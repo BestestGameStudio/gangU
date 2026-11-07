@@ -107,7 +107,61 @@ func _process(delta: float) -> bool:
 					print("[E] Tab closes panel + modal_ui leave OK")
 				else:
 					print("[E] FAIL panel close"); ok = false
+				phase = 2; t = 0
+		2:
+			# Apply path through the REAL panel buttons: the 10 casts emitted in
+			# phase 0 qualify both forks; open the panel, select, click.
+			var panel := scene.get_node("EquipPanel")
+			var progress := scene.get_node("SpellProgress")
+			var caster: Node = scene.get_node("Player/SpellCaster")
+			var fireball: Spell = load("res://resources/spells/fire_ball.tres")
+			var split: Spell = load("res://resources/spells/fire_ball_split.tres")
+			var ev := InputEventAction.new()
+			ev.action = &"equip_panel"
+			ev.pressed = true
+			panel._unhandled_input(ev)
+			panel._on_spell_pressed(fireball)
+			var texts: Array = []
+			var buttons: Array = []
+			for c in panel._upgrade_box.get_children():
+				if c is Button:
+					texts.append(c.text)
+					buttons.append(c)
+			texts.sort()
+			if texts != ["Beam", "Split shot"] or buttons.size() != 2:
+				print("[E] FAIL fork buttons: ", texts); ok = false
 				return _done()
+			print("[E] both fork buttons render after fix OK")
+			# Assign Fire Ball to slot 1 through the real slot button (this
+			# clears the panel selection), re-select, then a manual click on
+			# Split shot -> apply -> slot replacement. Buttons are rebuilt on
+			# refresh, so re-capture after re-selecting.
+			panel._slot_buttons[0].pressed.emit()
+			panel._on_spell_pressed(fireball)
+			var buttons2: Array = []
+			for c2 in panel._upgrade_box.get_children():
+				if c2 is Button:
+					buttons2.append(c2)
+			var split_btn: Button = buttons2[0] if buttons2[0].text == "Split shot" else buttons2[1]
+			split_btn.pressed.emit()
+			if not caster.get_unlocked().has(fireball) and caster.get_unlocked().has(split):
+				print("[E] click applied split, fire ball replaced OK")
+			else:
+				print("[E] FAIL replacement: unlocked=", caster.get_unlocked().map(func(x): return x.spell_name)); ok = false
+			var slot_texts: Array = []
+			for b2 in panel._slot_buttons:
+				slot_texts.append(b2.text)
+			var shown := false
+			for st2 in slot_texts:
+				if st2.find("Split") >= 0:
+					shown = true
+			if shown:
+				print("[E] slot shows replaced spell OK")
+			else:
+				print("[E] FAIL slot replacement not shown: ", slot_texts); ok = false
+			if progress.can_upgrade(split):
+				print("[E] FAIL split upgradable at 0 casts"); ok = false
+			return _done()
 		_:
 			return true
 	if t > 6.0:
