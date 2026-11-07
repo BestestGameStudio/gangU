@@ -173,8 +173,8 @@ func _refresh() -> void:
 		for path in _upgrader.get_upgrade_paths(_selected):
 			var b := Button.new()
 			b.add_theme_font_size_override("font_size", 22)
-			b.text = str(path.get("name", "?"))
-			var pid = path.get("id")
+			b.text = path.display_name
+			var pid = path.id
 			b.pressed.connect(func(): _on_upgrade_pressed(pid))
 			_upgrade_box.add_child(b)
 	_status.text = "Selected: %s" % (_selected.spell_name if _selected != null else "none")
