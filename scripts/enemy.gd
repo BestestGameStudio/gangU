@@ -20,12 +20,24 @@ signal health_changed(current: int, max_hp: int)
 ## position. ADDITIVE hook only - no table assigned means no drop. Table
 ## contents, weights and drop chances are human-open (#59); placeholder data.
 @export var reward_table: RewardTable
+## #98 (Foundation E1): optional per-type definition. When assigned, its
+## stats take effect as a set (applied in _ready before hp init; no
+## per-field scalar mixing). Reward precedence: a directly assigned
+## reward_table WINS over the definition's table (instance override); the
+## definition's table applies only when no direct table is assigned.
+@export var definition: EnemyDefinition
 
 var hp: int
 var _player: Player
 var _contact_timer: float = 0.0
 
 func _ready() -> void:
+	if definition != null:
+		max_hp = definition.max_hp
+		speed = definition.speed
+		contact_damage = definition.contact_damage
+		contact_cooldown = definition.contact_cooldown
+		contact_range = definition.contact_range
 	hp = max_hp
 	add_to_group("enemies")
 	if player_path != NodePath(""):
@@ -64,11 +76,14 @@ func _physics_process(delta: float) -> void:
 ## drop into my parent (the area), so an area swap frees it like any other
 ## area child. Null roll (pool exhausted / empty table) means no drop.
 func _spawn_reward_drop() -> void:
-	if reward_table == null:
+	var table: RewardTable = reward_table
+	if table == null and definition != null:
+		table = definition.reward_table
+	if table == null:
 		return
 	var pool := get_tree().get_first_node_in_group("reward_pool") as RewardPool
 	var granted: Array = pool.granted() if pool != null else []
-	var entry := reward_table.roll(granted)
+	var entry := table.roll(granted)
 	if entry == null:
 		return
 	var drop: RewardDrop = preload("res://scenes/reward_drop.tscn").instantiate()
