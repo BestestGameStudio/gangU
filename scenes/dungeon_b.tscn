@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgangu7dnb"]
+
+[ext_resource type="PackedScene" uid="uid://bgangu2player" path="res://scenes/player.tscn" id="1"]
+
+[node name="DungeonB" type="Node2D"]
+
+[node name="Title" type="Label" parent="."]
+offset_left = 380.0
+offset_top = 24.0
+theme_override_font_sizes/font_size = 28
+text = "DUNGEON B (placeholder, RED gate)"
+
+[node name="Player" parent="." instance=ExtResource("1") groups=["player"]]
+position = Vector2(576, 560)
