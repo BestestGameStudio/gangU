@@ -66,6 +66,8 @@ func _ready() -> void:
 		_caster.cooldown_started.connect(_on_cooldown_started)
 		_caster.spell_equipped.connect(_on_spell_equipped)
 		_caster.spell_added.connect(_add_spell_row) # #10: rows follow runtime pickups
+		if _caster.has_signal(&"spell_replaced"):
+			_caster.spell_replaced.connect(_on_spell_replaced) # rows track upgrades (#67)
 		for s in _caster.spells:
 			_add_spell_row(s)
 		# #10 slots slice (C): six fixed rows only when the pinned API exists.
@@ -179,6 +181,16 @@ func _on_cooldown_started(_spell: Spell, _duration: float) -> void:
 
 func _on_spell_equipped(_spell: Spell) -> void:
 	pass
+
+## Legacy rows follow replace_spell (#67): re-key the row to the new resource
+## so the name, cooldown bar and equipped marker track the swap instead of
+## going stale (review finding on the C fixture). Unlock-only replacements
+## (old never in the legacy list) have no row to re-key and stay unlisted.
+func _on_spell_replaced(old_spell: Spell, new_spell: Spell) -> void:
+	if not _spell_rows.has(old_spell):
+		return
+	_spell_rows[new_spell] = _spell_rows[old_spell]
+	_spell_rows.erase(old_spell)
 
 ## #11 objective slice: lazy discovery of the mounted DungeonObjective.
 ## Throttled search; the node only exists while a dungeon with an objective
