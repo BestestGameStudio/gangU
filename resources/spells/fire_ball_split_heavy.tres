@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangum2sh"]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Fire Ball Split Heavy [placeholder]"
+cooldown = 1.4
+damage = 45.0
+radius = 9.0
+tags = Array[StringName]([&"projectile", &"burn"])
+range = 420.0
+projectile_speed = 700.0
+projectile_color = Color(0.9, 0.2, 0.1, 1)
+projectile_count = 2
+spread_degrees = 10.0
