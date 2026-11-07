@@ -10,5 +10,5 @@ damage = 25.0
 radius = 7.0
 effects = Array[String](["burn"])
 range = 420.0
-projectile_speed = 360.0
+projectile_speed = 900.0
 projectile_color = Color(1, 0.45, 0.1, 1)
