@@ -100,7 +100,7 @@ func _process(delta: float) -> bool:
 			_casts(fireball, 10)
 			_check("beam apply succeeds", progress.apply_upgrade(fireball, &"fireball_beam"))
 			_casts(beam, 15)
-			_check("both beam mastery paths", _has_paths(beam, [&"fireball_m2_beam_long", &"fireball_m2_beam_heavy"]))
+			_check("all beam mastery paths (incl. #37 piercing)", _has_paths(beam, [&"fireball_m2_beam_long", &"fireball_m2_beam_heavy", &"fireball_m2_beam_piercing"]))
 			_check("long-beam apply succeeds", progress.apply_upgrade(beam, &"fireball_m2_beam_long"))
 			_check("long beam parameters live", caster.spells.find(blong) != -1
 				and caster.equipped_spell == blong
