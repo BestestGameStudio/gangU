@@ -1,0 +1,41 @@
+class_name SpellTags
+## Controlled spell tag vocabulary (#66, approved foundation 2026-11-07).
+## Tags are METADATA ONLY: classification for buff matching, never behavior.
+## A tag here does not execute anything; effect parameters live in future
+## effect definitions keyed by tag. The list is deliberately minimal - only
+## tags a current spell actually carries plus the delivery names Daniel named
+## (projectile/melee/aoe). Taxonomy growth is settled with peers, not here.
+
+const PROJECTILE: StringName = &"projectile"
+const AOE: StringName = &"aoe"
+const MELEE: StringName = &"melee"
+const BURN: StringName = &"burn"
+const MANA: StringName = &"mana"
+
+const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA]
+
+static func is_valid(tag: StringName) -> bool:
+	return ALL.has(tag)
+
+## Returns the subset of `tags` not in the vocabulary; empty means all known.
+static func unknown_tags(tags: Array[StringName]) -> Array[StringName]:
+	var out: Array[StringName] = []
+	for t in tags:
+		if not ALL.has(t):
+			out.append(t)
+	return out
+
+## Pure query helpers for the future buff-match seam (#66 foundation).
+## No ANY-vs-ALL policy is chosen here: the buff system picks the rule when
+## it exists. Both are simple membership tests over spell tags.
+static func match_any(match_tags: Array[StringName], spell_tags: Array[StringName]) -> bool:
+	for t in match_tags:
+		if spell_tags.has(t):
+			return true
+	return false
+
+static func match_all(match_tags: Array[StringName], spell_tags: Array[StringName]) -> bool:
+	for t in match_tags:
+		if not spell_tags.has(t):
+			return false
+	return true
