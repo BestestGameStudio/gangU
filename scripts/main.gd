@@ -53,6 +53,7 @@ func _swap(area: Node) -> void:
 	if p and spawn:
 		p.global_position = spawn.global_position
 	_mount_demo_enemies(current_area)
+	_mount_objective(current_area)
 
 ## #34 demo config: three enemies, upper half of the room, far from the
 ## entrance spawn (576,560). Children of the area so a gate swap frees them.
@@ -68,3 +69,19 @@ func _mount_demo_enemies(area: Node) -> void:
 		# explicit target BEFORE add_child so Enemy._ready resolves it.
 		e.player_path = NodePath("../../Player")
 		area.add_child(e)
+
+## #8 production objective: CLEAR_ALL over the mounted demo enemies in
+## DungeonA. Mounted AFTER _mount_demo_enemies - DungeonObjective._ready
+## scans the "enemies" group, so the enemies must already be in the tree or
+## the objective targets 0 and never completes.
+func _mount_objective(area: Node) -> void:
+	if area.name != "DungeonA":
+		return
+	var obj := DungeonObjective.new()
+	obj.name = "DungeonObjective"
+	obj.dungeon_id = &"dungeon_a"
+	obj.objective_completed.connect(_on_objective_completed)
+	area.add_child(obj)
+
+func _on_objective_completed(dungeon_id: StringName) -> void:
+	print("objective completed: ", dungeon_id)
