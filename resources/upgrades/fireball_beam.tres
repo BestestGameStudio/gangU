@@ -10,4 +10,4 @@ id = &"fireball_beam"
 display_name = "Beam"
 source_spell = ExtResource("2")
 result_spell = ExtResource("3")
-xp_threshold = 0
+xp_threshold = 10
