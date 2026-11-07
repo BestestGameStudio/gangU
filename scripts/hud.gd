@@ -174,7 +174,7 @@ func _process(delta: float) -> void:
 			frac = 1.0 - clampf(rem / s.cooldown, 0.0, 1.0)
 		var up_arrow := ""
 		if _progress != null and _progress.has_method("can_upgrade") and _progress.can_upgrade(s):
-			up_arrow = " ↑"
+			up_arrow = " ^"
 		row["name"].text = s.spell_name + (" *" if s == _caster.equipped_spell else "") + up_arrow
 		row["bar"].value = frac
 		row["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
