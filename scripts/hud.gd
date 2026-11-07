@@ -46,6 +46,14 @@ var _spell_rows := {} ## Spell -> {name: Label, bar: ProgressBar, state: Label}
 var _objective: DungeonObjective
 var _discover_elapsed := 0.0
 
+## Upgrade-availability indicator (Daniel, 2026-11-07): an up arrow on
+## the spell-name row when the provider reports a REAL qualified path.
+## Read-only can_upgrade() polling inside the existing per-frame loop; the
+## provider is discovered and validity-checked exactly like the objective
+## node below. No provider changes, no new signals.
+var _progress: Node = null
+var _progress_elapsed := 0.0
+
 ## #10 slots slice (C): built only when the pinned slot API is present.
 var _slots_supported := false
 var _slot_widgets: Array = [] ## [{key,name,bar,state}] x 6
@@ -153,6 +161,7 @@ func _update_slot_rows() -> void:
 
 func _process(delta: float) -> void:
 	_update_objective(delta)
+	_update_progress(delta)
 	if _caster == null:
 		return
 	if _slots_supported:
@@ -163,7 +172,10 @@ func _process(delta: float) -> void:
 		var frac := 1.0
 		if s.cooldown > 0.0:
 			frac = 1.0 - clampf(rem / s.cooldown, 0.0, 1.0)
-		row["name"].text = s.spell_name + (" *" if s == _caster.equipped_spell else "")
+		var up_arrow := ""
+		if _progress != null and _progress.has_method("can_upgrade") and _progress.can_upgrade(s):
+			up_arrow = " ^"
+		row["name"].text = s.spell_name + (" *" if s == _caster.equipped_spell else "") + up_arrow
 		row["bar"].value = frac
 		row["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
 
@@ -191,6 +203,20 @@ func _on_spell_replaced(old_spell: Spell, new_spell: Spell) -> void:
 		return
 	_spell_rows[new_spell] = _spell_rows[old_spell]
 	_spell_rows.erase(old_spell)
+
+## Upgrade indicator: cached discovery of the mounted SpellProgress provider.
+## Mirrors _update_objective: is_instance_valid guard (freed providers compare
+## non-null), throttled exact-name search, no per-frame tree scan.
+func _update_progress(delta: float) -> void:
+	if is_instance_valid(_progress):
+		return
+	_progress = null
+	_progress_elapsed += delta
+	if _progress_elapsed < 0.25:
+		return
+	_progress_elapsed = 0.0
+	_progress = get_tree().root.find_child("SpellProgress", true, false)
+
 
 ## #11 objective slice: lazy discovery of the mounted DungeonObjective.
 ## Throttled search; the node only exists while a dungeon with an objective
