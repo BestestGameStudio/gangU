@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://bgangu3proj"]
+
+[ext_resource type="Script" path="res://scripts/projectile.gd" id="1_proj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_proj"]
+radius = 4.0
+
+[node name="Projectile" type="Area2D"]
+script = ExtResource("1_proj")
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-4, 0, 0, -4, 4, 0, 0, 4)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_proj")
