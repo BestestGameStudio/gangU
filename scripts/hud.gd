@@ -169,6 +169,7 @@ func _add_spell_row(spell: Spell) -> void:
 	_apply_bar_state(bar, false) # #93: track + READY fill at build
 	_spell_rows_box.add_child(frame)
 	_spell_rows[spell] = {"name": name_label, "bar": bar, "state": state, "frame": frame, "cooling": false, "equipped": false}
+	_update_plate.call_deferred() # #93: settle containers, then re-mask (avoids one-frame gate/HUD clip)
 
 func _build_slot_rows() -> void:
 	for i in 6:
@@ -199,6 +200,7 @@ func _build_slot_rows() -> void:
 		_apply_bar_state(bar, false) # #93: track + READY fill at build
 		_slot_rows_box.add_child(frame)
 		_slot_widgets.append({"frame": frame, "key": key_label, "name": name_label, "bar": bar, "state": state, "cooling": false})
+	_update_plate.call_deferred()
 
 func _update_slot_rows() -> void:
 	# Freed-instance safe: the caster can die with the run (reload rebuilds
