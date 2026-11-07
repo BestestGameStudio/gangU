@@ -1,0 +1,40 @@
+name: Deploy web build to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      # Pinned to the Godot version in project.godot (4.5.1-stable).
+      image: barichello/godot-ci:4.5.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export Web build
+        run: |
+          godot --headless --path . --import
+          mkdir -p build/web
+          godot --headless --path . --export-release "Web" build/web/index.html
+      - name: Upload inspectable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gangu-web-build
+          path: build/web
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
