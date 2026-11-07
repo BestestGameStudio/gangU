@@ -6,6 +6,8 @@ extends Node2D
 ## no gameplay interaction.
 ## #6: a RunManager child watches Player.died, blocks dead casting, and
 ## restarts the run with a full scene reload.
+## #11: a HUD child shows health/spells/cooldowns. Mounted with an explicit
+## player_path (no group fallback); the scene reload remounts it fresh.
 
 func _ready() -> void:
 	print("gangU booted OK")
@@ -17,3 +19,6 @@ func _ready() -> void:
 	rm.name = "RunManager"
 	rm.player = $Player
 	add_child(rm)
+	var hud: HUD = preload("res://scenes/hud.tscn").instantiate()
+	hud.player_path = NodePath("../Player") # explicit, read in HUD._ready on tree entry
+	add_child(hud)
