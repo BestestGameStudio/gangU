@@ -114,6 +114,16 @@ func _process(delta: float) -> bool:
 			match step:
 				0:
 					if t > 0.3:
+						# HUD arrow after phase 0's 10 casts: Fire Ball only.
+						var hud1: Node = scene.get_node("HUD")
+						var fb1: Spell = load("res://resources/spells/fire_ball.tres")
+						var ms1: Spell = load("res://resources/spells/mana_shot.tres")
+						var fb_text: String = hud1._spell_rows[fb1]["name"].text
+						var ms_text: String = hud1._spell_rows[ms1]["name"].text
+						if fb_text.find("â") >= 0 and ms_text.find("â") < 0:
+							print("[E] HUD arrow on Fire Ball only at 10 casts OK")
+						else:
+							print("[E] FAIL HUD arrow: fb='", fb_text, "' ms='", ms_text, "'"); ok = false
 						_press_tab()
 						step = 1
 				1:
@@ -280,6 +290,69 @@ func _process(delta: float) -> bool:
 						print("[E] reselect + assign to slot 2 OK")
 					else:
 						print("[E] FAIL reselect/assign: ", caster.get_slots()[1]); ok = false
+					step = 10
+				10:
+					# Arrow clears on replacement: Fire Ball row is gone, the
+					# Split replacement row (0 casts) shows none.
+					var hud2: Node = scene.get_node("HUD")
+					if hud2._spell_rows.has(fireball):
+						print("[E] FAIL fireball row kept after replace"); ok = false
+					elif hud2._spell_rows[split]["name"].text.find("â") >= 0:
+						print("[E] FAIL arrow on fresh Split row: ", hud2._spell_rows[split]["name"].text); ok = false
+					else:
+						print("[E] arrow clears after Split apply OK")
+					step = 0
+					phase = 3; t = 0
+					return false
+		3:
+			# Second scenario on a FRESH scene: per-run reset (no arrows at 0
+			# casts), then the Beam fork applied - arrow must clear the same.
+			match step:
+				0:
+					scene.queue_free()
+					scene = load("res://scenes/main.tscn").instantiate()
+					root.add_child(scene)
+					current_scene = scene
+					step = 1
+				1:
+					if t < 0.4:
+						return false
+					var hud3: Node = scene.get_node("HUD")
+					var progress3: Node = scene.get_node("SpellProgress")
+					var caster3: Node = scene.get_node("Player/SpellCaster")
+					var fb3: Spell = load("res://resources/spells/fire_ball.tres")
+					if progress3.cast_count(fb3) != 0:
+						print("[E] FAIL cast count not reset: ", progress3.cast_count(fb3)); ok = false
+					elif hud3._spell_rows[fb3]["name"].text.find("â") >= 0:
+						print("[E] FAIL arrow at 0 casts after reset"); ok = false
+					else:
+						print("[E] fresh-run reset: no arrows at 0 casts OK")
+					for i in 10:
+						caster3.spell_cast.emit(fb3)
+					step = 2
+				2:
+					var hud4: Node = scene.get_node("HUD")
+					var fb4: Spell = load("res://resources/spells/fire_ball.tres")
+					if hud4._spell_rows[fb4]["name"].text.find("â") >= 0:
+						print("[E] arrow returns at 10 casts after reset OK")
+					else:
+						print("[E] FAIL arrow missing after reset+10: ", hud4._spell_rows[fb4]["name"].text); ok = false
+						return _done()
+					var progress4: Node = scene.get_node("SpellProgress")
+					progress4.apply_upgrade(fb4, &"fireball_beam")
+					step = 3
+				3:
+					var hud5: Node = scene.get_node("HUD")
+					var fb5: Spell = load("res://resources/spells/fire_ball.tres")
+					var beam: Spell = load("res://resources/spells/fire_ball_beam.tres")
+					if hud5._spell_rows.has(fb5):
+						print("[E] FAIL fireball row kept after Beam apply"); ok = false
+					elif not hud5._spell_rows.has(beam):
+						print("[E] FAIL beam row missing after apply"); ok = false
+					elif hud5._spell_rows[beam]["name"].text.find("â") >= 0:
+						print("[E] FAIL arrow on fresh Beam row: ", hud5._spell_rows[beam]["name"].text); ok = false
+					else:
+						print("[E] arrow clears after Beam apply OK")
 					return _done()
 		_:
 			return true
