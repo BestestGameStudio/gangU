@@ -4,6 +4,8 @@ extends Node2D
 ## #20: a BackgroundGrid child gives a world-space reference so camera-follow
 ## movement is visible. Pure background (z_index -100), behind the Player,
 ## no gameplay interaction.
+## #6: a RunManager child watches Player.died, blocks dead casting, and
+## restarts the run with a full scene reload.
 
 func _ready() -> void:
 	print("gangU booted OK")
@@ -11,3 +13,7 @@ func _ready() -> void:
 	grid.name = "BackgroundGrid"
 	add_child(grid)
 	move_child(grid, 0)
+	var rm := RunManager.new()
+	rm.name = "RunManager"
+	rm.player = $Player
+	add_child(rm)
