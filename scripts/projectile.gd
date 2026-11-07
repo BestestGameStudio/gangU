@@ -8,6 +8,7 @@ var spell: Spell
 var direction: Vector2 = Vector2.RIGHT
 var source: Node2D ## The caster's owner; never hit by its own projectile.
 var _traveled: float = 0.0
+var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projectile
 
 func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
@@ -33,6 +34,14 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body == source:
 		return
+	if _hit_bodies.has(body):
+		return # #37: piercing re-contact never double-hits the same body
 	if body.has_method(&"apply_damage"):
 		body.apply_damage(spell.damage)
+		_hit_bodies.append(body)
+		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
+		# Untagged spells keep the original despawn-on-hit, and range expiry
+		# is unchanged for both.
+		if spell.tags.has(SpellTags.PIERCING):
+			return
 	queue_free()
