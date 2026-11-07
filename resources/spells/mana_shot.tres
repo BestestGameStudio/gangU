@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu4mana"]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Mana Shot"
+cooldown = 0.35
+damage = 8.0
+radius = 3.0
+effects = Array[String](["mana"])
+range = 640.0
+projectile_speed = 660.0
+projectile_color = Color(0.6, 0.45, 1, 1)
