@@ -4,13 +4,16 @@ extends SceneTree
 ## Synthetic apply_damage is a named headless complement only; browser
 ## real-input evidence follows separately. The pool mount here simulates the
 ## pending E main.gd window - harness-local, NOT production wiring. The
-## caster unlock call itself is B (#60) pending, so this harness asserts pool
-## behavior + drop lifecycle and reports the caster seam as B-pending.
+## caster unlock seam is now live (B unlock_spell on main): pickup must call
+## caster.unlock_spell and emit spell_unlocked with the granted spell.
 var scene: Node
 var p: Player
 var pool: RewardPool
 var enemy: Enemy
 var table: RewardTable
+var caster: Node
+var bolt: Spell
+var unlock_signals: Array = []
 var kill_pos := Vector2.ZERO
 var phase := 0
 var t := 0.0
@@ -41,6 +44,14 @@ func _process(delta: float) -> bool:
 			table = load("res://resources/rewards/demo_table.tres")
 			enemy.reward_table = table
 			scene.current_area.add_child(enemy)
+			caster = p.get_node_or_null("SpellCaster")
+			bolt = load("res://resources/spells/placeholder_bolt.tres")
+			if caster == null:
+				print("[A] FAIL no SpellCaster on Player"); ok = false
+			elif caster.has_signal("spell_unlocked"):
+				caster.spell_unlocked.connect(func(sp): unlock_signals.append(sp))
+			if caster != null and caster.get_unlocked().has(bolt):
+				print("[A] FAIL bolt unexpectedly unlocked pre-kill"); ok = false
 			phase = 1; t = 0
 		1:
 			if t > 0.5:
@@ -80,7 +91,15 @@ func _process(delta: float) -> bool:
 					print("[A] FAIL drop not consumed"); ok = false
 				else:
 					print("[A] drop consumed on pickup OK")
-				print("[A] caster unlock seam: B (#60) pending - not asserted here")
+				if caster != null:
+					if caster.get_unlocked().has(bolt):
+						print("[A] caster unlock seam OK: bolt unlocked on pickup")
+					else:
+						print("[A] FAIL bolt not unlocked on caster"); ok = false
+					if unlock_signals.size() == 1 and unlock_signals[0] == bolt:
+						print("[A] spell_unlocked fired once with granted spell OK")
+					else:
+						print("[A] FAIL spell_unlocked count/content: ", unlock_signals.size()); ok = false
 				print("[A] ", "PASS" if ok else "FAIL")
 				return true
 		_:
