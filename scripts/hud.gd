@@ -42,6 +42,13 @@ var _spell_rows := {} ## Spell -> {name: Label, bar: ProgressBar, state: Label}
 @onready var _spell_rows_box: VBoxContainer = $Root/SpellRows
 @onready var _slot_rows_box: VBoxContainer = $Root/SlotRows
 @onready var _objective_label: Label = $Root/ObjectiveLabel
+## #50: dark backing plate sized from the ACTUAL occupied rect of Root
+## (runtime content: objective row, spell rows incl. long upgraded names,
+## slot rows, viewport changes). Geometry under the plate is deliberately
+## masked (lead UX choice); gates read reserved_rect() to keep their world
+## labels out. Plate mouse_filter=IGNORE in the scene: click-through
+## behavior in the HUD zone is unchanged.
+@onready var _plate: ColorRect = $BackingPlate
 
 var _objective: DungeonObjective
 var _discover_elapsed := 0.0
@@ -55,6 +62,7 @@ var _progress: Node = null
 var _progress_elapsed := 0.0
 
 ## #10 slots slice (C): built only when the pinned slot API is present.
+const PLATE_PAD := 8.0
 var _slots_supported := false
 var _slot_widgets: Array = [] ## [{key,name,bar,state}] x 6
 
@@ -70,6 +78,7 @@ func _ready() -> void:
 	_player.health_changed.connect(_on_health_changed)
 	_player.died.connect(_on_player_died)
 	_on_health_changed(_player.hp, _player.max_hp)
+	get_viewport().size_changed.connect(_update_plate)
 	if _caster != null:
 		_caster.cooldown_started.connect(_on_cooldown_started)
 		_caster.spell_equipped.connect(_on_spell_equipped)
@@ -162,6 +171,7 @@ func _update_slot_rows() -> void:
 func _process(delta: float) -> void:
 	_update_objective(delta)
 	_update_progress(delta)
+	_update_plate()
 	if _caster == null:
 		return
 	if _slots_supported:
@@ -251,3 +261,38 @@ func _on_objective_progress(current: int, target: int) -> void:
 func _on_objective_completed(_dungeon_id: StringName) -> void:
 	_objective_label.text = "Objective: COMPLETE"
 	_objective_label.visible = true
+
+## #50: union of every visible Root descendant rect, extended for text that
+## renders wider than its control box (long spell names), plus padding.
+## Runs every frame after the row updates above; a handful of controls, no
+## tree scan. CanvasLayer space == screen space.
+func _update_plate() -> void:
+	if _plate == null:
+		return
+	var rect := Rect2()
+	var first := true
+	for c: Control in $Root.find_children("*", "Control", true, false):
+		if not c.visible:
+			continue
+		var r := c.get_global_rect()
+		if c is Label:
+			var font := c.get_theme_font("font")
+			var fs := c.get_theme_font_size("font_size")
+			if font != null and c.text != "":
+				var ts := font.get_string_size(c.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+				r.size.x = maxf(r.size.x, ts.x)
+				r.size.y = maxf(r.size.y, ts.y)
+		rect = r if first else rect.merge(r)
+		first = false
+	if first:
+		rect = Rect2($Root.position, Vector2(388, 40))
+	rect = rect.grow(PLATE_PAD)
+	_plate.position = rect.position
+	_plate.size = rect.size
+	_plate.visible = true
+
+## #50: screen-space rect other UI/world labels must keep clear of.
+func reserved_rect() -> Rect2:
+	if _plate == null:
+		return Rect2()
+	return Rect2(_plate.position, _plate.size)
