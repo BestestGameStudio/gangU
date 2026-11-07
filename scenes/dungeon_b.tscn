@@ -3,6 +3,7 @@
 [node name="DungeonB" type="Node2D"]
 
 [node name="TitleLayer" type="CanvasLayer" parent="."]
+layer = 2
 
 [node name="Title" type="Label" parent="TitleLayer"]
 anchors_preset = 1
