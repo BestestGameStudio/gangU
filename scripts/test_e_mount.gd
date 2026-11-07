@@ -30,13 +30,14 @@ func _process(delta: float) -> bool:
 				print("[E] reward pool mounted once OK")
 			if get_nodes_in_group("spell_progress").size() != 1:
 				print("[E] FAIL spell_progress group size"); ok = false
-			# Provider wiring: caster resolved, two approved placeholder paths.
+			# Provider wiring: caster resolved, upgrade list EMPTY (inert)
+			# until the human playable-config choice lands content.
 			var fireball: Spell = load("res://resources/spells/fire_ball.tres")
 			var paths: Array = progress.get_upgrade_paths(fireball)
-			if paths.size() == 2:
-				print("[E] provider upgrade paths (split+beam) OK")
+			if paths.is_empty() and not progress.can_upgrade(fireball):
+				print("[E] provider inert (no paths, cannot upgrade) OK")
 			else:
-				print("[E] FAIL upgrade path count: ", paths.size()); ok = false
+				print("[E] FAIL provider not inert: paths=", paths.size()); ok = false
 			# Panel: hidden at boot, player resolved, provider wired.
 			if panel.visible:
 				print("[E] FAIL panel visible at boot"); ok = false
