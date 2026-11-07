@@ -1,7 +1,9 @@
 extends SceneTree
-## E production mount harness: Main mounts the reward/progression children
-## ONCE, wired but INERT until content lands. Asserts the mount shape and
-## inertness only - no gameplay/content claims.
+## E production mount + first playable config harness: Main mounts the
+## reward/progression children ONCE, wired with the approved 2026-11-07
+## package: single-Bolt pool table, two fork upgrades at 10 Fire Ball casts,
+## DungeonA demo enemies carrying that table. Asserts mount shape and the
+## approved config only - Mastery/Signature remain unbuilt.
 var scene: Node
 var phase := 0
 var t := 0.0
@@ -30,29 +32,60 @@ func _process(delta: float) -> bool:
 				print("[E] reward pool mounted once OK")
 			if get_nodes_in_group("spell_progress").size() != 1:
 				print("[E] FAIL spell_progress group size"); ok = false
-			# Provider wiring: caster resolved, upgrade list EMPTY (inert)
-			# until the human playable-config choice lands content.
+			# Provider wiring: caster resolved, exactly the two approved fork
+			# paths for Fire Ball, both gated at 10 casts (equal-cost choice).
 			var fireball: Spell = load("res://resources/spells/fire_ball.tres")
+			var mana: Spell = load("res://resources/spells/mana_shot.tres")
 			var paths: Array = progress.get_upgrade_paths(fireball)
-			if paths.is_empty() and not progress.can_upgrade(fireball):
-				print("[E] provider inert (no paths, cannot upgrade) OK")
+			if paths.size() == 2:
+				print("[E] provider exposes both fork paths OK")
 			else:
-				print("[E] FAIL provider not inert: paths=", paths.size()); ok = false
+				print("[E] FAIL fork path count: ", paths.size()); ok = false
+			for u in paths:
+				if u.xp_threshold != 10:
+					print("[E] FAIL threshold: ", u.id, "=", u.xp_threshold); ok = false
+			if not progress.get_upgrade_paths(mana).is_empty():
+				print("[E] FAIL unexpected Mana Shot paths"); ok = false
+			# Threshold gate via the REAL signal path: 9 casts no, 10 yes.
+			var caster: Node = scene.get_node("Player/SpellCaster")
+			for i in 9:
+				caster.spell_cast.emit(fireball)
+			if progress.can_upgrade(fireball):
+				print("[E] FAIL can_upgrade below 10 casts"); ok = false
+			caster.spell_cast.emit(fireball)
+			if progress.can_upgrade(fireball):
+				print("[E] fork unlocks at exactly 10 casts OK")
+			else:
+				print("[E] FAIL cannot upgrade at 10 casts"); ok = false
 			# Panel: hidden at boot, player resolved, provider wired.
 			if panel.visible:
 				print("[E] FAIL panel visible at boot"); ok = false
 			else:
 				print("[E] panel hidden at boot OK")
-			# Enemies carry no reward_table: nothing can drop.
-			var enemies := get_nodes_in_group("enemies")
-			var any_table := false
-			for e in enemies:
-				if e.reward_table != null:
-					any_table = true
-			if any_table:
-				print("[E] FAIL enemy reward_table assigned (content leak)"); ok = false
+			# Pool carries the approved single-Bolt table, eligible at boot.
+			var demo: RewardTable = load("res://resources/rewards/demo_table.tres")
+			if pool.is_eligible(demo.entries[0]):
+				print("[E] pool bolt entry eligible at boot OK")
 			else:
-				print("[E] no enemy loot tables (inert) OK")
+				print("[E] FAIL pool bolt entry not eligible"); ok = false
+			# DungeonA demo enemies mount with that table (production geometry:
+			# area is a Main child, Player resolves at ../../Player).
+			var area := Node2D.new()
+			area.name = "DungeonA"
+			scene.add_child(area)
+			scene._mount_demo_enemies(area)
+			var mounted := 0
+			var tables_ok := true
+			for c in area.get_children():
+				if c is Enemy:
+					mounted += 1
+					if c.reward_table != demo:
+						tables_ok = false
+			if mounted == 3 and tables_ok:
+				print("[E] 3 DungeonA enemies carry the bolt table OK")
+			else:
+				print("[E] FAIL enemy mounts/tables: ", mounted, " tables_ok=", tables_ok); ok = false
+			area.queue_free()
 			phase = 1; t = 0
 		1:
 			if t > 0.3:
