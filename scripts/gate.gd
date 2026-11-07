@@ -60,6 +60,18 @@ func _update_label_placement() -> void:
 	var hud := get_tree().root.find_child("HUD", true, false)
 	if hud != null and hud.has_method("reserved_rect"):
 		reserved = hud.reserved_rect()
+	# #84: an escaped label must also keep clear of OTHER gates' projected
+	# body rects (live residual: NORMAL's plate-edge escape clipped by RED's
+	# sprite). Read each live gate's actual body ColorRect, no hardcoded size.
+	var other_gate_rects: Array[Rect2] = []
+	for g in get_tree().get_nodes_in_group("gates"):
+		if g == self or not (g is Gate):
+			continue
+		var body: ColorRect = (g as Gate).get_node_or_null("ColorRect")
+		if body == null:
+			continue
+		var btl: Vector2 = canvas * ((g as Gate).global_position + body.position)
+		other_gate_rects.append(Rect2(btl, body.size * body.scale))
 	# Candidate top-left positions in preference order: centered on the gate
 	# (original), below the gate, right of the gate.
 	var candidates := [
@@ -74,7 +86,7 @@ func _update_label_placement() -> void:
 		var r := Rect2(tl, label_size)
 		var inside := r.position.x >= 0.0 and r.position.y >= 0.0 and r.end.x <= view_size.x and r.end.y <= view_size.y
 		var clear := reserved.get_area() <= 0.0 or not r.intersects(reserved)
-		if inside and clear:
+		if inside and clear and _clear_of_gates(r, other_gate_rects):
 			chosen = tl
 			found = true
 			break
@@ -88,17 +100,28 @@ func _update_label_placement() -> void:
 			Vector2(reserved.end.x + LABEL_GAP, gate_screen.y - label_size.y / 2.0),
 			Vector2(gate_screen.x - label_size.x / 2.0, reserved.end.y + LABEL_GAP),
 		]
+		# Rejection order prefers the plate side AWAY from a neighboring gate:
+		# an edge escape overlapping another gate is refused, so the next edge
+		# (the other side of the plate) wins instead.
 		for tl in edge_candidates:
 			var cl: Vector2 = tl.clamp(Vector2.ZERO, view_size - label_size)
-			if not Rect2(cl, label_size).intersects(reserved):
+			var r := Rect2(cl, label_size)
+			if not r.intersects(reserved) and _clear_of_gates(r, other_gate_rects):
 				chosen = cl
 				found = true
 				break
 	if not found:
-		# Every viewport-fitting placement intersects the plate (reserved zone
-		# plus label larger than the viewport allows). Keep the label below
-		# its own gate, clamped inside the viewport: readable on the plate
-		# backing, still tied to its gate.
+		# Every viewport-fitting placement intersects the plate or a
+		# neighboring gate (reserved zone plus neighbors leave no room). Keep
+		# the label below its own gate, clamped inside the viewport: readable
+		# on the plate backing, still tied to its gate.
 		chosen = candidates[1].clamp(Vector2.ZERO, view_size - label_size)
 	var world_tl: Vector2 = canvas.affine_inverse() * chosen
 	_type_label.position = world_tl - global_position
+
+## #84: true when r intersects no other gate's projected body rect.
+func _clear_of_gates(r: Rect2, other_gate_rects: Array[Rect2]) -> bool:
+	for ogr in other_gate_rects:
+		if r.intersects(ogr):
+			return false
+	return true
