@@ -24,6 +24,8 @@ signal spell_unlocked(spell: Spell)
 ## #10 slots: slot gained a spell / slot lost one (clear). Indices are 0-5.
 signal slot_assigned(index: int, spell: Spell)
 signal slot_cleared(index: int)
+## Post-B follow-up: replace_spell swapped a granted spell for a new one.
+signal spell_replaced(old_spell: Spell, new_spell: Spell)
 
 @export var projectile_scene: PackedScene
 @export var starting_spells: Array[Spell] = []
@@ -118,6 +120,43 @@ func clear_slot(index: int) -> bool:
 		return false
 	_slots[index] = null
 	slot_cleared.emit(index)
+	return true
+
+## Post-B follow-up (bounded caster follow-up, additive): atomically swap a
+## granted spell for a new, not-yet-granted one. unlocked[] is replaced at
+## old_spell's OWN index; the legacy spells[] list is replaced at its OWN old
+## index ONLY IF old is present there (an unlock-only grant stays out of the
+## legacy list; current_index is never touched). If old was slotted, that slot
+## index is preserved and re-emits slot_assigned (no slot_cleared). The new
+## spell inherits old's remaining cooldown (max(remaining, 0), unconditional
+## overwrite) and old's cooldown key is deleted. Refusals below are argument
+## validation for THIS API only - they do not change the OPEN duplicate-grant
+## policy (unlock_spell/add_spell stay unguarded).
+func replace_spell(old_spell: Spell, new_spell: Spell) -> bool:
+	if old_spell == null or new_spell == null:
+		push_warning("replace_spell: null spell")
+		return false
+	var uidx := unlocked.find(old_spell)
+	if uidx == -1:
+		push_warning("replace_spell: old spell not in unlocked inventory")
+		return false
+	if unlocked.has(new_spell):
+		push_warning("replace_spell: new spell already unlocked")
+		return false
+	# Atomic inventory + slot swap (no partial states: all refusals above).
+	unlocked[uidx] = new_spell
+	var lidx := spells.find(old_spell)
+	if lidx != -1:
+		spells[lidx] = new_spell # legacy keeps its own index; current_index unchanged
+	var sidx := _slots.find(old_spell)
+	if sidx != -1:
+		_slots[sidx] = new_spell # preserve slot index; no slot_cleared
+	# Cooldown transfer: new inherits old's remaining time, old entry removed.
+	_cooldowns[new_spell] = maxf(_cooldowns.get(old_spell, 0.0), 0.0)
+	_cooldowns.erase(old_spell)
+	if sidx != -1:
+		slot_assigned.emit(sidx, new_spell)
+	spell_replaced.emit(old_spell, new_spell)
 	return true
 
 func can_cast_slot(index: int) -> bool:
