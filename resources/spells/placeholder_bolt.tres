@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu3bolt"]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Placeholder Bolt"
+cooldown = 0.6
+damage = 10.0
+radius = 5.0
+effects = Array[String]([])
+range = 520.0
+projectile_speed = 480.0
+projectile_color = Color(0.4, 0.8, 1, 1)
