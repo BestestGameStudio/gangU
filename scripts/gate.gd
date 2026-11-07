@@ -78,10 +78,27 @@ func _update_label_placement() -> void:
 			chosen = tl
 			found = true
 			break
+	if not found and reserved.get_area() > 0.0:
+		# Plate-edge escapes, tried only after every adjacent candidate
+		# failed: right of the plate at the gate's own row, below the plate
+		# at the gate's own column. A clamped edge placement is accepted only
+		# when it stays clear of the plate - an inside-plate placement is
+		# never chosen while an edge placement fits the viewport.
+		var edge_candidates := [
+			Vector2(reserved.end.x + LABEL_GAP, gate_screen.y - label_size.y / 2.0),
+			Vector2(gate_screen.x - label_size.x / 2.0, reserved.end.y + LABEL_GAP),
+		]
+		for tl in edge_candidates:
+			var cl: Vector2 = tl.clamp(Vector2.ZERO, view_size - label_size)
+			if not Rect2(cl, label_size).intersects(reserved):
+				chosen = cl
+				found = true
+				break
 	if not found:
-		# No candidate fully fits: clamp the below-gate placement into the
-		# viewport; the plate overlap is then unavoidable (pathological
-		# viewport) but the label stays readable and tied to its gate.
+		# Every viewport-fitting placement intersects the plate (reserved zone
+		# plus label larger than the viewport allows). Keep the label below
+		# its own gate, clamped inside the viewport: readable on the plate
+		# backing, still tied to its gate.
 		chosen = candidates[1].clamp(Vector2.ZERO, view_size - label_size)
 	var world_tl: Vector2 = canvas.affine_inverse() * chosen
 	_type_label.position = world_tl - global_position
