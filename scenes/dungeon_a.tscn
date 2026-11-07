@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgangu7dna"]
+
+[node name="DungeonA" type="Node2D"]
+
+[node name="Title" type="Label" parent="."]
+offset_left = 380.0
+offset_top = 24.0
+theme_override_font_sizes/font_size = 28
+text = "DUNGEON A (placeholder, normal gate)"
+
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(576, 560)
