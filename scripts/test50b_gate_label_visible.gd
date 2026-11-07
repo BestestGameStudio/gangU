@@ -15,6 +15,17 @@ var hub_plate_h := 0.0
 var _cam_last := Vector2.INF
 var _cam_stable := 0
 var _entered := false
+var _87_setup := false
+var _87_aimed := false
+var _87_frames := 0
+var _87_consec := 0
+var _87_rn := Rect2()
+var _87_rred := Rect2()
+var _87_zn := ""
+var _87_zr := ""
+var _87_zflips := 0
+var _87_maxdelta := 0.0
+var _87_maxres := 0.0
 
 func _check(cond: bool, name: String) -> void:
 	if cond:
@@ -50,8 +61,33 @@ func _label_screen_rect(gate: Gate) -> Rect2:
 	return Rect2(tl, size)
 
 func _inside_viewport(r: Rect2) -> bool:
+	# 1px tolerance: the gate places against THIS frame's canvas transform
+	# and the harness re-projects after the camera's _process - a boundary-
+	# clamped label (x=0) can measure sub-pixel negative from camera
+	# micro-drift alone. Placement choice is unaffected.
 	var vs: Vector2 = root.get_visible_rect().size
-	return r.position.x >= 0.0 and r.position.y >= 0.0 and r.end.x <= vs.x and r.end.y <= vs.y
+	return r.position.x >= -1.0 and r.position.y >= -1.0 and r.end.x <= vs.x + 1.0 and r.end.y <= vs.y + 1.0
+
+## #87: which placement ZONE a label rect is in, relative to the plate -
+## distinguishes a changed candidate choice from sub-pixel camera drift.
+func _zone_of(r: Rect2, plate: Rect2) -> String:
+	if r.position.x >= plate.end.x - 1.0:
+		return "edge-right"
+	if r.position.y >= plate.end.y - 1.0:
+		return "below-plate"
+	return "adjacent"
+
+## #87: position minus the zone's driving input (plate edge or gate screen
+## position through the canvas transform). ~0 over the window proves the
+## within-zone position is a pure function of camera/plate inputs - camera
+## subtraction that excludes avoidance-feedback alternation.
+func _zone_residual(r: Rect2, zone: String, gate: Gate, plate: Rect2) -> float:
+	var gs: Vector2 = root.get_canvas_transform() * gate.global_position
+	if zone == "edge-right":
+		return (r.position - Vector2(plate.end.x + Gate.LABEL_GAP, gs.y - r.size.y / 2.0)).length()
+	if zone == "below-plate":
+		return (r.position - Vector2(gs.x - r.size.x / 2.0, plate.end.y + Gate.LABEL_GAP)).length()
+	return 0.0 # adjacent zones are not asserted here
 
 ## Row or column tie to the gate's own screen position.
 func _tied(r: Rect2, gate: Gate) -> bool:
@@ -174,7 +210,88 @@ func _process(_d: float) -> bool:
 			hud.get_node("Root/HPLabel").text = "HP 100/100"
 			_stage = 6
 			return false
-		6: # portrait viewport rebuild
+		6: # #87: BOTH gates behind the wide plate - labels must not collide
+			# Both hub gates share the world row (y=380), 552 px apart. Aimed
+			# so BOTH sit behind the wide plate, each label escapes to the SAME
+			# plate-right-edge point on unpatched code (a02ab51 FAILS here).
+			if not _87_setup:
+				hud.get_node("Root/HPLabel").text = "HP 100/100 VERYLONGTAIL xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+				_87_setup = true
+				return false # let the plate rebuild first
+			if not _87_aimed:
+				var rr2: Rect2 = hud.reserved_rect()
+				var gn2: Gate = main.current_area.get_node("GateNormal")
+				var view2: Vector2 = root.get_visible_rect().size
+				var target_gs := Vector2(rr2.end.x - 900.0, rr2.end.y - 100.0) # both gates inside the plate's x-range
+				main.get_node("Player").global_position = gn2.global_position - target_gs + view2 / 2.0
+				_cam_stable = 0
+				_cam_last = Vector2.INF
+				_87_aimed = true
+				return false
+			if not _cam_settled():
+				return false
+			_87_frames = 0
+			_87_consec = 0
+			_stage = 63
+			return false
+		63: # #87 assertions + settle/no-oscillation: placements must become
+			# constant and STAY constant for 10 consecutive frames, however long
+			# the post-sweep transient takes (condition-based, no frame budget).
+			var gn3: Gate = main.current_area.get_node("GateNormal")
+			var gr3: Gate = main.current_area.get_node("GateRed")
+			var rn3 := _label_screen_rect(gn3)
+			var rred3 := _label_screen_rect(gr3)
+			var rr3p: Rect2 = hud.reserved_rect()
+			var zn := _zone_of(rn3, rr3p)
+			var zr := _zone_of(rred3, rr3p)
+			print("[50b] #87 frame ", _87_frames, ": labelN=", rn3.position, " zone=", zn, " labelRED=", rred3.position, " zone=", zr)
+			var zone_flip := false
+			if _87_frames == 0:
+				_87_zn = zn
+				_87_zr = zr
+			elif zn != _87_zn or zr != _87_zr:
+				_87_zflips += 1
+				zone_flip = true
+				_87_zn = zn
+				_87_zr = zr
+			var dn := rn3.position.distance_to(_87_rn.position)
+			var dr := rred3.position.distance_to(_87_rred.position)
+			if _87_frames > 0 and (zone_flip or dn >= 1.0 or dr >= 1.0):
+				_87_consec = 0 # still moving: transient continues
+			else:
+				_87_consec += 1
+				if _87_frames > 0:
+					_87_maxdelta = maxf(_87_maxdelta, maxf(dn, dr))
+					_87_maxres = maxf(_87_maxres, maxf(
+						_zone_residual(rn3, zn, gn3, rr3p),
+						_zone_residual(rred3, zr, gr3, rr3p)))
+			_87_rn = rn3
+			_87_rred = rred3
+			_87_frames += 1
+			if _87_frames > 120:
+				_check(false, "#87 placements settle to a fixed point - no oscillation (never stabilized)")
+				_check(not rn3.intersects(rred3), "#87 escaped gate labels do not intersect each other (both behind wide plate)")
+				hud.get_node("Root/HPLabel").text = "HP 100/100"
+				_stage = 62
+				return false
+			if _87_consec < 30:
+				return false
+			# 30 consecutive frames: no zone/candidate change, per-frame movement
+			# under 1px. Long window separates camera-lerp drift (continuous,
+			# decaying, zone-stable) from feedback alternation (zone flips,
+			# which reset the counter and never reach 30).
+			print("[50b] #87: labelN=", rn3, " labelRED=", rred3, " zone flips during transient=", _87_zflips, " max per-frame drift in window=", _87_maxdelta, " max zone residual=", _87_maxres)
+			_check(not rn3.intersects(rred3), "#87 escaped gate labels do not intersect each other (both behind wide plate)")
+			_check(true, "#87 placements settle: no zone/candidate change over 30 consecutive frames (max per-frame drift < 1px = camera settling, not alternation)")
+			_check(_87_maxres < 1.0, "#87 within-zone positions track camera/plate exactly (residual < 1px) - feedback alternation excluded by subtraction")
+			_check(_tied(rn3, gn3) and _tied(rred3, gr3), "#87 both labels tied to their own gate (row/column)")
+			_check(_inside_viewport(rn3) and _inside_viewport(rred3), "#87 both labels inside viewport")
+			var rr3b: Rect2 = hud.reserved_rect()
+			_check(not rn3.intersects(rr3b) and not rred3.intersects(rr3b), "#87 both labels still clear of the plate")
+			hud.get_node("Root/HPLabel").text = "HP 100/100"
+			_stage = 62
+			return false
+		62: # portrait viewport rebuild
 			root.content_scale_size = Vector2i(800, 1000) # logical portrait, host-independent
 			_cam_stable = 0
 			_cam_last = Vector2.INF
@@ -191,6 +308,7 @@ func _process(_d: float) -> bool:
 			_check(covered, "plate still covers HUD rows after viewport change")
 			var gn: Gate = main.current_area.get_node("GateNormal")
 			var rn := _label_screen_rect(gn)
+			print("[50b] portrait: labelN=", rn, " gateN_screen=", root.get_canvas_transform() * gn.global_position, " view=", root.get_visible_rect().size)
 			_check(_inside_viewport(rn), "GateNormal label inside viewport (portrait)")
 			root.content_scale_size = Vector2i(1152, 648)
 			_stage = 7
