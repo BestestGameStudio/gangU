@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3 uid="uid://bgangu7hub"]
+
+[ext_resource type="PackedScene" uid="uid://bgangu2player" path="res://scenes/player.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://bgangu7dnb" path="res://scenes/dungeon_b.tscn" id="4"]
+
+[node name="Hub" type="Node2D"]
+
+[node name="Title" type="Label" parent="."]
+offset_left = 520.0
+offset_top = 24.0
+theme_override_font_sizes/font_size = 28
+text = "HUB"
+
+[node name="Player" parent="." instance=ExtResource("1") groups=["player"]]
+position = Vector2(576, 480)
+
+[node name="GateNormal" parent="." instance=ExtResource("2")]
+position = Vector2(300, 160)
+target_dungeon = ExtResource("3")
+
+[node name="GateRed" parent="." instance=ExtResource("2")]
+position = Vector2(852, 160)
+gate_type = 1
+target_dungeon = ExtResource("4")
