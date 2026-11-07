@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu4fire"]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Fire Ball"
+cooldown = 1.2
+damage = 25.0
+radius = 7.0
+effects = Array[String](["burn"])
+range = 420.0
+projectile_speed = 360.0
+projectile_color = Color(1, 0.45, 0.1, 1)

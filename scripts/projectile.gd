@@ -16,8 +16,11 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	rotation = direction.angle()
 
 func _ready() -> void:
+	$CollisionShape2D.shape = $CollisionShape2D.shape.duplicate() # per-spell radius must not leak across instances (#4 gate)
 	$CollisionShape2D.shape.radius = spell.radius
 	$Visual.color = spell.projectile_color
+	var _vis_scale := spell.radius / 4.0 # Visual polygon is authored at radius 4
+	$Visual.scale = Vector2(_vis_scale, _vis_scale)
 	body_entered.connect(_on_body_entered)
 
 func _physics_process(delta: float) -> void:
