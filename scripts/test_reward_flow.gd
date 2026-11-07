@@ -2,8 +2,9 @@ extends SceneTree
 ## Track A (#59) harness: enemy death -> reward drop spawns at the kill spot;
 ## walk-over auto-pick-up removes the spell from the run-scoped pool.
 ## Synthetic apply_damage is a named headless complement only; browser
-## real-input evidence follows separately. The pool mount here simulates the
-## pending E main.gd window - harness-local, NOT production wiring. The
+## real-input evidence follows separately. The harness REUSES the production
+## reward pool when the E main.gd mount is present and mounts its own only
+## when the group is empty. The
 ## caster unlock seam is now live (B unlock_spell on main): pickup must call
 ## caster.unlock_spell and emit spell_unlocked with the granted spell.
 var scene: Node
@@ -33,11 +34,18 @@ func _process(delta: float) -> bool:
 			# frame, not during add_child - wait for current_area first.
 			if scene.current_area == null:
 				return false
-			# Harness-local pool mount (production mount is the E window).
-			pool = RewardPool.new()
-			pool.name = "RewardPool"
-			scene.add_child(pool)
-			pool.setup(load("res://resources/rewards/demo_table.tres"))
+			# Reuse the production reward pool when present (group-first
+			# semantics: drops and grants resolve to the FIRST pool in the
+			# reward_pool group, so a second harness mount would be bypassed).
+			# Mount a harness-local pool only when the group is empty. The
+			# pool has no reset API, so a pool that already granted this
+			# entry fails loudly below instead of passing on stale state.
+			pool = get_first_node_in_group("reward_pool") as RewardPool
+			if pool == null:
+				pool = RewardPool.new()
+				pool.name = "RewardPool"
+				scene.add_child(pool)
+				pool.setup(load("res://resources/rewards/demo_table.tres"))
 			enemy = load("res://scenes/enemy.tscn").instantiate()
 			enemy.position = Vector2(576, 300)
 			enemy.player_path = NodePath("../../Player")
@@ -52,6 +60,10 @@ func _process(delta: float) -> bool:
 				caster.spell_unlocked.connect(func(sp): unlock_signals.append(sp))
 			if caster != null and caster.get_unlocked().has(bolt):
 				print("[A] FAIL bolt unexpectedly unlocked pre-kill"); ok = false
+			# Isolation: with no pool reset API, a pre-granted entry would
+			# make the grant assertions meaningless. Fail loudly instead.
+			if not pool.is_eligible(table.entries[0]):
+				print("[A] FAIL pool already granted bolt entry pre-kill (stale state, no reset API)"); ok = false
 			phase = 1; t = 0
 		1:
 			if t > 0.5:

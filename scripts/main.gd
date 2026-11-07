@@ -41,6 +41,27 @@ func _ready() -> void:
 	satchel.player_path = NodePath("../Player")
 	add_child(satchel)
 	rm.satchel = satchel
+	## (E) Reward/progression production mounts - same ONE-persistent-child
+	## pattern as ReviveSatchel. Per-run reset comes free from RunManager's
+	## full scene reload. INERT BY DESIGN until content lands:
+	## - RewardPool gets NO table (production loot contents/chances are an
+	##   open human choice; enemies also have no reward_table, so nothing
+	##   rolls and nothing drops).
+	## - SpellProgress mounts with an EMPTY upgrade list: the approved
+	##   placeholder paths and their XP thresholds are content that lands
+	##   with the human playable-config choice, not wiring to pre-empt it.
+	var pool := RewardPool.new()
+	pool.name = "RewardPool"
+	add_child(pool)
+	var progress := SpellProgress.new()
+	progress.name = "SpellProgress"
+	progress.caster_path = NodePath("../Player/SpellCaster")
+	add_child(progress)
+	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
+	panel.name = "EquipPanel"
+	panel.player_path = NodePath("../Player")
+	panel.upgrader_path = NodePath("../SpellProgress")
+	add_child(panel)
 	_load_hub()
 
 var current_area: Node = null
