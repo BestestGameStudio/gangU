@@ -16,6 +16,10 @@ signal health_changed(current: int, max_hp: int)
 ## The "player" group lookup remains as a fallback so existing test scenes
 ## (which put the Player in the group) keep working unchanged.
 @export var player_path: NodePath
+## (A, #59) Reward drop: on death, roll this table and spawn the drop at my
+## position. ADDITIVE hook only - no table assigned means no drop. Table
+## contents, weights and drop chances are human-open (#59); placeholder data.
+@export var reward_table: RewardTable
 
 var hp: int
 var _player: Player
@@ -40,6 +44,7 @@ func apply_damage(amount: int) -> void:
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()
+		_spawn_reward_drop()
 		queue_free()
 
 func _physics_process(delta: float) -> void:
@@ -54,3 +59,19 @@ func _physics_process(delta: float) -> void:
 	if to_player.length() <= contact_range and _contact_timer <= 0.0:
 		_player.apply_damage(contact_damage)
 		_contact_timer = contact_cooldown
+
+## (A, #59) Roll the table against the pool's granted set and defer-spawn the
+## drop into my parent (the area), so an area swap frees it like any other
+## area child. Null roll (pool exhausted / empty table) means no drop.
+func _spawn_reward_drop() -> void:
+	if reward_table == null:
+		return
+	var pool := get_tree().get_first_node_in_group("reward_pool") as RewardPool
+	var granted: Array = pool.granted() if pool != null else []
+	var entry := reward_table.roll(granted)
+	if entry == null:
+		return
+	var drop: RewardDrop = preload("res://scenes/reward_drop.tscn").instantiate()
+	drop.setup(entry)
+	drop.global_position = global_position
+	get_parent().call_deferred("add_child", drop)
