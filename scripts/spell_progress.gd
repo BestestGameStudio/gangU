@@ -10,7 +10,7 @@ extends Node
 ## caster atomically. XP is observed READ-ONLY from the caster's spell_cast
 ## signal - no XP spending or qualification policy is invented here.
 
-signal upgrades_changed()
+signal upgrades_changed(spell)
 
 ## Explicit caster wiring (no-group convention from #34).
 @export var caster_path: NodePath
@@ -56,7 +56,7 @@ func can_upgrade(spell: Spell) -> bool:
 ## Refusal-bool. Currently ALWAYS refuses: the replace_spell caster seam is
 ## Mitra's post-#63 follow-up and has not landed. Once it lands this
 ## delegates: _caster.replace_spell(u.source_spell, u.result_spell), then
-## upgrades_changed.emit(). No direct array mutation here ever.
+## upgrades_changed.emit(spell). No direct array mutation here ever.
 func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
 	for u in get_upgrade_paths(spell):
 		if u.id == upgrade_id:
@@ -68,7 +68,7 @@ func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
 				return false
 			var ok: bool = _caster.replace_spell(u.source_spell, u.result_spell)
 			if ok:
-				upgrades_changed.emit()
+				upgrades_changed.emit(spell)
 			return ok
 	push_warning("SpellProgress: unknown upgrade id '%s' for %s." % [upgrade_id, spell])
 	return false
