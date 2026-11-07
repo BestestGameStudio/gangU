@@ -8,6 +8,12 @@ extends Node2D
 ## restarts the run with a full scene reload.
 ## #11: a HUD child shows health/spells/cooldowns. Mounted with an explicit
 ## player_path (no group fallback); the scene reload remounts it fresh.
+## #34: demo enemy mount - Daniel-approved demo config: exactly THREE enemies
+## in DungeonA (normal gate), spread away from the entrance (PlayerSpawn at the
+## room's bottom edge). Code-mounted here - no scene edits - each with an
+## explicit player_path set BEFORE tree entry (production Player is in no
+## group). Count/positions are the human-approved demo design, not invented
+## defaults; DungeonB (red gate) is out of the demo loop and gets none.
 
 func _ready() -> void:
 	print("gangU booted OK")
@@ -46,3 +52,19 @@ func _swap(area: Node) -> void:
 	var spawn := current_area.get_node_or_null("PlayerSpawn")
 	if p and spawn:
 		p.global_position = spawn.global_position
+	_mount_demo_enemies(current_area)
+
+## #34 demo config: three enemies, upper half of the room, far from the
+## entrance spawn (576,560). Children of the area so a gate swap frees them.
+const DEMO_ENEMY_POSITIONS: Array[Vector2] = [Vector2(250, 280), Vector2(576, 220), Vector2(900, 280)]
+
+func _mount_demo_enemies(area: Node) -> void:
+	if area.name != "DungeonA":
+		return
+	for pos in DEMO_ENEMY_POSITIONS:
+		var e: Enemy = preload("res://scenes/enemy.tscn").instantiate()
+		e.position = pos
+		# Enemy is Main/DungeonA/EnemyN, Player is Main/Player - set the
+		# explicit target BEFORE add_child so Enemy._ready resolves it.
+		e.player_path = NodePath("../../Player")
+		area.add_child(e)
