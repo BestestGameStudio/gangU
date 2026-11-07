@@ -2,6 +2,9 @@ class_name Enemy
 extends CharacterBody2D
 ## #5: basic enemy. Chases the player, deals contact damage, takes spell damage.
 ## Contract: died(), health_changed(), apply_damage() (clamps, emits inside only).
+## #99 (Foundation E2): chase/contact behavior extracted into a per-enemy
+## behavior instance (see enemy_behavior_chase_contact.gd); swappable via
+## the definition's behavior slot. Behavior unchanged.
 
 signal died()
 signal health_changed(current: int, max_hp: int)
@@ -25,11 +28,15 @@ signal health_changed(current: int, max_hp: int)
 ## per-field scalar mixing). Reward precedence: a directly assigned
 ## reward_table WINS over the definition's table (instance override); the
 ## definition's table applies only when no direct table is assigned.
+## #99 (Foundation E2): the definition's behavior slot picks the behavior
+## Script; unset = the current chase/contact implementation.
 @export var definition: EnemyDefinition
 
 var hp: int
 var _player: Player
-var _contact_timer: float = 0.0
+## #99: per-enemy behavior instance (created in _ready). Owns the contact
+## cooldown; never shared across enemies.
+var _behavior: RefCounted
 
 func _ready() -> void:
 	if definition != null:
@@ -40,6 +47,16 @@ func _ready() -> void:
 		contact_range = definition.contact_range
 	hp = max_hp
 	add_to_group("enemies")
+	# #99: instantiate MY OWN behavior (never a shared Resource). Slot unset
+	# or no definition = the current chase/contact implementation; a slot
+	# script without physics_step falls back to it with a warning.
+	var behavior_script: Script = EnemyBehaviorChaseContact
+	if definition != null and definition.behavior != null:
+		behavior_script = definition.behavior
+	_behavior = behavior_script.new()
+	if not _behavior.has_method("physics_step"):
+		push_warning("Enemy: definition behavior script lacks physics_step(enemy, player, delta); using the default chase/contact behavior.")
+		_behavior = EnemyBehaviorChaseContact.new()
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 		if _player == null:
@@ -60,17 +77,8 @@ func apply_damage(amount: int) -> void:
 		queue_free()
 
 func _physics_process(delta: float) -> void:
-	if _player == null or not is_instance_valid(_player) or _player.hp <= 0:
-		velocity = Vector2.ZERO
-		move_and_slide()
-		return
-	var to_player: Vector2 = _player.global_position - global_position
-	velocity = to_player.normalized() * speed if to_player.length() > 8.0 else Vector2.ZERO
-	move_and_slide()
-	_contact_timer = maxf(0.0, _contact_timer - delta)
-	if to_player.length() <= contact_range and _contact_timer <= 0.0:
-		_player.apply_damage(contact_damage)
-		_contact_timer = contact_cooldown
+	if _behavior != null:
+		_behavior.physics_step(self, _player, delta)
 
 ## (A, #59) Roll the table against the pool's granted set and defer-spawn the
 ## drop into my parent (the area), so an area swap frees it like any other
