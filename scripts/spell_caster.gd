@@ -7,6 +7,8 @@ class_name SpellCaster
 signal spell_cast(spell: Spell)
 signal cooldown_started(spell: Spell, duration: float)
 signal spell_equipped(spell: Spell)
+## #10: emitted on EVERY add (starting spells and pickups) so HUD rows follow.
+signal spell_added(spell: Spell)
 
 @export var projectile_scene: PackedScene
 @export var starting_spells: Array[Spell] = []
@@ -34,6 +36,7 @@ func _ready() -> void:
 
 func add_spell(spell: Spell) -> void:
 	spells.append(spell)
+	spell_added.emit(spell)
 	if spells.size() == 1:
 		current_index = 0
 		spell_equipped.emit(spell)
@@ -55,6 +58,10 @@ func _process(delta: float) -> void:
 	_update_bar()
 	if Input.is_action_just_pressed(&"cast") and can_cast():
 		cast()
+	# #10: switching is caster-owned (player.gd untouched). The action has no
+	# key bound until the human key choice lands; harness drives next_spell().
+	if InputMap.has_action(&"switch_spell") and Input.is_action_just_pressed(&"switch_spell"):
+		next_spell()
 
 func cast() -> void:
 	var spell := equipped_spell
