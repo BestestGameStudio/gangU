@@ -47,19 +47,15 @@ func _ready() -> void:
 	## - RewardPool gets NO table (production loot contents/chances are an
 	##   open human choice; enemies also have no reward_table, so nothing
 	##   rolls and nothing drops).
-	## - SpellProgress wires the two Daniel-approved placeholder upgrade
-	##   paths (split/beam); their xp_threshold values are placeholder
-	##   content pending the same human config choice.
+	## - SpellProgress mounts with an EMPTY upgrade list: the approved
+	##   placeholder paths and their XP thresholds are content that lands
+	##   with the human playable-config choice, not wiring to pre-empt it.
 	var pool := RewardPool.new()
 	pool.name = "RewardPool"
 	add_child(pool)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")
-	progress.upgrades = [
-		load("res://resources/upgrades/fireball_split.tres"),
-		load("res://resources/upgrades/fireball_beam.tres"),
-	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
 	panel.name = "EquipPanel"
