@@ -1,6 +1,10 @@
-extends Node2D
-## gangU entry scene. Boots the game; scene flow (hub <-> dungeon) will be
-## managed from here by the hub/gate issues (#7/#9). Kept intentionally empty.
+extends Node
+## gangU entry point (#1 scaffold).
+## On the #5 branch: boots directly into the #5 test arena so the damage
+## pipeline is visible without hub navigation (hub flow lands with #7).
+
+const ARENA_SCENE := "res://scenes/test_arena.tscn"
 
 func _ready() -> void:
-	print("gangU booted OK")
+	var arena: Node = (load(ARENA_SCENE) as PackedScene).instantiate()
+	add_child(arena)
