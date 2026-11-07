@@ -121,10 +121,12 @@ func _build_ui() -> void:
 	_status.add_theme_font_size_override("font_size", 18)
 	vbox.add_child(_status)
 
-func _unhandled_input(event: InputEvent) -> void:
-	# No key is bound today (open human choice). If one is ever bound to an
-	# "equip_panel" action, this toggles without any code change.
+func _input(event: InputEvent) -> void:
+	# Toggle in _input, BEFORE GUI handling: a focused panel button would
+	# otherwise consume Tab as ui_focus_next and the panel could never be
+	# closed from the keyboard (live bug report, Chrome).
 	if InputMap.has_action(&"equip_panel") and event.is_action_pressed(&"equip_panel"):
+		get_viewport().set_input_as_handled()
 		if visible:
 			hide_panel()
 		else:
