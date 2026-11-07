@@ -8,12 +8,11 @@ extends Node2D
 ## restarts the run with a full scene reload.
 ## #11: a HUD child shows health/spells/cooldowns. Mounted with an explicit
 ## player_path (no group fallback); the scene reload remounts it fresh.
-## #34: demo enemy mount - Daniel-approved demo config: exactly THREE enemies
-## in DungeonA (normal gate), spread away from the entrance (PlayerSpawn at the
-## room's bottom edge). Code-mounted here - no scene edits - each with an
-## explicit player_path set BEFORE tree entry (production Player is in no
-## group). Count/positions are the human-approved demo design, not invented
-## defaults; DungeonB (red gate) is out of the demo loop and gets none.
+## #100: per-area enemy spawning is DATA-DRIVEN. An area attaches ONE
+## "SpawnData" child (scripts/area_spawn_data.gd) in its .tscn; the generic
+## mounter reads it on every area swap. No SpawnData child => no enemies for
+## that area (the hub stays empty; DungeonB's carrier holds zero entries).
+## No area-name checks and no hardcoded positions/tables remain in code.
 
 func _ready() -> void:
 	print("gangU booted OK")
@@ -102,33 +101,30 @@ func _swap(area: Node) -> void:
 	var spawn := current_area.get_node_or_null("PlayerSpawn")
 	if p and spawn:
 		p.global_position = spawn.global_position
-	_mount_demo_enemies(current_area)
+	_mount_area_spawns(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
 	_mount_revive_item(current_area)
 
-## #34 demo config: three enemies, upper half of the room, far from the
-## entrance spawn (576,560). Children of the area so a gate swap frees them.
-const DEMO_ENEMY_POSITIONS: Array[Vector2] = [Vector2(250, 280), Vector2(576, 220), Vector2(900, 280)]
-
-func _mount_demo_enemies(area: Node) -> void:
-	if area.name != "DungeonA":
+## #100 generic mounter: every area swap reads the area's "SpawnData" child
+## (AreaSpawnData). Entries are plain scene data - position, enemy scene and
+## reward table per spawn. The carrier's player_path is assigned BEFORE
+## add_child so Enemy._ready resolves it (production Player is in no group).
+## Children of the area so a gate swap frees them.
+func _mount_area_spawns(area: Node) -> void:
+	var data := area.get_node_or_null("SpawnData") as AreaSpawnData
+	if data == null:
 		return
-	for pos in DEMO_ENEMY_POSITIONS:
-		var e: Enemy = preload("res://scenes/enemy.tscn").instantiate()
-		e.position = pos
-		# First playable loot: every kill rolls the single-Bolt table until
-		# the pickup is granted (pool removes on grant only); later kills
-		# then roll null. Unpicked floor copies can repeat; extra copies
-		# consume with no effect (approved 2026-11-07 package).
-		e.reward_table = preload("res://resources/rewards/demo_table.tres")
-		# Enemy is Main/DungeonA/EnemyN, Player is Main/Player - set the
-		# explicit target BEFORE add_child so Enemy._ready resolves it.
-		e.player_path = NodePath("../../Player")
+	for entry: Dictionary in data.entries:
+		var enemy_scene := entry["enemy"] as PackedScene
+		var e := enemy_scene.instantiate() as Enemy
+		e.position = entry["position"] as Vector2
+		e.reward_table = entry["reward_table"] as RewardTable
+		e.player_path = data.player_path
 		area.add_child(e)
 
-## #8 production objective: CLEAR_ALL over the mounted demo enemies in
-## DungeonA. Mounted AFTER _mount_demo_enemies - DungeonObjective._ready
+## #8 production objective: CLEAR_ALL over the spawned enemies in
+## DungeonA. Mounted AFTER _mount_area_spawns - DungeonObjective._ready
 ## scans the "enemies" group, so the enemies must already be in the tree or
 ## the objective targets 0 and never completes.
 func _mount_objective(area: Node) -> void:

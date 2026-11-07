@@ -1,4 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://bgangu7dna"]
+[gd_scene load_steps=5 format=3 uid="uid://bgangu7dna"]
+
+[ext_resource type="Script" uid="uid://bgangu100asd" path="res://scripts/area_spawn_data.gd" id="1_spawn"]
+[ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://scenes/enemy.tscn" id="2_enemy"]
+[ext_resource type="Resource" uid="uid://bgangurdemotable" path="res://resources/rewards/demo_table.tres" id="3_table"]
 
 [node name="DungeonA" type="Node2D"]
 
@@ -20,3 +24,8 @@ horizontal_alignment = 2
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 position = Vector2(576, 560)
+
+[node name="SpawnData" type="Node" parent="."]
+script = ExtResource("1_spawn")
+entries = [{ "position": Vector2(250, 280), "enemy": ExtResource("2_enemy"), "reward_table": ExtResource("3_table") }, { "position": Vector2(576, 220), "enemy": ExtResource("2_enemy"), "reward_table": ExtResource("3_table") }, { "position": Vector2(900, 280), "enemy": ExtResource("2_enemy"), "reward_table": ExtResource("3_table") }]
+player_path = NodePath("../../Player")

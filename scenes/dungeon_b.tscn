@@ -1,4 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://bgangu7dnb"]
+[gd_scene load_steps=3 format=3 uid="uid://bgangu7dnb"]
+
+[ext_resource type="Script" uid="uid://bgangu100asd" path="res://scripts/area_spawn_data.gd" id="1_spawn"]
 
 [node name="DungeonB" type="Node2D"]
 
@@ -20,3 +22,7 @@ horizontal_alignment = 2
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 position = Vector2(576, 560)
+
+[node name="SpawnData" type="Node" parent="."]
+script = ExtResource("1_spawn")
+entries = []
