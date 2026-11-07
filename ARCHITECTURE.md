@@ -1,0 +1,118 @@
+# gangU - Key Architectural Decisions
+
+Tracking issue: #39. Grounded in main @ `1c0c8a3deadd3282ae19b82c7e3cc9f640c73b77`.
+Each entry states the decision, where it lives in code, and why. Status is one of:
+
+- **Implemented** - merged and verifiable in the current source.
+- **Provisional** - merged as a labeled harness default, explicitly not settled.
+- **Open** - a human choice; no code may presume an answer.
+
+---
+
+## Implemented decisions
+
+### D1. Platform and stack
+Godot **4.5.1-stable** (pinned exactly) + GDScript. Web/HTML5 is a first-class target: renderer `gl_compatibility` (broad WebGL2 support) and thread support OFF so the build runs on plain static hosting without COOP/COEP headers.
+*Where:* `project.godot`, `export_presets.cfg`, README.
+
+### D2. Display contract
+Viewport 1152x648, stretch mode `canvas_items`, aspect `expand`. Working convention: layout claims get checked at multiple window sizes before merge; #50 tracks a known cosmetic overlap that remains open under it.
+*Where:* `project.godot`.
+
+### D3. Input: shared project-level actions, manual aim only
+`move_up/down/left/right` (WASD) and `cast` (Space + left mouse button) are defined once in `project.godot` and consumed everywhere; no scene redefines them. Manual aim only, no aim assist; keyboard + mouse, trackpad-friendly. `switch_spell` exists as an action with **no key bound** (open choice, see O2).
+*Where:* `project.godot`, `scripts/player.gd`, `scripts/spell_caster.gd`.
+
+### D4. One Main scene; systems are code-mounted, not scene-edited
+`scenes/main.tscn` stays minimal (Player + FollowCamera). `main.gd._ready()` mounts BackgroundGrid, RunManager, HUD and ReviveSatchel in code; `_swap()` mounts per-area content (demo enemies, objective, exit portal). This keeps shared scene files out of merge contention and keeps mount ordering explicit.
+*Where:* `scripts/main.gd`.
+
+### D5. The shared Player is never recreated during a run
+Area swaps (hub <-> dungeon) reposition the existing Player at the area's `PlayerSpawn` marker; HP, spells and carried items persist across travel for free. The only reset is the RunManager's full scene reload on death. Transport is deferred (`call_deferred`) because it starts inside physics callbacks.
+*Where:* `scripts/main.gd` (`_swap`, `_on_gate_entered`, `_on_exit_portal_entered`).
+
+### D6. Explicit wiring beats group lookups in production
+The production Player is in **no group**. Cross-node references are exported NodePaths (`player_path`, `objective_path`) set **before** the node enters the tree, resolved in `_ready`. Group lookup remains only as a fallback so older test fixtures keep working; ReviveSatchel has no fallback at all (accepted #6/#12 contract - a missing `player_path` is an error, not a silent idle).
+*Where:* `scripts/main.gd`, `scripts/hud.gd`, `scripts/enemy.gd`, `scripts/run_manager.gd`, `scripts/revive_satchel.gd`; gap history in #34.
+
+### D7. Single HP mutation entry points
+`Player.apply_damage()` / `Player.heal()` and `Enemy.apply_damage()` are the only places HP changes. Each clamps and emits `health_changed` from inside, so HP can never change silently; `died()` fires exactly once at HP 0. `heal()` works from HP 0 (the revive path); the HUD recovers via `health_changed`.
+*Where:* `scripts/player.gd`, `scripts/enemy.gd`.
+
+### D8. Spells are data; the caster owns collection, cooldowns and switching
+All spell stats live on `Spell` resources (`resources/spells/*.tres`), never hardcoded in casting logic. `SpellCaster` owns the collected spell array, per-spell cooldowns keyed by the Spell object, the equip index, and switching (`add_spell` / `next_spell`). Switching was added in the caster so `player.gd` stayed untouched (#10 stage 1).
+*Where:* `scripts/spell.gd`, `scripts/spell_caster.gd`.
+
+### D9. Systems talk through signals, not reach-ins
+The published contracts: `Player.health_changed/died`, `SpellCaster.spell_cast/cooldown_started/spell_equipped/spell_added`, `Enemy.died/health_changed`, `DungeonObjective.objective_progress_changed/objective_completed`, `Gate.entered`, `ExitPortal.entered`, `ReviveSatchel.revive_collected/revive_used`, `RunManager.run_restarting`. Consumers connect; producers never know their listeners.
+*Where:* the scripts above.
+
+### D10. Death means a full run restart; revive intercepts synchronously
+On `died()`, RunManager first offers the satchel a synchronous `try_revive()` **before** latching anything; a carried item cancels the restart entirely (scene survives, upgrades/state persist). Otherwise it disables every caster on the player (`PROCESS_MODE_DISABLED`, so a dead player can never cast during the pause) and reloads the whole scene after a short delay - HP, enemies, projectiles and pickups all rebuild from the scene definition. The satchel deliberately has **no** `died()` listener: interception ordering is owned by the run manager, never by signal order.
+*Where:* `scripts/run_manager.gd`, `scripts/revive_satchel.gd`.
+
+### D11. Objectives are data-driven, one node per dungeon, mounted after enemies
+`DungeonObjective` supports `CLEAR_ALL_ENEMIES` (target 0 = every enemy present at ready) and `DEFEAT_BOSS`. Its `_ready` scans the `enemies` group, so `main.gd` mounts it **after** the area's enemies or the target computes as 0 and never completes. Production DungeonA runs CLEAR_ALL over the demo enemies; completion emits `objective_completed(dungeon_id)`.
+*Where:* `scripts/dungeon_objective.gd`, `scripts/main.gd` (`_mount_objective`).
+
+### D12. Exit portals: retreat-anytime on normal, clear-or-die on red
+Normal-gate dungeons mount the portal **unlocked** (objective not required). Red-gate dungeons mount it **locked**; it opens on `objective_completed` via a duck-typed `objective_path` (signal-name check, so the portal file stands alone). Using a portal returns to the hub in the same run (see D5).
+*Where:* `scripts/exit_portal.gd`, `scripts/main.gd` (`_mount_exit_portal`).
+
+### D13. Gates are typed transport only
+`Gate` carries `gate_type` (NORMAL/RED), tint and label, and emits `entered`; it owns no lock-in rules. Labels sit inside the gate rect and clear of the HUD (#44).
+*Where:* `scripts/gate.gd`, `scenes/hub.tscn`.
+
+### D14. Never mutate the tree synchronously inside physics callbacks
+Scene swaps, pickup consumption and portal returns use `call_deferred` / `set_deferred` - nothing is freed or swapped inside `body_entered`.
+*Where:* `scripts/main.gd`, `scripts/spell_pickup.gd`, `scripts/exit_portal.gd`.
+
+### D15. Camera: smoothed follow on physics ticks
+The follow camera lerps toward the player with frame-rate-independent exponential smoothing, in `_physics_process` (not `_process`): the player moves on fixed physics ticks, and sampling that step-wise target on render frames caused visible jitter (#29). It snaps only on ready so the first frame is framed correctly. It lives in `main.tscn`, independent of player.tscn changes.
+*Where:* `scripts/camera_follow.gd`.
+
+### D16. HUD is self-contained and discovers the objective lazily
+The HUD (CanvasLayer) connects to explicit player/caster signals, renders nothing it cannot source (the objective row stays hidden where no objective exists), and finds the area-mounted `DungeonObjective` by throttled lazy search, using `is_instance_valid` (a freed objective does not compare == null). Spell rows follow `spell_added` at runtime, so pickups appear without HUD changes.
+*Where:* `scripts/hud.gd`.
+
+### D17. Demo content scope is human-approved config, code-mounted
+DungeonA (normal gate) carries exactly three enemies, spread away from the entrance spawn - the approved demo configuration, declared as constants in `main.gd`, not invented defaults. DungeonB (red gate) gets none.
+*Where:* `scripts/main.gd` (`DEMO_ENEMY_POSITIONS`, `_mount_demo_enemies`).
+
+### D18. Projectiles duplicate their collision shape per instance
+`Projectile._ready` duplicates the collision shape before setting the spell's radius, so per-spell radii never leak across instances sharing the scene. Projectiles despawn at max range, never hit their source, and damage anything implementing `apply_damage`.
+*Where:* `scripts/projectile.gd`.
+
+### D19. Evidence standard for gameplay PRs
+Mechanics land with headless SceneTree harness drivers plus, for player-visible claims, a browser recording of the exact pushed head with zero console errors, made with real input (synthetic `apply_damage` calls are a named headless complement only). Fixture scenes are labeled evidence fixtures, never described as production.
+*Where:* `scripts/test*.gd`, `scenes/test*.tscn`.
+
+### D20. CI/CD: one workflow, PRs build, only main deploys
+A single GitHub Actions workflow exports the web build in a pinned `barichello/godot-ci:4.5.1` container. Pull requests get build-only checks; deployment to GitHub Pages happens only on real main-branch pushes. The concurrency group is scoped per ref (`pages-${{ github.ref }}`, cancel-in-progress off) so PR activity cannot cancel a pending main deploy (#52).
+*Where:* `.github/workflows/deploy.yml`.
+
+---
+
+## Provisional harness defaults (merged, explicitly not settled)
+
+- **P1. Duplicate spell pickups are ignored** and **P2. pickups are consumed on grant** (`scripts/spell_pickup.gd`). Both are labeled PROVISIONAL HARNESS DEFAULTS in code: reversible choices made so the #10 stage-1 harness reads clearly. The O2 reward direction (pool removal on pickup, auto-pick-up) supersedes them for production; the merged harness behavior stands until that work lands.
+- **P3. Revive restores 50 HP** (`revive_hp` export default in `scripts/revive_satchel.gd`). Tunable data, not a design decision.
+- **P4. Revive item visual** is a placeholder green-cross polygon (`scenes/revive_item.tscn`); content identity is an open human choice (O3).
+
+---
+
+## Open human choices (blocking; no code may presume an answer)
+
+- **O1. RED gate / DungeonB (#55).** The red gate is enterable today but DungeonB is empty - no enemies, no objective, no exit portal - so entering it soft-locks the session (refresh-only escape). Options on the table: lock the red gate until DungeonB has content, mount an unlocked exit portal in DungeonB, or accept the placeholder. **No decision yet.**
+- **O2. Spell pickups and rewards in production (#10 stage 2, reward direction settled 2026-11-07).** Stage 1 (pickup mechanic, caster switching, HUD row hook) is merged but mounted nowhere in production. Settled by Daniel: enemies carry a reward table of spells and items; a spell leaves the pool once picked up; spells auto-pick-up and unlock for the player to equip later (no auto-equip); the player has a maximum of 6 spell slots, each with its own keybind. Also settled by Daniel (2026-11-07): unlocks and the reward pool reset per run (no meta-persistence), each slot key casts its spell directly (no select-then-cast step), the slot keys are 1-6, and equipping uses an equip panel opened with Tab that does not pause the game: pick an unlocked spell and assign it to a slot, one spell per slot. The same panel doubles as the upgrade UI. Still open: reward table contents, weights and drop chances; starting loadout; dropped-uncollected and duplicate policies.
+- **O3. Playable revive (#54).** The foundation is merged and inert (nothing placed). Open: item placement, content/visual identity, counts per run and carry cap, and the post-revive edge (a revived player stands at the kill site with no i-frames and can be re-killed within ~400 ms; options include brief invulnerability, knockback, reposition, or accept as-is).
+- **O4. Spell upgrade content and UX (#33 -> #36/#37/#38).** Decided already (not re-asked): XP on use, 2 paths per level-up, 3 upgrades (Base > Specialization > Mastery > Signature), first upgrade must change how the spell feels. Settled by Daniel (2026-11-07): upgrades are manual and do NOT pause the game (players find a safe space to upgrade); the spell panel doubles as the upgrade UI; placeholder upgrade paths are authorized for now (visually distinct, e.g. Fireball A split shot / B beam). Still open: what qualifies as a "use", XP amounts/thresholds, and whether/how tier shows in the HUD. The architecture breakdowns (#36 progression core, #37 behavior plumbing, #38 selection UX) are written; #36/#37 are unblocked for placeholder content, #38's presentation fork is settled.
+- **O5. HUD/world-label overlap (#50, P5 cosmetic).** World labels can render under the fixed HUD zone at certain camera offsets; legibility is unaffected. Candidate fixes and a leave-as-is recommendation are on the issue.
+
+---
+
+## Conventions for future work
+
+- One assigned reviewer per PR; heads are frozen while a review is assigned; the lead is the sole squash executor.
+- Separate issue and PR per concern; draft PRs are opened early while work is local.
+- Bugs may be logged and worked freely; design suggestions are filed with the `suggestion` label and wait for explicit human approval.
