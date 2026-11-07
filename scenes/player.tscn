@@ -3,7 +3,8 @@
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/spell_caster.gd" id="2_caster"]
 [ext_resource type="PackedScene" uid="uid://bgangu3proj" path="res://scenes/projectile.tscn" id="3_proj"]
-[ext_resource type="Resource" uid="uid://bgangu3bolt" path="res://resources/spells/placeholder_bolt.tres" id="4_bolt"]
+[ext_resource type="Resource" uid="uid://bgangu4fire" path="res://resources/spells/fire_ball.tres" id="4_fire"]
+[ext_resource type="Resource" uid="uid://bgangu4mana" path="res://resources/spells/mana_shot.tres" id="5_mana"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 16.0
@@ -26,7 +27,7 @@ polygon = PackedVector2Array(0, -6, 12, 0, 0, 6)
 [node name="SpellCaster" type="Node2D" parent="."]
 script = ExtResource("2_caster")
 projectile_scene = ExtResource("3_proj")
-starting_spells = Array[Resource]([ExtResource("4_bolt")])
+starting_spells = Array[Resource]([ExtResource("4_fire"), ExtResource("5_mana")])
 
 [node name="CooldownBarBG" type="Polygon2D" parent="SpellCaster"]
 color = Color(0.9, 0.9, 0.9, 0.85)
