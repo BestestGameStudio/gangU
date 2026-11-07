@@ -1,0 +1,29 @@
+class_name EnemyBehaviorChaseContact
+extends RefCounted
+## #99 (Foundation E2): the CURRENT chase/contact behavior, extracted
+## unchanged from enemy.gd into a swappable behavior. enemy_definition.gd's
+## behavior slot names a Script; each Enemy instantiates its OWN behavior
+## instance in _ready, so per-enemy state (the contact cooldown timer)
+## lives on the instance and is NEVER shared across enemies (no shared
+## Resource state).
+##
+## Contract (unchanged): chase the resolved player at speed, stop within
+## 8px, deal contact_damage inside contact_range with contact_cooldown
+## between hits; idle (zero velocity) when there is no live player.
+## Stats stay on the enemy (definition-supplied); this class owns only
+## the cooldown timer.
+
+var _contact_timer: float = 0.0
+
+func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
+	if player == null or not is_instance_valid(player) or player.hp <= 0:
+		enemy.velocity = Vector2.ZERO
+		enemy.move_and_slide()
+		return
+	var to_player: Vector2 = player.global_position - enemy.global_position
+	enemy.velocity = to_player.normalized() * enemy.speed if to_player.length() > 8.0 else Vector2.ZERO
+	enemy.move_and_slide()
+	_contact_timer = maxf(0.0, _contact_timer - delta)
+	if to_player.length() <= enemy.contact_range and _contact_timer <= 0.0:
+		player.apply_damage(enemy.contact_damage)
+		_contact_timer = enemy.contact_cooldown
