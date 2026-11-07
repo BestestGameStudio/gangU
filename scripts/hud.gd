@@ -72,6 +72,10 @@ func _ready() -> void:
 		_slots_supported = _caster.has_method(&"get_slots")
 		if _slots_supported:
 			_build_slot_rows()
+			if _caster.has_signal(&"slot_assigned"):
+				_caster.slot_assigned.connect(func(_i, _s): _update_slot_rows())
+			if _caster.has_signal(&"slot_cleared"):
+				_caster.slot_cleared.connect(func(_i): _update_slot_rows())
 
 func _add_spell_row(spell: Spell) -> void:
 	var row := HBoxContainer.new()
@@ -120,10 +124,18 @@ func _build_slot_rows() -> void:
 		_slot_widgets.append({"key": key_label, "name": name_label, "bar": bar, "state": state})
 
 func _update_slot_rows() -> void:
+	# Freed-instance safe: the caster can die with the run (reload rebuilds
+	# the HUD, but signal timing can race); null slots are the normal empty
+	# state. Mirrors the objective-discovery validity pattern.
+	if not is_instance_valid(_caster):
+		_slots_supported = false
+		return
 	var slots: Array = _caster.get_slots()
 	for i in _slot_widgets.size():
 		var w: Dictionary = _slot_widgets[i]
 		var spell: Spell = slots[i] if i < slots.size() else null
+		if spell != null and not is_instance_valid(spell):
+			spell = null
 		if spell == null:
 			w["name"].text = "(empty)"
 			w["bar"].value = 0.0
