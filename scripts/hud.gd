@@ -21,6 +21,14 @@ class_name HUD
 ##     cooldown_remaining(spell), cooldown_started(spell, duration),
 ##     spell_equipped(spell).
 ##   Spell (scripts/spell.gd): spell_name, cooldown.
+##
+## #10 slots slice (C): when the caster exposes the pinned slot API
+## (get_slots(), size-6 nullable), renders six fixed slot rows (key 1-6,
+## name, cooldown bar, state) under SlotRows. ADDITIVE and backward
+## compatible: on a caster without get_slots() no slot rows are built and
+## the HUD is byte-identical in behavior to the pre-slots version. Style
+## (rows under the spell list, same fonts) is PROVISIONAL pending the open
+## human style choice; no unlocked-inventory display here (panel scope).
 
 ## Set by the mounting scene. If unset, falls back to the "player" group.
 @export var player_path: NodePath
@@ -32,10 +40,15 @@ var _spell_rows := {} ## Spell -> {name: Label, bar: ProgressBar, state: Label}
 @onready var _hp_label: Label = $Root/HPLabel
 @onready var _hp_bar: ProgressBar = $Root/HPBar
 @onready var _spell_rows_box: VBoxContainer = $Root/SpellRows
+@onready var _slot_rows_box: VBoxContainer = $Root/SlotRows
 @onready var _objective_label: Label = $Root/ObjectiveLabel
 
 var _objective: DungeonObjective
 var _discover_elapsed := 0.0
+
+## #10 slots slice (C): built only when the pinned slot API is present.
+var _slots_supported := false
+var _slot_widgets: Array = [] ## [{key,name,bar,state}] x 6
 
 func _ready() -> void:
 	if player_path != NodePath(""):
@@ -55,6 +68,10 @@ func _ready() -> void:
 		_caster.spell_added.connect(_add_spell_row) # #10: rows follow runtime pickups
 		for s in _caster.spells:
 			_add_spell_row(s)
+		# #10 slots slice (C): six fixed rows only when the pinned API exists.
+		_slots_supported = _caster.has_method(&"get_slots")
+		if _slots_supported:
+			_build_slot_rows()
 
 func _add_spell_row(spell: Spell) -> void:
 	var row := HBoxContainer.new()
@@ -76,10 +93,56 @@ func _add_spell_row(spell: Spell) -> void:
 	_spell_rows_box.add_child(row)
 	_spell_rows[spell] = {"name": name_label, "bar": bar, "state": state}
 
+func _build_slot_rows() -> void:
+	for i in 6:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var key_label := Label.new()
+		key_label.add_theme_font_size_override("font_size", 22)
+		key_label.custom_minimum_size = Vector2(24, 0)
+		key_label.text = str(i + 1)
+		var name_label := Label.new()
+		name_label.add_theme_font_size_override("font_size", 22)
+		name_label.custom_minimum_size = Vector2(120, 0)
+		var bar := ProgressBar.new()
+		bar.min_value = 0.0
+		bar.max_value = 1.0
+		bar.value = 0.0
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(140, 18)
+		var state := Label.new()
+		state.add_theme_font_size_override("font_size", 22)
+		row.add_child(key_label)
+		row.add_child(name_label)
+		row.add_child(bar)
+		row.add_child(state)
+		_slot_rows_box.add_child(row)
+		_slot_widgets.append({"key": key_label, "name": name_label, "bar": bar, "state": state})
+
+func _update_slot_rows() -> void:
+	var slots: Array = _caster.get_slots()
+	for i in _slot_widgets.size():
+		var w: Dictionary = _slot_widgets[i]
+		var spell: Spell = slots[i] if i < slots.size() else null
+		if spell == null:
+			w["name"].text = "(empty)"
+			w["bar"].value = 0.0
+			w["state"].text = ""
+			continue
+		var rem: float = _caster.cooldown_remaining(spell)
+		var frac := 1.0
+		if spell.cooldown > 0.0:
+			frac = 1.0 - clampf(rem / spell.cooldown, 0.0, 1.0)
+		w["name"].text = spell.spell_name
+		w["bar"].value = frac
+		w["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
+
 func _process(delta: float) -> void:
 	_update_objective(delta)
 	if _caster == null:
 		return
+	if _slots_supported:
+		_update_slot_rows()
 	for s in _spell_rows.keys():
 		var row: Dictionary = _spell_rows[s]
 		var rem: float = _caster.cooldown_remaining(s)
