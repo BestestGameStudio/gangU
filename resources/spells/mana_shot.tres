@@ -10,5 +10,5 @@ damage = 8.0
 radius = 3.0
 effects = Array[String](["mana"])
 range = 640.0
-projectile_speed = 660.0
+projectile_speed = 1100.0
 projectile_color = Color(0.6, 0.45, 1, 1)

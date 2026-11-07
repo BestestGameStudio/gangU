@@ -1,9 +1,13 @@
 extends CanvasLayer
 class_name HUD
-## gangU #11: player HUD - health, spells, cooldowns. (Objective display is
-## intentionally NOT implemented here: it consumes #8's objective-state
-## contract, which is still pending. See issue #11 body; no fake objective
-## data is rendered.)
+## gangU #11: player HUD - health, spells, cooldowns, objective.
+## Objective slice consumes the merged #8 contract read-only: the production
+## mount (main.gd) adds a node named "DungeonObjective" to the dungeon area
+## AFTER the enemies. HUD boots before any objective exists and outlives area
+## swaps, so it discovers that node lazily by exact name, connects its
+## signals, and drops the reference when the swap frees it. No main.gd or
+## dungeon_objective.gd changes; no fake objective data is rendered - the row
+## stays hidden wherever no objective exists (hub, DungeonB).
 ##
 ## Isolated by design: this scene is self-contained and mounted by the scene
 ## that owns the player. Wiring into main.tscn is coordinated separately
@@ -28,6 +32,10 @@ var _spell_rows := {} ## Spell -> {name: Label, bar: ProgressBar, state: Label}
 @onready var _hp_label: Label = $Root/HPLabel
 @onready var _hp_bar: ProgressBar = $Root/HPBar
 @onready var _spell_rows_box: VBoxContainer = $Root/SpellRows
+@onready var _objective_label: Label = $Root/ObjectiveLabel
+
+var _objective: DungeonObjective
+var _discover_elapsed := 0.0
 
 func _ready() -> void:
 	if player_path != NodePath(""):
@@ -67,7 +75,8 @@ func _add_spell_row(spell: Spell) -> void:
 	_spell_rows_box.add_child(row)
 	_spell_rows[spell] = {"name": name_label, "bar": bar, "state": state}
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_objective(delta)
 	if _caster == null:
 		return
 	for s in _spell_rows.keys():
@@ -94,3 +103,37 @@ func _on_cooldown_started(_spell: Spell, _duration: float) -> void:
 
 func _on_spell_equipped(_spell: Spell) -> void:
 	pass
+
+## #11 objective slice: lazy discovery of the mounted DungeonObjective.
+## Throttled search; the node only exists while a dungeon with an objective
+## is the current area.
+func _update_objective(delta: float) -> void:
+	# Note: a freed objective compares == null in GDScript, so validity must
+	# be checked with is_instance_valid, not a null comparison.
+	if is_instance_valid(_objective):
+		return
+	_objective = null # never held, or the area swap freed it
+	_objective_label.visible = false
+	_discover_elapsed += delta
+	if _discover_elapsed < 0.25:
+		return
+	_discover_elapsed = 0.0
+	var found := get_tree().root.find_child("DungeonObjective", true, false) as DungeonObjective
+	if found == null:
+		return
+	_objective = found
+	_objective.objective_progress_changed.connect(_on_objective_progress)
+	_objective.objective_completed.connect(_on_objective_completed)
+	var p := _objective.progress()
+	_show_objective(p.x, p.y)
+
+func _show_objective(current: int, target: int) -> void:
+	_objective_label.text = "Objective: CLEAR ALL %d/%d" % [current, target]
+	_objective_label.visible = true
+
+func _on_objective_progress(current: int, target: int) -> void:
+	_show_objective(current, target)
+
+func _on_objective_completed(_dungeon_id: StringName) -> void:
+	_objective_label.text = "Objective: COMPLETE"
+	_objective_label.visible = true

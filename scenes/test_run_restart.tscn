@@ -1,0 +1,36 @@
+[gd_scene load_steps=5 format=3 uid="uid://bgangu6run"]
+
+[ext_resource type="Script" path="res://scripts/test_run_restart.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/run_manager.gd" id="2"]
+[ext_resource type="PackedScene" uid="uid://bgangu2player" path="res://scenes/player.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://scenes/enemy.tscn" id="4"]
+
+[node name="TestRunRestart" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.12, 0.1, 0.13, 1)
+
+[node name="Player" parent="." instance=ExtResource("3") groups=["player"]]
+position = Vector2(576, 400)
+
+[node name="Enemy1" parent="." instance=ExtResource("4") groups=["enemies"]]
+position = Vector2(500, 340)
+contact_damage = 40
+
+[node name="Enemy2" parent="." instance=ExtResource("4") groups=["enemies"]]
+position = Vector2(652, 340)
+contact_damage = 40
+
+[node name="RunManager" type="Node" parent="."]
+script = ExtResource("2")
+restart_delay = 1.0
+
+[node name="DebugLabel" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 608.0
+offset_right = 1136.0
+offset_bottom = 640.0
+text = "run"
