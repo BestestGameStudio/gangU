@@ -135,11 +135,13 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
 ## anytime, objective not required). Returns to the hub in the SAME run via a
 ## deferred swap - the shared Player is repositioned, never recreated, so
-## spells and current HP are retained. Red-gate DungeonB gets none yet: the
-## red lock-in rule is proven by the labeled fixture regression in
-## scripts/test9_exit_flow.gd (no red dungeon config exists in the demo loop).
+## spells and current HP are retained. #55: red-gate DungeonB mounts it
+## UNLOCKED too - DungeonB has no enemies/objective, so without a portal an
+## entered run could not end (soft-lock). Locked objective-gated portal
+## mechanics remain proven by the labeled fixture regression in
+## scripts/test9_exit_flow.gd.
 func _mount_exit_portal(area: Node) -> void:
-	if area.name != "DungeonA":
+	if area.name != "DungeonA" and area.name != "DungeonB":
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"

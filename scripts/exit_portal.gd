@@ -5,13 +5,16 @@ extends Area2D
 ## Player node is repositioned, never recreated (transport is owned by main.gd,
 ## which connects `entered` the same way it connects gates).
 ## Normal-gate dungeons mount it unlocked (retreat at any time, objective not
-## required). Red-gate dungeons mount it locked; it opens when the dungeon
-## objective completes (clear-or-die: death restarts the run via RunManager).
+## required). Red-gate dungeons WITH an objective mount it locked; it opens
+## when the dungeon objective completes (clear-or-die: death restarts the run
+## via RunManager). #55: a red-gate dungeon WITHOUT an objective (DungeonB in
+## the demo config) mounts it unlocked - no objective exists to open a locked
+## one, so a locked mount would soft-lock the run.
 
 signal entered(portal: ExitPortal)
 
-## Locked portals ignore the player. Red dungeons start locked and open on
-## objective completion; normal dungeons leave this false.
+## Locked portals ignore the player. Red dungeons with an objective start
+## locked and open on completion; normal dungeons leave this false.
 @export var locked: bool = false
 ## Optional path to a node with an `objective_completed` signal (the #8
 ## DungeonObjective). Duck-typed by signal name so this file stands alone.

@@ -89,8 +89,25 @@ func _process(delta: float) -> bool:
 			if current_scene != null and current_scene != scene and t > 0.4:
 				scene = current_scene
 				p = scene.get_node("Player")
+				caster = p.get_node("SpellCaster")
 				print("[9] PROD death restart area=", scene.current_area.name, " hp=", p.hp,
 					" -> ", "PASS" if scene.current_area.name == "Hub" and p.hp == 100 else "FAIL")
+				_enter_gate("GateRed")
+				phase = 6; t = 0
+		6:
+			if t > 0.4:
+				var area = scene.current_area
+				var portal: ExitPortal = area.get_node_or_null("ExitPortal")
+				print("[9] PROD after RED gate area=", area.name, " portal=", portal != null,
+					" locked=", portal.locked if portal else "?",
+					" -> ", "PASS" if area.name == "DungeonB" and portal and not portal.locked else "FAIL")
+				portal._on_body_entered(p)
+				phase = 7; t = 0
+		7:
+			if t > 0.4:
+				print("[9] PROD red retreat area=", scene.current_area.name, " hp=", p.hp,
+					" same_caster=", p.get_node("SpellCaster") == caster,
+					" -> ", "PASS" if scene.current_area.name == "Hub" and p.hp == 100 and p.get_node("SpellCaster") == caster else "FAIL")
 				print("[9] DONE")
 				quit()
 	return false
