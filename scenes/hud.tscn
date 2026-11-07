@@ -31,3 +31,7 @@ text = "Objective: --"
 [node name="SpellRows" type="VBoxContainer" parent="Root"]
 layout_mode = 2
 theme_override_constants/separation = 4
+
+[node name="SlotRows" type="VBoxContainer" parent="Root"]
+layout_mode = 2
+theme_override_constants/separation = 4
