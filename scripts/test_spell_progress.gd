@@ -13,6 +13,7 @@ var phase := 0
 var t := 0.0
 var ok := true
 var replaced_seen: Array = []
+var upsig_seen: Array = []
 var slot_assigned_seen: Array = []
 
 func _initialize() -> void:
@@ -36,6 +37,7 @@ func _process(delta: float) -> bool:
 			var beam: SpellUpgrade = load("res://resources/upgrades/fireball_beam.tres")
 			prog.upgrades = [split, beam]
 			prog._ready()
+			prog.upgrades_changed.connect(func(sp): upsig_seen.append(sp))
 			caster.spell_replaced.connect(func(o, n): replaced_seen.append([o, n]))
 			caster.slot_assigned.connect(func(i, s): slot_assigned_seen.append([i, s]))
 			phase = 1; t = 0
@@ -53,22 +55,38 @@ func _process(delta: float) -> bool:
 					caster.unlock_spell(fire)
 				if not caster.assign_slot(0, fire):
 					print("[PROG] FAIL assign_slot(0, fire) refused"); ok = false
-				if not prog.can_upgrade(fire):
-					print("[PROG] FAIL can_upgrade(fire_ball) false on real caster"); ok = false
-				else:
-					print("[PROG] can_upgrade(fire_ball) true on real B caster OK")
+				if prog.can_upgrade(fire):
+					print("[PROG] FAIL can_upgrade at 0 casts"); ok = false
 				if prog.apply_upgrade(fire, &"nonexistent") != false:
 					print("[PROG] FAIL unknown id accepted"); ok = false
-				# One real cast: XP accrual + cooldown for transfer check.
-				caster.cast_slot(0)
+				# Approved threshold is 10: TEN REAL casts through cast_slot, each
+				# gated by the actual 1.2s cooldown. Gate checked at 9, opens at 10.
+				phase = 15; t = 0
+		15:
+			# Real-cast loop: one cast_slot(0) per cooldown cycle until 10 casts.
+			var fire15: Spell = load("res://resources/spells/fire_ball.tres")
+			var n: int = prog.cast_count(fire15)
+			if n >= 10:
+				if not prog.can_upgrade(fire15):
+					print("[PROG] FAIL can_upgrade false at 10 real casts"); ok = false
+				else:
+					print("[PROG] can_upgrade true at exactly 10 real cooldown casts OK")
 				phase = 2; t = 0
+				return false
+			if caster.cooldown_remaining(fire15) <= 0.0:
+				caster.cast_slot(0)
+				var m: int = prog.cast_count(fire15)
+				if m == 9 and prog.can_upgrade(fire15):
+					print("[PROG] FAIL can_upgrade below 10 casts (at 9)"); ok = false
+				elif m == 9:
+					print("[PROG] gate holds at 9 real casts OK")
 		2:
 			if t > 0.3:
 				var fire: Spell = load("res://resources/spells/fire_ball.tres")
-				if prog.cast_count(fire) != 1:
-					print("[PROG] FAIL cast_count after one real cast: ", prog.cast_count(fire)); ok = false
+				if prog.cast_count(fire) != 10:
+					print("[PROG] FAIL cast_count after real-cast loop: ", prog.cast_count(fire)); ok = false
 				else:
-					print("[PROG] XP read-only accrual via spell_cast OK (count=1)")
+					print("[PROG] XP read-only accrual via spell_cast OK (count=10, real casts)")
 				if not caster.has_method("replace_spell"):
 					print("[PROG] FAIL replace_spell seam expected landed (#67 merged)"); ok = false
 					print("[PROG] ", "PASS" if ok else "FAIL")
@@ -97,6 +115,10 @@ func _process(delta: float) -> bool:
 					print("[PROG] FAIL cooldown transfer: old=", caster.cooldown_remaining(fire), " new=", caster.cooldown_remaining(split)); ok = false
 				else:
 					print("[PROG] edge semantics OK: unlocked own-index, slot preserved+re-emitted, spell_replaced once, CD transferred (old cleared)")
+				if upsig_seen.size() != 1 or upsig_seen[0] != fire:
+					print("[PROG] FAIL upgrades_changed: ", upsig_seen.size(), " calls, payload=", upsig_seen[0] if upsig_seen.size() > 0 else "none"); ok = false
+				else:
+					print("[PROG] upgrades_changed fired once with source-spell payload OK")
 				if caster.replace_spell(fire, split) != false:
 					print("[PROG] FAIL re-replace of consumed source accepted"); ok = false
 				else:
@@ -105,7 +127,7 @@ func _process(delta: float) -> bool:
 				return true
 		_:
 			return true
-	if t > 8.0:
+	if t > 30.0:
 		print("[PROG] FAIL timeout in phase ", phase)
 		return true
 	return false

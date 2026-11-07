@@ -43,19 +43,25 @@ func _ready() -> void:
 	rm.satchel = satchel
 	## (E) Reward/progression production mounts - same ONE-persistent-child
 	## pattern as ReviveSatchel. Per-run reset comes free from RunManager's
-	## full scene reload. INERT BY DESIGN until content lands:
-	## - RewardPool gets NO table (production loot contents/chances are an
-	##   open human choice; enemies also have no reward_table, so nothing
-	##   rolls and nothing drops).
-	## - SpellProgress mounts with an EMPTY upgrade list: the approved
-	##   placeholder paths and their XP thresholds are content that lands
-	##   with the human playable-config choice, not wiring to pre-empt it.
+	## full scene reload. First playable config (approved by Daniel via his
+	## Instinct, 2026-11-07, "yep!" to the delivered package):
+	## - RewardPool gets the single-entry demo table (Placeholder Bolt).
+	## - SpellProgress carries the two approved placeholder fork upgrades,
+	##   both at 10 Fire Ball casts: Split OR Beam, an equal-cost manual
+	##   either/or choice in the non-pausing Tab panel. Only the
+	##   Specialization tier is configured; Mastery/Signature stay unbuilt.
+	var loot_table: RewardTable = preload("res://resources/rewards/demo_table.tres")
 	var pool := RewardPool.new()
 	pool.name = "RewardPool"
+	pool.setup(loot_table)
 	add_child(pool)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")
+	progress.upgrades = [
+		preload("res://resources/upgrades/fireball_split.tres"),
+		preload("res://resources/upgrades/fireball_beam.tres"),
+	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
 	panel.name = "EquipPanel"
@@ -100,6 +106,11 @@ func _mount_demo_enemies(area: Node) -> void:
 	for pos in DEMO_ENEMY_POSITIONS:
 		var e: Enemy = preload("res://scenes/enemy.tscn").instantiate()
 		e.position = pos
+		# First playable loot: every kill rolls the single-Bolt table until
+		# the pickup is granted (pool removes on grant only); later kills
+		# then roll null. Unpicked floor copies can repeat; extra copies
+		# consume with no effect (approved 2026-11-07 package).
+		e.reward_table = preload("res://resources/rewards/demo_table.tres")
 		# Enemy is Main/DungeonA/EnemyN, Player is Main/Player - set the
 		# explicit target BEFORE add_child so Enemy._ready resolves it.
 		e.player_path = NodePath("../../Player")

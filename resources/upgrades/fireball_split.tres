@@ -10,4 +10,4 @@ id = &"fireball_split"
 display_name = "Split shot"
 source_spell = ExtResource("2")
 result_spell = ExtResource("3")
-xp_threshold = 0
+xp_threshold = 10

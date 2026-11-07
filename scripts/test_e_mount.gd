@@ -1,9 +1,31 @@
 extends SceneTree
-## E production mount harness: Main mounts the reward/progression children
-## ONCE, wired but INERT until content lands. Asserts the mount shape and
-## inertness only - no gameplay/content claims.
+## E production mount + first playable config harness: Main mounts the
+## reward/progression children ONCE, wired with the approved 2026-11-07
+## package: single-Bolt pool table, two fork upgrades at 10 Fire Ball casts,
+## DungeonA demo enemies carrying that table. Asserts mount shape and the
+## approved config only - Mastery/Signature remain unbuilt.
 var scene: Node
 var phase := 0
+var step := 0
+var sig_log: Array = []
+var _p2_spell_btn: Button = null
+var _kb_nav_ok := false
+
+
+func _press_key(code: Key) -> void:
+	# Faithful keys: a real keyboard sets BOTH keycode and physical_keycode;
+	# ui_focus_next's default binding is logical-keycode, so keycode-less
+	# synthetic events never exercised the GUI-consumption path (live bug).
+	for pr in [true, false]:
+		var k := InputEventKey.new()
+		k.keycode = code
+		k.physical_keycode = code
+		k.pressed = pr
+		get_root().push_input(k)
+
+
+func _press_tab() -> void:
+	_press_key(KEY_TAB)
 var t := 0.0
 var ok := true
 
@@ -30,51 +52,235 @@ func _process(delta: float) -> bool:
 				print("[E] reward pool mounted once OK")
 			if get_nodes_in_group("spell_progress").size() != 1:
 				print("[E] FAIL spell_progress group size"); ok = false
-			# Provider wiring: caster resolved, upgrade list EMPTY (inert)
-			# until the human playable-config choice lands content.
+			# Provider wiring: caster resolved, exactly the two approved fork
+			# paths for Fire Ball, both gated at 10 casts (equal-cost choice).
 			var fireball: Spell = load("res://resources/spells/fire_ball.tres")
+			var mana: Spell = load("res://resources/spells/mana_shot.tres")
 			var paths: Array = progress.get_upgrade_paths(fireball)
-			if paths.is_empty() and not progress.can_upgrade(fireball):
-				print("[E] provider inert (no paths, cannot upgrade) OK")
+			if paths.size() == 2:
+				print("[E] provider exposes both fork paths OK")
 			else:
-				print("[E] FAIL provider not inert: paths=", paths.size()); ok = false
+				print("[E] FAIL fork path count: ", paths.size()); ok = false
+			for u in paths:
+				if u.xp_threshold != 10:
+					print("[E] FAIL threshold: ", u.id, "=", u.xp_threshold); ok = false
+			if not progress.get_upgrade_paths(mana).is_empty():
+				print("[E] FAIL unexpected Mana Shot paths"); ok = false
+			# Threshold gate via the REAL signal path: 9 casts no, 10 yes.
+			var caster: Node = scene.get_node("Player/SpellCaster")
+			for i in 9:
+				caster.spell_cast.emit(fireball)
+			if progress.can_upgrade(fireball):
+				print("[E] FAIL can_upgrade below 10 casts"); ok = false
+			caster.spell_cast.emit(fireball)
+			if progress.can_upgrade(fireball):
+				print("[E] fork unlocks at exactly 10 casts OK")
+			else:
+				print("[E] FAIL cannot upgrade at 10 casts"); ok = false
 			# Panel: hidden at boot, player resolved, provider wired.
 			if panel.visible:
 				print("[E] FAIL panel visible at boot"); ok = false
 			else:
 				print("[E] panel hidden at boot OK")
-			# Enemies carry no reward_table: nothing can drop.
-			var enemies := get_nodes_in_group("enemies")
-			var any_table := false
-			for e in enemies:
-				if e.reward_table != null:
-					any_table = true
-			if any_table:
-				print("[E] FAIL enemy reward_table assigned (content leak)"); ok = false
+			# Pool carries the approved single-Bolt table, eligible at boot.
+			var demo: RewardTable = load("res://resources/rewards/demo_table.tres")
+			if pool.is_eligible(demo.entries[0]):
+				print("[E] pool bolt entry eligible at boot OK")
 			else:
-				print("[E] no enemy loot tables (inert) OK")
+				print("[E] FAIL pool bolt entry not eligible"); ok = false
+			# DungeonA demo enemies mount with that table (production geometry:
+			# area is a Main child, Player resolves at ../../Player).
+			var area := Node2D.new()
+			area.name = "DungeonA"
+			scene.add_child(area)
+			scene._mount_demo_enemies(area)
+			var mounted := 0
+			var tables_ok := true
+			for c in area.get_children():
+				if c is Enemy:
+					mounted += 1
+					if c.reward_table != demo:
+						tables_ok = false
+			if mounted == 3 and tables_ok:
+				print("[E] 3 DungeonA enemies carry the bolt table OK")
+			else:
+				print("[E] FAIL enemy mounts/tables: ", mounted, " tables_ok=", tables_ok); ok = false
+			area.queue_free()
 			phase = 1; t = 0
 		1:
-			if t > 0.3:
-				# Tab toggles the panel via its own registered action.
-				var panel := scene.get_node("EquipPanel")
-				var ev := InputEventAction.new()
-				ev.action = &"equip_panel"
-				ev.pressed = true
-				panel._unhandled_input(ev)
-				if panel.visible and get_nodes_in_group("modal_ui").size() == 1:
-					print("[E] Tab opens panel + modal_ui join OK")
-				else:
-					print("[E] FAIL panel toggle/modal: visible=", panel.visible); ok = false
-				ev = InputEventAction.new()
-				ev.action = &"equip_panel"
-				ev.pressed = true
-				panel._unhandled_input(ev)
-				if not panel.visible and get_nodes_in_group("modal_ui").is_empty():
-					print("[E] Tab closes panel + modal_ui leave OK")
-				else:
-					print("[E] FAIL panel close"); ok = false
-				return _done()
+			# Frame-separated faithful Tab toggles: push_input is synchronous,
+			# but CanvasLayer visibility/grab propagation needs one frame.
+			var panel1 := scene.get_node("EquipPanel")
+			match step:
+				0:
+					if t > 0.3:
+						_press_tab()
+						step = 1
+				1:
+					if panel1.visible and get_nodes_in_group("modal_ui").size() == 1:
+						print("[E] Tab opens panel + modal_ui join OK")
+					else:
+						print("[E] FAIL panel toggle/modal: visible=", panel1.visible); ok = false
+					_press_tab()
+					step = 2
+				2:
+					if not panel1.visible and get_nodes_in_group("modal_ui").is_empty():
+						print("[E] Tab closes panel + modal_ui leave OK")
+					else:
+						print("[E] FAIL panel close"); ok = false
+					step = 0
+					phase = 2; t = 0
+		2:
+			# Apply path through the REAL panel buttons: the 10 casts emitted in
+			# phase 0 qualify both forks; open the panel, select, click.
+			var panel := scene.get_node("EquipPanel")
+			var progress := scene.get_node("SpellProgress")
+			var caster: Node = scene.get_node("Player/SpellCaster")
+			var fireball: Spell = load("res://resources/spells/fire_ball.tres")
+			var split: Spell = load("res://resources/spells/fire_ball_split.tres")
+			match step:
+				0:
+					progress.upgrades_changed.connect(func(sp): sig_log.append(sp))
+					_press_tab()
+					step = 1
+				1:
+					panel._on_spell_pressed(fireball)
+					var texts: Array = []
+					var buttons: Array = []
+					for c in panel._upgrade_box.get_children():
+						if c is Button:
+							texts.append(c.text)
+							buttons.append(c)
+					texts.sort()
+					if texts != ["Beam", "Split shot"] or buttons.size() != 2:
+						print("[E] FAIL fork buttons: ", texts); ok = false
+						return _done()
+					print("[E] both fork buttons render after fix OK")
+					# Focus regression (live Chrome bug): with any panel button
+					# holding GUI focus, a faithful Tab must STILL close the panel;
+					# before the fix the focused button consumed Tab as
+					# ui_focus_next and the panel could never be closed.
+					buttons[0].grab_focus()
+					if get_root().gui_get_focus_owner() != buttons[0]:
+						print("[E] FAIL upgrade focus not held"); ok = false
+						return _done()
+					_press_tab()
+					step = 2
+				2:
+					if panel.visible:
+						print("[E] FAIL focused upgrade button consumed Tab"); ok = false
+						return _done()
+					print("[E] focused UPGRADE button: Tab still closes OK")
+					_press_tab()
+					step = 3
+				3:
+					panel._on_spell_pressed(fireball)
+					panel._slot_buttons[0].grab_focus()
+					if get_root().gui_get_focus_owner() != panel._slot_buttons[0]:
+						print("[E] FAIL slot focus not held"); ok = false
+						return _done()
+					_press_tab()
+					step = 4
+				4:
+					if panel.visible:
+						print("[E] FAIL focused slot button consumed Tab"); ok = false
+						return _done()
+					print("[E] focused SLOT button: Tab still closes OK")
+					_press_tab()
+					step = 5
+				5:
+					# Keyboard controls retained: arrows move focus, Enter activates.
+					_p2_spell_btn = null
+					for sb in panel._unlocked_box.get_children():
+						if sb is Button:
+							_p2_spell_btn = sb
+							break
+					_p2_spell_btn.grab_focus()
+					if get_root().gui_get_focus_owner() != _p2_spell_btn:
+						print("[E] FAIL spell focus not held"); ok = false
+						return _done()
+					_press_key(KEY_DOWN)
+					step = 6
+				6:
+					var f1: Control = get_root().gui_get_focus_owner()
+					_kb_nav_ok = f1 != null and f1 != _p2_spell_btn
+					_press_key(KEY_ENTER)
+					step = 7
+				7:
+					if _kb_nav_ok and panel._status.text != "Selected: none":
+						print("[E] keyboard focus nav + Enter activation retained OK")
+					else:
+						print("[E] FAIL keyboard operability: nav=", _kb_nav_ok, " status=", panel._status.text); ok = false
+					_p2_spell_btn = null
+					for sb2 in panel._unlocked_box.get_children():
+						if sb2 is Button:
+							_p2_spell_btn = sb2
+							break
+					_p2_spell_btn.grab_focus()
+					if get_root().gui_get_focus_owner() != _p2_spell_btn:
+						print("[E] FAIL spell refocus not held"); ok = false
+						return _done()
+					_press_tab()
+					step = 8
+				8:
+					if panel.visible:
+						print("[E] FAIL focused spell button consumed Tab"); ok = false
+						return _done()
+					print("[E] focused SPELL button: Tab still closes OK")
+					_press_tab()
+					step = 9
+				9:
+					panel._on_spell_pressed(fireball)
+					# Assign Fire Ball to slot 1 through the real slot button (this
+					# clears the panel selection), re-select, then a manual click on
+					# Split shot -> apply -> slot replacement. Buttons are rebuilt on
+					# refresh, so re-capture after re-selecting.
+					panel._slot_buttons[0].pressed.emit()
+					panel._on_spell_pressed(fireball)
+					var buttons2: Array = []
+					for c2 in panel._upgrade_box.get_children():
+						if c2 is Button:
+							buttons2.append(c2)
+					var split_btn: Button = buttons2[0] if buttons2[0].text == "Split shot" else buttons2[1]
+					split_btn.pressed.emit()
+					if sig_log.size() != 1 or sig_log[0] != fireball:
+						print("[E] FAIL upgrades_changed: ", sig_log.size(), " calls"); ok = false
+					else:
+						print("[E] upgrades_changed fired once with source spell OK")
+					if not caster.get_unlocked().has(fireball) and caster.get_unlocked().has(split):
+						print("[E] click applied split, fire ball replaced OK")
+					else:
+						print("[E] FAIL replacement: unlocked=", caster.get_unlocked().map(func(x): return x.spell_name)); ok = false
+					var slot_texts: Array = []
+					for b2 in panel._slot_buttons:
+						slot_texts.append(b2.text)
+					var shown := false
+					for st2 in slot_texts:
+						if st2.find("Split") >= 0:
+							shown = true
+					if shown:
+						print("[E] slot shows replaced spell OK")
+					else:
+						print("[E] FAIL slot replacement not shown: ", slot_texts); ok = false
+					if progress.can_upgrade(split):
+						print("[E] FAIL split upgradable at 0 casts"); ok = false
+					# Stale-selection safety (Mitra repro): after the upgrade,
+					# EXPLICITLY re-select the removed base resource, then click the
+					# OCCUPIED slot: the refusal must not pre-clear the occupant.
+					panel._on_spell_pressed(fireball)
+					panel._slot_buttons[0].pressed.emit()
+					if caster.get_slots()[0] == split:
+						print("[E] stale-selection click preserves occupied slot OK")
+					else:
+						print("[E] FAIL stale click cleared slot: ", caster.get_slots()[0]); ok = false
+					# Successful reselection + fresh assignment still works.
+					panel._on_spell_pressed(split)
+					panel._slot_buttons[1].pressed.emit()
+					if caster.get_slots()[1] == split:
+						print("[E] reselect + assign to slot 2 OK")
+					else:
+						print("[E] FAIL reselect/assign: ", caster.get_slots()[1]); ok = false
+					return _done()
 		_:
 			return true
 	if t > 6.0:
