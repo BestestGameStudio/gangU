@@ -11,6 +11,10 @@ class_name FollowCamera
 ## Follow stiffness in 1/seconds. Higher = snappier, lower = looser trail.
 @export var follow_speed: float = 5.0
 
+## #29: follow in _physics_process, not _process. The player moves on fixed
+## physics ticks; sampling that step-moving target on variable render frames
+## made the exponential catch-up oscillate visibly (measured +-2-5px on web).
+
 @onready var target: Node2D = get_node_or_null(target_path)
 
 func _ready() -> void:
@@ -18,7 +22,7 @@ func _ready() -> void:
 	if target:
 		global_position = target.global_position
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if target:
 		# Frame-rate independent exponential smoothing toward the target.
 		var weight := 1.0 - exp(-follow_speed * delta)
