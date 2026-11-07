@@ -36,6 +36,11 @@ func _on_body_entered(body: Node2D) -> void:
 ## adjacent to ITS OWN gate - displaced, never detached.
 @onready var _type_label: Label = $TypeLabel
 
+## #87: this gate's placed label screen rect, published immediately each
+## frame for the other gates' second-tier label avoidance.
+var _label_screen_rect := Rect2()
+var _label_screen_rect_valid := false
+
 const LABEL_GAP := 6.0
 
 func _process(_delta: float) -> void:
@@ -72,6 +77,17 @@ func _update_label_placement() -> void:
 			continue
 		var btl: Vector2 = canvas * ((g as Gate).global_position + body.position)
 		other_gate_rects.append(Rect2(btl, body.size * body.scale))
+	# #87: other gates' current LABEL screen rects are a SECOND tier, read
+	# only from live group members. Each gate publishes its rect immediately
+	# when it places, so a gate later in tree order sees this frame's rect
+	# and a gate earlier in order sees last frame's (1-frame lag only on the
+	# transient, never on the settled placement).
+	var other_label_rects: Array[Rect2] = []
+	for g in get_tree().get_nodes_in_group("gates"):
+		if g == self or not (g is Gate):
+			continue
+		if (g as Gate)._label_screen_rect_valid:
+			other_label_rects.append((g as Gate)._label_screen_rect)
 	# Candidate top-left positions in preference order: centered on the gate
 	# (original), below the gate, right of the gate.
 	var candidates := [
@@ -82,15 +98,18 @@ func _update_label_placement() -> void:
 	]
 	var chosen: Vector2 = candidates[0]
 	var found := false
+	# #87: collect the body-clear pool in preference order, then prefer the
+	# first placement that ALSO clears the other gates' labels. If none
+	# does, the body-clear order wins unchanged - a label overlap is the
+	# accepted last resort, never a body or plate overlap.
+	var pool: Array[Vector2] = []
 	for tl in candidates:
 		var r := Rect2(tl, label_size)
 		var inside := r.position.x >= 0.0 and r.position.y >= 0.0 and r.end.x <= view_size.x and r.end.y <= view_size.y
 		var clear := reserved.get_area() <= 0.0 or not r.intersects(reserved)
 		if inside and clear and _clear_of_gates(r, other_gate_rects):
-			chosen = tl
-			found = true
-			break
-	if not found and reserved.get_area() > 0.0:
+			pool.append(tl)
+	if pool.is_empty() and reserved.get_area() > 0.0:
 		# Plate-edge escapes, tried only after every adjacent candidate
 		# failed: right of the plate at the gate's own row, below the plate
 		# at the gate's own column. A clamped edge placement is accepted only
@@ -107,8 +126,13 @@ func _update_label_placement() -> void:
 			var cl: Vector2 = tl.clamp(Vector2.ZERO, view_size - label_size)
 			var r := Rect2(cl, label_size)
 			if not r.intersects(reserved) and _clear_of_gates(r, other_gate_rects):
-				chosen = cl
-				found = true
+				pool.append(cl)
+	if not pool.is_empty():
+		chosen = pool[0]
+		found = true
+		for tl in pool:
+			if _clear_of_labels(Rect2(tl, label_size), other_label_rects):
+				chosen = tl
 				break
 	if not found:
 		# Every viewport-fitting placement intersects the plate or a
@@ -116,6 +140,12 @@ func _update_label_placement() -> void:
 		# the label below its own gate, clamped inside the viewport: readable
 		# on the plate backing, still tied to its gate.
 		chosen = candidates[1].clamp(Vector2.ZERO, view_size - label_size)
+	# #87: publish this frame's placed rect immediately. Deterministic tree
+	# order lets the later-processed gate defer to its next candidate while
+	# the earlier keeps the shared point, so placements settle to a fixed
+	# point instead of oscillating (asserted in test50b's #87 leg).
+	_label_screen_rect = Rect2(chosen, label_size)
+	_label_screen_rect_valid = true
 	var world_tl: Vector2 = canvas.affine_inverse() * chosen
 	_type_label.position = world_tl - global_position
 
@@ -123,5 +153,12 @@ func _update_label_placement() -> void:
 func _clear_of_gates(r: Rect2, other_gate_rects: Array[Rect2]) -> bool:
 	for ogr in other_gate_rects:
 		if r.intersects(ogr):
+			return false
+	return true
+
+## #87: true when r intersects no other gate's current label rect.
+func _clear_of_labels(r: Rect2, other_label_rects: Array[Rect2]) -> bool:
+	for olr in other_label_rects:
+		if r.intersects(olr):
 			return false
 	return true
