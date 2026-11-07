@@ -182,16 +182,33 @@ func _refresh() -> void:
 func _on_upgrade_pressed(path_id) -> void:
 	if _upgrader == null or _selected == null:
 		return
-	if not _upgrader.apply_upgrade(_selected, path_id):
+	var sel := _selected
+	if not _upgrader.apply_upgrade(sel, path_id):
 		push_warning("EquipPanel: apply_upgrade refused; refreshing.")
+	elif _caster != null and not _caster.get_unlocked().has(sel):
+		# Successful replace consumed the selected spell; drop the stale
+		# selection so no later slot click can act on a removed resource.
+		_selected = null
 	_refresh()
 
 func _on_spell_pressed(spell: Spell) -> void:
+	# Refuse selections the caster no longer holds (e.g. a base spell consumed
+	# by an upgrade): acting on a removed resource must never reach a slot.
+	if _caster != null and not _caster.get_unlocked().has(spell):
+		_selected = null
+		_refresh()
+		return
 	_selected = spell
 	_refresh()
 
 func _on_slot_pressed(index: int) -> void:
 	if _selected == null or _caster == null:
+		return
+	if not _caster.get_unlocked().has(_selected):
+		# Stale/removed selection: refuse BEFORE any clear so an occupied
+		# target slot is never erased by an assign that cannot succeed.
+		_selected = null
+		_refresh()
 		return
 	var slots: Array = _caster.get_slots()
 	# Compose the approved move semantics out of strict primitives.
