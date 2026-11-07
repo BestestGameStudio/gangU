@@ -41,6 +41,7 @@ func _ready() -> void:
 	satchel.player_path = NodePath("../Player")
 	add_child(satchel)
 	rm.satchel = satchel
+	satchel.revive_collected.connect(_on_revive_collected)
 	## (E) Reward/progression production mounts - same ONE-persistent-child
 	## pattern as ReviveSatchel. Per-run reset comes free from RunManager's
 	## full scene reload. First playable config (approved by Daniel via his
@@ -95,6 +96,7 @@ func _swap(area: Node) -> void:
 	_mount_demo_enemies(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
+	_mount_revive_item(current_area)
 
 ## #34 demo config: three enemies, upper half of the room, far from the
 ## entrance spawn (576,560). Children of the area so a gate swap frees them.
@@ -151,3 +153,26 @@ func _mount_exit_portal(area: Node) -> void:
 
 func _on_exit_portal_entered(_portal: ExitPortal) -> void:
 	_load_hub.call_deferred()
+
+## #54: ONE revive item (green cross) per run, spawned in DungeonA only, away
+## from the entrance spawn (576,560), the demo enemies (y<=280) and the exit
+## portal (576,120). Scoped choice under the 2026-11-07 collaboration grants:
+## placement/count here are the bounded #54 decision, not a new design tier.
+## Per-run semantics ride the existing full-scene-reload restart: Main
+## rebuilds fresh each run, so _revive_claimed resets for free. Within a run
+## the flag latches on the FIRST collection - a successful revive continues
+## the same scene, so claimed-once (even after the item is consumed) keeps
+## re-entered DungeonA free of a second spawn; leaving UNclaimed keeps the
+## item available on re-entry.
+var _revive_claimed := false
+
+func _on_revive_collected(_carried: int) -> void:
+	_revive_claimed = true
+
+func _mount_revive_item(area: Node) -> void:
+	if area.name != "DungeonA" or _revive_claimed:
+		return
+	var item: ReviveItem = preload("res://scenes/revive_item.tscn").instantiate()
+	item.name = "ReviveItem"
+	item.position = Vector2(900, 480)
+	area.add_child(item)
