@@ -70,6 +70,7 @@ func _ready() -> void:
 		preload("res://resources/upgrades/fireball_m2_beam_long.tres"),
 		preload("res://resources/upgrades/fireball_m2_beam_heavy.tres"),
 		preload("res://resources/upgrades/fireball_m2_beam_piercing.tres"),
+		preload("res://resources/upgrades/fireball_m2_beam_homing.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
