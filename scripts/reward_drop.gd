@@ -51,3 +51,8 @@ func _on_body_entered(body: Node2D) -> void:
 	print("spell unlocked: ", entry.spell.spell_name)
 	set_deferred("monitoring", false)
 	visible = false
+	# #72: a GRANTED drop has completed its lifecycle - free it like the stale
+	# path does, so it does not linger as a dead "reward_drops" group member
+	# until area swap. Pool removal / unlock / collected signal all precede
+	# this; grant/stale/restart semantics and loot policies unchanged.
+	queue_free()
