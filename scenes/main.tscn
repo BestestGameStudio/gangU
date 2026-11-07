@@ -1,14 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://bgangu1main"]
+[gd_scene load_steps=3 format=3 uid="uid://bgangu1main"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://bgangu2player" path="res://scenes/player.tscn" id="2_player"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
 
-[node name="BootLabel" type="Label" parent="."]
-offset_left = 440.0
-offset_top = 300.0
-offset_right = 712.0
-offset_bottom = 348.0
-theme_override_font_sizes/font_size = 32
-text = "gangU boots OK"
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(576, 324)
