@@ -82,19 +82,24 @@ func _process(delta: float) -> bool:
 				e1.queue_free(); e2.queue_free()
 				phase = 5; t = 0.0
 		5:
-			# Range expiry before any body: enemy beyond range stays untouched.
-			# #109 swept hits: the envelope is range + shape radius (900 + 14 from
-			# x=50 = 964); a 950-center enemy's edge (937) sits INSIDE that swept
-			# territory and is a legitimate hit now (the old discrete 33px steps
-			# only ever missed it by step-size luck). 990 puts the edge (977)
-			# beyond even the clamped final sweep, which is what "beyond range"
-			# must mean for this check.
-			e1 = spawn_enemy(990) # beyond range 900 + radius 14 from x=50
+			# Range expiry geometry under #109 swept hits (envelope = range +
+			# shape radius; the step is clamped so the center never exceeds
+			# range). Two pinned oracles, computed geometrically:
+			#  - e_edge center 950: its edge (937) is INSIDE range 900 from x=50,
+				#    and the clamped final sweep ends with the circle centered at
+				#    950 covering 936..964 -> a legitimate hit (intended radius
+				#    forgiveness while the projectile is alive). Pre-112 discrete
+				#    33px steps missed this only by step-size luck.
+			#  - e_far center 990: edge 977 lies beyond the max swept reach
+				#    900 + 14 = 914 -> genuinely over-range, stays untouched.
+			e1 = spawn_enemy(950)
+			e2 = spawn_enemy(990)
 			p = spawn_projectile(PIERCING_BEAM)
 			phase = 6; t = 0.0
 		6:
 			if t > 0.7:
-				check(e1.hp == 30.0, "piercing: enemy beyond range untouched")
+				check(e1.hp == 5.0, "piercing: enemy at exact range point hit (edge inside swept envelope)")
+				check(e2.hp == 30.0, "piercing: enemy beyond range+radius untouched")
 				check(not is_instance_valid(p), "piercing: projectile freed by range expiry")
 				phase = 7
 		7:
