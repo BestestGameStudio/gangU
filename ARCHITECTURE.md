@@ -16,7 +16,7 @@ Godot **4.5.1-stable** (pinned exactly) + GDScript. Web/HTML5 is a first-class t
 *Where:* `project.godot`, `export_presets.cfg`, README.
 
 ### D2. Display contract
-Viewport 1152x648, stretch mode `canvas_items`, aspect `expand`. All layout claims are verified at multiple window sizes before merge.
+Viewport 1152x648, stretch mode `canvas_items`, aspect `expand`. Working convention: layout claims get checked at multiple window sizes before merge; #50 tracks a known cosmetic overlap that remains open under it.
 *Where:* `project.godot`.
 
 ### D3. Input: shared project-level actions, manual aim only
