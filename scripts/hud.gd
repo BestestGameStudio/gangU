@@ -52,6 +52,7 @@ func _ready() -> void:
 	if _caster != null:
 		_caster.cooldown_started.connect(_on_cooldown_started)
 		_caster.spell_equipped.connect(_on_spell_equipped)
+		_caster.spell_added.connect(_add_spell_row) # #10: rows follow runtime pickups
 		for s in _caster.spells:
 			_add_spell_row(s)
 
