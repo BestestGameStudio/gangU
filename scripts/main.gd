@@ -28,6 +28,19 @@ func _ready() -> void:
 	var hud: HUD = preload("res://scenes/hud.tscn").instantiate()
 	hud.player_path = NodePath("../Player") # explicit, read in HUD._ready on tree entry
 	add_child(hud)
+	## #12 production wiring: ONE persistent satchel mounted on Main so carried
+	## count survives area swaps. Code assign, not a tscn NodePath - a scene-set
+	## NodePath on a typed export resolves null silently (verified in #12 prep).
+	## Explicit player_path per the #34 no-group convention; resolved relative
+	## to the satchel itself (Main/ReviveSatchel -> Main/Player = "../Player").
+	## INERT by design: no revive items are placed in production (content /
+	## placement / counts are an OPEN human choice), so carried stays 0 and
+	## interception never fires until that decision lands.
+	var satchel: ReviveSatchel = preload("res://scenes/revive_satchel.tscn").instantiate()
+	satchel.name = "ReviveSatchel"
+	satchel.player_path = NodePath("../Player")
+	add_child(satchel)
+	rm.satchel = satchel
 	_load_hub()
 
 var current_area: Node = null

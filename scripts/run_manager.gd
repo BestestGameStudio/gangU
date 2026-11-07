@@ -26,6 +26,10 @@ signal run_restarting()
 ## on the "player" group fallback instead.
 @export var player: Player
 
+## #12 contract: optional. When wired, the satchel gets a synchronous chance to
+## revive BEFORE any latch/disable/reload; null keeps this manager pure #6.
+@export var satchel: ReviveSatchel
+
 var _restarting := false
 var _watched: Player = null
 
@@ -40,6 +44,9 @@ func _process(_delta: float) -> void:
 
 func _on_player_died() -> void:
 	if _restarting:
+		return
+	# #12 interception: a carried revive item cancels the restart entirely.
+	if satchel != null and satchel.try_revive():
 		return
 	_restarting = true
 	_disable_casting()

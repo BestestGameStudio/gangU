@@ -29,6 +29,15 @@ func apply_damage(amount: int) -> void:
 	if hp == 0:
 		died.emit()
 
+
+## #12 contract: single heal entry point. Clamps at max_hp and emits
+## health_changed ONLY from inside here, mirroring apply_damage, so HP can
+## never change silently. Works from hp == 0 (revive path); died() has already
+## fired by then and the HUD recovers via health_changed.
+func heal(amount: int) -> void:
+	hp = clampi(hp + amount, 0, max_hp)
+	health_changed.emit(hp, max_hp)
+
 func _physics_process(_delta: float) -> void:
 	if hp <= 0:
 		velocity = Vector2.ZERO
