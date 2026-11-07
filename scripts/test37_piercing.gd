@@ -83,7 +83,13 @@ func _process(delta: float) -> bool:
 				phase = 5; t = 0.0
 		5:
 			# Range expiry before any body: enemy beyond range stays untouched.
-			e1 = spawn_enemy(950) # beyond range 900 from x=50
+			# #109 swept hits: the envelope is range + shape radius (900 + 14 from
+			# x=50 = 964); a 950-center enemy's edge (937) sits INSIDE that swept
+			# territory and is a legitimate hit now (the old discrete 33px steps
+			# only ever missed it by step-size luck). 990 puts the edge (977)
+			# beyond even the clamped final sweep, which is what "beyond range"
+			# must mean for this check.
+			e1 = spawn_enemy(990) # beyond range 900 + radius 14 from x=50
 			p = spawn_projectile(PIERCING_BEAM)
 			phase = 6; t = 0.0
 		6:

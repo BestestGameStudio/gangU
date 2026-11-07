@@ -50,6 +50,12 @@ func _physics_process(delta: float) -> void:
 	# on the web export) can never tunnel through a body between frames.
 	# Per-frame body_entered overlap remains as the ordinary path; the sweep
 	# only catches what it would miss (once-per-body guard dedupes).
+	# The step is clamped to the remaining range: the swept path never reaches
+	# past the projectile's own expiry point, so the maximum hit envelope stays
+	# range + shape radius instead of range + one frame step + shape radius.
+	var remaining: float = spell.range - _traveled
+	if step > remaining:
+		step = remaining
 	var from: Vector2 = global_position
 	position += direction * step
 	_sweep_hits(from, direction * step)
