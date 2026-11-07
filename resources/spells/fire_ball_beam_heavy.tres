@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangum2bh"]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Fire Ball Beam Heavy [placeholder projectile, not continuous beam]"
+cooldown = 1.6
+damage = 50.0
+radius = 20.0
+tags = Array[StringName]([&"projectile", &"burn"])
+range = 700.0
+projectile_speed = 1400.0
+projectile_color = Color(1, 0.8, 0.2, 1)

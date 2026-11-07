@@ -62,6 +62,13 @@ func _ready() -> void:
 	progress.upgrades = [
 		preload("res://resources/upgrades/fireball_split.tres"),
 		preload("res://resources/upgrades/fireball_beam.tres"),
+		## Mastery-tier forks (2026-11-07, lead's numeric placeholder choices
+		## under Colin's judgment grant - NOT preexisting owner-approved
+		## content): 15 casts of a Specialization result qualify its fork.
+		preload("res://resources/upgrades/fireball_m2_split_wide.tres"),
+		preload("res://resources/upgrades/fireball_m2_split_heavy.tres"),
+		preload("res://resources/upgrades/fireball_m2_beam_long.tres"),
+		preload("res://resources/upgrades/fireball_m2_beam_heavy.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
