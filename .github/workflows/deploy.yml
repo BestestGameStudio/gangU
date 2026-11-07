@@ -24,6 +24,12 @@ jobs:
       image: barichello/godot-ci:4.5.1
     steps:
       - uses: actions/checkout@v4
+      - name: Install Web (nothreads) export templates
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.5.1.stable"
+          wget -q -O /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz
+          unzip -o -j /tmp/templates.tpz "templates/web_nothreads_debug.zip" "templates/web_nothreads_release.zip" -d "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
+          rm -f /tmp/templates.tpz
       - name: Export Web build
         run: |
           godot --headless --path . --import
