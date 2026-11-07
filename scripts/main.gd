@@ -31,7 +31,7 @@ func _load_hub() -> void:
 
 func _on_gate_entered(gate: Gate) -> void:
 	print("gate entered: ", "RED" if gate.gate_type == Gate.GateType.RED else "NORMAL")
-	_swap(gate.target_dungeon.instantiate())
+	_swap.call_deferred(gate.target_dungeon.instantiate())
 
 func _swap(area: Node) -> void:
 	if current_area:
