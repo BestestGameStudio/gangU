@@ -16,6 +16,7 @@ var split: Spell = load("res://resources/spells/fire_ball_split.tres")
 var beam: Spell = load("res://resources/spells/fire_ball_beam.tres")
 var wide: Spell = load("res://resources/spells/fire_ball_split_wide.tres")
 var blong: Spell = load("res://resources/spells/fire_ball_beam_long.tres")
+var bhom: Spell = load("res://resources/spells/fire_ball_beam_homing.tres")
 
 func _check(label: String, ok: bool) -> void:
 	if not ok:
@@ -100,11 +101,26 @@ func _process(delta: float) -> bool:
 			_casts(fireball, 10)
 			_check("beam apply succeeds", progress.apply_upgrade(fireball, &"fireball_beam"))
 			_casts(beam, 15)
-			_check("all beam mastery paths (incl. #37 piercing)", _has_paths(beam, [&"fireball_m2_beam_long", &"fireball_m2_beam_heavy", &"fireball_m2_beam_piercing"]))
+			_check("all beam mastery paths (incl. #37 piercing/homing)", _has_paths(beam, [&"fireball_m2_beam_long", &"fireball_m2_beam_heavy", &"fireball_m2_beam_piercing", &"fireball_m2_beam_homing"]))
 			_check("long-beam apply succeeds", progress.apply_upgrade(beam, &"fireball_m2_beam_long"))
 			_check("long beam parameters live", caster.spells.find(blong) != -1
 				and caster.equipped_spell == blong
 				and blong.range == 1400.0 and blong.projectile_speed == 2600.0)
+			scene.queue_free()
+			_boot()
+			phase = 4; t = 0
+		4:
+			if not _grab():
+				_check("homing-line mounts present", false)
+				return _done()
+			_casts(fireball, 10)
+			_check("beam apply succeeds (homing leg)", progress.apply_upgrade(fireball, &"fireball_beam"))
+			_casts(beam, 15)
+			_check("homing-beam apply succeeds", progress.apply_upgrade(beam, &"fireball_m2_beam_homing"))
+			_check("homing beam live: equipped, beam params kept, homing tag",
+				caster.spells.find(bhom) != -1 and caster.equipped_spell == bhom
+				and bhom.range == 900.0 and bhom.projectile_speed == 2000.0 and bhom.damage == 25.0
+				and bhom.tags.has(SpellTags.HOMING))
 			return _done()
 		_:
 			pass

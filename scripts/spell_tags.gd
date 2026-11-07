@@ -1,10 +1,10 @@
 class_name SpellTags
 ## Controlled spell tag vocabulary (#66, approved foundation 2026-11-07).
 ## Tags are classification metadata; effect parameters live on the spells.
-## #37: PIERCING is the FIRST behavior-keyed tag, read directly by Projectile.
-## Provenance: a peer-lead design choice worked under Daniel's standing grant
-## for Colin-instinct gangU tasks - NOT owner-picked design, and it does not
-## settle the #37 issue. All other tags remain metadata only.
+## #37: PIERCING and HOMING are the FIRST behavior-keyed tags, read directly
+## by Projectile. Provenance: peer-lead design choices worked under Daniel's
+## standing grant for Colin-instinct gangU tasks - NOT owner-picked design,
+## and they do not settle the #37 issue. All other tags remain metadata only.
 
 const PROJECTILE: StringName = &"projectile"
 const AOE: StringName = &"aoe"
@@ -12,8 +12,9 @@ const MELEE: StringName = &"melee"
 const BURN: StringName = &"burn"
 const MANA: StringName = &"mana"
 const PIERCING: StringName = &"piercing"
+const HOMING: StringName = &"homing"
 
-const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING]
+const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING]
 
 static func is_valid(tag: StringName) -> bool:
 	return ALL.has(tag)
