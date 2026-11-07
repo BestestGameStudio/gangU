@@ -13,7 +13,10 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  # Scope the concurrency group per ref (issue #52): PR check runs use
+  # refs/pull/<n>/merge and main deploys use refs/heads/main, so PR
+  # activity can no longer cancel a pending main deploy.
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
