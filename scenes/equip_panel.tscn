@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgangu10equip"]
+
+[ext_resource type="Script" path="res://scripts/equip_panel.gd" id="1_panel"]
+
+[node name="EquipPanel" type="CanvasLayer"]
+script = ExtResource("1_panel")
