@@ -89,11 +89,19 @@ func _process(delta: float) -> bool:
 			else:
 				print("[E] FAIL pool bolt entry not eligible"); ok = false
 			# DungeonA demo enemies mount with that table (production geometry:
-			# area is a Main child, Player resolves at ../../Player).
+			# area is a Main child, Player resolves at ../../Player). #100: the
+			# synthetic area carries a SpawnData fixture and mounts through the
+			# generic mounter - same three positions, SAME table assert retained.
 			var area := Node2D.new()
 			area.name = "DungeonA"
 			scene.add_child(area)
-			scene._mount_demo_enemies(area)
+			var carrier := AreaSpawnData.new()
+			carrier.name = "SpawnData"
+			var enemy_scene: PackedScene = load("res://scenes/enemy.tscn")
+			for pos in [Vector2(250, 280), Vector2(576, 220), Vector2(900, 280)]:
+				carrier.entries.append({"position": pos, "enemy": enemy_scene, "reward_table": demo})
+			area.add_child(carrier)
+			scene._mount_area_spawns(area)
 			var mounted := 0
 			var tables_ok := true
 			for c in area.get_children():
