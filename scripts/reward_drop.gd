@@ -41,9 +41,9 @@ func _on_body_entered(body: Node2D) -> void:
 		if caster != null and caster.has_method("unlock_spell"):
 			caster.unlock_spell(entry.spell)
 		else:
-			# B's unlock_spell lands with the caster slots PR (#60); until
-			# then the grant is pool-recorded but not yet caster-visible.
-			push_warning("RewardDrop: caster.unlock_spell unavailable (B #60 pending); pool grant recorded only.")
+			# Defensive fallback only: unlock_spell is live on main. If the
+			# caster is absent or predates it, the grant stays pool-recorded.
+			push_warning("RewardDrop: caster.unlock_spell unavailable; pool grant recorded only.")
 	else:
 		# Item rewards unwired until #54 content approval.
 		print("[rewards] item drop collected; item route unwired (#54 pending)")
