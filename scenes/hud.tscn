@@ -22,6 +22,12 @@ custom_minimum_size = Vector2(260, 22)
 layout_mode = 2
 show_percentage = false
 
+[node name="ObjectiveLabel" type="Label" parent="Root"]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Objective: --"
+
 [node name="SpellRows" type="VBoxContainer" parent="Root"]
 layout_mode = 2
 theme_override_constants/separation = 4
