@@ -120,7 +120,7 @@ func _process(delta: float) -> bool:
 						var ms1: Spell = load("res://resources/spells/mana_shot.tres")
 						var fb_text: String = hud1._spell_rows[fb1]["name"].text
 						var ms_text: String = hud1._spell_rows[ms1]["name"].text
-						if fb_text.find("â") >= 0 and ms_text.find("â") < 0:
+						if fb_text.find("↑") >= 0 and ms_text.find("↑") < 0:
 							print("[E] HUD arrow on Fire Ball only at 10 casts OK")
 						else:
 							print("[E] FAIL HUD arrow: fb='", fb_text, "' ms='", ms_text, "'"); ok = false
@@ -297,7 +297,7 @@ func _process(delta: float) -> bool:
 					var hud2: Node = scene.get_node("HUD")
 					if hud2._spell_rows.has(fireball):
 						print("[E] FAIL fireball row kept after replace"); ok = false
-					elif hud2._spell_rows[split]["name"].text.find("â") >= 0:
+					elif hud2._spell_rows[split]["name"].text.find("↑") >= 0:
 						print("[E] FAIL arrow on fresh Split row: ", hud2._spell_rows[split]["name"].text); ok = false
 					else:
 						print("[E] arrow clears after Split apply OK")
@@ -323,7 +323,7 @@ func _process(delta: float) -> bool:
 					var fb3: Spell = load("res://resources/spells/fire_ball.tres")
 					if progress3.cast_count(fb3) != 0:
 						print("[E] FAIL cast count not reset: ", progress3.cast_count(fb3)); ok = false
-					elif hud3._spell_rows[fb3]["name"].text.find("â") >= 0:
+					elif hud3._spell_rows[fb3]["name"].text.find("↑") >= 0:
 						print("[E] FAIL arrow at 0 casts after reset"); ok = false
 					else:
 						print("[E] fresh-run reset: no arrows at 0 casts OK")
@@ -333,7 +333,7 @@ func _process(delta: float) -> bool:
 				2:
 					var hud4: Node = scene.get_node("HUD")
 					var fb4: Spell = load("res://resources/spells/fire_ball.tres")
-					if hud4._spell_rows[fb4]["name"].text.find("â") >= 0:
+					if hud4._spell_rows[fb4]["name"].text.find("↑") >= 0:
 						print("[E] arrow returns at 10 casts after reset OK")
 					else:
 						print("[E] FAIL arrow missing after reset+10: ", hud4._spell_rows[fb4]["name"].text); ok = false
@@ -349,7 +349,7 @@ func _process(delta: float) -> bool:
 						print("[E] FAIL fireball row kept after Beam apply"); ok = false
 					elif not hud5._spell_rows.has(beam):
 						print("[E] FAIL beam row missing after apply"); ok = false
-					elif hud5._spell_rows[beam]["name"].text.find("â") >= 0:
+					elif hud5._spell_rows[beam]["name"].text.find("↑") >= 0:
 						print("[E] FAIL arrow on fresh Beam row: ", hud5._spell_rows[beam]["name"].text); ok = false
 					else:
 						print("[E] arrow clears after Beam apply OK")
