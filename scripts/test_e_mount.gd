@@ -116,6 +116,8 @@ func _process(delta: float) -> bool:
 			var caster: Node = scene.get_node("Player/SpellCaster")
 			var fireball: Spell = load("res://resources/spells/fire_ball.tres")
 			var split: Spell = load("res://resources/spells/fire_ball_split.tres")
+			var sig_log: Array = []
+			progress.upgrades_changed.connect(func(sp): sig_log.append(sp))
 			var ev := InputEventAction.new()
 			ev.action = &"equip_panel"
 			ev.pressed = true
@@ -144,6 +146,10 @@ func _process(delta: float) -> bool:
 					buttons2.append(c2)
 			var split_btn: Button = buttons2[0] if buttons2[0].text == "Split shot" else buttons2[1]
 			split_btn.pressed.emit()
+			if sig_log.size() != 1 or sig_log[0] != fireball:
+				print("[E] FAIL upgrades_changed: ", sig_log.size(), " calls"); ok = false
+			else:
+				print("[E] upgrades_changed fired once with source spell OK")
 			if not caster.get_unlocked().has(fireball) and caster.get_unlocked().has(split):
 				print("[E] click applied split, fire ball replaced OK")
 			else:
@@ -161,6 +167,22 @@ func _process(delta: float) -> bool:
 				print("[E] FAIL slot replacement not shown: ", slot_texts); ok = false
 			if progress.can_upgrade(split):
 				print("[E] FAIL split upgradable at 0 casts"); ok = false
+			# Stale-selection safety (Mitra repro): after the upgrade, EXPLICITLY
+			# re-select the removed base resource, then click the OCCUPIED slot:
+			# the refusal must not pre-clear the occupant.
+			panel._on_spell_pressed(fireball)
+			panel._slot_buttons[0].pressed.emit()
+			if caster.get_slots()[0] == split:
+				print("[E] stale-selection click preserves occupied slot OK")
+			else:
+				print("[E] FAIL stale click cleared slot: ", caster.get_slots()[0]); ok = false
+			# Successful reselection + fresh assignment still works.
+			panel._on_spell_pressed(split)
+			panel._slot_buttons[1].pressed.emit()
+			if caster.get_slots()[1] == split:
+				print("[E] reselect + assign to slot 2 OK")
+			else:
+				print("[E] FAIL reselect/assign: ", caster.get_slots()[1]); ok = false
 			return _done()
 		_:
 			return true
