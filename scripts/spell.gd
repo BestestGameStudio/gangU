@@ -13,3 +13,9 @@ class_name Spell
 @export var range: float = 600.0 ## Max projectile travel distance in pixels.
 @export var projectile_speed: float = 500.0
 @export var projectile_color: Color = Color(0.4, 0.8, 1.0)
+## (Progression placeholder mechanics, #33/#36) How many projectiles one cast
+## fans out, and the total fan width. 1/0.0 = today's single-projectile
+## behavior, so every existing spell is unchanged. Provisional placeholder
+## numbers only - balance is an open human choice.
+@export var projectile_count: int = 1
+@export var spread_degrees: float = 0.0
