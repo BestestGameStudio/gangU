@@ -221,18 +221,24 @@ func cast() -> void:
 func _input_casts_suppressed() -> bool:
 	return get_tree().get_first_node_in_group("modal_ui") != null
 
-## Shared spawn path for the generic cast and direct slot casts: projectile
+## Shared spawn path for the generic cast and direct slot casts: projectiles
 ## toward the cursor, cooldown keyed by the Spell resource.
+## Fan-out seam (#33/#36, post-#65 window): one spawn per direction from the
+## pure SpellFanout helper. Defaults (projectile_count 1 / spread 0) return
+## [dir], so every existing spell behaves exactly as before. ONE cooldown
+## entry and ONE cooldown_started/spell_cast signal per CAST, not per
+## projectile; per-projectile setup/range/despawn is Projectile's own.
 func _cast_spell(spell: Spell) -> void:
 	if spell == null:
 		return
 	var dir := global_position.direction_to(get_global_mouse_position())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
-	var p: Projectile = projectile_scene.instantiate()
-	p.setup(spell, dir, get_parent())
-	get_tree().current_scene.add_child(p)
-	p.global_position = global_position
+	for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
+		var p: Projectile = projectile_scene.instantiate()
+		p.setup(spell, d, get_parent())
+		get_tree().current_scene.add_child(p)
+		p.global_position = global_position
 	_cooldowns[spell] = spell.cooldown
 	cooldown_started.emit(spell, spell.cooldown)
 	spell_cast.emit(spell)
