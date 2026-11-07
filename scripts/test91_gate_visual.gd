@@ -1,0 +1,123 @@
+extends SceneTree
+## #91 acceptance driver (headless, production composition via main.tscn).
+## Proves the flat-geometric gate/exit-portal decor within its exact
+## boundary - ColorRect TYPE + 52x72 offsets, TypeLabel/StateLabel type +
+## geometry and both RectangleShape2D (52,72) collision shapes UNCHANGED:
+##   structure  - gate.tscn and exit_portal.tscn keep every script-coupled
+##                node exactly (scripts drive $ColorRect/$TypeLabel/
+##                $StateLabel by name; test50b measures label geometry)
+##   decor      - gate: HeaderBar + ChevronTop + ChevronBottom flat
+##                Polygon2D (dark slate, DOWN = entry); portal: ExitArrow
+##                flat Polygon2D (light lavender, UP = exit) - exact points
+##   families   - hub boot: NORMAL gate tint blue, RED gate tint red
+##                (script-driven, intact over the neutral decor)
+##   portal     - real normal-gate entry into DungeonA: ExitPortal decor
+##                present, unlocked purple tint, EXIT label text
+## The decor legs FAIL on the old base (no decor nodes) - meaningful
+## negative. Gate use follows the test9 direct _on_body_entered idiom -
+## NOT real-input movement proof.
+
+const SLATE := Color(0.12, 0.14, 0.18, 0.9)
+const LAVENDER := Color(0.85, 0.8, 0.95, 0.9)
+const HEADER_BAR: Array[Vector2] = [Vector2(-26, -36), Vector2(26, -36), Vector2(26, -29), Vector2(-26, -29)]
+const CHEVRON_TOP: Array[Vector2] = [Vector2(-12, -27), Vector2(0, -17), Vector2(12, -27), Vector2(12, -21), Vector2(0, -11), Vector2(-12, -21)]
+const CHEVRON_BOTTOM: Array[Vector2] = [Vector2(-12, 11), Vector2(0, 21), Vector2(12, 11), Vector2(12, 17), Vector2(0, 27), Vector2(-12, 17)]
+const EXIT_ARROW: Array[Vector2] = [Vector2(0, -26), Vector2(14, -6), Vector2(6, -6), Vector2(6, 18), Vector2(-6, 18), Vector2(-6, -6), Vector2(-14, -6)]
+
+var scene: Node
+var p: CharacterBody2D
+var phase := 0
+var t := 0.0
+var fails := 0
+
+func _initialize() -> void:
+	scene = load("res://scenes/main.tscn").instantiate()
+	root.add_child(scene)
+	current_scene = scene
+
+func _check(label: String, ok: bool) -> void:
+	if not ok:
+		fails += 1
+	print("[91] ", label, " -> ", "PASS" if ok else "FAIL")
+
+func _color_eq(a: Color, b: Color) -> bool:
+	return absf(a.r - b.r) < 0.001 and absf(a.g - b.g) < 0.001 and absf(a.b - b.b) < 0.001
+
+func _poly_eq(actual: PackedVector2Array, expected: Array) -> bool:
+	if actual.size() != expected.size():
+		return false
+	for i in actual.size():
+		if actual[i] != expected[i]:
+			return false
+	return true
+
+func _gate_structure(gate: Node, where: String) -> void:
+	var tint: Node = gate.get_node_or_null("ColorRect")
+	_check(where + ": ColorRect type + exact 52x72 offsets",
+		tint is ColorRect and tint.offset_left == -26.0 and tint.offset_top == -36.0
+		and tint.offset_right == 26.0 and tint.offset_bottom == 36.0)
+	var lbl: Node = gate.get_node_or_null("TypeLabel")
+	_check(where + ": TypeLabel type + geometry + font",
+		lbl is Label and lbl.offset_left == -26.0 and lbl.offset_top == -10.0
+		and lbl.offset_right == 26.0 and lbl.offset_bottom == 8.0
+		and lbl.get_theme_font_size("font_size") == 10)
+	var cs: CollisionShape2D = gate.get_node_or_null("CollisionShape2D")
+	_check(where + ": collision RectangleShape2D (52,72) untouched",
+		cs != null and cs.shape is RectangleShape2D and cs.shape.size == Vector2(52, 72))
+	var hb: Node = gate.get_node_or_null("HeaderBar")
+	var ct: Node = gate.get_node_or_null("ChevronTop")
+	var cb: Node = gate.get_node_or_null("ChevronBottom")
+	_check(where + ": HeaderBar flat slate lintel",
+		hb is Polygon2D and _poly_eq(hb.polygon, HEADER_BAR) and _color_eq(hb.color, SLATE))
+	_check(where + ": ChevronTop DOWN chevron slate",
+		ct is Polygon2D and _poly_eq(ct.polygon, CHEVRON_TOP) and _color_eq(ct.color, SLATE))
+	_check(where + ": ChevronBottom DOWN chevron slate",
+		cb is Polygon2D and _poly_eq(cb.polygon, CHEVRON_BOTTOM) and _color_eq(cb.color, SLATE))
+
+func _process(delta: float) -> bool:
+	t += delta
+	match phase:
+		0:
+			if scene.get_node_or_null("Player") != null and t > 0.4:
+				p = scene.get_node("Player")
+				_check("hub boot", scene.current_area.name == "Hub")
+				var normal: Node = scene.current_area.get_node_or_null("GateNormal")
+				var red: Node = scene.current_area.get_node_or_null("GateRed")
+				_check("hub: both gates present", normal != null and red != null)
+				_gate_structure(normal, "GateNormal")
+				_gate_structure(red, "GateRed")
+				_check("families: NORMAL tint blue (script-driven)",
+					_color_eq(normal.get_node("ColorRect").color, Color(0.15, 0.6, 0.9)))
+				_check("families: RED tint red (script-driven)",
+					_color_eq(red.get_node("ColorRect").color, Color(0.85, 0.15, 0.15)))
+				var g: Gate = normal
+				g._on_body_entered(p)
+				phase = 1; t = 0
+		1:
+			if t > 0.4:
+				_check("dungeon boot: real normal-gate entry into DungeonA",
+					scene.current_area.name == "DungeonA")
+				var portal: Node = scene.current_area.get_node_or_null("ExitPortal")
+				_check("portal present", portal != null)
+				if portal != null:
+					var tint: Node = portal.get_node_or_null("ColorRect")
+					_check("portal: ColorRect type + exact 52x72 offsets",
+						tint is ColorRect and tint.offset_left == -26.0 and tint.offset_top == -36.0
+						and tint.offset_right == 26.0 and tint.offset_bottom == 36.0)
+					var lbl: Node = portal.get_node_or_null("StateLabel")
+					_check("portal: StateLabel type + text EXIT",
+						lbl is Label and lbl.text == "EXIT")
+					var cs: CollisionShape2D = portal.get_node_or_null("CollisionShape2D")
+					_check("portal: collision RectangleShape2D (52,72) untouched",
+						cs != null and cs.shape is RectangleShape2D and cs.shape.size == Vector2(52, 72))
+					var arrow: Node = portal.get_node_or_null("ExitArrow")
+					_check("portal: ExitArrow UP arrow lavender",
+						arrow is Polygon2D and _poly_eq(arrow.polygon, EXIT_ARROW)
+						and _color_eq(arrow.color, LAVENDER))
+					_check("portal: unlocked purple tint (script-driven)",
+						_color_eq(tint.color, Color(0.5, 0.2, 0.8)))
+				if fails == 0:
+					print("[91] ALL PASS")
+				print("[91] DONE fails=", fails)
+				quit()
+	return false
