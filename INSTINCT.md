@@ -46,7 +46,10 @@ only.
 - Merges to `main` are performed by the designated merge executor (currently
   `instinct-projects`), only after an independent approval on the current head and a
   green CI run on that head.
-- Authors do not merge their own PRs.
+- No one approves their own work: the required approval always comes from a reviewer
+  other than the author. When the merge executor authored the PR, the same rule
+  applies - it merges only after another contributor's independent approval on the
+  current head.
 
 ## 6. Merged is not live is not playable
 
@@ -57,7 +60,9 @@ status precisely:
 - **Live** - the Pages deploy for that commit succeeded and the site serves it.
 - **Playable** - the change has been verified in the actual browser build.
 
-A change is not done until it is live and playable. Report status with the right word.
+A shipped gameplay change is not done until it is live and playable. Docs and other
+non-gameplay changes are done when merged with their content verified against the
+relevant sources - no browser check applies. Report status with the right word.
 
 ## 7. Keep the repo public-safe
 
