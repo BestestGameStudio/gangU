@@ -63,8 +63,55 @@ var _progress_elapsed := 0.0
 
 ## #10 slots slice (C): built only when the pinned slot API is present.
 const PLATE_PAD := 8.0
+## #93 visual identity: flat code-drawn styleboxes (no assets), neutral
+## decoration + readable state colors. Labels, texts and data are unchanged.
+const HP_GREEN := Color(0.35, 0.8, 0.4, 1.0)
+const HP_AMBER := Color(0.95, 0.75, 0.25, 1.0)
+const HP_RED := Color(0.9, 0.3, 0.25, 1.0)
+const HP_AMBER_FRAC := 0.5
+const HP_RED_FRAC := 0.25
+const BAR_TRACK := Color(0.08, 0.08, 0.1, 0.9)
+const BAR_READY := Color(0.8, 0.85, 0.95, 1.0)
+const BAR_COOLING := Color(0.35, 0.45, 0.6, 0.9)
+const FRAME_BG := Color(0.05, 0.05, 0.07, 0.55)
+const FRAME_EQUIPPED := Color(0.85, 0.9, 1.0, 0.9)
+const FRAME_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
+const FRAME_DIM := Color(0.45, 0.48, 0.55, 0.6)
+const FRAME_EMPTY := Color(0.4, 0.42, 0.48, 0.6)
 var _slots_supported := false
-var _slot_widgets: Array = [] ## [{key,name,bar,state}] x 6
+var _slot_widgets: Array = [] ## [{frame,key,name,bar,state,cooling}] x 6
+var _style_track: StyleBoxFlat
+var _style_ready: StyleBoxFlat
+var _style_cooling: StyleBoxFlat
+var _frame_cache := {} ## border Color -> StyleBoxFlat
+
+func _bar_style(c: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = c
+	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
+		sb.set(corner, 3)
+	return sb
+
+func _frame_style(border: Color) -> StyleBoxFlat:
+	if _frame_cache.has(border):
+		return _frame_cache[border]
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = FRAME_BG
+	sb.border_color = border
+	for side in ["border_width_left", "border_width_top", "border_width_right", "border_width_bottom"]:
+		sb.set(side, 1)
+	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
+		sb.set(corner, 3)
+	for m in ["content_margin_left", "content_margin_top", "content_margin_right", "content_margin_bottom"]:
+		sb.set(m, 3.0)
+	_frame_cache[border] = sb
+	return sb
+
+func _apply_bar_state(bar: ProgressBar, cooling: bool) -> void:
+	if _style_ready == null:
+		return
+	bar.add_theme_stylebox_override("background", _style_track)
+	bar.add_theme_stylebox_override("fill", _style_cooling if cooling else _style_ready)
 
 func _ready() -> void:
 	if player_path != NodePath(""):
@@ -75,6 +122,9 @@ func _ready() -> void:
 		push_warning("HUD: no player found (player_path unset, no 'player' group); HUD idle.")
 		return
 	_caster = _player.get_node_or_null("SpellCaster") as SpellCaster
+	_style_track = _bar_style(BAR_TRACK)
+	_style_ready = _bar_style(BAR_READY)
+	_style_cooling = _bar_style(BAR_COOLING)
 	_player.health_changed.connect(_on_health_changed)
 	_player.died.connect(_on_player_died)
 	_on_health_changed(_player.hp, _player.max_hp)
@@ -97,8 +147,11 @@ func _ready() -> void:
 				_caster.slot_cleared.connect(func(_i): _update_slot_rows())
 
 func _add_spell_row(spell: Spell) -> void:
+	var frame := PanelContainer.new() # #93: flat border frame; border highlights equipped
+	frame.add_theme_stylebox_override("panel", _frame_style(FRAME_DIM))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
+	frame.add_child(row)
 	var name_label := Label.new()
 	name_label.add_theme_font_size_override("font_size", 22)
 	name_label.custom_minimum_size = Vector2(120, 0)
@@ -113,13 +166,18 @@ func _add_spell_row(spell: Spell) -> void:
 	row.add_child(name_label)
 	row.add_child(bar)
 	row.add_child(state)
-	_spell_rows_box.add_child(row)
-	_spell_rows[spell] = {"name": name_label, "bar": bar, "state": state}
+	_apply_bar_state(bar, false) # #93: track + READY fill at build
+	_spell_rows_box.add_child(frame)
+	_spell_rows[spell] = {"name": name_label, "bar": bar, "state": state, "frame": frame, "cooling": false, "equipped": false}
+	_update_plate.call_deferred() # #93: settle containers, then re-mask (avoids one-frame gate/HUD clip)
 
 func _build_slot_rows() -> void:
 	for i in 6:
+		var frame := PanelContainer.new() # #93: flat border frame; border shows assigned vs empty
+		frame.add_theme_stylebox_override("panel", _frame_style(FRAME_EMPTY))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
+		frame.add_child(row)
 		var key_label := Label.new()
 		key_label.add_theme_font_size_override("font_size", 22)
 		key_label.custom_minimum_size = Vector2(24, 0)
@@ -139,8 +197,10 @@ func _build_slot_rows() -> void:
 		row.add_child(name_label)
 		row.add_child(bar)
 		row.add_child(state)
-		_slot_rows_box.add_child(row)
-		_slot_widgets.append({"key": key_label, "name": name_label, "bar": bar, "state": state})
+		_apply_bar_state(bar, false) # #93: track + READY fill at build
+		_slot_rows_box.add_child(frame)
+		_slot_widgets.append({"frame": frame, "key": key_label, "name": name_label, "bar": bar, "state": state, "cooling": false})
+	_update_plate.call_deferred()
 
 func _update_slot_rows() -> void:
 	# Freed-instance safe: the caster can die with the run (reload rebuilds
@@ -159,6 +219,10 @@ func _update_slot_rows() -> void:
 			w["name"].text = "(empty)"
 			w["bar"].value = 0.0
 			w["state"].text = ""
+			w["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_EMPTY))
+			if w["cooling"]:
+				w["cooling"] = false
+				_apply_bar_state(w["bar"], false)
 			continue
 		var rem: float = _caster.cooldown_remaining(spell)
 		var frac := 1.0
@@ -167,6 +231,11 @@ func _update_slot_rows() -> void:
 		w["name"].text = spell.spell_name
 		w["bar"].value = frac
 		w["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
+		w["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_ASSIGNED))
+		var cooling := rem > 0.0
+		if cooling != w["cooling"]:
+			w["cooling"] = cooling
+			_apply_bar_state(w["bar"], cooling)
 
 func _process(delta: float) -> void:
 	_update_objective(delta)
@@ -188,11 +257,26 @@ func _process(delta: float) -> void:
 		row["name"].text = s.spell_name + (" *" if s == _caster.equipped_spell else "") + up_arrow
 		row["bar"].value = frac
 		row["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
+		var cooling := rem > 0.0
+		if cooling != row["cooling"]:
+			row["cooling"] = cooling
+			_apply_bar_state(row["bar"], cooling)
+		var equipped: bool = s == _caster.equipped_spell
+		if equipped != row["equipped"]:
+			row["equipped"] = equipped
+			row["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_EQUIPPED if equipped else FRAME_DIM))
 
 func _on_health_changed(current: int, max_hp: int) -> void:
 	_hp_label.text = "HP %d/%d" % [current, max_hp]
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = current
+	# #93: HP state color - green -> amber -> red as the fraction drops.
+	var fill := _hp_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	if fill != null:
+		var frac := 0.0
+		if max_hp > 0:
+			frac = clampf(float(current) / float(max_hp), 0.0, 1.0)
+		fill.bg_color = HP_GREEN if frac > HP_AMBER_FRAC else (HP_AMBER if frac > HP_RED_FRAC else HP_RED)
 
 func _on_player_died() -> void:
 	# Run restart is #6's job; the HUD only reflects the death state.
