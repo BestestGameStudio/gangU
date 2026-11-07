@@ -135,11 +135,52 @@ func _process(_d: float) -> bool:
 			_check(not rn.intersects(rr), "GateNormal label clear of plate after camera sweep")
 			_check(_inside_viewport(rn), "GateNormal label inside viewport after camera sweep")
 			_check(_tied(rn, gn), "GateNormal label tied to own gate after camera sweep")
+			_stage = 5
+		5: # #84: an escaped label must clear the OTHER gate's projected body
+			# Widen the plate with real long HUD content, then place the player
+			# (computed from the LIVE plate rect, not hardcoded) so NORMAL sits
+			# behind the plate with RED's body exactly in the right-edge escape
+			# path - the LIVE residual pair from the #84 frames.
+			if not _84_setup:
+				hud.get_node("Root/HPLabel").text = "HP 100/100 VERYLONGTAIL xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+				_84_setup = true
+				return false # let the plate rebuild first
+			if _84_aimed == false:
+				var rr2: Rect2 = hud.reserved_rect()
+				var gn2: Gate = main.current_area.get_node("GateNormal")
+				var view2: Vector2 = root.get_visible_rect().size
+				# Gate target: behind the plate, in the x-band where the
+				# plate-right-edge escape lands exactly on RED's body
+				# (RED sits a fixed 552 world px right of NORMAL).
+				var target_gs := Vector2(rr2.end.x - 520.0, rr2.end.y - 100.0) # deep enough that below-adjacent stays inside the plate, forcing the escape
+				main.get_node("Player").global_position = gn2.global_position - target_gs + view2 / 2.0
+				_cam_stable = 0
+				_cam_last = Vector2.INF
+				_84_aimed = true
+				return false
+			if not _cam_settled():
+				return false
+			var rr3: Rect2 = hud.reserved_rect()
+			var gn3: Gate = main.current_area.get_node("GateNormal")
+			var gr3: Gate = main.current_area.get_node("GateRed")
+			var canvas3 := root.get_canvas_transform()
+			var rn3 := _label_screen_rect(gn3)
+			var red_body: ColorRect = gr3.get_node("ColorRect")
+			var rb3 := Rect2(canvas3 * (gr3.global_position + red_body.position), red_body.size)
+			print("[50b] #84: plate=", rr3, " gateN_screen=", canvas3 * gn3.global_position, " labelN=", rn3, " RED_body=", rb3)
+			_check(not rn3.intersects(rb3), "#84 escaped GateNormal label clear of RED gate body (swept)")
+			_check(_inside_viewport(rn3), "#84 escaped GateNormal label inside viewport")
+			_check(_tied(rn3, gn3), "#84 escaped GateNormal label tied to own gate (row/column)")
+			hud.get_node("Root/HPLabel").text = "HP 100/100"
+			_stage = 6
+			return false
+		6: # portrait viewport rebuild
 			root.content_scale_size = Vector2i(800, 1000) # logical portrait, host-independent
 			_cam_stable = 0
 			_cam_last = Vector2.INF
-			_stage = 5
-		5: # portrait viewport rebuild
+			_stage = 61
+			return false
+		61:
 			if not _cam_settled():
 				return false
 			var rr: Rect2 = hud.reserved_rect()
@@ -152,16 +193,16 @@ func _process(_d: float) -> bool:
 			var rn := _label_screen_rect(gn)
 			_check(_inside_viewport(rn), "GateNormal label inside viewport (portrait)")
 			root.content_scale_size = Vector2i(1152, 648)
-			_stage = 6
-		6: # objective growth via the REAL gate-entry path
+			_stage = 7
+		7: # objective growth via the REAL gate-entry path
 			if _entered:
 				return false
 			hub_plate_h = hud.reserved_rect().size.y
 			var g: Gate = main.current_area.get_node("GateNormal")
 			g._on_body_entered(main.get_node("Player"))
 			_entered = true
-			_stage = 7
-		7: # condition wait: objective discovered + label visible (no frame budget)
+			_stage = 8
+		8: # condition wait: objective discovered + label visible (no frame budget)
 			if main.current_area.name == "DungeonA" and not _check_done_objective:
 				var lbl: Label = hud.get_node("Root/ObjectiveLabel")
 				if lbl.visible:
@@ -182,8 +223,8 @@ func _process(_d: float) -> bool:
 					_check(plate_h > hub_plate_h, "plate grew with objective row in DungeonA (%.0f -> %.0f)" % [hub_plate_h, plate_h])
 					var portal = main.current_area.get_node_or_null("ExitPortal")
 					_check(portal != null, "exit portal mounted (regression)")
-					_stage = 8
-		8:
+					_stage = 9
+		9:
 			print("[50b] ", "PASS" if failures == 0 else "FAIL (%d)" % failures)
 			quit(0 if failures == 0 else 1)
 			_stage = 9
@@ -192,3 +233,6 @@ func _process(_d: float) -> bool:
 var _check_done_objective := false
 var _plate_wait := 0
 var _stable_plate := 0.0
+
+var _84_setup := false
+var _84_aimed := false
