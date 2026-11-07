@@ -54,6 +54,7 @@ func _swap(area: Node) -> void:
 		p.global_position = spawn.global_position
 	_mount_demo_enemies(current_area)
 	_mount_objective(current_area)
+	_mount_exit_portal(current_area)
 
 ## #34 demo config: three enemies, upper half of the room, far from the
 ## entrance spawn (576,560). Children of the area so a gate swap frees them.
@@ -85,3 +86,21 @@ func _mount_objective(area: Node) -> void:
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
+
+## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
+## anytime, objective not required). Returns to the hub in the SAME run via a
+## deferred swap - the shared Player is repositioned, never recreated, so
+## spells and current HP are retained. Red-gate DungeonB gets none yet: the
+## red lock-in rule is proven by the labeled fixture regression in
+## scripts/test9_exit_flow.gd (no red dungeon config exists in the demo loop).
+func _mount_exit_portal(area: Node) -> void:
+	if area.name != "DungeonA":
+		return
+	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
+	portal.name = "ExitPortal"
+	portal.position = Vector2(576, 120)
+	portal.entered.connect(_on_exit_portal_entered)
+	area.add_child(portal)
+
+func _on_exit_portal_entered(_portal: ExitPortal) -> void:
+	_load_hub.call_deferred()
