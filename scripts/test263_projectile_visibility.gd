@@ -41,13 +41,16 @@ func _initialize() -> void:
 
 	# --- bigger on screen; collision unchanged by visual_scale --------------
 	var old_px := {"Mana Shot": 3.0 / 16.0, "Fire Ball": 9.0 / 16.0}
+	# #289: art scale is the clamped radius / 10 sizing, which puts Fire Ball at
+	# 1.6x its old footprint; Mana Shot keeps the 1.75x floor.
+	var min_growth := {"Mana Shot": 1.75, "Fire Ball": 1.5}
 	for sp in [mana, fire]:
 		var p := _spawn(sp)
 		var spr := p.get_node_or_null("Sprite") as AnimatedSprite2D
 		_check(spr != null, "%s has its art sprite" % sp.spell_name)
 		if spr != null:
-			_check(spr.scale.x >= old_px[sp.spell_name] * 1.75,
-				"%s sprite >= 1.75x its old size (%.3f vs %.3f)" % [sp.spell_name, spr.scale.x, old_px[sp.spell_name]])
+			_check(spr.scale.x >= old_px[sp.spell_name] * min_growth[sp.spell_name],
+				"%s sprite >= %sx its old size (%.3f vs %.3f)" % [sp.spell_name, min_growth[sp.spell_name], spr.scale.x, old_px[sp.spell_name]])
 		var shape := p.get_node("CollisionShape2D").shape as CircleShape2D
 		_check(is_equal_approx(shape.radius, sp.radius), "%s collision radius == spell.radius" % sp.spell_name)
 		_check(p.get_node_or_null("Glow") is Polygon2D, "%s has a Glow halo" % sp.spell_name)
@@ -75,7 +78,8 @@ func _initialize() -> void:
 	_check(pb.get_node_or_null("Glow") == null and pb.get_node_or_null("Trail") == null,
 		"placeholder bolt spawns no Glow/Trail")
 	var spb := pb.get_node_or_null("Sprite") as AnimatedSprite2D
-	_check(spb != null and is_equal_approx(spb.scale.x, bolt.radius / 16.0), "placeholder bolt sprite still radius/16")
+	var bolt_scale := clampf(bolt.radius / Projectile.SPRITE_RADIUS_DIVISOR, Projectile.SPRITE_SCALE_MIN, Projectile.SPRITE_SCALE_MAX)
+	_check(spb != null and is_equal_approx(spb.scale.x, bolt_scale), "placeholder bolt sprite follows the #289 clamped radius sizing")
 	pb.queue_free()
 	var orb := _spawn(load("res://resources/spells/warlord_orb.tres"))
 	_check(orb.get_node_or_null("Glow") == null and orb.get_node_or_null("Trail") == null,

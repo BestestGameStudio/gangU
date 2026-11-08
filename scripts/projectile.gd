@@ -17,17 +17,36 @@ var spell: Spell
 ## projectile only. Radius, movement, hits and despawn are untouched, and
 ## projectiles without an override look exactly as before.
 var visual_override: Node2D
-## #210: supplied sprite art replaces the code-drawn Dart/Visual for spells
+## #210/#289: supplied sprite art replaces the code-drawn Dart/Visual for spells
 ## with a mapped animation. Visuals only: radius, movement, hits, despawn and
 ## the visual_override hook are untouched; unmapped spells look as before.
-const PROJECTILE_SPRITES: SpriteFrames = preload("res://resources/sprites/spell_projectiles_frames.tres")
-## Cell art is authored ~4x the in-world size at scale 4; radius/16 lands each
-## sprite in the same visual footprint as the radius-scaled code-drawn dart.
+const PROJECTILE_SPRITES: SpriteFrames = preload("res://resources/sprites/spell_upgrades_frames.tres")
+## Each spell (base or upgrade result) flies its own sheet row (#289): a
+## one-shot "<anim>_start" spawn-in, then the looping "<anim>" flight.
 const SPELL_SPRITE_ANIMS: Dictionary = {
-	"Fire Ball": &"flame",
-	"Mana Shot": &"mana",
-	"Placeholder Bolt": &"bolt",
+	"Fire Ball": &"fire_ball",
+	"Fire Ball Split": &"fire_ball_split",
+	"Fire Ball Split Heavy": &"fire_ball_split_heavy",
+	"Fire Ball Split Wide": &"fire_ball_split_wide",
+	"Fire Ball Beam": &"fire_ball_beam",
+	"Fire Ball Beam Heavy": &"fire_ball_beam_heavy",
+	"Fire Ball Beam Homing": &"fire_ball_beam_homing",
+	"Fire Ball Beam Long": &"fire_ball_beam_long",
+	"Fire Ball Beam Piercing": &"fire_ball_beam_piercing",
+	"Mana Shot": &"mana_shot",
+	"Mana Volley": &"mana_volley",
+	"Mana Lance": &"mana_lance",
+	"Placeholder Bolt": &"placeholder_bolt",
 }
+## Cell art is 64 px wide at scale 1; radius / 10 draws each projectile a little
+## larger than its hit circle so it reads clearly. Clamped (art only, never the
+## hitbox) so the smallest shots stay visible and the largest stay in proportion.
+const SPRITE_RADIUS_DIVISOR: float = 10.0
+const SPRITE_SCALE_MIN: float = 0.7
+const SPRITE_SCALE_MAX: float = 1.4
+## The art's head sits right of the cell centre; shift it back (cell px) so the
+## bright head, not the tail, is at the hit point.
+const SPRITE_HEAD_OFFSET: Vector2 = Vector2(-12.0, 0.0)
 
 var direction: Vector2 = Vector2.RIGHT
 var source: Node2D ## The caster's owner; never hit by its own projectile.
@@ -110,6 +129,10 @@ func _ready() -> void:
 func visual_radius() -> float:
 	return spell.radius * maxf(spell.visual_scale, 0.0)
 
+## #289: halo and trail colour; the rest of the game keeps projectile_color.
+func _effect_color() -> Color:
+	return spell.glow_tint if spell.glow_tint.a > 0.0 else spell.projectile_color
+
 func _wire_glow_and_trail() -> void:
 	if spell.trail_length > 0:
 		_trail = Line2D.new()
@@ -121,9 +144,13 @@ func _wire_glow_and_trail() -> void:
 		curve.add_point(Vector2(1.0, 1.0))
 		_trail.width_curve = curve
 		var grad := Gradient.new()
-		var c := spell.projectile_color
+		var c := _effect_color()
 		grad.set_color(0, Color(c.r, c.g, c.b, 0.0))
 		grad.set_color(1, Color(c.r, c.g, c.b, 0.7))
+		if spell.trail_head_fade > 0.0:
+			# #289: fade out towards the head instead of ending at full strength.
+			grad.add_point(1.0 - spell.trail_head_fade, Color(c.r, c.g, c.b, 0.7))
+			grad.set_color(grad.get_point_count() - 1, Color(c.r, c.g, c.b, 0.0))
 		_trail.gradient = grad
 		_trail.joint_mode = Line2D.LINE_JOINT_ROUND
 		_trail.end_cap_mode = Line2D.LINE_CAP_ROUND
@@ -138,7 +165,7 @@ func _wire_glow_and_trail() -> void:
 		var pts := PackedVector2Array()
 		var cols := PackedColorArray()
 		var r := visual_radius() * GLOW_RADIUS_MULT
-		var c := spell.projectile_color
+		var c := _effect_color()
 		pts.append(Vector2.ZERO)
 		cols.append(Color(c.r, c.g, c.b, GLOW_ALPHA))
 		for i in 25:
@@ -169,13 +196,14 @@ func _wire_sprite() -> void:
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "Sprite"
 	_sprite.sprite_frames = PROJECTILE_SPRITES
-	_sprite.animation = anim
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var sz: float = visual_radius() / 16.0 # #263: visual_scale enlarges art only
+	var sz: float = clampf(spell.radius / SPRITE_RADIUS_DIVISOR, SPRITE_SCALE_MIN, SPRITE_SCALE_MAX)
 	_sprite.scale = Vector2(sz, sz)
 	_sprite_base = _sprite.scale
+	_sprite.offset = SPRITE_HEAD_OFFSET
 	add_child(_sprite)
-	_sprite.play()
+	_sprite.animation_finished.connect(_sprite.play.bind(anim), CONNECT_ONE_SHOT)
+	_sprite.play(StringName("%s_start" % anim))
 	$Dart.visible = false
 	$Visual.visible = false
 

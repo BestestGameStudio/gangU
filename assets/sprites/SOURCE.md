@@ -36,6 +36,28 @@ traced art, no stock files shipped.
   out of a working copy (dim lavender on the dark board) before extraction;
   the art itself is byte-faithful to the issue attachment.
 
+# spell_upgrades.png - spell and upgrade animations (#289)
+- Source: single sheet attached to issue #289 by @Mitravasu
+  (https://github.com/user-attachments/assets/226db38e-d1cf-4de5-ac62-48c518bb1466).
+  It has real transparency, so it is cut with `tools/sprites/pack_alpha_strip.py`
+  and `tools/sprites/specs/spell_upgrades.json`: 2:1 premultiplied box downsample
+  into 64x72 cells (6 per row, 14 rows), source alpha below 32 dropped, each
+  frame clipped to its grid cell so no line or neighbour bleeds in.
+- Rows (top to bottom): fire_ball, fire_ball_split, fire_ball_split_heavy,
+  fire_ball_split_wide, fire_ball_beam, fire_ball_beam_heavy,
+  fire_ball_beam_homing, fire_ball_beam_long, fire_ball_beam_piercing,
+  mana_shot, mana_volley, mana_lance, placeholder_bolt, summon_ally.
+- Animations: projectile rows are `<row>_start` (cols 0-2, one-shot, 18 fps) then
+  `<row>` (cols 3, 4, 5, 4, loop, 12 fps). `summon_ally` is all six cols, one-shot,
+  10 fps, last frames held. Art faces +X; the board's column labels (F1/F3/... and
+  F1/F2/...) do not match across sections, so cells are read left to right.
+- Multi-shot rows draw every shot in one cell, but the game fires one projectile
+  per shot. So split, split heavy, split wide and volley cells are clipped to ONE
+  shot per frame (from the col where the shots separate); each fanned projectile
+  flies that shot. The other shots drawn in those cells are not extracted. The
+  flight then shows split wide as 5 shots although its cols 2-4 draw 4.
+- `spell_projectiles.png` (#210) is no longer used at runtime.
+
 # mustache_warrior.png - Mustache Warrior (common enemy + Warlord boss)
 
 Art from issue #177 ("common enemy sprite update"): the 1536x1024
