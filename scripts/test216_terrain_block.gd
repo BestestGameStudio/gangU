@@ -37,6 +37,36 @@ func _fire(stage: Node, spell: Spell, from: Vector2, dir: Vector2, src: Node2D) 
 	p.global_position = from
 	return p
 
+## One single-step ordering shot along row 0 of `omap` (map-local y = 32):
+## BLOCK at `block_cell`, a stationary real Enemy at map-local x = `enemy_x`,
+## projectile from x = 32 flying RIGHT. Returns what happened after ONE step.
+func _order_case(stage: Node, omap: TerrainMap, src: Node2D, s: Spell, block_cell: Vector2i, enemy_x: float, order: Array) -> Dictionary:
+	order.clear()
+	omap.set_cell(block_cell, TerrainTypes.BLOCK)
+	var e: Node2D = load("res://scenes/enemy.tscn").instantiate()
+	stage.add_child(e)
+	e.global_position = omap.to_global(Vector2(enemy_x, 32))
+	e.set_physics_process(false)
+	await physics_frame
+	await physics_frame # body registered in the physics space
+	var p := _fire(stage, s, omap.to_global(Vector2(32, 32)), Vector2.RIGHT, src)
+	p.hit.connect(func(_b): order.append("body"))
+	var start_x := p.global_position.x
+	await physics_frame
+	var out := {
+		"block_gone": omap.tile_type_at_cell(block_cell) != TerrainTypes.BLOCK,
+		"enemy_hp": float(e.hp),
+		"consumed": not is_instance_valid(p) or p.is_queued_for_deletion(),
+		"order": order.duplicate(),
+	}
+	_check(out.consumed or p.global_position.x - start_x > 250.0, "fixture: one step spans block and enemy")
+	if is_instance_valid(p):
+		p.queue_free()
+	e.queue_free()
+	omap.clear_cell(block_cell)
+	await physics_frame
+	return out
+
 func _initialize() -> void:
 	var stage := Node2D.new()
 	stage.name = "Stage"
@@ -191,6 +221,45 @@ func _initialize() -> void:
 	for i in 30:
 		await physics_frame
 	_check(events.is_empty() and map.tile_type_at_cell(gap) == TerrainTypes.BLOCK, "a terrain-less source leaves the block standing")
+
+	# --- review: body and terrain hits resolve in flight order within ONE step ---
+	# speed 16000 at 60 Hz = ~267 px per physics step, so a single segment
+	# spans both the block and the enemy in every case below.
+	var omap := _new_map(stage)
+	omap.position = Vector2(0, 4096) # away from every earlier fixture
+	var oshooter: Player = load("res://scenes/player.tscn").instantiate()
+	stage.add_child(oshooter)
+	oshooter.global_position = omap.to_global(Vector2(32, 600)) # off the flight line
+	oshooter.terrain = omap
+	oshooter.set_physics_process(false)
+	oshooter.get_node("SpellCaster").set_process(false)
+	await process_frame
+	var fast: Spell = bolt.duplicate()
+	fast.projectile_speed = 16000.0
+	fast.range = 1000.0
+	fast.damage = 7.0
+	fast.radius = 4.0
+	var fast_pierce: Spell = fast.duplicate()
+	var fp_tags: Array[StringName] = [SpellTags.PIERCING]
+	fast_pierce.tags = fp_tags
+	var order: Array = []
+	omap.cell_destroyed.connect(func(c, _o, _n): order.append("block"))
+
+	# block (cell 2) nearer than enemy (x=224): the block absorbs the shot
+	var r := await _order_case(stage, omap, oshooter, fast, Vector2i(2, 0), 224.0, order)
+	_check(r.block_gone and r.enemy_hp == 30.0, "non-piercing: nearer block destroyed, farther enemy untouched (hp %s)" % r.enemy_hp)
+	_check(r.consumed and r.order == ["block"], "non-piercing: projectile consumed by the block, nothing else hit")
+	# enemy (x=96) nearer than block (cell 3): the enemy consumes the shot
+	r = await _order_case(stage, omap, oshooter, fast, Vector2i(3, 0), 96.0, order)
+	_check(r.enemy_hp < 30.0 and not r.block_gone, "non-piercing: nearer enemy damaged, farther block intact")
+	_check(r.consumed and r.order == ["body"], "non-piercing: projectile consumed by the enemy, nothing else hit")
+	# piercing: both resolve, in flight order, and the shot keeps flying
+	r = await _order_case(stage, omap, oshooter, fast_pierce, Vector2i(2, 0), 224.0, order)
+	_check(r.block_gone and r.enemy_hp < 30.0 and not r.consumed, "piercing: block then enemy both hit in one step, shot continues")
+	_check(r.order == ["block", "body"], "piercing: block resolved before the farther enemy (%s)" % [r.order])
+	r = await _order_case(stage, omap, oshooter, fast_pierce, Vector2i(3, 0), 96.0, order)
+	_check(r.block_gone and r.enemy_hp < 30.0 and not r.consumed, "piercing: enemy then block both hit in one step, shot continues")
+	_check(r.order == ["body", "block"], "piercing: enemy resolved before the farther block (%s)" % [r.order])
 
 	print("[216] failures: ", failures)
 	if failures == 0:

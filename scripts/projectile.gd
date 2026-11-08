@@ -234,10 +234,10 @@ func _physics_process(delta: float) -> void:
 		step = remaining
 	var from: Vector2 = global_position
 	position += direction * step
-	_sweep_hits(from, direction * step)
-	if is_queued_for_deletion():
-		return
-	_sweep_terrain(from, direction * step)
+	# #216 review: bodies and destroyable terrain crossed in this one segment
+	# resolve in the order the projectile reaches them, so a nearer block
+	# absorbs a non-piercing shot before a farther body (and vice versa).
+	_sweep_segment(from, direction * step)
 	if is_queued_for_deletion():
 		return
 	_traveled += step
@@ -291,6 +291,8 @@ func _steer(delta: float) -> void:
 	rotation = direction.angle()
 
 func _on_body_entered(body: Node2D) -> void:
+	if is_queued_for_deletion():
+		return # #216 review: a shot already spent (e.g. on a block) hits nothing more
 	if body == source:
 		return
 	if _hit_bodies.has(body):
@@ -315,28 +317,50 @@ func _on_body_entered(body: Node2D) -> void:
 			return
 	queue_free()
 
-## #216 (wires #169): owner rule "any damage that hits a destroyable tile
-## destroys it, whatever the element". The flight path is sampled at most
-## half a cell apart (no tunnelling through a cell on a big frame step); the
-## first destroyable cell crossed is destroyed through TerrainMap.destroy_at,
-## the single terrain-damage entry point. Like a body hit, the projectile then
-## despawns unless PIERCING. Non-destroyable tiles stay pass-through as before.
-func _sweep_terrain(from: Vector2, motion: Vector2) -> void:
+## #216 (wires #169): the flight path is sampled at most half a cell apart (no
+## tunnelling through a cell on a big frame step). Returns [{t, cell}] for each destroyable cell the centre line enters, with
+## t = the fraction of the segment at which it enters that cell.
+func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
 	if _terrain == null or not is_instance_valid(_terrain):
-		return
+		return events
 	var length := motion.length()
 	var spacing := _terrain.cell_size * 0.5
 	var samples := maxi(1, ceili(length / spacing))
+	var seen: Dictionary = {}
 	for i in range(1, samples + 1):
 		var pt := from + motion * (float(i) / float(samples))
-		if _terrain.destroy_at(pt):
-			if not spell.tags.has(SpellTags.PIERCING):
-				queue_free()
-				return
+		var cell := _terrain.world_to_cell(pt)
+		if seen.has(cell):
+			continue
+		seen[cell] = true
+		if not TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+			continue
+		events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell})
+	return events
+
+## Fraction of the segment at which the centre line enters `cell` (0 if it
+## starts inside). Computed in the map's local space; affine maps keep t.
+func _cell_entry_t(from: Vector2, motion: Vector2, cell: Vector2i) -> float:
+	var a := _terrain.to_local(from)
+	var d := _terrain.to_local(from + motion) - a
+	var cs := float(_terrain.cell_size)
+	var lo := Vector2(cell) * cs
+	var hi := lo + Vector2(cs, cs)
+	var t_enter := 0.0
+	for axis in 2:
+		if absf(d[axis]) < 0.000001:
+			continue
+		var t1 := (lo[axis] - a[axis]) / d[axis]
+		var t2 := (hi[axis] - a[axis]) / d[axis]
+		t_enter = maxf(t_enter, minf(t1, t2))
+	return clampf(t_enter, 0.0, 1.0)
 
 ## #109: sweep the hit circle from `from` along `motion`; every body the path
-## crosses takes the hit even if no single physics frame overlaps it.
-func _sweep_hits(from: Vector2, motion: Vector2) -> void:
+## crosses takes the hit even if no single physics frame overlaps it. Returns
+## [{t, body}], t = the segment fraction of first contact with that body.
+func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = $CollisionShape2D.shape
 	params.transform = Transform2D(direction.angle(), from)
@@ -344,11 +368,47 @@ func _sweep_hits(from: Vector2, motion: Vector2) -> void:
 	params.collision_mask = collision_mask
 	params.collide_with_bodies = true
 	params.collide_with_areas = false
-	var hits: Array[Dictionary] = get_world_2d().direct_space_state.intersect_shape(params, 8)
+	var space := get_world_2d().direct_space_state
+	var hits: Array[Dictionary] = space.intersect_shape(params, 8)
+	var rids: Array[RID] = []
 	for h in hits:
-		var b: Node2D = h.get("collider")
+		rids.append(h.get("rid"))
+	for idx in hits.size():
+		var b: Node2D = hits[idx].get("collider")
 		if b == null or b == source or _hit_bodies.has(b):
 			continue
-		_on_body_entered(b)
+		# Contact time against this body alone: exclude every other hit.
+		var others: Array[RID] = []
+		for j in rids.size():
+			if j != idx:
+				others.append(rids[j])
+		params.exclude = others
+		var cast: PackedFloat32Array = space.cast_motion(params)
+		var t: float = cast[1] if cast.size() == 2 else 0.0
+		events.append({"t": t, "body": b})
+	return events
+
+## #216 review: one ordered pass over everything this segment crosses. Bodies
+## go through _on_body_entered (source exclusion, damage dispatch, one-hit
+## bookkeeping, pierce); destroyable cells through TerrainMap.destroy_cell, the
+## single terrain-damage entry point (owner rule from #169: any hit destroys a
+## destroyable tile). Either kind consumes a non-piercing shot; ties go to the
+## body. Non-destroyable tiles never produce an event (pass-through as before).
+func _sweep_segment(from: Vector2, motion: Vector2) -> void:
+	var events: Array[Dictionary] = _body_events(from, motion)
+	events.append_array(_terrain_events(from, motion))
+	events.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		if x.t != y.t:
+			return x.t < y.t
+		return x.has("body") and not y.has("body"))
+	for e in events:
+		if e.has("body"):
+			var b: Node2D = e.body
+			if not is_instance_valid(b) or _hit_bodies.has(b):
+				continue
+			_on_body_entered(b)
+		elif _terrain.destroy_cell(e.cell):
+			if not spell.tags.has(SpellTags.PIERCING):
+				queue_free()
 		if is_queued_for_deletion():
 			return
