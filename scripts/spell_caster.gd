@@ -229,11 +229,15 @@ func _cast_spell(spell: Spell) -> void:
 	var dir := global_position.direction_to(get_global_mouse_position())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
-	for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
-		var p: Projectile = projectile_scene.instantiate()
-		p.setup(spell, d, get_parent())
-		get_tree().current_scene.add_child(p)
-		p.global_position = global_position
+	# #212: summon-only spells carry projectile_count 0 - skip the projectile
+	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
+	# signals below stay unconditional; positive counts are byte-identical.
+	if spell.projectile_count > 0:
+		for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
+			var p: Projectile = projectile_scene.instantiate()
+			p.setup(spell, d, get_parent())
+			get_tree().current_scene.add_child(p)
+			p.global_position = global_position
 	_cooldowns[spell] = spell.cooldown
 	cooldown_started.emit(spell, spell.cooldown)
 	spell_cast.emit(spell)

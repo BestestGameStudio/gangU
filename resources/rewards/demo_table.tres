@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="RewardTable" load_steps=4 format=3 uid="uid://bgangurdemotable"]
+[gd_resource type="Resource" script_class="RewardTable" load_steps=6 format=3 uid="uid://bgangurdemotable"]
 
 [ext_resource type="Script" path="res://scripts/reward_table.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/reward_entry.gd" id="2"]
 [ext_resource type="Spell" uid="uid://bgangu3bolt" path="res://resources/spells/placeholder_bolt.tres" id="3"]
+[ext_resource type="Spell" uid="uid://bgangu212sum" path="res://resources/spells/summon_ally.tres" id="4"]
 
 [sub_resource type="Resource" id="1"]
 script = ExtResource("2")
@@ -10,6 +11,12 @@ kind = 0
 spell = ExtResource("3")
 weight = 1.0
 
+[sub_resource type="Resource" id="2"]
+script = ExtResource("2")
+kind = 0
+spell = ExtResource("4")
+weight = 1.0
+
 [resource]
 script = ExtResource("1")
-entries = Array[ExtResource("2")]([SubResource("1")])
+entries = Array[ExtResource("2")]([SubResource("1"), SubResource("2")])

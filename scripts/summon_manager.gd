@@ -56,6 +56,10 @@ func request_spawn(definition: SummonDefinition, position: Vector2) -> Summon:
 		return null
 	var summon: Summon = preload("res://scenes/summon.tscn").instantiate()
 	summon.setup(definition)
+	# #212: wire the guarding player BEFORE tree entry (player_path idiom);
+	# the caster's parent is the production Player. Null in harnesses.
+	if _caster != null:
+		summon.player = _caster.get_parent() as Node2D
 	_spawn_parent().add_child(summon)
 	summon.global_position = position
 	summoned.emit(summon)
