@@ -154,11 +154,20 @@ func _mount_area_spawns(area: Node) -> void:
 ## scans the "enemies" group, so the enemies must already be in the tree or
 ## the objective targets 0 and never completes.
 func _mount_objective(area: Node) -> void:
-	if area.name != "DungeonA":
-		return
 	var obj := DungeonObjective.new()
 	obj.name = "DungeonObjective"
-	obj.dungeon_id = &"dungeon_a"
+	if area.name == "DungeonA":
+		obj.dungeon_id = &"dungeon_a"
+	elif area.name == "DungeonB":
+		## #173: the RED room holds the Head boss. ELIMINATION with no mobs
+		## spawns the boss at ready (mob target 0) and the boss kill is the
+		## clear - the locked red exit opens on objective_completed (D12).
+		obj.dungeon_id = &"dungeon_b"
+		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
+		obj.boss_scene = preload("res://scenes/boss_head.tscn")
+		obj.boss_spawn_position = Vector2(576, 300)
+	else:
+		return
 	obj.objective_completed.connect(_on_objective_completed)
 	area.add_child(obj)
 
@@ -168,17 +177,23 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
 ## anytime, objective not required). Returns to the hub in the SAME run via a
 ## deferred swap - the shared Player is repositioned, never recreated, so
-## spells and current HP are retained. #55: red-gate DungeonB mounts it
-## UNLOCKED too - DungeonB has no enemies/objective, so without a portal an
-## entered run could not end (soft-lock). Locked objective-gated portal
-## mechanics remain proven by the labeled fixture regression in
-## scripts/test9_exit_flow.gd.
+## spells and current HP are retained. #55's soft-lock reason for an unlocked
+## DungeonB portal is gone: #173 gives the RED room its boss objective, so
+## DungeonB mounts the portal LOCKED again per D12 (clear-or-die), wired to
+## the area objective by the duck-typed objective_path.
 func _mount_exit_portal(area: Node) -> void:
 	if area.name != "DungeonA" and area.name != "DungeonB":
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
 	portal.position = Vector2(576, 120)
+	if area.name == "DungeonB":
+		## Anti-soft-lock: only lock the red exit when BOTH a live objective
+		## and its boss_scene exist; without either, stay unlocked (#55).
+		var obj: DungeonObjective = area.get_node_or_null("DungeonObjective")
+		if obj != null and obj.boss_scene != null:
+			portal.locked = true
+			portal.objective_path = NodePath("../DungeonObjective")
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 
