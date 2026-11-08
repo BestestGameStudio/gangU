@@ -1,0 +1,570 @@
+{
+ "_comment": "#177 Mustache Warrior board -> assets/sprites/mustache_warrior.png (+ mustache_warrior_frames.tres body). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/mustache_warrior.json <board.png> assets/sprites/mustache_warrior.png",
+ "scale": 3,
+ "cell_w": 64,
+ "cell_h": 48,
+ "baseline": 44,
+ "bg": [
+  21,
+  18,
+  28
+ ],
+ "key_dist": 54,
+ "texture_path": "res://assets/sprites/mustache_warrior.png",
+ "rows": [
+  {
+   "name": "idle",
+   "y": [
+    428,
+    552
+   ],
+   "mode": "bbox",
+   "frames": [
+    [
+     70,
+     125,
+     null
+    ],
+    [
+     179,
+     234,
+     null
+    ],
+    [
+     287,
+     341,
+     null
+    ],
+    [
+     395,
+     451,
+     null
+    ]
+   ]
+  },
+  {
+   "name": "walk",
+   "y": [
+    428,
+    552
+   ],
+   "mode": "bbox",
+   "frames": [
+    [
+     572,
+     626,
+     null
+    ],
+    [
+     691,
+     746,
+     null
+    ],
+    [
+     808,
+     865,
+     null
+    ],
+    [
+     926,
+     987,
+     null
+    ],
+    [
+     1054,
+     1109,
+     null
+    ],
+    [
+     1174,
+     1227,
+     null
+    ],
+    [
+     1292,
+     1346,
+     null
+    ],
+    [
+     1412,
+     1466,
+     null
+    ]
+   ]
+  },
+  {
+   "name": "attack",
+   "y": [
+    612,
+    750
+   ],
+   "mode": "anchor",
+   "frames": [
+    [
+     64,
+     140,
+     113
+    ],
+    [
+     192,
+     295,
+     233
+    ],
+    [
+     320,
+     442,
+     372
+    ],
+    [
+     483,
+     539,
+     511
+    ]
+   ]
+  },
+  {
+   "name": "hurt",
+   "y": [
+    612,
+    750
+   ],
+   "mode": "anchor",
+   "frames": [
+    [
+     633,
+     695,
+     675
+    ],
+    [
+     727,
+     804,
+     763
+    ],
+    [
+     827,
+     894,
+     866
+    ]
+   ]
+  },
+  {
+   "name": "death",
+   "y": [
+    612,
+    750
+   ],
+   "mode": "anchor",
+   "frames": [
+    [
+     972,
+     1038,
+     1005
+    ],
+    [
+     1053,
+     1114,
+     1079
+    ],
+    [
+     1139,
+     1214,
+     1168
+    ],
+    [
+     1236,
+     1321,
+     1253
+    ],
+    [
+     1337,
+     1410,
+     1350
+    ],
+    [
+     1428,
+     1500,
+     1452
+    ]
+   ]
+  },
+  {
+   "name": "lunge",
+   "y": [
+    856,
+    960
+   ],
+   "mode": "anchor",
+   "frames": [
+    [
+     51,
+     119,
+     99
+    ],
+    [
+     135,
+     262,
+     240
+    ]
+   ]
+  },
+  {
+   "name": "spin",
+   "y": [
+    856,
+    960
+   ],
+   "mode": "anchor",
+   "frames": [
+    [
+     309,
+     409,
+     363
+    ],
+    [
+     424,
+     528,
+     469
+    ],
+    [
+     546,
+     647,
+     590
+    ]
+   ]
+  },
+  {
+   "name": "ranged",
+   "y": [
+    856,
+    960
+   ],
+   "mode": "anchor",
+   "frames": [
+    [
+     697,
+     740,
+     718
+    ],
+    [
+     772,
+     813,
+     794
+    ],
+    [
+     841,
+     893,
+     861
+    ]
+   ]
+  },
+  {
+   "name": "orb",
+   "y": [
+    856,
+    960
+   ],
+   "mode": "center",
+   "frames": [
+    [
+     905,
+     956,
+     null
+    ]
+   ]
+  },
+  {
+   "name": "fx",
+   "y": [
+    840,
+    965
+   ],
+   "mode": "center",
+   "frames": [
+    [
+     1040,
+     1126,
+     null
+    ],
+    [
+     1130,
+     1235,
+     null
+    ],
+    [
+     1255,
+     1324,
+     null
+    ],
+    [
+     1338,
+     1401,
+     null
+    ]
+   ]
+  }
+ ],
+ "animations": [
+  {
+   "name": "idle",
+   "speed": 6.0,
+   "loop": true,
+   "frames": [
+    [
+     0,
+     0,
+     1.0
+    ],
+    [
+     0,
+     1,
+     1.0
+    ],
+    [
+     0,
+     2,
+     1.0
+    ],
+    [
+     0,
+     3,
+     1.0
+    ]
+   ]
+  },
+  {
+   "name": "walk",
+   "speed": 12.0,
+   "loop": true,
+   "frames": [
+    [
+     1,
+     0,
+     1.0
+    ],
+    [
+     1,
+     1,
+     1.0
+    ],
+    [
+     1,
+     2,
+     1.0
+    ],
+    [
+     1,
+     3,
+     1.0
+    ],
+    [
+     1,
+     4,
+     1.0
+    ],
+    [
+     1,
+     5,
+     1.0
+    ],
+    [
+     1,
+     6,
+     1.0
+    ],
+    [
+     1,
+     7,
+     1.0
+    ]
+   ]
+  },
+  {
+   "name": "attack",
+   "speed": 14.0,
+   "loop": false,
+   "frames": [
+    [
+     2,
+     0,
+     1.0
+    ],
+    [
+     2,
+     1,
+     1.0
+    ],
+    [
+     2,
+     2,
+     1.5
+    ],
+    [
+     2,
+     3,
+     1.5
+    ]
+   ]
+  },
+  {
+   "name": "hurt",
+   "speed": 14.0,
+   "loop": false,
+   "frames": [
+    [
+     3,
+     0,
+     1.0
+    ],
+    [
+     3,
+     1,
+     1.5
+    ],
+    [
+     3,
+     2,
+     1.0
+    ]
+   ]
+  },
+  {
+   "name": "death",
+   "speed": 9.0,
+   "loop": false,
+   "frames": [
+    [
+     4,
+     0,
+     1.0
+    ],
+    [
+     4,
+     1,
+     1.0
+    ],
+    [
+     4,
+     2,
+     1.0
+    ],
+    [
+     4,
+     3,
+     1.5
+    ],
+    [
+     4,
+     4,
+     2.5
+    ],
+    [
+     4,
+     5,
+     2.0
+    ]
+   ]
+  },
+  {
+   "name": "lunge",
+   "speed": 10.0,
+   "loop": false,
+   "frames": [
+    [
+     5,
+     0,
+     1.0
+    ],
+    [
+     5,
+     1,
+     3.0
+    ]
+   ]
+  },
+  {
+   "name": "spin",
+   "speed": 16.0,
+   "loop": true,
+   "frames": [
+    [
+     6,
+     0,
+     1.0
+    ],
+    [
+     6,
+     1,
+     1.0
+    ],
+    [
+     6,
+     2,
+     1.0
+    ]
+   ]
+  },
+  {
+   "name": "ranged",
+   "speed": 10.0,
+   "loop": false,
+   "frames": [
+    [
+     7,
+     0,
+     1.0
+    ],
+    [
+     7,
+     1,
+     1.0
+    ],
+    [
+     7,
+     2,
+     2.0
+    ]
+   ]
+  },
+  {
+   "name": "windup_lunge",
+   "speed": 1.0,
+   "loop": true,
+   "frames": [
+    [
+     5,
+     0,
+     1.0
+    ]
+   ]
+  },
+  {
+   "name": "windup_spin",
+   "speed": 1.0,
+   "loop": true,
+   "frames": [
+    [
+     2,
+     0,
+     1.0
+    ]
+   ]
+  },
+  {
+   "name": "windup_ranged",
+   "speed": 6.0,
+   "loop": true,
+   "frames": [
+    [
+     7,
+     0,
+     1.0
+    ],
+    [
+     7,
+     1,
+     1.0
+    ]
+   ]
+  }
+ ]
+}
