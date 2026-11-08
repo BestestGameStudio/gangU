@@ -92,3 +92,12 @@ alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
 - Not extracted (no consumer, and drawn ~1.5x larger than the rows): the
   "FX / Telegraphed Variants" panels (Charge, Dash, Invulnerable/Shield,
   Targeted/Warning) and the "VFX Elements" overlays; the large portrait.
+
+# spell_projectiles.png - spell projectile sprites (#210)
+- Source: single sprite sheet attached to issue #210 by @Mitravasu
+  (https://github.com/user-attachments/assets/f0f3f901-d1bc-48aa-8f67-d0df7610042b).
+- Rows flame / mana / bolt, 8 loop frames each, 12 fps; packed at scale 4 into
+  64x48 cells via `tools/sprites/specs/spell_projectiles.json`.
+- The sheet's row labels sit close above the art, so the label text was keyed
+  out of a working copy (dim lavender on the dark board) before extraction;
+  the art itself is byte-faithful to the issue attachment.
