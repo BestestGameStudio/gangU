@@ -41,14 +41,15 @@ runs:
 
     # xvfb + Mesa (llvmpipe) let Godot open a real window with the
     # gl_compatibility renderer, so screenshots and Movie Maker work.
-    - name: Install virtual display, software GL and ffmpeg
+    # numpy + Pillow are for tools/sprites/*.py (sprite-sheet-pipeline skill).
+    - name: Install virtual display, software GL, ffmpeg and sprite-tool deps
       shell: bash
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y -qq --no-install-recommends \
           xvfb xauth libgl1 libgl1-mesa-dri libglx-mesa0 libegl1 \
           libxcursor1 libxinerama1 libxrandr2 libxi6 libasound2t64 \
-          libpulse0 ffmpeg >/dev/null
+          libpulse0 ffmpeg python3-numpy python3-pil >/dev/null
 
     - name: Restore import cache
       uses: actions/cache@v4
