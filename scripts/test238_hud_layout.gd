@@ -76,7 +76,7 @@ func _initialize() -> void:
 	var free_icon := SpellIcon.new(SIDE, true)
 	root.add_child(free_icon)
 	var free_wipe := free_icon.get_node("CooldownWipe") as ColorRect
-	_check(free_wipe.color.a == 1.0, "wipe is opaque")
+	_check(free_wipe.color.a > 0.0 and free_wipe.color.a < 1.0, "wipe is translucent (#278)")
 	await process_frame
 	for frac in [1.0, 0.75, 0.5, 0.1]:
 		free_icon.set_cooldown_fraction(frac)

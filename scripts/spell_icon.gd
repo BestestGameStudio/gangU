@@ -8,7 +8,8 @@ extends TextureRect
 ## icon_prefix).
 ## #238: two independent overlays, above the art and below each other in this
 ## order. Only surfaces that drive them show them:
-##   set_cooldown_fraction - opaque wipe, full at cooldown start, whose top
+##   set_cooldown_fraction - translucent wipe (#278: the art stays visible
+##     beneath it), full at cooldown start, whose top
 ##     edge moves straight down until gone (HUD only).
 ##   set_upgrade_available - animated rising chevron, only on icons built with
 ##     upgrade_overlay = true (HUD and Tab panel). Those icons stay on the
