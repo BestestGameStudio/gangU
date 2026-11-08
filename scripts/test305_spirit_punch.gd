@@ -93,6 +93,23 @@ func _initialize() -> void:
 	_check(far.hp == far.max_hp, "far enemy untouched (punch dies at range)")
 	_check(_projectile_count() == 0, "punch projectile despawned")
 
+	# --- #289 sprite wiring: the punch flies the opaque-fist art ------------
+	var frames: SpriteFrames = load("res://resources/sprites/spell_upgrades_frames.tres")
+	_check(frames != null and frames.has_animation(&"spirit_punch") and frames.has_animation(&"spirit_punch_start"),
+		"sheet has spirit_punch_start + spirit_punch anims")
+	_check(Projectile.SPELL_SPRITE_ANIMS.get("Spirit Punch") == &"spirit_punch", "SPELL_SPRITE_ANIMS maps Spirit Punch")
+	var p: Projectile = load("res://scenes/projectile.tscn").instantiate()
+	p.setup(_spell, Vector2.RIGHT, null)
+	_area.add_child(p)
+	await process_frame
+	var sprite := p.get_node_or_null("Sprite") as AnimatedSprite2D
+	_check(sprite != null, "punch projectile carries the Sprite child")
+	if sprite != null:
+		_check(sprite.animation == &"spirit_punch_start" and sprite.is_playing(), "plays spirit_punch_start on spawn")
+	var shape := p.get_node("CollisionShape2D").shape as CircleShape2D
+	_check(is_equal_approx(shape.radius, _spell.radius), "sprite swap leaves hit radius at spell.radius")
+	p.queue_free()
+
 	print("test305: %d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 

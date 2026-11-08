@@ -1,4 +1,4 @@
-[gd_resource type="SpriteFrames" load_steps=98 format=3]
+[gd_resource type="SpriteFrames" load_steps=104 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/spell_upgrades.png" id="1_sheet"]
 
@@ -385,6 +385,30 @@ region = Rect2(256, 1080, 64, 72)
 [sub_resource type="AtlasTexture" id="AtlasTexture_r15c5"]
 atlas = ExtResource("1_sheet")
 region = Rect2(320, 1080, 64, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r16c0"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 1152, 64, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r16c1"]
+atlas = ExtResource("1_sheet")
+region = Rect2(64, 1152, 64, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r16c2"]
+atlas = ExtResource("1_sheet")
+region = Rect2(128, 1152, 64, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r16c3"]
+atlas = ExtResource("1_sheet")
+region = Rect2(192, 1152, 64, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r16c4"]
+atlas = ExtResource("1_sheet")
+region = Rect2(256, 1152, 64, 72)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r16c5"]
+atlas = ExtResource("1_sheet")
+region = Rect2(320, 1152, 64, 72)
 
 [resource]
 animations = [{
@@ -874,5 +898,36 @@ animations = [{
 }],
 "loop": true,
 "name": &"bolt_heavy",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c2")
+}],
+"loop": false,
+"name": &"spirit_punch_start",
+"speed": 18.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r16c4")
+}],
+"loop": true,
+"name": &"spirit_punch",
 "speed": 12.0
 }]

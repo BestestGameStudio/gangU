@@ -26,6 +26,7 @@ const SPELLS := {
 	"placeholder_bolt": [12, &"placeholder_bolt", "warm"],
 	"bolt_flurry": [14, &"bolt_flurry", "warm"],
 	"bolt_heavy": [15, &"bolt_heavy", "warm"],
+	"spirit_punch": [16, &"spirit_punch", "cool"],
 }
 
 var _checks := 0
@@ -97,7 +98,7 @@ func _initialize() -> void:
 	var frames: SpriteFrames = load("res://resources/sprites/spell_upgrades_frames.tres")
 	_check(frames != null, "spell_upgrades_frames.tres loads")
 	var image: Image = (load("res://assets/sprites/spell_upgrades.png") as Texture2D).get_image()
-	_check(image.get_width() == 6 * CELL_W and image.get_height() == 16 * CELL_H, "sheet is 6x16 cells")
+	_check(image.get_width() == 6 * CELL_W and image.get_height() == 17 * CELL_H, "sheet is 6x17 cells")
 	if image.is_compressed():
 		image.decompress()
 	_check_animations(frames, image)
