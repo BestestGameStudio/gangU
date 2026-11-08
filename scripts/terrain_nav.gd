@@ -15,10 +15,16 @@ const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), 
 ## actually expect (the A1 debug map is wall-enclosed and terminates
 ## naturally far below the default).
 static func reachable(map: TerrainMap, from_world: Vector2, max_cells: int = 65536) -> Array[Vector2i]:
+	if map == null:
+		return []
+	return reachable_from_cell(map, map.world_to_cell(from_world), max_cells)
+
+## Cell-space flood fill: no world transforms, so it also works on a map
+## that is not in the scene tree.
+static func reachable_from_cell(map: TerrainMap, start: Vector2i, max_cells: int = 65536) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
-	if map == null or not map.is_walkable_at(from_world):
+	if map == null or not map.is_walkable_at_cell(start):
 		return out
-	var start := map.world_to_cell(from_world)
 	var visited := {start: true}
 	var stack: Array[Vector2i] = [start]
 	while not stack.is_empty() and visited.size() < max_cells:
