@@ -26,3 +26,25 @@ traced art, no stock files shipped.
 - Author: instinctmitra (Mitra's Instinct), 2026-11-07, pixel-by-pixel via
   generator script (PIL), iterated against rendered previews.
 - License for this original asset: CC0 (matches project asset licensing).
+
+# boss_head.png - "Head" boss sprite atlas (#173)
+
+User-supplied reference art, sliced and repacked for the engine.
+
+## Provenance
+- Source image: uploaded by repo collaborator Mitravasu to issue #173
+  ("BOSS SPRITE", 2026-11-07) with the request "Can you use this sprite for
+  a boss enemy, with the animations and stuff?" - user-supplied asset for
+  this project. No third-party asset pack, stock file, or copied game art
+  shipped.
+- Processing (instinctmitra, 2026-11-08): the reference sheet's labeled
+  panels (Idle 6 / Move 7-per-direction x4 / Attack-Projectile 8 /
+  Attack-AOE-Pulse 8 / Hurt 4 / Stun 4 / Death 10 / FX variants / VFX
+  overlays) were sliced per frame from the irregular presentation layout,
+  panel background flood-removed to transparency, normalized to a 96x64
+  cell atlas, bottom-center anchored. The sheet labels Move as "(8, 4 dir)"
+  but ships 7 frames per direction; the atlas carries the actual 7.
+  AOE ring frames with panel-clipped baked rings were dropped (the pulse
+  ring is drawn in-engine from the sheet's VFX circle element instead).
+- Frame counts, timing and gameplay numbers that use this art are CHOSEN
+  tunings (scripts/boss_head.gd), not facts from the image.
