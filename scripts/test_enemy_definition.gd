@@ -34,8 +34,18 @@ func _initialize() -> void:
 	var def_script: Script = load("res://scripts/enemy_definition.gd")
 	_check(def_script != null, "EnemyDefinition resource script exists")
 	var enemy_scene: PackedScene = load("res://scenes/enemy.tscn")
-	var demo_table: Resource = load("res://resources/rewards/demo_table.tres")
-	_check(demo_table != null, "demo reward table loads (fixture)")
+	# Single-entry fixture table BUILT IN CODE (Placeholder Bolt). The
+	# production demo_table.tres is content-owned data - #212 added the
+	# summon spell entry - so loading it here would couple these exact-roll
+	# assertions to unrelated content changes.
+	var fix_entry_script: Script = load("res://scripts/reward_entry.gd")
+	var fix_table_script: Script = load("res://scripts/reward_table.gd")
+	var bolt_entry: Resource = fix_entry_script.new()
+	bolt_entry.set("spell", load("res://resources/spells/placeholder_bolt.tres"))
+	bolt_entry.set("weight", 1.0)
+	var demo_table: Resource = fix_table_script.new()
+	demo_table.set("entries", Array([bolt_entry], TYPE_OBJECT, "Resource", fix_entry_script))
+	_check(demo_table != null, "single-entry fixture reward table (Placeholder Bolt)")
 	if def_script == null or enemy_scene == null or demo_table == null:
 		print("[98] DONE failures=", failures)
 		quit(failures)
