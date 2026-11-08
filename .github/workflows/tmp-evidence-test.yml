@@ -2,6 +2,7 @@ name: TEMP evidence-link test
 'on':
   pull_request:
     types:
+    - opened
     - synchronize
 jobs:
   claude:
