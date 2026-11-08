@@ -22,6 +22,10 @@ extends Node
 
 signal purchased(entry: ShopEntry)
 
+## Explicit wiring convention (matches SpellProgress/HUD): set before tree
+## entry; the "player" group fallback applies otherwise.
+@export var caster_path: NodePath
+
 var _catalog: ShopCatalog
 var _wallet: CurrencyWallet
 var _caster: SpellCaster
@@ -32,9 +36,12 @@ func setup(catalog: ShopCatalog) -> void:
 func _ready() -> void:
 	add_to_group("shop")
 	_wallet = get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
-	var player := get_tree().get_first_node_in_group("player")
-	if player != null:
-		_caster = player.get_node_or_null("SpellCaster") as SpellCaster
+	if caster_path != NodePath(""):
+		_caster = get_node_or_null(caster_path) as SpellCaster
+	if _caster == null:
+		var player := get_tree().get_first_node_in_group("player")
+		if player != null:
+			_caster = player.get_node_or_null("SpellCaster") as SpellCaster
 	if _wallet == null:
 		push_warning("Shop: no currency_wallet group node; all buys refuse.")
 	if _caster == null:
