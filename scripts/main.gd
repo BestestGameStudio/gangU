@@ -171,6 +171,17 @@ func _swap(area: Node) -> void:
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
 	_mount_revive_item(current_area)
+	_mount_dungeon_modifiers(current_area)
+
+## (#222) Dungeon modifiers: an area opts in with ONE "DungeonModifiers"
+## child (DungeonModifierHost, SpawnData idiom). Bound LAST so the
+## dungeon_entered event sees spawns, objective and portal in place. No
+## production area carries one yet (content is human-open), so this is inert.
+func _mount_dungeon_modifiers(area: Node) -> void:
+	var host := area.get_node_or_null("DungeonModifiers") as DungeonModifierHost
+	if host == null:
+		return
+	host.bind(area, get_node_or_null("Player/SpellCaster") as SpellCaster, get_node_or_null("RunManager") as RunManager)
 
 ## #100 generic mounter: every area swap reads the area's "SpawnData" child
 ## (AreaSpawnData). Entries are plain scene data - position, enemy scene and
