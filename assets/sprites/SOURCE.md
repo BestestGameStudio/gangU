@@ -33,7 +33,8 @@ Art from issue #177 ("common enemy sprite update"): the 1536x1024
 "Mustache Warrior - Common Enemy" concept sheet attached to the issue by the
 project team. That sheet is a presentation board (labels, panels, dark
 background, uneven spacing), so it is NOT shipped as-is; the engine sheet
-here is cut from it by `tools/sprites/extract_mustache_warrior.py`
+here is cut from it by `tools/sprites/extract_frames.py` with
+`tools/sprites/specs/mustache_warrior.json`
 (background keyed out, frames anchored on body/mustache centre + feet line,
 3:1 alpha-weighted downsample, hard alpha cut for crisp pixels).
 

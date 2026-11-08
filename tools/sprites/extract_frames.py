@@ -1,5 +1,5 @@
-"""Generic concept-board -> Godot sprite sheet extractor (generalized from
-extract_mustache_warrior.py, #177).
+"""Generic concept-board -> Godot sprite sheet extractor (first used for the
+#177 Mustache Warrior sheet; see specs/mustache_warrior.json).
 
 Concept boards (e.g. images attached to GitHub issues) are presentation art:
 labels, panels, a flat background and uneven spacing. This tool cuts the

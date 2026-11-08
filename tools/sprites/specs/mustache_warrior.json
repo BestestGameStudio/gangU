@@ -1,5 +1,5 @@
 {
- "_comment": "#177 Mustache Warrior board -> assets/sprites/mustache_warrior.png (+ mustache_warrior_frames.tres body). Reproduces extract_mustache_warrior.py byte-for-byte.",
+ "_comment": "#177 Mustache Warrior board -> assets/sprites/mustache_warrior.png (+ mustache_warrior_frames.tres body). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/mustache_warrior.json <board.png> assets/sprites/mustache_warrior.png",
  "scale": 3,
  "cell_w": 64,
  "cell_h": 48,

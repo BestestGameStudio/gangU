@@ -5,7 +5,7 @@ description: "Turn a concept board or sprite sheet image (usually attached to a 
 
 # Sprite sheet pipeline (gangU)
 
-Reference run: #177 Mustache Warrior (PR #182). Tool: `tools/sprites/extract_frames.py` + a JSON spec (`tools/sprites/specs/mustache_warrior.json` reproduces `assets/sprites/mustache_warrior.png` byte-for-byte). Original one-off: `tools/sprites/extract_mustache_warrior.py`.
+Reference run: #177 Mustache Warrior (PR #182). Tool: `tools/sprites/extract_frames.py` + a JSON spec (`tools/sprites/specs/mustache_warrior.json` reproduces `assets/sprites/mustache_warrior.png` byte-for-byte).
 
 ## 1. Get the image
 - `gh issue view N --repo BestestGameStudio/gangU --json title,body,comments` - images are `https://github.com/user-attachments/assets/<id>` links in the body.
