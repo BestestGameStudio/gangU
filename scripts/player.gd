@@ -18,6 +18,12 @@ var hp: int
 var damage_modifiers := DamageModifiers.new()
 var damage_rng := RandomNumberGenerator.new()
 
+## #205: spell-triggered invincibility window. Default OFF. Future spell code
+## opens and closes it with set_invulnerable() around the spell phases that
+## grant iframes. Taking a hit never opens it. No durations live here: each
+## spell owns its own timing.
+var _invulnerable := false
+
 ## #137: wizard sprite facing state. The 8-way movement vector collapses to
 ## 4-way facing on the dominant axis (exact diagonals resolve vertically) and
 ## the last facing is retained while idle. Down is the at-rest facing.
@@ -44,12 +50,26 @@ func _ready() -> void:
 ## #5 contract: single damage entry point. Clamps HP at 0 and emits
 ## health_changed ONLY from inside here, so HP can never change silently.
 func apply_damage(amount: int) -> void:
+	if _invulnerable:
+		# #205: window open - ignore the hit entirely (no HP change, no
+		# health_changed, no died).
+		return
 	if hp <= 0:
 		return
 	hp = clampi(hp - amount, 0, max_hp)
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()
+
+
+## #205: open (true) or close (false) the spell-triggered invincibility window.
+## Called by future spell code for specific spell phases.
+func set_invulnerable(active: bool) -> void:
+	_invulnerable = active
+
+
+func is_invulnerable() -> bool:
+	return _invulnerable
 
 
 ## #12 contract: single heal entry point. Clamps at max_hp and emits
