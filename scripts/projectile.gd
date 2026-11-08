@@ -48,6 +48,15 @@ const PULSE_AMP: float = 0.15 ## +/-15% scale pulse
 var _vis_t: float = 0.0
 var _vis_base: Vector2 = Vector2.ONE
 var _sprite: AnimatedSprite2D = null
+var _sprite_base: Vector2 = Vector2.ONE
+
+## #263: glow halo + fading trail (opt-in per spell, visuals only).
+const GLOW_RADIUS_MULT: float = 2.2 ## halo radius vs. the sprite's visual radius
+const GLOW_ALPHA: float = 0.35
+const GLOW_PULSE_AMP: float = 0.2 ## +/-20% halo pulse
+const SPRITE_PULSE_AMP: float = 0.1 ## +/-10% sprite pulse
+var _glow: Polygon2D = null
+var _trail: Line2D = null
 
 func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
@@ -94,6 +103,61 @@ func _ready() -> void:
 		add_child(visual_override)
 	else:
 		_wire_sprite()
+		_wire_glow_and_trail()
+
+## #263: visual radius in pixels - the hit radius times the spell's
+## visual_scale. Collision keeps using spell.radius.
+func visual_radius() -> float:
+	return spell.radius * maxf(spell.visual_scale, 0.0)
+
+func _wire_glow_and_trail() -> void:
+	if spell.trail_length > 0:
+		_trail = Line2D.new()
+		_trail.name = "Trail"
+		_trail.top_level = true # points live in world space behind the shot
+		_trail.width = visual_radius() * 1.4
+		var curve := Curve.new()
+		curve.add_point(Vector2(0.0, 0.15))
+		curve.add_point(Vector2(1.0, 1.0))
+		_trail.width_curve = curve
+		var grad := Gradient.new()
+		var c := spell.projectile_color
+		grad.set_color(0, Color(c.r, c.g, c.b, 0.0))
+		grad.set_color(1, Color(c.r, c.g, c.b, 0.7))
+		_trail.gradient = grad
+		_trail.joint_mode = Line2D.LINE_JOINT_ROUND
+		_trail.end_cap_mode = Line2D.LINE_CAP_ROUND
+		var add_mat := CanvasItemMaterial.new()
+		add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		_trail.material = add_mat
+		_trail.z_index = -1
+		add_child(_trail)
+	if spell.glow:
+		_glow = Polygon2D.new()
+		_glow.name = "Glow"
+		var pts := PackedVector2Array()
+		var cols := PackedColorArray()
+		var r := visual_radius() * GLOW_RADIUS_MULT
+		var c := spell.projectile_color
+		pts.append(Vector2.ZERO)
+		cols.append(Color(c.r, c.g, c.b, GLOW_ALPHA))
+		for i in 25:
+			var a := TAU * float(i) / 24.0
+			pts.append(Vector2(cos(a), sin(a)) * r)
+			cols.append(Color(c.r, c.g, c.b, 0.0))
+		# Triangle fan from the centre so the halo fades out to the rim.
+		var polys: Array = []
+		for i in 24:
+			polys.append(PackedInt32Array([0, i + 1, i + 2]))
+		_glow.polygon = pts
+		_glow.vertex_colors = cols
+		_glow.polygons = polys
+		var add_mat2 := CanvasItemMaterial.new()
+		add_mat2.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		_glow.material = add_mat2
+		_glow.z_index = -1
+		add_child(_glow)
+		move_child(_glow, 0)
 
 ## #210: hide the code-drawn visuals and fly the mapped supplied-art
 ## animation instead. The root already faces the flight direction and the art
@@ -107,8 +171,9 @@ func _wire_sprite() -> void:
 	_sprite.sprite_frames = PROJECTILE_SPRITES
 	_sprite.animation = anim
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var sz: float = spell.radius / 16.0
+	var sz: float = visual_radius() / 16.0 # #263: visual_scale enlarges art only
 	_sprite.scale = Vector2(sz, sz)
+	_sprite_base = _sprite.scale
 	add_child(_sprite)
 	_sprite.play()
 	$Dart.visible = false
@@ -149,6 +214,19 @@ func _physics_process(delta: float) -> void:
 	$Visual.rotation += SPIN_RATE * delta
 	var pulse: float = 1.0 + PULSE_AMP * sin(_vis_t * PULSE_RATE)
 	$Visual.scale = _vis_base * pulse
+	_update_feel()
+
+## #263: sprite/halo pulse and trail follow (visual only).
+func _update_feel() -> void:
+	if _sprite != null and spell.glow:
+		_sprite.scale = _sprite_base * (1.0 + SPRITE_PULSE_AMP * sin(_vis_t * PULSE_RATE))
+	if _glow != null:
+		var g: float = 1.0 + GLOW_PULSE_AMP * sin(_vis_t * PULSE_RATE * 1.3)
+		_glow.scale = Vector2(g, g)
+	if _trail != null:
+		_trail.add_point(global_position)
+		while _trail.get_point_count() > spell.trail_length:
+			_trail.remove_point(0)
 
 func _steer(delta: float) -> void:
 	var best: Node2D = null

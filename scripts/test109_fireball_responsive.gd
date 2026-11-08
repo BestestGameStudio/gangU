@@ -30,7 +30,9 @@ func _initialize() -> void:
 	root.add_child(_root2d)
 	_fireball = load("res://resources/spells/fire_ball.tres")
 	_check("radius: shipped Fire Ball radius is 9.0 (was 7.0)", is_equal_approx(_fireball.radius, 9.0))
-	Engine.physics_ticks_per_second = 18 # degraded frame rate: 50px steps
+	# degraded frame rate: ~50px steps (#263 slowed Fire Ball to 520px/s, so
+	# the tick rate drops from 18 to 10 to keep the tunneling stress intact)
+	Engine.physics_ticks_per_second = 10
 	_spawn_enemy(Vector2(SWEEP_DISTANCES[0], 0))
 	_fire_at_enemy()
 
@@ -64,7 +66,7 @@ func _process(delta: float) -> bool:
 					_fire_at_enemy()
 					t = 0.0
 				else:
-					_check("swept: 18tps 50px steps register at ALL 8 phase offsets (misses=%d)" % _sweep_misses, _sweep_misses == 0)
+					_check("swept: 10tps ~50px steps register at ALL 8 phase offsets (misses=%d)" % _sweep_misses, _sweep_misses == 0)
 					Engine.physics_ticks_per_second = 60
 					phase = 1
 					t = 0.0

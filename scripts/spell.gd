@@ -24,6 +24,14 @@ class_name Spell
 @export var range: float = 600.0 ## Max projectile travel distance in pixels.
 @export var projectile_speed: float = 500.0
 @export var projectile_color: Color = Color(0.4, 0.8, 1.0)
+## (#263) Visual-only projectile feel. None of these touch hit radius,
+## movement, damage or despawn. Defaults keep every other spell unchanged.
+## Multiplier on the supplied-art sprite size (base footprint is radius/16).
+@export var visual_scale: float = 1.0
+## Draws a soft additive halo in projectile_color behind the projectile.
+@export var glow: bool = false
+## Number of past positions in the fading trail; 0 = no trail.
+@export var trail_length: int = 0
 ## (Progression placeholder mechanics, #33/#36) How many projectiles one cast
 ## fans out, and the total fan width. 1/0.0 = today's single-projectile
 ## behavior, so every existing spell is unchanged. Provisional placeholder
