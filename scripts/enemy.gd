@@ -88,6 +88,7 @@ func apply_damage(amount: int) -> void:
 	_flash_t = FLASH_TIME
 	modulate = Color(2.4, 2.4, 2.4)
 	health_changed.emit(hp, max_hp)
+	CombatEffects.damage_number(get_parent(), global_position, amount)
 	if hp > 0:
 		# #110: brief contact spark at the damage-apply site (ENEMY-CENTER,
 		# not the exact physical impact point). Visual only.
