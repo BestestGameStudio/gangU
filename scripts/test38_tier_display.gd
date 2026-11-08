@@ -107,7 +107,7 @@ func _initialize() -> void:
 	var art := Image.create(4, 4, false, Image.FORMAT_RGBA8)
 	split.icon = ImageTexture.create_from_image(art)
 	var slot_icon: SpellIcon = hud.get_node("Root/SpellGrid").get_child(0)
-	_check(slot_icon.texture == null, "(d) before swap the square shows the art-less spell")
+	_check(slot_icon.texture == SpellIcon.NO_ICON_TEXTURE and not slot_icon.get_node("Placeholder").visible, "(d) before swap the square shows the art-less spell (#257 placeholder sprite)")
 	caster.fake_slots[0] = split
 	caster.slot_assigned.emit(0, split)
 	for i in range(5):
