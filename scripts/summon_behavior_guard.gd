@@ -169,7 +169,7 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2) -> Array[Vector2i]:
 				continue
 			if not map.is_walkable_at_cell(next):
 				continue
-			var ng: float = g[current] + 1.0
+			var ng: float = g[current] + 1.0 + _clearance_penalty(map, next, goal)
 			if ng < g.get(next, INF):
 				g[next] = ng
 				came[next] = current
@@ -199,3 +199,15 @@ func _pop_lowest_f(open: Array[Vector2i], g: Dictionary, goal: Vector2i) -> Vect
 
 func _h(a: Vector2i, b: Vector2i) -> float:
 	return absf(a.x - b.x) + absf(a.y - b.y)
+
+## Soft one-cell clearance around blocked cells: keeps waypoints (and the
+## sprite) off wall corners so the ally never visibly brushes terrain. The
+## goal cell is exempt - an enemy hugging a wall must stay reachable.
+func _clearance_penalty(map: TerrainMap, cell: Vector2i, goal: Vector2i) -> float:
+	if cell == goal:
+		return 0.0
+	var blocked := 0
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		if not map.is_walkable_at_cell(cell + d):
+			blocked += 1
+	return 0.75 * blocked
