@@ -15,12 +15,26 @@ extends SceneTree
 
 const AREAS := {
 	"res://scenes/hub.tscn": "HUB",
-	"res://scenes/dungeon_a.tscn": "DUNGEON A (placeholder, normal gate)",
-	"res://scenes/dungeon_b.tscn": "DUNGEON B (placeholder, RED gate)",
+	"res://scenes/dungeon_a.tscn": "DUNGEON A",
+	"res://scenes/dungeon_b.tscn": "DUNGEON B (RED gate)",
 }
+## #124 regression: the 8 renamed upgraded spell resources and all area titles
+## must never re-grow a bracketed dev note.
+const RENAMED_SPELLS := [
+	"res://resources/spells/fire_ball_split.tres",
+	"res://resources/spells/fire_ball_split_wide.tres",
+	"res://resources/spells/fire_ball_split_heavy.tres",
+	"res://resources/spells/fire_ball_beam.tres",
+	"res://resources/spells/fire_ball_beam_long.tres",
+	"res://resources/spells/fire_ball_beam_heavy.tres",
+	"res://resources/spells/fire_ball_beam_piercing.tres",
+	"res://resources/spells/fire_ball_beam_homing.tres",
+]
 const HUD_BAND_RIGHT := 450.0
 const VIEWPORT_W := 1152.0
-## Widest live spell apply entry (69 chars) - the #88 wide-plate trigger.
+## Synthetic 69-char HPLabel stress string (NOT a live spell name) - the #88
+## wide-plate trigger. Kept after #124 renamed live strings; injects worst-case
+## width directly into HPLabel so the masking-geometry legs stay discriminating.
 const WIDE_CONTENT := "Fire Ball Beam Piercing [placeholder projectile, not continuous beam]"
 
 var failures := 0
@@ -60,6 +74,7 @@ func _initialize() -> void:
 		_check(left_edge >= HUD_BAND_RIGHT,
 			path.get_file() + ": Title box left edge %.0f clears HUD band %.0f" % [left_edge, HUD_BAND_RIGHT])
 		_check(title.text == AREAS[path], path.get_file() + ": Title text preserved")
+		_check(not title.text.contains("["), path.get_file() + ": Title carries no bracketed dev note (#124)")
 		# Old world-space Label must be gone (no direct-child Label named Title).
 		_check(scene.get_node_or_null("Title") == null, path.get_file() + ": no world-space Title remains")
 		# #88: title layer stacks strictly above the HUD layer so a wide HUD
@@ -69,6 +84,11 @@ func _initialize() -> void:
 				path.get_file() + ": TitleLayer layer %d above HUD layer %d" % [layer.layer, hud_layer])
 		root.remove_child(scene)
 		scene.free()
+
+	for sp in RENAMED_SPELLS:
+		var res: Resource = load(sp)
+		_check(res != null and not (res.spell_name as String).contains("["),
+			sp.get_file() + ": spell_name carries no bracketed dev note (#124)")
 
 	# #88 geometry proof: ACTUAL HUD driven to wide content vs the ACTUAL
 	# DungeonA title rect. The plate must genuinely reach under the title
