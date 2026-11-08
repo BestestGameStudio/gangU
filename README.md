@@ -86,3 +86,4 @@ the `test_objective_flow` fixture, and `test_run_restart` (the restart guard) fa
 intermittently. Compare your run against this instead of rebuilding a copy of main to
 re-baseline. While iterating, run only the harnesses you touched; run the full suite once at
 the end. Anything beyond this baseline is yours.
+<!-- claude label-flow test -->
