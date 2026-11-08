@@ -5,6 +5,10 @@ extends SceneTree
 ## HP state colors, spell-row frames + equipped border, READY/cooling bar
 ## fills, slot frames, backward-compat slot fallback, and that all labels /
 ## data strings are preserved. Decor legs FAIL on old main (no styling).
+## #122: compact HUD - geometry pins (i) re-pinned to the smaller sizes and
+## the empty-slot leg (e) updated to collapsed semantics (unassigned frames
+## hide; zero assigned renders one dim hint line). Decor + collapse +
+## geometry legs FAIL on pre-#122 main.
 class StubPlayer extends Player:
 	var start_hp := 80
 	var start_max := 100
@@ -148,21 +152,40 @@ func _initialize() -> void:
 		_check(_fill_of(bars[0]) == C_COOLING, "(d) AlphaBolt fill swaps to cooling")
 		_check(_fill_of(bars[1]) == C_READY, "(d) BetaBolt fill swaps to READY")
 
-	# (e) slot frames assigned vs empty + labels.
+	# (e) #122 collapsed slot rows: assigned frames render with border and
+	# full row content; unassigned frames hide entirely; zero assigned shows
+	# one dim hint line instead of any placeholder rows.
 	var slots_box := hud.get_node("Root/SlotRows") as VBoxContainer
 	var slframes := _frames(slots_box)
-	_check(slframes.size() == 6, "(e) 6 slot frames (got %d)" % slframes.size())
+	_check(slframes.size() == 6, "(e) 6 slot frames built (got %d)" % slframes.size())
 	if slframes.size() == 6:
-		_check(_border_of(slframes[0]) == C_ASSIGNED, "(e) slot 1 assigned border")
-		_check(_border_of(slframes[1]) == C_EMPTY, "(e) slot 2 empty border")
-		_check(_border_of(slframes[2]) == C_ASSIGNED, "(e) slot 3 assigned border")
-		_check(_border_of(slframes[5]) == C_EMPTY, "(e) slot 6 empty border")
-		var labels: Array = slframes[1].find_children("*", "Label", true, false)
-		var empty_text := false
-		for l in labels:
-			if l.text == "(empty)":
-				empty_text = true
-		_check(empty_text, "(e) empty slot label preserved")
+		_check(slframes[0].visible and _border_of(slframes[0]) == C_ASSIGNED, "(e) slot 1 assigned frame visible + border")
+		_check(not slframes[1].visible, "(e) slot 2 empty frame collapsed")
+		_check(slframes[2].visible and _border_of(slframes[2]) == C_ASSIGNED, "(e) slot 3 assigned frame visible + border")
+		_check(not slframes[5].visible, "(e) slot 6 empty frame collapsed")
+		var hint := slots_box.get_node_or_null("EmptyHint") as Label
+		_check(hint != null, "(e) EmptyHint line exists")
+		if hint != null:
+			_check(not hint.visible, "(e) hint hidden while slots assigned")
+		# zero-assigned pass: every frame collapses, the hint line renders.
+		caster.fake_slots = [null, null, null, null, null, null]
+		for i in range(3):
+			await process_frame
+		var all_hidden := true
+		for f in slframes:
+			all_hidden = all_hidden and not f.visible
+		_check(all_hidden, "(e) zero assigned: all slot frames collapsed")
+		if hint != null:
+			_check(hint.visible and hint.text == "(no spells assigned - Tab to equip)",
+				"(e) zero assigned: dim hint line (visible=%s text='%s')" % [str(hint.visible), hint.text])
+		# restoring assignments: frames uncollapse, the hint hides again.
+		caster.fake_slots = [a, null, b, null, null, null]
+		for i in range(3):
+			await process_frame
+		_check(slframes[0].visible and slframes[2].visible and not slframes[1].visible,
+			"(e) reassign: frames uncollapse")
+		if hint != null:
+			_check(not hint.visible, "(e) reassign: hint hides again")
 
 	# (g) backward-compat: a caster without the slot override still builds rows.
 	var player2 := StubPlayer.new()
@@ -178,12 +201,34 @@ func _initialize() -> void:
 		await process_frame
 	_check(true, "(g) base-API caster mounted with no errors (see error count)")
 
-	# (h) plate tracks the new occupied rect: reserved_rect covers every frame.
+	# (h) plate tracks the occupied rect: reserved_rect covers every VISIBLE
+	# frame (#122: collapsed empty frames render nothing to cover).
 	var rr: Rect2 = hud.reserved_rect()
 	var covered := rr.has_area()
 	for f in _frames(hud.get_node("Root/SpellRows")) + _frames(hud.get_node("Root/SlotRows")):
+		if not f.visible:
+			continue
 		covered = covered and rr.encloses(f.get_global_rect().grow(-1.0))
-	_check(covered, "(h) reserved_rect covers all row frames after settle")
+	_check(covered, "(h) reserved_rect covers all visible row frames after settle")
+
+	# (i) #122 compact geometry pins.
+	var root_box := hud.get_node("Root") as VBoxContainer
+	_check(root_box.offset_right == 312.0, "(i) Root width ~300 (offset_right got %s)" % str(root_box.offset_right))
+	_check(root_box.get_theme_constant("separation") == 4, "(i) Root separation 4")
+	_check(hp_label.get_theme_font_size("font_size") == 16, "(i) HPLabel font 16")
+	_check(hp_bar.custom_minimum_size == Vector2(180, 14), "(i) HPBar 180x14 (got %s)" % str(hp_bar.custom_minimum_size))
+	var obj_label := hud.get_node("Root/ObjectiveLabel") as Label
+	_check(obj_label.get_theme_font_size("font_size") == 16, "(i) ObjectiveLabel font 16")
+	_check(srows.get_theme_constant("separation") == 3, "(i) SpellRows separation 3")
+	_check(slots_box.get_theme_constant("separation") == 3, "(i) SlotRows separation 3")
+	if sframes.size() == 2:
+		var sname := sframes[0].find_children("*", "Label", true, false)[0] as Label
+		_check(sname.get_theme_font_size("font_size") == 15, "(i) spell row name font 15")
+		_check(sname.custom_minimum_size == Vector2(110, 0), "(i) spell row name min width 110")
+		var ibar := sframes[0].find_children("*", "ProgressBar", true, false)[0] as ProgressBar
+		_check(ibar.custom_minimum_size == Vector2(90, 12), "(i) row bar 90x12")
+		var shbox := sframes[0].get_child(0) as HBoxContainer
+		_check(shbox.get_theme_constant("separation") == 4, "(i) row separation 4")
 
 	print("[93] DONE failures=%d" % failures)
 	quit(1 if failures > 0 else 0)
