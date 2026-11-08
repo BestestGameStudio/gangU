@@ -11,3 +11,4 @@ display_name = "Heavy beam"
 source_spell = ExtResource("2")
 result_spell = ExtResource("3")
 xp_threshold = 15
+tier = 2
