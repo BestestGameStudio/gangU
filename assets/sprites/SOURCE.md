@@ -27,6 +27,15 @@ traced art, no stock files shipped.
   generator script (PIL), iterated against rendered previews.
 - License for this original asset: CC0 (matches project asset licensing).
 
+# spell_projectiles.png - spell projectile sprites (#210)
+- Source: single sprite sheet attached to issue #210 by @Mitravasu
+  (https://github.com/user-attachments/assets/f0f3f901-d1bc-48aa-8f67-d0df7610042b).
+- Rows flame / mana / bolt, 8 loop frames each, 12 fps; packed at scale 4 into
+  64x48 cells via `tools/sprites/specs/spell_projectiles.json`.
+- The sheet's row labels sit close above the art, so the label text was keyed
+  out of a working copy (dim lavender on the dark board) before extraction;
+  the art itself is byte-faithful to the issue attachment.
+
 # mustache_warrior.png - Mustache Warrior (common enemy + Warlord boss)
 
 Art from issue #177 ("common enemy sprite update"): the 1536x1024
@@ -92,29 +101,3 @@ alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
 - Not extracted (no consumer, and drawn ~1.5x larger than the rows): the
   "FX / Telegraphed Variants" panels (Charge, Dash, Invulnerable/Shield,
   Targeted/Warning) and the "VFX Elements" overlays; the large portrait.
-
-# shop_vendor.png - hub shop vendor stall (#217)
-
-Art from issue #217 ("Shop Sprite Update"): the 1536x1024 six-frame board
-attached to the issue by Mitravasu (project human). The board's background
-is light/white with interior highlights, so the exterior background was
-flood-filled to magenta before extraction (interior whites preserved), then
-cut by `tools/sprites/extract_frames.py` with
-`tools/sprites/specs/shop_vendor.json` (magenta keyed out, bbox-anchored,
-2:1 alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
-`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres resources/sprites/shop_vendor_frames.tres`.
-
-## Layout
-- Cell: 224x224 px, baseline row 220 (stall base). Sheet: 3 cols x 2 rows
-  (672x448), one stall per cell; the scene draws it at 0.5 scale (~112 px).
-- Frames are the board's six idle variants (potion sparkle / lighting
-  positions). SpriteFrames (resources/sprites/shop_vendor_frames.tres):
-  idle, 6 frames, 4 fps loop.
-# spell_projectiles.png - spell projectile sprites (#210)
-- Source: single sprite sheet attached to issue #210 by @Mitravasu
-  (https://github.com/user-attachments/assets/f0f3f901-d1bc-48aa-8f67-d0df7610042b).
-- Rows flame / mana / bolt, 8 loop frames each, 12 fps; packed at scale 4 into
-  64x48 cells via `tools/sprites/specs/spell_projectiles.json`.
-- The sheet's row labels sit close above the art, so the label text was keyed
-  out of a working copy (dim lavender on the dark board) before extraction;
-  the art itself is byte-faithful to the issue attachment.
