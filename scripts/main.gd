@@ -67,6 +67,7 @@ func _ready() -> void:
 	var shop := Shop.new()
 	shop.name = "Shop"
 	shop.setup(preload("res://resources/shop/demo_catalog.tres"))
+	shop.caster_path = NodePath("../Player/SpellCaster") # explicit, SpellProgress idiom
 	add_child(shop)
 	var shop_panel: ShopPanel = preload("res://scenes/shop_panel.tscn").instantiate()
 	shop_panel.name = "ShopPanel"
