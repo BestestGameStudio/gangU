@@ -39,6 +39,8 @@ jobs:
           --output "$2" "$1"
         EOF
         sudo chmod 755 /usr/local/bin/github-fetch
+    - name: Create scratch dir
+      run: mkdir -p /tmp/ci
     - name: Set up Godot
       uses: "./.github/actions/setup-godot"
       with:
@@ -52,19 +54,22 @@ jobs:
 
 '
         claude_args: |
-          --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
-          --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results."
+          --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/extract_frames.py:*),Bash(python3 -I tools/sprites/pack_alpha_strip.py:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+          --add-dir /tmp/ci
+          --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results."
         prompt: 'CI environment smoke test. Do not edit, commit or push anything in
-          the repository; write only under /tmp. 1) Say whether the ci-runner skill
-          is available, and load it. 2) Run timeout 300 godot --headless -s scripts/test10_pickup_flow.gd
-          and report the RESULT line. 3) Render the hub as the skill describes, adding
-          --resolution 1920x1080, then Read the last frame and describe it in two
-          sentences, including its pixel size if you can tell. 4) Find the user-attachments
-          image URL in the comments of issue 257 with gh issue view 257 --comments,
-          download it with github-fetch to /tmp/board/board.png, Read it and describe
-          it in one sentence. 5) Run python3 -I tools/sprites/extract_frames.py segment
-          /tmp/board/board.png --band 0 600 0 600 and report the first lines of output.
-          6) List every command or tool call that was denied, verbatim. Finish with
-          a table: step, pass/fail, evidence.'
+          the repository; write only under /tmp. 1) Load the ci-runner skill; if the
+          Skill tool cannot find it, read .claude/skills/ci-runner/SKILL.md with git
+          show HEAD:.claude/skills/ci-runner/SKILL.md and follow it. 2) Run timeout
+          300 godot --headless -s scripts/test10_pickup_flow.gd and report the RESULT
+          line. 3) Render the hub as the skill describes, adding --resolution 1920x1080,
+          then Read the last frame and describe it in two sentences, including its
+          pixel size if you can tell. 4) Find the user-attachments image URL in the
+          comments of issue 257 with gh issue view 257 --comments, download it with
+          github-fetch to /tmp/ci/board/board.png, Read it and describe it in one
+          sentence. 5) Run python3 -I tools/sprites/extract_frames.py segment /tmp/ci/board/board.png
+          --band 0 600 0 600 and report the first lines of output. 6) List every command
+          or tool call that was denied, verbatim. Finish with a table: step, pass/fail,
+          evidence.'
         show_full_output: true
         github_token: "${{ github.token }}"

@@ -55,6 +55,11 @@ jobs:
           EOF
           sudo chmod 755 /usr/local/bin/github-fetch
 
+      # Claude may only write inside its working directories; /tmp/ci is
+      # added as one (--add-dir below) for renders and downloads.
+      - name: Create scratch dir
+        run: mkdir -p /tmp/ci
+
       - name: Set up Godot
         uses: ./.github/actions/setup-godot
         with:
@@ -78,5 +83,6 @@ jobs:
           # this job (GDScript can call OS.execute), so this list keeps Claude on
           # the intended path; it is not a sandbox.
           claude_args: |
-            --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
-            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results."
+            --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/extract_frames.py:*),Bash(python3 -I tools/sprites/pack_alpha_strip.py:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+            --add-dir /tmp/ci
+            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results."
