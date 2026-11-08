@@ -4,6 +4,47 @@
 
 [node name="DungeonB" type="Node2D"]
 
+[node name="Background" type="Node2D" parent="."]
+z_index = -50
+
+[node name="ArenaFrameTop" type="ColorRect" parent="Background"]
+offset_left = 150.0
+offset_top = 84.0
+offset_right = 1002.0
+offset_bottom = 88.0
+color = Color(0.42, 0.36, 0.32, 1)
+
+[node name="ArenaFrameBottom" type="ColorRect" parent="Background"]
+offset_left = 150.0
+offset_top = 652.0
+offset_right = 1002.0
+offset_bottom = 656.0
+color = Color(0.42, 0.36, 0.32, 1)
+
+[node name="ArenaFrameLeft" type="ColorRect" parent="Background"]
+offset_left = 150.0
+offset_top = 84.0
+offset_right = 154.0
+offset_bottom = 656.0
+color = Color(0.42, 0.36, 0.32, 1)
+
+[node name="ArenaFrameRight" type="ColorRect" parent="Background"]
+offset_left = 998.0
+offset_top = 84.0
+offset_right = 1002.0
+offset_bottom = 656.0
+color = Color(0.42, 0.36, 0.32, 1)
+
+[node name="SpawnChevron1" type="Polygon2D" parent="Background"]
+position = Vector2(576, 596)
+color = Color(0.42, 0.36, 0.32, 1)
+polygon = PackedVector2Array(-12, -11, 0, -21, 12, -11, 12, -17, 0, -27, -12, -17)
+
+[node name="SpawnChevron2" type="Polygon2D" parent="Background"]
+position = Vector2(576, 618)
+color = Color(0.42, 0.36, 0.32, 1)
+polygon = PackedVector2Array(-12, -11, 0, -21, 12, -11, 12, -17, 0, -27, -12, -17)
+
 [node name="TitleLayer" type="CanvasLayer" parent="."]
 layer = 2
 
