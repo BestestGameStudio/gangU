@@ -138,6 +138,24 @@ windows, 4:1 downsample to the 47x48 cells). Reproduce:
   increasing coverage (~15/40/60/85%). SpriteFrames
   (resources/sprites/spell_icons_frames.tres): `<row>_base` (1 frame),
   `<row>_upgraded` (1 frame), `<row>_sweep` (4 frames, cols 3-6).
-- The supplied art has no chevron variant of the sweep frames, so an
-  upgraded spell shows the plain sweep while its cooldown runs and the
-  chevron returns at cooldown end.
+- Since #238 the `<row>_sweep` frames are packed but unused: cooldown is a
+  code-drawn wipe in `SpellIcon`. `<row>_upgraded` is used only by surfaces
+  without the upgrade overlay (shop, hub directory); the HUD and Tab panel
+  draw `upgrade_chevron.png` over `<row>_base`.
+
+# upgrade_chevron.png - upgrade-available overlay (#238)
+
+Art from issue #238 ("FIx HUD"): the 2172x724 four-frame strip attached to the
+issue by the project owner. The strip already has real transparency, so it was
+cut with `tools/sprites/pack_alpha_strip.py` and
+`tools/sprites/specs/upgrade_chevron.json` instead of the colour-keying
+`extract_frames.py`: fixed 384x384 windows, 12:1 premultiplied box downsample,
+source alpha below 32 dropped as generator noise (mostly around frame 3).
+Reproduce:
+`python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/upgrade_chevron.json <issue-238-strip.png> assets/sprites/upgrade_chevron.png --tres resources/sprites/upgrade_chevron_frames.tres`.
+
+## Layout
+- Cell: 32x32 px. Sheet: 4 cols x 1 row (128x32). Frames drawn at their
+  sheet position, with no re-anchoring.
+- SpriteFrames (resources/sprites/upgrade_chevron_frames.tres): `pulse`, 4
+  frames, 8 fps loop.

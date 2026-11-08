@@ -10,8 +10,8 @@ class_name SpellCaster
 ## spell one slot). The legacy cycle path (spells/add_spell/spell_added/
 ## next_spell/equipped_spell/cast, generic LMB/Space) is preserved untouched
 ## for production and harness compatibility; the cycle's removal and the
-## generic cast role remain OPEN human choices. No slot prefill at boot
-## (starting loadout OPEN). Duplicate unlock grants get no new guard here
+## generic cast role remain OPEN human choices. The caster never prefills a
+## slot itself; main.gd seeds starting_spells in order at boot (#238). Duplicate unlock grants get no new guard here
 ## (grant policy OPEN) - equip uniqueness is enforced by assign_slot only.
 
 signal spell_cast(spell: Spell)

@@ -109,7 +109,7 @@ func _process(delta: float) -> bool:
 					print("[PROG] FAIL slot 0 not preserved with split"); ok = false
 				elif replaced_seen.size() != 1 or replaced_seen[0][0] != fire or replaced_seen[0][1] != split:
 					print("[PROG] FAIL spell_replaced signal: ", replaced_seen.size()); ok = false
-				elif slot_assigned_seen.size() != 2 or slot_assigned_seen[1][0] != 0 or slot_assigned_seen[1][1] != split:
+				elif slot_assigned_seen.size() != 1 or slot_assigned_seen[0][0] != 0 or slot_assigned_seen[0][1] != split: # #238: boot seeds slot 1, so the assign above is a no-op
 					print("[PROG] FAIL slot_assigned re-emit: ", slot_assigned_seen.size()); ok = false
 				elif caster.cooldown_remaining(fire) != 0.0 or caster.cooldown_remaining(split) <= 0.0:
 					print("[PROG] FAIL cooldown transfer: old=", caster.cooldown_remaining(fire), " new=", caster.cooldown_remaining(split)); ok = false

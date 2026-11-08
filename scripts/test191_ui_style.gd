@@ -1,12 +1,11 @@
 extends SceneTree
-## Every screen-space panel in the real game (HUD plate, equip panel, shop
+## Every screen-space panel in the real game (equip panel, shop
 ## panel) draws with the shared UiStyle look: 2px grey-blue border, 8px
 ## corners and a drop shadow on panels; 1px / 4px-corner rows that thicken to
 ## 2px when highlighted. Values are literals so a drifting palette fails here.
 
 const PANEL_BORDER := Color(0.55, 0.6, 0.72, 0.85)
 const PANEL_BG := Color(0.05, 0.05, 0.07, 0.92)
-const PLATE_BG := Color(0.02, 0.02, 0.03, 0.55)
 const B_DIM := Color(0.45, 0.48, 0.55, 0.6)
 const B_SELECTED := Color(0.85, 0.9, 1.0, 0.9)
 const B_ACCENT := Color(0.95, 0.75, 0.25, 0.9)
@@ -50,18 +49,10 @@ func _initialize() -> void:
 		await process_frame
 
 	var hud: Node = main.get_node("HUD")
-	var plate := hud.get_node("BackingPlate") as Panel
-	_check(plate != null, "HUD BackingPlate is a Panel")
-	_check_panel(plate.get_theme_stylebox("panel"), PLATE_BG, "HUD plate")
-	_check(PLATE_BG.a < 1.0, "HUD plate stays translucent")
-	var frames: Array = hud.get_node("Root/SpellRows").get_children()
-	_check(frames.size() >= 2, "HUD shows starting spell rows (got %d)" % frames.size())
-	var widths: Array[int] = []
-	for f: PanelContainer in frames:
-		var sb := f.get_theme_stylebox("panel") as StyleBoxFlat
-		widths.append(sb.border_width_left)
-		_check(sb.corner_radius_top_left == 4, "HUD spell row corners 4px")
-	_check(widths.count(2) == 1 and widths.count(1) == frames.size() - 1, "HUD: only the equipped row is highlighted (widths %s)" % str(widths))
+	_check(hud.get_node_or_null("BackingPlate") == null, "#238 HUD has no backing plate")
+	var squares: Array = hud.get_node("Root/SpellGrid").get_children()
+	_check(squares.size() == 6, "#238 HUD shows six bare spell squares (got %d)" % squares.size())
+	_check(squares.all(func(c): return c is SpellIcon), "#238 HUD squares carry no row frames")
 
 	var equip: EquipPanel = main.get_node("EquipPanel")
 	equip.show_panel()
@@ -78,7 +69,7 @@ func _initialize() -> void:
 	var hover := first_row.get_theme_stylebox("hover") as StyleBoxFlat
 	var normal := first_row.get_theme_stylebox("normal") as StyleBoxFlat
 	_check(hover.bg_color != normal.bg_color, "Equip row hover lightens the fill")
-	_check_row(slots_box.get_child(1).get_theme_stylebox("normal"), B_DIM, 1, "Equip empty slot")
+	_check_row(slots_box.get_child(3).get_theme_stylebox("normal"), B_DIM, 1, "Equip empty slot")
 	first_row.pressed.emit()
 	await process_frame
 	var selected: Button = null

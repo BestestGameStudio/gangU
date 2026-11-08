@@ -27,6 +27,12 @@ func _ready() -> void:
 	var hud: HUD = preload("res://scenes/hud.tscn").instantiate()
 	hud.player_path = NodePath("../Player") # explicit, read in HUD._ready on tree entry
 	add_child(hud)
+	## (#238) starting_spells fill the slots in order at boot, so the HUD grid
+	## and the Tab panel start from the same seeded loadout. _ready runs once
+	## per run (a death restart reloads this scene); hub returns never reseed.
+	var caster: SpellCaster = $Player/SpellCaster
+	for i in mini(caster.starting_spells.size(), SpellCaster.SLOT_COUNT):
+		caster.assign_slot(i, caster.starting_spells[i])
 	## #12 production wiring: ONE persistent satchel mounted on Main so carried
 	## count survives area swaps. Code assign, not a tscn NodePath - a scene-set
 	## NodePath on a typed export resolves null silently (verified in #12 prep).

@@ -109,10 +109,7 @@ func _process(_d: float) -> bool:
 				return false
 			_check(root.get_visible_rect().size == Vector2(1152, 648), "viewport is the real 1152x648 (not headless default)")
 			_check(hud != null, "HUD mounted")
-			var plate: Panel = hud.get_node_or_null("BackingPlate")
-			_check(plate != null, "BackingPlate exists")
-			_check(plate != null and plate.mouse_filter == Control.MOUSE_FILTER_IGNORE, "plate click-through (mouse_filter IGNORE)")
-			_check(plate != null and plate.visible, "plate visible")
+			_check(hud.get_node_or_null("BackingPlate") == null, "#238 BackingPlate removed")
 			_stage = 1
 		1: # plate coverage + content rebuild
 			var plate_rect: Rect2 = hud.reserved_rect()
@@ -122,12 +119,12 @@ func _process(_d: float) -> bool:
 				if c.visible and not plate_rect.encloses(c.get_global_rect()):
 					covered = false
 			_check(covered, "plate covers all visible HUD rows (incl. 6 slot rows)")
-			hud.get_node("Root/HPLabel").text = "HP 100/100 VERYLONGTAIL xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+			hud.get_node("Root/HPBar/HPLabel").text = "HP 100/100 VERYLONGTAIL xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 			_stage = 2
 		2:
 			var plate_rect: Rect2 = hud.reserved_rect()
 			_check(plate_rect.size.x > 388.0, "plate rebuilt wider after long content (was 388 base)")
-			hud.get_node("Root/HPLabel").text = "HP 100/100"
+			hud.get_node("Root/HPBar/HPLabel").text = "HP 100/100"
 			_stage = 3
 		3: # hub spawn at real viewport, camera settled
 			if not _cam_settled() or frame < 20:
@@ -194,7 +191,7 @@ func _process(_d: float) -> bool:
 			# dimmed through the translucent plate), never escape off their gate,
 			# never overlap each other.
 			if not _84_setup:
-				hud.get_node("Root/HPLabel").text = "HP 100/100 VERYLONGTAIL xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+				hud.get_node("Root/HPBar/HPLabel").text = "HP 100/100 VERYLONGTAIL xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 				_84_setup = true
 				return false # let the plate rebuild first
 			if _84_aimed == false:
@@ -203,7 +200,7 @@ func _process(_d: float) -> bool:
 				var view2: Vector2 = root.get_visible_rect().size
 				# Both gates into the plate's x-band (RED sits a fixed 552 world
 				# px right of NORMAL).
-				var target_gs := Vector2(rr2.end.x - 520.0, rr2.end.y - 100.0)
+				var target_gs := Vector2(rr2.end.x - 412.0, rr2.end.y - 100.0) # #238: rect is narrower without the plate; keeps this camera so the portrait leg stays on-screen
 				main.get_node("Player").global_position = gn2.global_position - target_gs + view2 / 2.0
 				_cam_stable = 0
 				_cam_last = Vector2.INF
@@ -220,7 +217,7 @@ func _process(_d: float) -> bool:
 			_check(_attached(rred3, gr3), "#106 RED label attached behind the wide plate")
 			_check(not rn3.intersects(rred3), "#106 labels do not intersect each other")
 			_check(gn3.get_node("TypeLabel").visible and gr3.get_node("TypeLabel").visible, "#106 labels visible (gates on screen behind the translucent plate)")
-			hud.get_node("Root/HPLabel").text = "HP 100/100"
+			hud.get_node("Root/HPBar/HPLabel").text = "HP 100/100"
 			_stage = 6
 			return false
 		6: # #106 settle check at the current camera (both gates behind plate)

@@ -7,7 +7,7 @@ extends SceneTree
 ##                        mid-cooldown is never a free recast
 ##   own cooldown after - once the inherited remainder expires, the next cast
 ##                        keys the cooldown to the UPGRADED spell's own value
-##   HUD rows           - the row is re-keyed to the upgraded object (no
+##   HUD slot grid      - the slot icon follows the upgraded object (no
 ##                        stale base row) and the visible name follows it
 ##   slot preservation  - the equip slot INDEX survives the swap
 ##                        (slot_assigned re-emit, NO slot_cleared)
@@ -79,6 +79,9 @@ func _process(delta: float) -> bool:
 			if t > 0.3 and progress != null:
 				snap = {"fb": _snap(fb), "split": _snap(split)}
 				_check("pre: fb unlocked, split not", caster.get_unlocked().has(fb) and not caster.get_unlocked().has(split))
+				caster.clear_slot(0) # #238: boot seeds slots 1-2; this leg pins slot index 2
+				caster.clear_slot(1)
+				slot_cleared_count = 0
 				_check("pre: slot 2 assign fb", caster.assign_slot(2, fb) and caster.get_slots()[2] == fb)
 				for i in 10: # XP observation, read-only
 					caster.spell_cast.emit(fb)
@@ -87,7 +90,6 @@ func _process(delta: float) -> bool:
 				# #36 tier delta legs (clean FAIL on old base: no field/accessor)
 				_check("tier: spec resource fields tier=1", split_up.get("tier") == 1 and beam_up.get("tier") == 1)
 				_check("tier: base spell is 0 pre-apply", not progress.has_method("get_tier") or progress.get_tier(fb) == 0)
-				_check("pre: HUD row keyed to fb", hud._spell_rows.has(fb) and not hud._spell_rows.has(split))
 				caster.cast_slot(2) # REAL cast: fb cooldown starts
 				apply_ok = progress.apply_upgrade(fb, &"fireball_split")
 				_check("apply_upgrade accepted", apply_ok)
@@ -110,8 +112,10 @@ func _process(delta: float) -> bool:
 				_check("signals: slot_assigned(2, split) re-emitted", slot_assigned_seen.any(func(e): return e[0] == 2 and e[1] == split))
 				_check("signals: no slot_cleared on upgrade", slot_cleared_count == 0)
 				_check("signals: upgrades_changed emitted once", upgrades_changed_count == 1)
-				_check("HUD: row re-keyed to split, stale fb row gone", hud._spell_rows.has(split) and not hud._spell_rows.has(fb))
-				_check("HUD: visible name follows upgraded object", hud._spell_rows[split]["name"].text.contains("Split"))
+				var slot_icon := hud.get_node("Root/SpellGrid").get_child(2) as SpellIcon
+				_check("HUD: polled slot icon shows art in the reassigned slot", slot_icon.texture != null)
+				_check("HUD: slot icon wipe follows inherited cooldown", slot_icon.get_node("CooldownWipe").visible)
+				_check("HUD: slot icon chevron clears on the 0-cast upgrade", not slot_icon.get_node("UpgradeChevron").visible)
 				_check("tier: split recorded Specialization ON apply", progress.has_method("get_tier") and progress.get_tier(split) == 1)
 				_check("tier: consumed source drops to Base/0", progress.has_method("get_tier") and progress.get_tier(fb) == 0)
 				var m2: Array = progress.get_upgrade_paths(split)

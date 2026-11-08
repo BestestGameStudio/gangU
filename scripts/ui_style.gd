@@ -1,13 +1,10 @@
 class_name UiStyle
 extends RefCounted
-## Shared look for every screen-space panel (HUD plate, equip panel, shop
+## Shared look for every screen-space panel (equip panel, shop
 ## panel): one palette and the StyleBoxFlat builders that use it. Code-drawn
 ## only, so it renders the same under the compatibility renderer on the web.
 
 const PANEL_BG := Color(0.05, 0.05, 0.07, 0.92)
-## The HUD plate stays translucent: gates and their labels under it must
-## remain readable (dimmed, not hidden).
-const PLATE_BG := Color(0.02, 0.02, 0.03, 0.55)
 const PANEL_BORDER := Color(0.55, 0.6, 0.72, 0.85)
 const SHADOW := Color(0.0, 0.0, 0.0, 0.45)
 
@@ -33,6 +30,7 @@ const ROW_RADIUS := 4
 const BAR_RADIUS := 3
 const ICON_SIZE := 22.0
 const ICON_PLACEHOLDER_BG := Color(1.0, 1.0, 1.0, 0.04)
+const COOLDOWN_WIPE := Color(0.18, 0.2, 0.26, 1.0)
 
 ## Outer plate of a panel: thick border, rounded corners, soft drop shadow.
 static func panel(bg: Color = PANEL_BG) -> StyleBoxFlat:

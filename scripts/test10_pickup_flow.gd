@@ -2,8 +2,8 @@ extends SceneTree
 ## #10 stage-1 harness (local composition). PROVISIONAL HARNESS DEFAULTS,
 ## not settled production behavior: duplicate-ignore and consume-on-grant.
 ## pickup grants spell (spell_added
-## fires so HUD rows follow), duplicate ignored, switching cycles, HUD gains a
-## row for the pickup spell, new run resets.
+## fires), duplicate ignored, switching cycles, the HUD grid stays six slots
+## (#238), new run resets.
 var scene: Node
 var p: Player
 var caster: SpellCaster
@@ -49,12 +49,12 @@ func _process(delta: float) -> bool:
 					print("[10] FAIL duplicate added"); ok = false
 				else:
 					print("[10] duplicate pickup ignored -> PASS")
-				# HUD row follows via spell_added (merged #11 HUD + #10 hook)
-				var box: VBoxContainer = hud.get_node("Root/SpellRows")
-				if box.get_child_count() != 3:
-					print("[10] FAIL HUD rows after pickup: ", box.get_child_count()); ok = false
+				# #238: the HUD mirrors the six slots, and a pickup never auto-equips.
+				var grid: GridContainer = hud.get_node("Root/SpellGrid")
+				if grid.get_child_count() != 6 or caster.get_slots().has(caster.spells[2]):
+					print("[10] FAIL HUD grid after pickup: ", grid.get_child_count()); ok = false
 				else:
-					print("[10] HUD gains row for picked-up spell (spell_added) -> PASS")
+					print("[10] HUD grid stays six slots after an unequipped pickup -> PASS")
 				caster.next_spell()
 				var s1 := caster.equipped_spell.spell_name
 				caster.next_spell()

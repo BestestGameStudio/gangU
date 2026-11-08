@@ -119,12 +119,11 @@ func _on_body_entered(body: Node2D) -> void:
 		entered.emit(self)
 
 ## #106: the label stays ATTACHED to its own gate. The earlier #50/#84/#87
-## contract kept the label clear of the HUD plate and inside the viewport at
-## all costs, which DETACHED it from its gate (plate-edge escapes ~150px
+## contract kept the label clear of the HUD and inside the viewport at
+## all costs, which DETACHED it from its gate (HUD-edge escapes ~150px
 ## away) and clamped it mid-screen when the gate left the viewport - Colin's
 ## 2026-11-07 report: moving around, the HUD pushes the gate texts around.
-## The plate is translucent: the gate body already renders dimmed under it,
-## so the label simply rides with its gate and dims the same way. A gate
+## The label simply rides with its gate, under the HUD like the body. A gate
 ## fully outside the viewport HIDES its label instead of clamping it into
 ## view. Adjacent-candidate avoidance (#84 bodies, #87 labels) is retained
 ## so neighboring gates never stack labels.
@@ -172,8 +171,8 @@ func _update_label_placement() -> void:
 		if (g as Gate)._label_screen_rect_valid:
 			other_label_rects.append((g as Gate)._label_screen_rect)
 	# #106: attached candidates only - above (original), below, right, left
-	# of THIS gate. No plate exclusion and no viewport containment: the
-	# label moves WITH its gate - sliding under the translucent plate or
+	# of THIS gate. No HUD exclusion and no viewport containment: the
+	# label moves WITH its gate - sliding under the HUD or
 	# partly off-screen exactly like the gate body does.
 	var candidates := [
 		gate_screen + Vector2(-label_size.x / 2.0, -10.0),
