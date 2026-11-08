@@ -345,14 +345,17 @@ func _leg_orb_visual() -> void:
 	p.remove_from_group("player")
 	world.queue_free()
 	await process_frame
-	# Player spells are untouched: no override, default visuals shown.
+	# Player spells are untouched by the #177 override machinery: no override.
+	# (#210: the DEFAULT visual for a mapped spell like Mana Shot is now the
+	# supplied-art sprite, with the code-drawn Dart/Visual hidden.)
 	var w2 := Node2D.new()
 	root.add_child(w2)
 	var pr: Projectile = load("res://scenes/projectile.tscn").instantiate()
 	pr.setup(load("res://resources/spells/mana_shot.tres"), Vector2.RIGHT, null)
 	w2.add_child(pr)
 	await process_frame
-	_check(pr.get_node_or_null("VisualOverride") == null and pr.get_node("Dart").visible and pr.get_node("Visual").visible,
-		"(I) player projectiles keep the default Dart/Visual")
+	_check(pr.get_node_or_null("VisualOverride") == null and pr.get_node_or_null("Sprite") != null
+		and not pr.get_node("Dart").visible and not pr.get_node("Visual").visible,
+		"(I) player projectiles keep the default visual (no override; #210 sprite for mapped spells)")
 	w2.queue_free()
 	await process_frame
