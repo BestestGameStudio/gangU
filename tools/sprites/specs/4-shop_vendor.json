@@ -1,0 +1,105 @@
+{
+ "_comment": "#217 Shop Sprite Update board -> assets/sprites/shop_vendor.png (+ shop_vendor_frames.tres body). Board pre-keyed: exterior background flood-filled to magenta (see assets/sprites/SOURCE.md). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres resources/sprites/shop_vendor_frames.tres",
+ "scale": 2,
+ "cell_w": 224,
+ "cell_h": 224,
+ "baseline": 220,
+ "bg": [
+  255,
+  0,
+  255
+ ],
+ "key_dist": 30,
+ "texture_path": "res://assets/sprites/shop_vendor.png",
+ "rows": [
+  {
+   "name": "idle_a",
+   "y": [
+    0,
+    512
+   ],
+   "mode": "bbox",
+   "frames": [
+    [
+     8,
+     504,
+     null
+    ],
+    [
+     520,
+     1016,
+     null
+    ],
+    [
+     1032,
+     1528,
+     null
+    ]
+   ]
+  },
+  {
+   "name": "idle_b",
+   "y": [
+    512,
+    1024
+   ],
+   "mode": "bbox",
+   "frames": [
+    [
+     8,
+     504,
+     null
+    ],
+    [
+     520,
+     1016,
+     null
+    ],
+    [
+     1032,
+     1528,
+     null
+    ]
+   ]
+  }
+ ],
+ "animations": [
+  {
+   "name": "idle",
+   "speed": 4.0,
+   "loop": true,
+   "frames": [
+    [
+     0,
+     0,
+     1.0
+    ],
+    [
+     0,
+     1,
+     1.0
+    ],
+    [
+     0,
+     2,
+     1.0
+    ],
+    [
+     1,
+     0,
+     1.0
+    ],
+    [
+     1,
+     1,
+     1.0
+    ],
+    [
+     1,
+     2,
+     1.0
+    ]
+   ]
+  }
+ ]
+}
