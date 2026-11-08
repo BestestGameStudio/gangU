@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/generated_dungeon.gd" id="1_gen"]
+[ext_resource type="Resource" path="res://resources/terrain_layouts/enclosed_forked.tres" id="2_layout"]
+[ext_resource type="Script" path="res://scripts/terrain_map.gd" id="3_terrain"]
+[ext_resource type="Script" path="res://scripts/area_spawn_data.gd" id="4_spawn"]
+
+[node name="DungeonGenerated" type="Node2D"]
+script = ExtResource("1_gen")
+layout = ExtResource("2_layout")
+
+[node name="Terrain" type="Node2D" parent="."]
+z_index = -60
+script = ExtResource("3_terrain")
+
+[node name="TitleLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Title" type="Label" parent="TitleLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -700.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 28
+text = "GENERATED DUNGEON"
+horizontal_alignment = 2
+
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+
+[node name="ExitPoint" type="Marker2D" parent="."]
+
+[node name="SpawnData" type="Node" parent="."]
+script = ExtResource("4_spawn")

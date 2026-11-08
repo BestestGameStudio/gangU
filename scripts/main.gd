@@ -129,10 +129,12 @@ func _swap(area: Node) -> void:
 	for g: Gate in get_tree().get_nodes_in_group("gates"):
 		if not g.entered.is_connected(_on_gate_entered):
 			g.entered.connect(_on_gate_entered)
-	var p := get_node_or_null("Player")
+	var p := get_node_or_null("Player") as Player
 	var spawn := current_area.get_node_or_null("PlayerSpawn")
 	if p and spawn:
 		p.global_position = spawn.global_position
+	if p:
+		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
 	_mount_area_spawns(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
@@ -147,12 +149,14 @@ func _mount_area_spawns(area: Node) -> void:
 	var data := area.get_node_or_null("SpawnData") as AreaSpawnData
 	if data == null:
 		return
+	var terrain := area.get_node_or_null("Terrain") as TerrainMap
 	for entry: Dictionary in data.entries:
 		var enemy_scene := entry["enemy"] as PackedScene
 		var e := enemy_scene.instantiate() as Enemy
 		e.position = entry["position"] as Vector2
 		e.reward_table = entry["reward_table"] as RewardTable
 		e.player_path = data.player_path
+		e.terrain = terrain
 		area.add_child(e)
 
 ## #8 production objective: CLEAR_ALL over the spawned enemies in
@@ -213,12 +217,14 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## decision 2026-11-08) now has an ELIMINATION objective, so it mounts the
 ## portal LOCKED per D12 (clear-or-die): it opens when the Warlord dies. The
 ## #55 unlocked mount only existed because DungeonB had no objective.
+## An area with an "ExitPoint" marker gets an unlocked portal at that marker.
 func _mount_exit_portal(area: Node) -> void:
-	if not area.name in [&"DungeonA", &"DungeonB", &"DungeonC"]:
+	var exit_point := area.get_node_or_null("ExitPoint") as Node2D
+	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC"]:
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
-	portal.position = Vector2(576, 120)
+	portal.position = exit_point.position if exit_point else Vector2(576, 120)
 	# Lock only when a completable objective exists: an ELIMINATION objective
 	# without a boss_scene could never clear, so a locked portal would
 	# soft-lock the run (#55). Fail open instead.
