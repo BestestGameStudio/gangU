@@ -106,8 +106,10 @@ func _initialize() -> void:
 	_check(icon.texture == tex and wipe.visible, "static icon also gets the wipe")
 	var bare := Spell.new()
 	icon.show_spell(bare)
-	_check(icon.texture == null and icon.get_node("Placeholder").visible, "no art -> placeholder")
+	_check(icon.texture == SpellIcon.NO_ICON_TEXTURE and not icon.get_node("Placeholder").visible, "no art -> placeholder sprite (#257)")
 	_check(icon.custom_minimum_size == Vector2(20, 20), "placeholder size unchanged")
+	icon.show_spell(null)
+	_check(icon.texture == null and icon.get_node("Placeholder").visible, "null spell -> empty box")
 	icon.queue_free()
 
 	print("[207] RESULT: ", "PASS" if failures == 0 else "FAIL (%d)" % failures)

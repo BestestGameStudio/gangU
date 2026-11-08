@@ -32,6 +32,9 @@ func _shows_texture(icon: SpellIcon) -> bool:
 func _shows_placeholder(icon: SpellIcon) -> bool:
 	return icon != null and icon.texture == null and icon.get_node("Placeholder").visible
 
+func _shows_no_icon_sprite(icon: SpellIcon) -> bool:
+	return icon != null and icon.texture == SpellIcon.NO_ICON_TEXTURE and not icon.get_node("Placeholder").visible
+
 func _equip_row(spell_name: String) -> Button:
 	var cols := equip.find_children("*", "HBoxContainer", true, false)[0]
 	for c in cols.get_child(0).get_children():
@@ -73,7 +76,7 @@ func _initialize() -> void:
 	caster.clear_slot(0)
 	caster.assign_slot(0, plain)
 	await _frames(2)
-	_check(_shows_placeholder(slot_icon), "HUD slot 1 icon follows reassignment to an icon-less spell")
+	_check(_shows_no_icon_sprite(slot_icon), "HUD slot 1 icon follows reassignment to an icon-less spell (#257 sprite)")
 	_check(slot_icon.size == Vector2(48, 48), "HUD slot square keeps its size across the swap")
 
 	caster.clear_slot(0)
@@ -81,7 +84,7 @@ func _initialize() -> void:
 	equip.show_panel()
 	await _frames(2)
 	_check(_shows_texture(_icon_in(_equip_row("IconBolt"))), "Equip unlocked row shows the spell's icon")
-	_check(_shows_placeholder(_icon_in(_equip_row("PlainBolt"))), "Equip unlocked row without icon shows the placeholder")
+	_check(_shows_no_icon_sprite(_icon_in(_equip_row("PlainBolt"))), "Equip unlocked row without icon shows the placeholder sprite (#257)")
 	var eq_lit := _icon_in(_equip_row("IconBolt"))
 	var eq_plain := _icon_in(_equip_row("PlainBolt"))
 	_check(eq_lit.size == Vector2(22, 22) and eq_plain.size == Vector2(22, 22), "Equip row icon areas are 22x22 in both states")
