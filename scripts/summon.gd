@@ -20,6 +20,10 @@ var definition: SummonDefinition
 ## #212: the player this summon guards. Wired by SummonManager BEFORE
 ## add_child (player_path idiom); null in harnesses - behaviors tolerate it.
 var player: Node2D = null
+## #281: the area's terrain grid for pathfinding, wired by SummonManager
+## BEFORE add_child (main.gd's player.terrain lookup idiom); null in
+## harnesses without a Terrain node - behaviors then move exactly as #280.
+var terrain: TerrainMap = null
 ## #212: per-entity damage rolls for behavior attacks, same idiom as Enemy.
 var damage_rng := RandomNumberGenerator.new()
 
