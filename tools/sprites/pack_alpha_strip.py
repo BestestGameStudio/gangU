@@ -12,6 +12,9 @@ Usage (needs Pillow + numpy; run with python3 -I from a venv):
 Spec keys: scale, cell_w, cell_h, alpha_floor (source pixels below this alpha
 are dropped first: they are generator noise), origins ([x, y] top-left of each
 frame window in strip px), texture_path, animations (as extract_frames.py).
+Optional (#289): columns (frames per sheet row, default all on one row), and an
+origin may be [x, y, clip_x0, clip_y0, clip_x1, clip_y1]: strip px outside that
+rect are dropped first (grid lines, neighbouring cells, other shots in a cell).
 """
 import importlib.util
 import json
@@ -48,10 +51,18 @@ def pack(spec, strip, out_png):
     src = np.asarray(Image.open(strip).convert("RGBA"))
     sc, cw, ch = spec["scale"], spec["cell_w"], spec["cell_h"]
     origins = spec["origins"]
-    sheet = np.zeros((ch, cw * len(origins), 4), dtype=np.uint8)
-    for i, (x, y) in enumerate(origins):
-        window = src[y:y + ch * sc, x:x + cw * sc]
-        sheet[:, i * cw:(i + 1) * cw] = downsample(window, sc, spec["alpha_floor"])
+    cols = spec.get("columns", len(origins))
+    sheet = np.zeros((ch * ((len(origins) + cols - 1) // cols), cw * cols, 4), dtype=np.uint8)
+    for i, origin in enumerate(origins):
+        x, y = origin[:2]
+        window = src[y:y + ch * sc, x:x + cw * sc].copy()
+        if len(origin) == 6:
+            cx0, cy0, cx1, cy1 = origin[2:]
+            keep = np.zeros(window.shape[:2], dtype=bool)
+            keep[max(cy0 - y, 0):max(cy1 - y, 0), max(cx0 - x, 0):max(cx1 - x, 0)] = True
+            window[~keep] = 0
+        r, c = divmod(i, cols)
+        sheet[r * ch:(r + 1) * ch, c * cw:(c + 1) * cw] = downsample(window, sc, spec["alpha_floor"])
     Image.fromarray(sheet, "RGBA").save(out_png)
     print("wrote", out_png, sheet.shape[1], "x", sheet.shape[0])
 

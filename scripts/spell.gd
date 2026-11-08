@@ -26,12 +26,16 @@ class_name Spell
 @export var projectile_color: Color = Color(0.4, 0.8, 1.0)
 ## (#263) Visual-only projectile feel. None of these touch hit radius,
 ## movement, damage or despawn. Defaults keep every other spell unchanged.
-## Multiplier on the supplied-art sprite size (base footprint is radius/16).
+## Multiplier on the halo and trail size (spell.radius * visual_scale). The
+## sprite's size comes from Projectile's clamped radius sizing instead (#289).
 @export var visual_scale: float = 1.0
-## Draws a soft additive halo in projectile_color behind the projectile.
+## Draws a soft additive halo behind the projectile (colour: see glow_tint).
 @export var glow: bool = false
 ## Number of past positions in the fading trail; 0 = no trail.
 @export var trail_length: int = 0
+## (#289) Halo and trail colour when its alpha is above 0, so they can match the
+## sprite art. Alpha 0 uses projectile_color. Only the glow and trail read this.
+@export var glow_tint: Color = Color(0, 0, 0, 0)
 ## (Progression placeholder mechanics, #33/#36) How many projectiles one cast
 ## fans out, and the total fan width. 1/0.0 = today's single-projectile
 ## behavior, so every existing spell is unchanged. Provisional placeholder

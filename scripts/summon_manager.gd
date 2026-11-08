@@ -21,6 +21,8 @@ signal summoned(summon: Summon)
 ## not a constant.
 @export var base_cap: int = 10
 
+const CombatEffects = preload("res://scripts/combat_effects.gd")
+
 var _caster: SpellCaster
 
 func _ready() -> void:
@@ -71,7 +73,10 @@ func _on_spell_cast(spell: Spell) -> void:
 	var origin := Vector2.ZERO
 	if _caster != null:
 		origin = _caster.global_position
-	request_spawn(spell.summon, origin)
+	var spawned := request_spawn(spell.summon, origin)
+	# #289: cast art for the summon, visual only; refused casts show nothing.
+	if spawned != null:
+		CombatEffects.summon_circle(spawned.get_parent(), origin)
 
 ## Current area first (production Main), then the scene root (harnesses).
 func _spawn_parent() -> Node:

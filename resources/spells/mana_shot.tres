@@ -18,3 +18,4 @@ projectile_color = Color(0.6, 0.45, 1, 1)
 visual_scale = 2.4
 glow = true
 trail_length = 10
+glow_tint = Color(0.25, 0.7, 1, 1)
