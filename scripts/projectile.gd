@@ -14,6 +14,14 @@ var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projec
 const HOMING_RANGE: float = 400.0 ## steer only toward enemies within this range
 const HOMING_TURN_RATE: float = 6.0 ## max turn in rad/s
 
+## #109: visual feel (code-drawn, flat geometric - style direction).
+const SPIN_RATE: float = 12.0 ## rad/s diamond spin
+const PULSE_RATE: float = 10.0 ## rad/s scale pulse
+const PULSE_AMP: float = 0.15 ## +/-15% scale pulse
+
+var _vis_t: float = 0.0
+var _vis_base: Vector2 = Vector2.ONE
+
 func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
 	direction = p_direction.normalized()
@@ -27,6 +35,7 @@ func _ready() -> void:
 	var _vis_scale := spell.radius / 4.0 # Visual polygon is authored at radius 4
 	$Visual.scale = Vector2(_vis_scale, _vis_scale)
 	body_entered.connect(_on_body_entered)
+	_vis_base = $Visual.scale
 
 func _physics_process(delta: float) -> void:
 	# #37: a HOMING-tagged spell steers BEFORE moving - toward the nearest
@@ -36,10 +45,31 @@ func _physics_process(delta: float) -> void:
 	if spell.tags.has(SpellTags.HOMING):
 		_steer(delta)
 	var step: float = spell.projectile_speed * delta
+	# #109: swept hit detection - move first, then sweep the circle along the
+	# whole path so a frame step larger than the hit envelope (low/janky fps
+	# on the web export) can never tunnel through a body between frames.
+	# Per-frame body_entered overlap remains as the ordinary path; the sweep
+	# only catches what it would miss (once-per-body guard dedupes).
+	# The step is clamped to the remaining range: the swept path never reaches
+	# past the projectile's own expiry point, so the maximum hit envelope stays
+	# range + shape radius instead of range + one frame step + shape radius.
+	var remaining: float = spell.range - _traveled
+	if step > remaining:
+		step = remaining
+	var from: Vector2 = global_position
 	position += direction * step
+	_sweep_hits(from, direction * step)
+	if is_queued_for_deletion():
+		return
 	_traveled += step
 	if _traveled >= spell.range:
 		queue_free()
+		return
+	# #109: code-drawn cast feel - the diamond spins and pulses while flying.
+	_vis_t += delta
+	$Visual.rotation += SPIN_RATE * delta
+	var pulse: float = 1.0 + PULSE_AMP * sin(_vis_t * PULSE_RATE)
+	$Visual.scale = _vis_base * pulse
 
 func _steer(delta: float) -> void:
 	var best: Node2D = null
@@ -80,3 +110,22 @@ func _on_body_entered(body: Node2D) -> void:
 		if spell.tags.has(SpellTags.PIERCING):
 			return
 	queue_free()
+
+## #109: sweep the hit circle from `from` along `motion`; every body the path
+## crosses takes the hit even if no single physics frame overlaps it.
+func _sweep_hits(from: Vector2, motion: Vector2) -> void:
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = $CollisionShape2D.shape
+	params.transform = Transform2D(direction.angle(), from)
+	params.motion = motion
+	params.collision_mask = collision_mask
+	params.collide_with_bodies = true
+	params.collide_with_areas = false
+	var hits: Array[Dictionary] = get_world_2d().direct_space_state.intersect_shape(params, 8)
+	for h in hits:
+		var b: Node2D = h.get("collider")
+		if b == null or b == source or _hit_bodies.has(b):
+			continue
+		_on_body_entered(b)
+		if is_queued_for_deletion():
+			return

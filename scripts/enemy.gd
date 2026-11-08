@@ -66,15 +66,28 @@ func _ready() -> void:
 	if _player == null:
 		push_warning("Enemy: no player target (no player_path and no 'player' group member); standing idle.")
 
+## #109: hit feedback - brief over-bright flash so a registered hit is
+## visible even when the enemy survives (25 dmg vs 30 hp). Additive only.
+var _flash_t: float = 0.0
+const FLASH_TIME: float = 0.12
+
 func apply_damage(amount: int) -> void:
 	if hp <= 0:
 		return
 	hp = clampi(hp - amount, 0, max_hp)
+	_flash_t = FLASH_TIME
+	modulate = Color(2.4, 2.4, 2.4)
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()
 		_spawn_reward_drop()
 		queue_free()
+
+func _process(delta: float) -> void:
+	if _flash_t > 0.0:
+		_flash_t -= delta
+		if _flash_t <= 0.0:
+			modulate = Color.WHITE
 
 func _physics_process(delta: float) -> void:
 	if _behavior != null:
