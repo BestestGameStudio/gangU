@@ -71,6 +71,9 @@ func _ready() -> void:
 var _flash_t: float = 0.0
 const FLASH_TIME: float = 0.12
 
+## #110: combat feedback - code-drawn death burst + hit spark (visual only).
+const CombatEffects = preload("res://scripts/combat_effects.gd")
+
 func apply_damage(amount: int) -> void:
 	if hp <= 0:
 		return
@@ -78,10 +81,23 @@ func apply_damage(amount: int) -> void:
 	_flash_t = FLASH_TIME
 	modulate = Color(2.4, 2.4, 2.4)
 	health_changed.emit(hp, max_hp)
+	if hp > 0:
+		# #110: brief contact spark at the damage-apply site (ENEMY-CENTER,
+		# not the exact physical impact point). Visual only.
+		CombatEffects.hit_spark(get_parent(), global_position)
 	if hp == 0:
 		died.emit()
 		_spawn_reward_drop()
+		_spawn_death_burst()
 		queue_free()
+
+## #110: death burst - visual only; the effect owns its lifetime and is
+## parented to my area, so it survives my queue_free. HP/drop/AI untouched.
+func _spawn_death_burst() -> void:
+	var c: Color = Color(0.95, 0.42, 0.06)
+	if has_node("Spikes"):
+		c = $Spikes.color
+	CombatEffects.death_burst(get_parent(), global_position, c)
 
 func _process(delta: float) -> void:
 	if _flash_t > 0.0:
