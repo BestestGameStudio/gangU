@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ShopCatalog" load_steps=4 format=3 uid="uid://bgangurshopcat"]
+
+[ext_resource type="Script" path="res://scripts/shop_catalog.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/shop_entry.gd" id="2"]
+[ext_resource type="Spell" uid="uid://bgangu3bolt" path="res://resources/spells/placeholder_bolt.tres" id="3"]
+
+[sub_resource type="Resource" id="1"]
+script = ExtResource("2")
+good = ExtResource("3")
+price = 10
+
+[resource]
+script = ExtResource("1")
+entries = Array[ExtResource("2")]([SubResource("1")])
