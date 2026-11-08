@@ -120,7 +120,7 @@ func _make_row(entry: ShopEntry) -> Control:
 	hbox.add_theme_constant_override("separation", 8)
 	row.add_child(hbox)
 	var name_label := Label.new()
-	name_label.text = entry.good.spell_name if entry.good is Spell else "Item"
+	name_label.text = entry.good.spell_name if entry.good is Spell else (entry.good.consumable_name if entry.good is Consumable else "Item")
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(name_label)
 	var price_label := Label.new()
