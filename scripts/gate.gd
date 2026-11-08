@@ -11,17 +11,99 @@ enum GateType { NORMAL, RED }
 
 signal entered(gate: Gate)
 
+const NORMAL_TINT := Color(0.15, 0.6, 0.9)
+const RED_TINT := Color(0.85, 0.15, 0.15)
+const PORTAL_RX := 24.0
+const PORTAL_RY := 34.0
+const PORTAL_POINTS := 48
+const HALO_SPREAD := 12.0
+const SWIRL_STEPS := 24
+
+var _anim_t := 0.0
+
 func _ready() -> void:
 	add_to_group("gates")
 	body_entered.connect(_on_body_entered)
-	var tint: ColorRect = $ColorRect
 	var label: Label = $TypeLabel
-	if gate_type == GateType.RED:
-		tint.color = Color(0.85, 0.15, 0.15)
-		label.text = "RED"
-	else:
-		tint.color = Color(0.15, 0.6, 0.9)
-		label.text = "NORMAL"
+	var tint := RED_TINT if gate_type == GateType.RED else NORMAL_TINT
+	label.text = "RED" if gate_type == GateType.RED else "NORMAL"
+	# The hidden ColorRect is the gate's footprint and tint record: label
+	# placement measures neighbor gates by it.
+	($ColorRect as ColorRect).color = tint
+	_build_portal(tint)
+
+static func ellipse_points(rx: float, ry: float, count: int) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in count:
+		var a := TAU * i / count
+		pts.append(Vector2(cos(a) * rx, sin(a) * ry))
+	return pts
+
+## Fills a Polygon2D with the band between two concentric ellipses, colored
+## per ring so the GPU blends inner_color to outer_color across it. An inner
+## radius of zero makes a radial-gradient disc.
+static func _fill_band(poly: Polygon2D, inner: Vector2, inner_color: Color, outer: Vector2, outer_color: Color) -> void:
+	var pts := ellipse_points(inner.x, inner.y, PORTAL_POINTS)
+	pts.append_array(ellipse_points(outer.x, outer.y, PORTAL_POINTS))
+	var colors := PackedColorArray()
+	for i in PORTAL_POINTS:
+		colors.append(inner_color)
+	for i in PORTAL_POINTS:
+		colors.append(outer_color)
+	var quads: Array = []
+	for i in PORTAL_POINTS:
+		var j := (i + 1) % PORTAL_POINTS
+		quads.append(PackedInt32Array([i, j, PORTAL_POINTS + j, PORTAL_POINTS + i]))
+	poly.polygon = pts
+	poly.vertex_colors = colors
+	poly.polygons = quads
+
+func _build_portal(tint: Color) -> void:
+	var rim_color := tint.lightened(0.6)
+	_fill_band($Halo, Vector2(PORTAL_RX, PORTAL_RY), Color(tint, 0.45),
+		Vector2(PORTAL_RX + HALO_SPREAD, PORTAL_RY + HALO_SPREAD), Color(tint, 0.0))
+	_fill_band($Body, Vector2.ZERO, tint.darkened(0.85), Vector2(PORTAL_RX, PORTAL_RY), tint)
+
+	# The swirl is drawn as a circle and squashed by its pivot, so spinning
+	# it keeps it inside the ellipse.
+	var pivot: Node2D = $SwirlPivot
+	pivot.scale = Vector2(1.0, PORTAL_RY / PORTAL_RX)
+	var swirl: Line2D = $SwirlPivot/Swirl
+	var r := PORTAL_RX * 0.8
+	var arm := PackedVector2Array()
+	for i in range(SWIRL_STEPS, -1, -1):
+		var t := float(i) / SWIRL_STEPS
+		arm.append(Vector2.from_angle(t * TAU * 0.9) * r * t)
+	for i in range(1, SWIRL_STEPS + 1):
+		var t := float(i) / SWIRL_STEPS
+		arm.append(Vector2.from_angle(PI + t * TAU * 0.9) * r * t)
+	swirl.points = arm
+	swirl.default_color = Color(tint.lightened(0.4), 0.55)
+
+	var rim: Line2D = $Rim
+	rim.points = ellipse_points(PORTAL_RX, PORTAL_RY, PORTAL_POINTS)
+	rim.default_color = rim_color
+
+	var light: PointLight2D = $Light
+	light.color = tint
+
+	var particles: CPUParticles2D = $Particles
+	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINTS
+	particles.emission_points = ellipse_points(PORTAL_RX, PORTAL_RY, PORTAL_POINTS)
+	particles.color = rim_color
+	var fade := Gradient.new()
+	fade.set_color(0, Color.WHITE)
+	fade.set_color(1, Color(1, 1, 1, 0))
+	particles.color_ramp = fade
+	particles.emitting = true
+
+func _process(delta: float) -> void:
+	_anim_t += delta
+	var pulse := sin(_anim_t * 2.4)
+	($SwirlPivot/Swirl as Line2D).rotation = _anim_t * 1.6
+	($Rim as Line2D).width = 2.5 + 0.8 * pulse
+	($Light as PointLight2D).energy = 0.9 + 0.15 * pulse
+	_update_label_placement()
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
@@ -46,9 +128,6 @@ var _label_screen_rect := Rect2()
 var _label_screen_rect_valid := false
 
 const LABEL_GAP := 6.0
-
-func _process(_delta: float) -> void:
-	_update_label_placement()
 
 func _update_label_placement() -> void:
 	if _type_label == null:
