@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
-spell_name = "Fire Ball Beam Heavy [placeholder projectile, not continuous beam]"
+spell_name = "Fire Ball Beam Heavy"
 cooldown = 1.6
 damage = 50.0
 radius = 20.0
