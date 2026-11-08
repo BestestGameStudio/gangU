@@ -189,3 +189,31 @@ jobs:
           fi
           echo "Claude's comment not found or not editable; posting a new comment"
           gh issue comment "$NUMBER" -R "$REPO" --body "$section"
+
+      # On issue runs Claude opens a new PR whose description links this run;
+      # give that PR the same direct download link.
+      - name: Add screenshot download link to the PR Claude opened
+        if: needs.claude.outputs.artifact-url != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          ARTIFACT_URL: ${{ needs.claude.outputs.artifact-url }}
+          FILES: ${{ needs.claude.outputs.media-files }}
+        run: |
+          set -euo pipefail
+          list=$(printf '%s\n' "$FILES" | sed '/^$/d; s/.*/- `&`/')
+          section=$(printf '**Screenshot evidence:** [download claude-ci-output.zip](%s) (kept 14 days; GitHub login required)\n%s' "$ARTIFACT_URL" "$list")
+          # Recent open PRs whose description links this run (not the search
+          # API, which can lag behind a PR opened seconds ago).
+          prs=$(gh pr list -R "$REPO" --state open --limit 50 --json number,body \
+            --jq ".[] | select(.body | contains(\"actions/runs/$RUN_ID\")) | .number")
+          if [ -z "$prs" ]; then echo "no PR links this run"; exit 0; fi
+          for pr in $prs; do
+            [ "$pr" = "$NUMBER" ] && continue  # already handled via Claude's comment
+            body=$(gh api "repos/$REPO/pulls/$pr" --jq '.body // ""')
+            case "$body" in *"$ARTIFACT_URL"*) echo "PR #$pr already has the link"; continue ;; esac
+            gh api -X PATCH "repos/$REPO/pulls/$pr" -f body="$body"$'\n\n---\n'"$section" > /dev/null
+            echo "appended to PR #$pr description"
+          done
