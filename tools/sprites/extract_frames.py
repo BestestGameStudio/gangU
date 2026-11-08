@@ -17,7 +17,9 @@ Usage (needs Pillow + numpy; run with python3 -I from a venv):
 Spec format: see tools/sprites/specs/mustache_warrior.json. Keys:
   scale, cell_w, cell_h, baseline, bg [r,g,b], key_dist,
   rows: [{name, y: [y0,y1], mode: bbox|anchor|center,
-          frames: [[x0, x1, anchor_x_or_null], ...]}],
+          frames: [[x0, x1, anchor_x_or_null], ...],
+          optional per-row: bg (one colour or a list), key_dist,
+          resize (float, nearest), keep_largest (bool)}],
   texture_path (res:// path of OUT.png, for --tres),
   animations: [{name, speed, loop, frames: [[row, col, duration], ...]}]
 anchor mode uses the hand-measured anchor_x (body / face centre in board px)
@@ -35,7 +37,35 @@ from PIL import Image
 
 
 def art_mask(rgb, bg, key_dist):
-    return np.abs(rgb.astype(int) - np.array(bg)).sum(2) > key_dist
+    # bg is one [r,g,b] or (per-row override) a list of them: a pixel is
+    # art only when it is far from every listed backdrop colour.
+    bgs = np.array(bg).reshape(-1, 3)
+    return np.all([np.abs(rgb.astype(int) - b).sum(2) > key_dist for b in bgs], axis=0)
+
+
+def largest_component(mask):
+    """Keep only the biggest 8-connected blob (drops stray FX fragments,
+    e.g. pieces of a neighbouring ring that fall inside the crop)."""
+    h, w = mask.shape
+    lab = np.zeros((h, w), dtype=np.int32)
+    best, best_n, n = 0, 0, 0
+    for y0, x0 in zip(*np.nonzero(mask)):
+        if lab[y0, x0]:
+            continue
+        n += 1
+        lab[y0, x0] = n
+        stack, count = [(y0, x0)], 0
+        while stack:
+            y, x = stack.pop()
+            count += 1
+            for ny in (y - 1, y, y + 1):
+                for nx in (x - 1, x, x + 1):
+                    if 0 <= ny < h and 0 <= nx < w and mask[ny, nx] and not lab[ny, nx]:
+                        lab[ny, nx] = n
+                        stack.append((ny, nx))
+        if count > best_n:
+            best, best_n = n, count
+    return lab == best
 
 
 def segment(board, x0, x1, y0, y1, bg, key_dist, min_gap=5):
@@ -62,11 +92,25 @@ def segment(board, x0, x1, y0, y1, bg, key_dist, min_gap=5):
         print(f"[{x0 + s}, {x0 + e}]  y {y0 + rows[0]}..{y0 + rows[-1]}")
 
 
-def cut(src, spec, y0, y1, x0, x1, anchor_x, mode):
+def cut(src, spec, y0, y1, x0, x1, anchor_x, mode, row=None):
+    row = row or {}
     pad = 6
     left = x0 - pad
     rgb = src[y0:y1, left:x1 + pad + 1, :3]
-    mask = art_mask(rgb, spec["bg"], spec["key_dist"])
+    # Optional per-row overrides (#173): a panel with its own glow/backdrop
+    # keys against its own bg; `resize` (nearest) evens out panels the board
+    # drew at a different character size before the integer downsample.
+    mask = art_mask(rgb, row.get("bg", spec["bg"]), row.get("key_dist", spec["key_dist"]))
+    if row.get("keep_largest"):
+        mask = largest_component(mask)
+    f = float(row.get("resize", 1.0))
+    if f != 1.0:
+        h, w = mask.shape
+        size = (max(1, int(round(w * f))), max(1, int(round(h * f))))
+        rgb = np.asarray(Image.fromarray(rgb.astype(np.uint8)).resize(size, Image.NEAREST))
+        mask = np.asarray(Image.fromarray(mask).resize(size, Image.NEAREST))
+        if anchor_x is not None:
+            anchor_x = left + (anchor_x - left) * f
     ys, xs = np.nonzero(mask)
     bx0, bx1, by1 = xs.min(), xs.max(), ys.max()
     ax = (anchor_x - left) if anchor_x is not None else (bx0 + bx1) / 2.0
@@ -111,7 +155,7 @@ def pack(spec, board, out_png):
     for ri, row in enumerate(rows):
         y0, y1 = row["y"]
         for i, (x0, x1, anchor_x) in enumerate(row["frames"]):
-            rgb, mask, ax, by1 = cut(src, spec, y0, y1, x0, x1, anchor_x, row["mode"])
+            rgb, mask, ax, by1 = cut(src, spec, y0, y1, x0, x1, anchor_x, row["mode"], row)
             sheet[ri * ch:(ri + 1) * ch, i * cw:(i + 1) * cw] = place(spec, rgb, mask, ax, by1)
         print(f"row {ri}: {row['name']} x{len(row['frames'])}")
     Image.fromarray(sheet, "RGBA").save(out_png)

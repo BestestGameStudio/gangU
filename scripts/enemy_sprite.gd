@@ -26,6 +26,13 @@ const CORPSE_FADE: float = 0.35
 ## has super armor: the hit still flashes but the animation keeps playing.
 const HURT_INTERRUPTS: Array[StringName] = [&"", &"attack", &"hurt"]
 
+## #173: true when the sheet's side-on art faces LEFT (the Head boss walk
+## row); face() then mirrors the other way. Default: art faces right.
+@export var art_faces_left: bool = false
+## #173: colour of the death burst Enemy spawns for this art (Mustache
+## Warrior green by default, matching Enemy.SPRITE_BURST_COLOR).
+@export var burst_color: Color = Color(0.62, 0.9, 0.24)
+
 var _action: StringName = &""
 var _hold: bool = false
 var _last_hp: int = -1
@@ -73,7 +80,7 @@ func set_glow(on: bool) -> void:
 ## so a target straight above/below never flickers the facing.
 func face(dir_x: float) -> void:
 	if absf(dir_x) > 0.5:
-		flip_h = dir_x < 0.0
+		flip_h = (dir_x < 0.0) != art_faces_left
 
 func _process(delta: float) -> void:
 	if _is_corpse:

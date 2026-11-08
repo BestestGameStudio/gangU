@@ -10,7 +10,8 @@ extends Area2D
 ## via RunManager). #55: a red-gate dungeon WITHOUT an objective mounts it
 ## unlocked - no objective exists to open a locked one, so a locked mount
 ## would soft-lock the run. (DungeonB gained an ELIMINATION objective in
-## #177 / O1, 2026-11-08, and now mounts it locked.)
+## #177 / O1, 2026-11-08, and now mounts it locked. The boss-gate arena
+## DungeonC (#173 / O6) mounts it locked until the Head boss dies.)
 
 signal entered(portal: ExitPortal)
 

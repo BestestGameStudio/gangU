@@ -7,6 +7,8 @@ class_name TerrainTypes
 ## MUD/WATER/MOUNTAIN are placeable movement types the generator does not
 ## emit yet. friction 1.0 is full grip; swimmable lets a swim-capable mover
 ## enter a non-walkable cell, where speed_multiplier is its swim speed.
+## A destroyable type turns into its destroyed_into type when any damage
+## hits it.
 ##
 ## Authority split: TerrainMap owns cell -> type assignments; this registry
 ## owns type -> properties. Downstream issues (A2/A4/B1/B3/C1/C2) consume
@@ -33,6 +35,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 1.0,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [],
 	},
 	OBSTACLE: {
@@ -40,6 +44,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [],
 	},
 	GRASS: {
@@ -47,6 +53,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 1.0,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [],
 	},
 	TREE: {
@@ -54,6 +62,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": true,
+		"destroyed_into": GRASS,
 		"element_tags": [],
 	},
 	SNOW: {
@@ -61,6 +71,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 1.0,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [],
 	},
 	ICE: {
@@ -68,6 +80,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 1.0,
 		"friction": 0.12,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [&"ice"],
 	},
 	MUD: {
@@ -75,6 +89,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 0.5,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [],
 	},
 	WATER: {
@@ -82,6 +98,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 0.6,
 		"friction": 1.0,
 		"swimmable": true,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [&"water"],
 	},
 	MOUNTAIN: {
@@ -89,6 +107,8 @@ const DEFS: Dictionary = {
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
 		"element_tags": [],
 	},
 }
@@ -100,6 +120,8 @@ const UNKNOWN_PROPS: Dictionary = {
 	"speed_multiplier": 0.0,
 	"friction": 1.0,
 	"swimmable": false,
+	"destroyable": false,
+	"destroyed_into": &"",
 	"element_tags": [],
 }
 
@@ -115,6 +137,8 @@ static func properties(type: StringName) -> Dictionary:
 		"speed_multiplier": src["speed_multiplier"],
 		"friction": src["friction"],
 		"swimmable": src["swimmable"],
+		"destroyable": src["destroyable"],
+		"destroyed_into": src["destroyed_into"],
 		"element_tags": (src["element_tags"] as Array).duplicate(),
 	}
 
@@ -129,6 +153,13 @@ static func friction(type: StringName) -> float:
 
 static func is_swimmable(type: StringName) -> bool:
 	return properties(type)["swimmable"]
+
+static func is_destroyable(type: StringName) -> bool:
+	return properties(type)["destroyable"]
+
+## The type a destroyed tile becomes; empty for a non-destroyable type.
+static func destroyed_into(type: StringName) -> StringName:
+	return properties(type)["destroyed_into"]
 
 static func element_tags(type: StringName) -> Array[StringName]:
 	var out: Array[StringName] = []

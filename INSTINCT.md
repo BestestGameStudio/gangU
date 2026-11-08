@@ -13,45 +13,73 @@ only.
   touch in the issue or PR description, and treat them as exclusively yours until that
   PR closes. Do not edit files covered by someone else's open PR without coordinating in
   the issue thread first.
-- Keep changes small and disjoint: one concern per PR beats a mixed bundle.
+- Keep changes small and disjoint: one concern per PR beats a mixed bundle. A side fix
+  discovered during other work gets its own issue and PR.
+- Split big features into multiple issues and discuss the architecture with the other
+  Instincts before implementing. Bring the owners only the questions that survive that
+  discussion.
+- If you have no assigned work, actively look for a free approved issue and claim it in
+  its thread rather than idling - no two sides own the same work at once.
 
-## 2. Commit early, label honestly
+## 2. Suggestions need human approval
+
+- Gameplay or design ideas that an Instinct originates are filed as issues tagged
+  `suggestion`. The tag is only for Instinct-originated ideas, never for owner requests.
+- No Instinct starts work on a `suggestion` issue without explicit approval from a human
+  owner. Bugs can be logged and worked on without approval.
+
+## 3. Commit early, label honestly
 
 - Commit and push early and often. Small incremental commits over one large drop.
-- Open a PR as a **draft** until it is genuinely ready for review. Mark blocked or
-  dependent work explicitly (e.g. `[DRAFT, depends on B]`). Never mark a PR ready while
-  it is known-failing or unverified.
+- Open a PR as a **draft** as soon as you start work, even if it is empty - every
+  in-progress task has a PR. Mark blocked or dependent work explicitly (e.g.
+  `[DRAFT, depends on B]`). Never mark a PR ready while it is known-failing or
+  unverified.
+- Verify each push against the actual remote branch before reporting it done.
 
-## 3. Every PR states exact scope and evidence
+## 4. Every PR states exact scope and evidence
 
 - **Scope:** the exact files changed and the behavior change intended. If the scope grows
   after review has started (new files, a moved head), say so explicitly - approvals do
   not carry over silently.
+- **Linked issue:** the body names the issue it resolves with `Closes #N` so the issue
+  closes automatically on merge.
 - **Evidence:** automated test results on the exact head, and for gameplay-visible
-  changes, screenshots or recordings of the running game. Author-captured evidence
-  supports the PR; it never substitutes for the reviewer's own check.
+  changes, a working demo video of the running game attached to the PR. Screenshots may
+  supplement the video but never replace it. Author-captured evidence supports the PR;
+  it never substitutes for the reviewer's own check.
 
-## 4. Independent review on the exact head
+## 5. Independent review on the exact head
 
-- Every PR is reviewed by someone other than its author. An author never approves their
-  own PR.
+- Every PR is reviewed by another Instinct, never its author. Request reviews explicitly
+  from the other Instincts, and prioritize incoming review requests over new
+  implementation - a review can run in parallel with your own work.
 - Review against the exact current head commit and name its SHA in the review. An
   approval applies to that head only - new pushes reset it and require a fresh review.
 - Review checks: the diff matches the stated file boundary, CI is green on that head,
   tests pass, and gameplay claims are verified against the rendered build where
   applicable.
+- If the only findings are process issues (e.g. the PR description), the reviewer fixes
+  them directly instead of bouncing the PR back to the author.
+- If a PR is blocked by conflicts with the base branch, the author fixes the conflicts,
+  pushes the new head, and re-requests review from another Instinct. Approvals and
+  findings on the pre-conflict head do not carry over.
 
-## 5. One merge executor
+## 6. Merge after approval, exactly once
 
-- Merges to `main` are performed by the designated merge executor (currently
-  `instinct-projects`), only after an independent approval on the current head and a
-  green CI run on that head.
-- No one approves their own work: the required approval always comes from a reviewer
-  other than the author. When the merge executor authored the PR, the same rule
-  applies - it merges only after another contributor's independent approval on the
-  current head.
+- A PR merges once it has an independent approval on its current head and a green CI run
+  on that head. Approved PRs merge promptly - they do not sit idle.
+- Exactly one merge executor per PR, agreed explicitly between the sides (in the PR
+  thread or in coordination between the Instincts) before merging. Before executing,
+  re-confirm the PR is still open - a human owner may have merged it - and that the
+  approval and CI still cover the current head.
+- No direct pushes to `main`, and no merging on your own approval - the qualifying
+  approval always comes from a reviewer other than the author.
+- After merging, confirm the linked issue closed automatically. If the closing link is
+  missing or wrong, fix the PR body link (`Closes #N`) through the normal route rather
+  than closing issues by hand.
 
-## 6. Merged is not live is not playable
+## 7. Merged is not live is not playable
 
 Every push to `main` rebuilds and republishes the web build to GitHub Pages. Track
 status precisely:
@@ -60,11 +88,13 @@ status precisely:
 - **Live** - the Pages deploy for that commit succeeded and the site serves it.
 - **Playable** - the change has been verified in the actual browser build.
 
-A shipped gameplay change is not done until it is live and playable. Docs and other
-non-gameplay changes are done when merged with their content verified against the
-relevant sources - no browser check applies. Report status with the right word.
+A shipped gameplay change is not done until it is live and playable. Deployment and
+playable verification are not tied to one side - the author and reviewers coordinate who
+runs the check. Docs and other non-gameplay changes are done when merged with their
+content verified against the relevant sources - no browser check applies. Report status
+with the right word.
 
-## 7. Keep the repo public-safe
+## 8. Keep the repo public-safe
 
 - This repo and everything committed to it is public. Working agreements, architecture
   decisions (see ARCHITECTURE.md), and design docs belong here.
