@@ -59,11 +59,11 @@ func _spell(n: String) -> Spell:
 	s.cooldown = 1.0
 	return s
 
-func _row_label(hud: HUD, spell: Spell) -> Label:
-	var rows: Dictionary = hud._spell_rows
-	if not rows.has(spell):
-		return null
-	return rows[spell]["name"]
+func _labels_without_suffix(hud: HUD) -> bool:
+	for l: Label in hud.find_children("*", "Label", true, false):
+		if l.text.find("[") != -1:
+			return false
+	return true
 
 func _initialize() -> void:
 	var hud_scene: PackedScene = load("res://scenes/hud.tscn")
@@ -86,14 +86,10 @@ func _initialize() -> void:
 	for i in range(5):
 		await process_frame
 
-	# (a) no provider in tree: names render plain (backward compatible).
-	for s in [base, spec, mast, sig]:
-		var l := _row_label(hud, s)
-		_check(l != null, "(a) row exists for %s" % s.spell_name)
-		if l != null:
-			_check(l.text.find("[") == -1, "(a) no suffix without provider (got '%s')" % l.text)
+	# (a) no provider in tree: no suffix anywhere on the HUD.
+	_check(_labels_without_suffix(hud), "(a) no HUD label carries a tier suffix without provider")
 
-	# (b) provider mounted: suffix per tier, Base shows nothing.
+	# (b)-(c) #238: tier suffixes left the HUD; recorded tiers render nothing.
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	root.add_child(progress)
@@ -103,37 +99,20 @@ func _initialize() -> void:
 	# HUD discovers the provider on a 0.25s throttle; give it real frames.
 	for i in range(120):
 		await process_frame
-	var lb := _row_label(hud, base)
-	var ls := _row_label(hud, spec)
-	var lm := _row_label(hud, mast)
-	var lg := _row_label(hud, sig)
-	_check(lb != null and lb.text.find("[") == -1, "(b) Base tier 0 shows nothing (got '%s')" % (lb.text if lb else "null"))
-	_check(ls != null and ls.text.begins_with("SpecBolt [S]"), "(b) Specialization suffix [S] (got '%s')" % (ls.text if ls else "null"))
-	_check(lm != null and lm.text.begins_with("MastBolt [M]"), "(b) Mastery suffix [M] (got '%s')" % (lm.text if lm else "null"))
-	_check(lg != null and lg.text.begins_with("SigBolt [G]"), "(b) Signature suffix [G] (got '%s')" % (lg.text if lg else "null"))
+	_check(_labels_without_suffix(hud), "(b) #238 recorded tiers add no HUD label suffix")
+	_check(hud.find_children("*", "Label", true, false).size() == 2, "(c) #238 HUD text is only the HP and objective labels")
 
-	# (c) slot rows carry the same suffix (HUD spell rows are slot-keyed).
-	var slot1_text: String = hud._slot_widgets[0]["name"].text
-	_check(slot1_text.begins_with("SpecBolt [S]"), "(c) slot row carries tier suffix (got '%s')" % slot1_text)
-
-	# (d) row survives the upgrade swap: same Label, suffix follows the
-	# upgraded spell's recorded tier, no duplicate rows.
+	# (d) slot icon identity survives the upgrade swap.
 	var split := _spell("SplitBolt")
-	var rows_before: int = hud._spell_rows.size()
-	var label_before := ls
-	progress._tiers.erase(spec)
-	progress._tiers[split] = 2
-	caster.spells[caster.spells.find(spec)] = split
-	caster.spell_replaced.emit(spec, split)
+	var art := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	split.icon = ImageTexture.create_from_image(art)
+	var slot_icon: SpellIcon = hud.get_node("Root/SpellGrid").get_child(0)
+	_check(slot_icon.texture == null, "(d) before swap the square shows the art-less spell")
+	caster.fake_slots[0] = split
+	caster.slot_assigned.emit(0, split)
 	for i in range(5):
 		await process_frame
-	_check(not hud._spell_rows.has(spec), "(d) old spell key dropped after swap")
-	_check(hud._spell_rows.has(split), "(d) row re-keyed to upgraded spell")
-	_check(hud._spell_rows.size() == rows_before, "(d) row count unchanged (no duplicate)")
-	if hud._spell_rows.has(split):
-		var lnew := _row_label(hud, split)
-		_check(lnew == label_before, "(d) stable row identity (same Label instance)")
-		_check(lnew.text.begins_with("SplitBolt [M]"), "(d) suffix follows upgraded tier (got '%s')" % lnew.text)
+	_check(slot_icon.texture == split.icon, "(d) square shows the upgraded spell's icon after swap")
 
 	# (e) equip panel: tier suffix in the UPGRADE CHANNEL ONLY.
 	var up1 := SpellUpgrade.new()

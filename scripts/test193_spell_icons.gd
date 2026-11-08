@@ -1,6 +1,6 @@
 extends SceneTree
-## Spell icon areas in the real game UI: the HUD spell row, the HUD slot row,
-## the equip panel's unlocked row and slot button each show Spell.icon when
+## Spell icon areas in the real game UI: the HUD slot square, the equip
+## panel's unlocked row and slot button each show Spell.icon when
 ## set and a same-size placeholder box when null, and follow slot changes.
 
 var failures := 0
@@ -31,13 +31,6 @@ func _shows_texture(icon: SpellIcon) -> bool:
 
 func _shows_placeholder(icon: SpellIcon) -> bool:
 	return icon != null and icon.texture == null and icon.get_node("Placeholder").visible
-
-func _hud_row(spell_name: String) -> Control:
-	for f: Control in hud.get_node("Root/SpellRows").get_children():
-		var labels := f.find_children("*", "Label", true, false)
-		if labels.size() > 0 and (labels[0].text as String).begins_with(spell_name):
-			return f
-	return null
 
 func _equip_row(spell_name: String) -> Button:
 	var cols := equip.find_children("*", "HBoxContainer", true, false)[0]
@@ -71,28 +64,17 @@ func _initialize() -> void:
 	caster.add_spell(plain)
 	await _frames(3)
 
-	var lit_row := _hud_row("IconBolt")
-	var plain_row := _hud_row("PlainBolt")
-	_check(lit_row != null and plain_row != null, "HUD built rows for both spells")
-	var lit_icon := _icon_in(lit_row)
-	var plain_icon := _icon_in(plain_row)
-	_check(_shows_texture(lit_icon), "HUD spell row shows the spell's icon texture")
-	_check(_shows_placeholder(plain_icon), "HUD spell row without icon shows the placeholder")
-	_check(lit_icon.size == Vector2(20, 20) and plain_icon.size == Vector2(20, 20),
-		"HUD icon areas are 20x20 in both states (%s, %s)" % [str(lit_icon.size), str(plain_icon.size)])
-	_check(lit_row.size.y == plain_row.size.y, "HUD rows are the same height with and without icon")
-
+	caster.clear_slot(0) # #238: boot seeds slot 1; this leg drives its own loadout
 	caster.assign_slot(0, lit)
 	await _frames(2)
-	var slot_frame: Control = hud.get_node("Root/SlotRows").get_child(0)
-	var slot_icon := _icon_in(slot_frame)
-	_check(slot_frame.visible and _shows_texture(slot_icon), "HUD slot 1 shows the assigned spell's icon")
-	var lit_slot_h := slot_frame.size.y
+	var slot_icon := hud.get_node("Root/SpellGrid").get_child(0) as SpellIcon
+	_check(_shows_texture(slot_icon), "HUD slot 1 shows the assigned spell's icon")
+	_check(slot_icon.size == Vector2(48, 48), "HUD slot square is 48x48 with art (%s)" % str(slot_icon.size))
 	caster.clear_slot(0)
 	caster.assign_slot(0, plain)
 	await _frames(2)
 	_check(_shows_placeholder(slot_icon), "HUD slot 1 icon follows reassignment to an icon-less spell")
-	_check(slot_frame.size.y == lit_slot_h and slot_icon.size == Vector2(20, 20), "HUD slot row keeps its size across the swap")
+	_check(slot_icon.size == Vector2(48, 48), "HUD slot square keeps its size across the swap")
 
 	caster.clear_slot(0)
 	caster.assign_slot(0, lit)
@@ -105,7 +87,7 @@ func _initialize() -> void:
 	_check(eq_lit.size == Vector2(22, 22) and eq_plain.size == Vector2(22, 22), "Equip row icon areas are 22x22 in both states")
 	var slot_btn_icon := _icon_in(_equip_slot(0))
 	_check(_shows_texture(slot_btn_icon), "Equip slot 1 shows the assigned spell's icon")
-	_check(_shows_placeholder(_icon_in(_equip_slot(1))), "Equip empty slot 2 shows the placeholder")
+	_check(_shows_placeholder(_icon_in(_equip_slot(2))), "Equip empty slot 3 shows the placeholder")
 	caster.clear_slot(0)
 	await _frames(1)
 	_check(_shows_placeholder(slot_btn_icon), "Equip slot 1 icon clears with the slot")

@@ -2,8 +2,9 @@ extends SceneTree
 ## #207: the supplied spell-icon sheet packs into spell_icons.png +
 ## spell_icons_frames.tres; every player Spell resource binds the shared
 ## frames with the right prefix/upgraded flag; SpellIcon renders base,
-## green-chevron upgraded and gray cooldown-sweep frames, and keeps the
-## #193 placeholder behaviour for spells with no icon art.
+## and (surfaces without the #238 overlay) green-chevron upgraded frames, a
+## cooldown wipe that never swaps the art, and keeps the #193 placeholder
+## behaviour for spells with no icon art.
 
 var failures := 0
 
@@ -77,18 +78,20 @@ func _initialize() -> void:
 	icon.show_spell(up_spell)
 	_check(icon.texture == frames.get_frame_texture(&"fireball_upgraded", 0), "upgraded spell shows chevron frame")
 
-	# Cooldown sweep: 0 restores base; fractions pick coverage frames.
+	# #238: icons with the upgrade overlay stay on the base art.
+	var overlay_icon := SpellIcon.new(20.0, true)
+	overlay_icon.show_spell(up_spell)
+	_check(overlay_icon.texture == frames.get_frame_texture(&"fireball_base", 0), "overlay icon keeps base art for upgraded spell")
+	overlay_icon.free()
+
+	# #238: the cooldown is a wipe overlay; the art never swaps to sweep frames.
 	icon.show_spell(base_spell)
-	icon.set_cooldown_fraction(1.0)
-	_check(icon.texture == frames.get_frame_texture(&"fireball_sweep", 3), "frac 1.0 -> most-covered sweep frame")
-	icon.set_cooldown_fraction(0.6)
-	_check(icon.texture == frames.get_frame_texture(&"fireball_sweep", 2), "frac 0.6 -> sweep frame 2")
-	icon.set_cooldown_fraction(0.3)
-	_check(icon.texture == frames.get_frame_texture(&"fireball_sweep", 1), "frac 0.3 -> sweep frame 1")
-	icon.set_cooldown_fraction(0.1)
-	_check(icon.texture == frames.get_frame_texture(&"fireball_sweep", 0), "frac 0.1 -> least-covered sweep frame")
+	var wipe := icon.get_node("CooldownWipe") as ColorRect
+	for frac in [1.0, 0.6, 0.3, 0.1]:
+		icon.set_cooldown_fraction(frac)
+		_check(icon.texture == frames.get_frame_texture(&"fireball_base", 0) and wipe.visible, "frac %s keeps base art under wipe" % str(frac))
 	icon.set_cooldown_fraction(0.0)
-	_check(icon.texture == frames.get_frame_texture(&"fireball_base", 0), "frac 0 restores base frame")
+	_check(icon.texture == frames.get_frame_texture(&"fireball_base", 0) and not wipe.visible, "frac 0 hides wipe")
 
 	# #193 back-compat: a Spell.icon texture still wins; no art -> placeholder, same size.
 	var img2 := Image.create(4, 4, false, Image.FORMAT_RGBA8)
@@ -100,7 +103,7 @@ func _initialize() -> void:
 	icon.show_spell(legacy)
 	_check(icon.texture == tex and not icon.get_node("Placeholder").visible, "Spell.icon still wins (#193)")
 	icon.set_cooldown_fraction(0.5)
-	_check(icon.texture == tex, "no sweep art -> fraction keeps the static icon")
+	_check(icon.texture == tex and wipe.visible, "static icon also gets the wipe")
 	var bare := Spell.new()
 	icon.show_spell(bare)
 	_check(icon.texture == null and icon.get_node("Placeholder").visible, "no art -> placeholder")

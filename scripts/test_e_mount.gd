@@ -24,6 +24,13 @@ func _press_key(code: Key) -> void:
 		get_root().push_input(k)
 
 
+## #238: the upgrade indicator is the chevron on the spell's HUD slot square.
+func _chevron_shown(hud: Node, caster: Node, spell: Spell) -> bool:
+	var index: int = caster.get_slots().find(spell)
+	if index == -1:
+		return false
+	return hud.get_node("Root/SpellGrid").get_child(index).get_node("UpgradeChevron").visible
+
 func _press_tab() -> void:
 	_press_key(KEY_TAB)
 var t := 0.0
@@ -134,12 +141,13 @@ func _process(delta: float) -> bool:
 						var hud1: Node = scene.get_node("HUD")
 						var fb1: Spell = load("res://resources/spells/fire_ball.tres")
 						var ms1: Spell = load("res://resources/spells/mana_shot.tres")
-						var fb_text: String = hud1._spell_rows[fb1]["name"].text
-						var ms_text: String = hud1._spell_rows[ms1]["name"].text
-						if fb_text.find("^") >= 0 and ms_text.find("^") < 0:
-							print("[E] HUD arrow on Fire Ball only at 10 casts OK")
+						var caster1: Node = scene.get_node("Player/SpellCaster")
+						var fb_shown := _chevron_shown(hud1, caster1, fb1)
+						var ms_shown := _chevron_shown(hud1, caster1, ms1)
+						if fb_shown and not ms_shown:
+							print("[E] HUD chevron on Fire Ball only at 10 casts OK")
 						else:
-							print("[E] FAIL HUD arrow: fb='", fb_text, "' ms='", ms_text, "'"); ok = false
+							print("[E] FAIL HUD chevron: fb=", fb_shown, " ms=", ms_shown); ok = false
 						_press_tab()
 						step = 1
 				1:
@@ -311,14 +319,14 @@ func _process(delta: float) -> bool:
 					# Arrow clears on replacement: Fire Ball row is gone, the
 					# Split replacement row (0 casts) shows none.
 					var hud2: Node = scene.get_node("HUD")
-					if hud2._spell_rows.has(fireball):
-						print("[E] FAIL fireball row kept after replace"); ok = false
-					elif not hud2._spell_rows.has(split):
-						print("[E] FAIL split row missing after replace"); ok = false
-					elif hud2._spell_rows[split]["name"].text.find("^") >= 0:
-						print("[E] FAIL arrow on fresh Split row: ", hud2._spell_rows[split]["name"].text); ok = false
+					if caster.get_slots().has(fireball):
+						print("[E] FAIL fireball still slotted after replace"); ok = false
+					elif not caster.get_slots().has(split):
+						print("[E] FAIL split not slotted after replace"); ok = false
+					elif _chevron_shown(hud2, caster, split):
+						print("[E] FAIL chevron on fresh Split slot"); ok = false
 					else:
-						print("[E] arrow clears after Split apply OK")
+						print("[E] chevron clears after Split apply OK")
 					step = 0
 					phase = 3; t = 0
 					return false
@@ -341,8 +349,8 @@ func _process(delta: float) -> bool:
 					var fb3: Spell = load("res://resources/spells/fire_ball.tres")
 					if progress3.cast_count(fb3) != 0:
 						print("[E] FAIL cast count not reset: ", progress3.cast_count(fb3)); ok = false
-					elif hud3._spell_rows[fb3]["name"].text.find("^") >= 0:
-						print("[E] FAIL arrow at 0 casts after reset"); ok = false
+					elif _chevron_shown(hud3, caster3, fb3):
+						print("[E] FAIL chevron at 0 casts after reset"); ok = false
 					else:
 						print("[E] fresh-run reset: no arrows at 0 casts OK")
 					for i in 10:
@@ -351,10 +359,10 @@ func _process(delta: float) -> bool:
 				2:
 					var hud4: Node = scene.get_node("HUD")
 					var fb4: Spell = load("res://resources/spells/fire_ball.tres")
-					if hud4._spell_rows[fb4]["name"].text.find("^") >= 0:
-						print("[E] arrow returns at 10 casts after reset OK")
+					if _chevron_shown(hud4, scene.get_node("Player/SpellCaster"), fb4):
+						print("[E] chevron returns at 10 casts after reset OK")
 					else:
-						print("[E] FAIL arrow missing after reset+10: ", hud4._spell_rows[fb4]["name"].text); ok = false
+						print("[E] FAIL chevron missing after reset+10"); ok = false
 						return _done()
 					var progress4: Node = scene.get_node("SpellProgress")
 					progress4.apply_upgrade(fb4, &"fireball_beam")
@@ -363,14 +371,15 @@ func _process(delta: float) -> bool:
 					var hud5: Node = scene.get_node("HUD")
 					var fb5: Spell = load("res://resources/spells/fire_ball.tres")
 					var beam: Spell = load("res://resources/spells/fire_ball_beam.tres")
-					if hud5._spell_rows.has(fb5):
-						print("[E] FAIL fireball row kept after Beam apply"); ok = false
-					elif not hud5._spell_rows.has(beam):
-						print("[E] FAIL beam row missing after apply"); ok = false
-					elif hud5._spell_rows[beam]["name"].text.find("^") >= 0:
-						print("[E] FAIL arrow on fresh Beam row: ", hud5._spell_rows[beam]["name"].text); ok = false
+					var caster5: Node = scene.get_node("Player/SpellCaster")
+					if caster5.get_slots().has(fb5):
+						print("[E] FAIL fireball still slotted after Beam apply"); ok = false
+					elif not caster5.get_slots().has(beam):
+						print("[E] FAIL beam not slotted after apply"); ok = false
+					elif _chevron_shown(hud5, caster5, beam):
+						print("[E] FAIL chevron on fresh Beam slot"); ok = false
 					else:
-						print("[E] arrow clears after Beam apply OK")
+						print("[E] chevron clears after Beam apply OK")
 					return _done()
 		_:
 			return true

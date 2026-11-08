@@ -1,14 +1,9 @@
 extends SceneTree
-## #93 HUD visual identity harness. Fixture: stub Player + stub SpellCaster
-## (typed subclasses so the HUD's `as Player` / `as SpellCaster` casts pass;
-## _ready overrides skip gameplay wiring). Asserts the #93 presentation layer:
-## HP state colors, spell-row frames + equipped border, READY/cooling bar
-## fills, slot frames, backward-compat slot fallback, and that all labels /
-## data strings are preserved. Decor legs FAIL on old main (no styling).
-## #122: compact HUD - geometry pins (i) re-pinned to the smaller sizes and
-## the empty-slot leg (e) updated to collapsed semantics (unassigned frames
-## hide; zero assigned renders one dim hint line). Decor + collapse +
-## geometry legs FAIL on pre-#122 main.
+## #93 / #238 HUD visual identity harness. Fixture: stub Player + stub
+## SpellCaster (typed subclasses so the HUD's `as Player` / `as SpellCaster`
+## casts pass; _ready overrides skip gameplay wiring). Asserts the HP state
+## colors and live text inside a bare bar, the bare 3x2 slot grid, removal of
+## the old rows/plate, and the geometry pins.
 class StubPlayer extends Player:
 	var start_hp := 80
 	var start_max := 100
@@ -58,13 +53,6 @@ func _spell(n: String, cd: float) -> Spell:
 	s.cooldown = cd
 	return s
 
-func _frames(box: VBoxContainer) -> Array:
-	return box.get_children().filter(func(c): return c is PanelContainer)
-
-func _border_of(frame: PanelContainer) -> Color:
-	var sb := frame.get_theme_stylebox("panel") as StyleBoxFlat
-	return sb.border_color if sb != null else Color(-1, -1, -1)
-
 func _fill_of(bar: ProgressBar) -> Color:
 	var sb := bar.get_theme_stylebox("fill") as StyleBoxFlat
 	return sb.bg_color if sb != null else Color(-1, -1, -1)
@@ -72,12 +60,6 @@ func _fill_of(bar: ProgressBar) -> Color:
 const C_GREEN := Color(0.35, 0.8, 0.4, 1.0)
 const C_AMBER := Color(0.95, 0.75, 0.25, 1.0)
 const C_RED := Color(0.9, 0.3, 0.25, 1.0)
-const C_READY := Color(0.8, 0.85, 0.95, 1.0)
-const C_COOLING := Color(0.35, 0.45, 0.6, 0.9)
-const C_EQUIPPED := Color(0.85, 0.9, 1.0, 0.9)
-const C_DIM := Color(0.45, 0.48, 0.55, 0.6)
-const C_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
-const C_EMPTY := Color(0.4, 0.42, 0.48, 0.6)
 
 func _initialize() -> void:
 	var hud_scene: PackedScene = load("res://scenes/hud.tscn")
@@ -100,16 +82,17 @@ func _initialize() -> void:
 	for i in range(5):
 		await process_frame
 
-	# (0) preserved structure.
-	_check(hud.get_node_or_null("Root/HPLabel") is Label, "(0) HPLabel preserved")
+	# (0) #238 structure.
+	_check(hud.get_node_or_null("Root/HPBar/HPLabel") is Label, "(0) HPLabel inside HPBar")
 	_check(hud.get_node_or_null("Root/HPBar") is ProgressBar, "(0) HPBar preserved")
 	_check(hud.get_node_or_null("Root/ObjectiveLabel") is Label, "(0) ObjectiveLabel preserved")
-	_check(hud.get_node_or_null("Root/SpellRows") is VBoxContainer, "(0) SpellRows preserved")
-	_check(hud.get_node_or_null("Root/SlotRows") is VBoxContainer, "(0) SlotRows preserved")
+	_check(hud.get_node_or_null("Root/SpellGrid") is GridContainer, "(0) SpellGrid present")
+	for removed in ["BackingPlate", "Root/SpellRows", "Root/SlotRows"]:
+		_check(hud.get_node_or_null(removed) == null, "(0) %s removed" % removed)
 
-	# (f) labels/data preserved.
-	var hp_label := hud.get_node("Root/HPLabel") as Label
-	_check(hp_label.text == "HP 80/100", "(f) HP label data preserved (got '%s')" % hp_label.text)
+	# (f) live current/max text, no prefix.
+	var hp_label := hud.get_node("Root/HPBar/HPLabel") as Label
+	_check(hp_label.text == "80/100", "(f) HP label is live current/max (got '%s')" % hp_label.text)
 
 	# (a) HP bar custom styling + state colors.
 	var hp_bar := hud.get_node("Root/HPBar") as ProgressBar
@@ -119,6 +102,7 @@ func _initialize() -> void:
 	player.hp = 40
 	player.health_changed.emit(40, 100)
 	_check(_fill_of(hp_bar) == C_AMBER, "(a) HP amber at 40 percent")
+	_check(hp_label.text == "40/100", "(f) HP text follows damage (got '%s')" % hp_label.text)
 	player.hp = 20
 	player.health_changed.emit(20, 100)
 	_check(_fill_of(hp_bar) == C_RED, "(a) HP red at 20 percent")
@@ -126,66 +110,39 @@ func _initialize() -> void:
 	player.health_changed.emit(80, 100)
 	_check(_fill_of(hp_bar) == C_GREEN, "(a) HP back to green at 80 percent")
 
-	# (c) spell row frames + equipped border state.
-	var srows := hud.get_node("Root/SpellRows") as VBoxContainer
-	var sframes := _frames(srows)
-	_check(sframes.size() == 2, "(c) 2 spell row frames (got %d)" % sframes.size())
-	if sframes.size() == 2:
-		var borders := [_border_of(sframes[0]), _border_of(sframes[1])]
-		var eq := caster.equipped_spell
-		var expect0 := C_EQUIPPED if eq == a else C_DIM
-		var expect1 := C_EQUIPPED if eq == b else C_DIM
-		_check(borders[0] == expect0 and borders[1] == expect1,
-			"(c) equipped border state (eq=%s got %s vs %s)" % [str(eq != null), str(borders[0]), str(borders[1])])
+	# (c) #238: squares are bare - nothing but the six icons in the grid.
+	var grid := hud.get_node("Root/SpellGrid") as GridContainer
+	_check(grid.columns == 3, "(c) grid is 3 columns")
+	_check(grid.get_child_count() == 6, "(c) 6 squares built (got %d)" % grid.get_child_count())
+	_check(grid.get_children().all(func(c): return c is SpellIcon), "(c) every square is a bare SpellIcon")
+	_check(grid.find_children("*", "Label", true, false).is_empty(), "(c) no name/state/key text")
+	_check(grid.find_children("*", "ProgressBar", true, false).is_empty(), "(c) no cooldown bars")
+	_check(grid.find_children("*", "PanelContainer", true, false).is_empty(), "(c) no row frames")
 
-	# (d) READY vs cooling bar fills, and swap on state change.
-	if sframes.size() == 2:
-		var bars: Array = []
-		for f in sframes:
-			bars.append(f.find_children("*", "ProgressBar", true, false)[0])
-		_check(_fill_of(bars[0]) == C_READY, "(d) AlphaBolt READY fill")
-		_check(_fill_of(bars[1]) == C_COOLING, "(d) BetaBolt cooling fill")
-		caster.cooling.erase(b)
-		caster.cooling[a] = 0.5
-		for i in range(3):
-			await process_frame
-		_check(_fill_of(bars[0]) == C_COOLING, "(d) AlphaBolt fill swaps to cooling")
-		_check(_fill_of(bars[1]) == C_READY, "(d) BetaBolt fill swaps to READY")
+	# (d) wipe state follows the caster's cooldown; empty squares never wipe.
+	var squares := grid.get_children()
+	_check(not squares[0].get_node("CooldownWipe").visible, "(d) AlphaBolt ready: no wipe")
+	_check(squares[2].get_node("CooldownWipe").visible, "(d) BetaBolt cooling: wipe shown")
+	_check(not squares[1].get_node("CooldownWipe").visible, "(d) empty square: no wipe")
+	caster.cooling.erase(b)
+	caster.cooling[a] = 0.5
+	for i in range(3):
+		await process_frame
+	_check(squares[0].get_node("CooldownWipe").visible, "(d) AlphaBolt wipe appears on cooldown")
+	_check(not squares[2].get_node("CooldownWipe").visible, "(d) BetaBolt wipe clears when ready")
 
-	# (e) #122 collapsed slot rows: assigned frames render with border and
-	# full row content; unassigned frames hide entirely; zero assigned shows
-	# one dim hint line instead of any placeholder rows.
-	var slots_box := hud.get_node("Root/SlotRows") as VBoxContainer
-	var slframes := _frames(slots_box)
-	_check(slframes.size() == 6, "(e) 6 slot frames built (got %d)" % slframes.size())
-	if slframes.size() == 6:
-		_check(slframes[0].visible and _border_of(slframes[0]) == C_ASSIGNED, "(e) slot 1 assigned frame visible + border")
-		_check(not slframes[1].visible, "(e) slot 2 empty frame collapsed")
-		_check(slframes[2].visible and _border_of(slframes[2]) == C_ASSIGNED, "(e) slot 3 assigned frame visible + border")
-		_check(not slframes[5].visible, "(e) slot 6 empty frame collapsed")
-		var hint := slots_box.get_node_or_null("EmptyHint") as Label
-		_check(hint != null, "(e) EmptyHint line exists")
-		if hint != null:
-			_check(not hint.visible, "(e) hint hidden while slots assigned")
-		# zero-assigned pass: every frame collapses, the hint line renders.
-		caster.fake_slots = [null, null, null, null, null, null]
-		for i in range(3):
-			await process_frame
-		var all_hidden := true
-		for f in slframes:
-			all_hidden = all_hidden and not f.visible
-		_check(all_hidden, "(e) zero assigned: all slot frames collapsed")
-		if hint != null:
-			_check(hint.visible and hint.text == "(no spells assigned - Tab to equip)",
-				"(e) zero assigned: dim hint line (visible=%s text='%s')" % [str(hint.visible), hint.text])
-		# restoring assignments: frames uncollapse, the hint hides again.
-		caster.fake_slots = [a, null, b, null, null, null]
-		for i in range(3):
-			await process_frame
-		_check(slframes[0].visible and slframes[2].visible and not slframes[1].visible,
-			"(e) reassign: frames uncollapse")
-		if hint != null:
-			_check(not hint.visible, "(e) reassign: hint hides again")
+	# (e) empty slots keep a placeholder square; assignments follow the caster.
+	for i in [1, 3, 4, 5]:
+		_check(squares[i].visible and squares[i].get_node("Placeholder").visible, "(e) empty square %d shows placeholder" % (i + 1))
+	caster.fake_slots = [null, null, null, null, null, null]
+	for i in range(3):
+		await process_frame
+	_check(squares.all(func(c): return c.visible and c.get_node("Placeholder").visible), "(e) zero assigned: all squares stay as placeholders")
+	_check(not squares[0].get_node("CooldownWipe").visible, "(e) zero assigned: cooling spell's wipe is gone")
+	caster.fake_slots = [a, null, b, null, null, null]
+	for i in range(3):
+		await process_frame
+	_check(squares[0].get_node("CooldownWipe").visible, "(e) reassign: square follows the caster again")
 
 	# (g) backward-compat: a caster without the slot override still builds rows.
 	var player2 := StubPlayer.new()
@@ -201,34 +158,22 @@ func _initialize() -> void:
 		await process_frame
 	_check(true, "(g) base-API caster mounted with no errors (see error count)")
 
-	# (h) plate tracks the occupied rect: reserved_rect covers every VISIBLE
-	# frame (#122: collapsed empty frames render nothing to cover).
+	# (h) reserved_rect is computed from the real content.
 	var rr: Rect2 = hud.reserved_rect()
 	var covered := rr.has_area()
-	for f in _frames(hud.get_node("Root/SpellRows")) + _frames(hud.get_node("Root/SlotRows")):
-		if not f.visible:
-			continue
-		covered = covered and rr.encloses(f.get_global_rect().grow(-1.0))
-	_check(covered, "(h) reserved_rect covers all visible row frames after settle")
+	for c in [hp_bar] + squares:
+		covered = covered and rr.encloses(c.get_global_rect())
+	_check(covered, "(h) reserved_rect covers the HP bar and every square")
 
-	# (i) #122 compact geometry pins.
+	# (i) #238 geometry pins.
 	var root_box := hud.get_node("Root") as VBoxContainer
-	_check(root_box.offset_right == 312.0, "(i) Root width ~300 (offset_right got %s)" % str(root_box.offset_right))
-	_check(root_box.get_theme_constant("separation") == 4, "(i) Root separation 4")
-	_check(hp_label.get_theme_font_size("font_size") == 16, "(i) HPLabel font 16")
-	_check(hp_bar.custom_minimum_size == Vector2(180, 14), "(i) HPBar 180x14 (got %s)" % str(hp_bar.custom_minimum_size))
+	_check(root_box.offset_right == 372.0, "(i) Root width 360 (offset_right got %s)" % str(root_box.offset_right))
+	_check(root_box.get_theme_constant("separation") == 8, "(i) Root separation 8")
+	_check(hp_label.get_theme_font_size("font_size") == 18, "(i) HPLabel font 18")
+	_check(hp_bar.custom_minimum_size == Vector2(360, 32), "(i) HPBar 360x32 (got %s)" % str(hp_bar.custom_minimum_size))
 	var obj_label := hud.get_node("Root/ObjectiveLabel") as Label
 	_check(obj_label.get_theme_font_size("font_size") == 16, "(i) ObjectiveLabel font 16")
-	_check(srows.get_theme_constant("separation") == 3, "(i) SpellRows separation 3")
-	_check(slots_box.get_theme_constant("separation") == 3, "(i) SlotRows separation 3")
-	if sframes.size() == 2:
-		var sname := sframes[0].find_children("*", "Label", true, false)[0] as Label
-		_check(sname.get_theme_font_size("font_size") == 15, "(i) spell row name font 15")
-		_check(sname.custom_minimum_size == Vector2(110, 0), "(i) spell row name min width 110")
-		var ibar := sframes[0].find_children("*", "ProgressBar", true, false)[0] as ProgressBar
-		_check(ibar.custom_minimum_size == Vector2(90, 12), "(i) row bar 90x12")
-		var shbox := sframes[0].get_child(0) as HBoxContainer
-		_check(shbox.get_theme_constant("separation") == 4, "(i) row separation 4")
+	_check(squares[0].custom_minimum_size == Vector2(48, 48), "(i) squares are 48x48")
 
 	print("[93] DONE failures=%d" % failures)
 	quit(1 if failures > 0 else 0)

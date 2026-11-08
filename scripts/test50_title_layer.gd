@@ -95,7 +95,7 @@ func _initialize() -> void:
 	# (intersection real), and the title must still render above it.
 	var hud := hud_scene.instantiate()
 	root.add_child(hud)
-	hud.get_node("Root/HPLabel").text = WIDE_CONTENT
+	hud.get_node("Root/HPBar/HPLabel").text = WIDE_CONTENT
 	var da := (load("res://scenes/dungeon_a.tscn") as PackedScene).instantiate()
 	root.add_child(da)
 	var da_title := da.get_node("TitleLayer/Title") as Label

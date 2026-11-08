@@ -1,0 +1,12 @@
+{
+ "_comment": "#238 upgrade chevron strip -> assets/sprites/upgrade_chevron.png (+ resources/sprites/upgrade_chevron_frames.tres). Run: python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/upgrade_chevron.json <issue-238-strip.png> assets/sprites/upgrade_chevron.png --tres resources/sprites/upgrade_chevron_frames.tres",
+ "scale": 12,
+ "cell_w": 32,
+ "cell_h": 32,
+ "alpha_floor": 32,
+ "origins": [[79, 144], [623, 144], [1166, 144], [1708, 144]],
+ "texture_path": "res://assets/sprites/upgrade_chevron.png",
+ "animations": [
+  {"name": "pulse", "speed": 8, "loop": true, "frames": [[0, 0, 1], [0, 1, 1], [0, 2, 1], [0, 3, 1]]}
+ ]
+}

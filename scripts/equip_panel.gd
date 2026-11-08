@@ -58,7 +58,7 @@ const ICON_GAP := 4.0
 ## Buttons are not containers, so the icon is pinned inside the button's
 ## left edge (vertically centered) and the caller pads the text past it.
 func _pin_icon(b: Button, left: float) -> SpellIcon:
-	var icon := SpellIcon.new()
+	var icon := SpellIcon.new(UiStyle.ICON_SIZE, true)
 	var half := UiStyle.ICON_SIZE * 0.5
 	icon.anchor_top = 0.5
 	icon.anchor_bottom = 0.5
@@ -83,6 +83,9 @@ func _tier_suffix(path) -> String:
 		3:
 			return " [G]"
 	return ""
+
+func _can_upgrade(spell: Spell) -> bool:
+	return spell != null and _upgrader != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(spell)
 
 func _ready() -> void:
 	visible = false
@@ -208,7 +211,7 @@ func _refresh() -> void:
 		b.text = (s as Spell).spell_name
 		b.button_pressed = (s == _selected)
 		var border := UiStyle.B_DIM
-		if _upgrader != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(s):
+		if _can_upgrade(s):
 			border = UiStyle.B_ACCENT
 		if s == _selected:
 			border = UiStyle.B_SELECTED
@@ -223,7 +226,9 @@ func _refresh() -> void:
 		chip.offset_bottom = -2.0
 		b.add_child(chip)
 		var spell: Spell = s
-		_pin_icon(b, ROW_ICON_LEFT).show_spell(spell)
+		var row_icon := _pin_icon(b, ROW_ICON_LEFT)
+		row_icon.show_spell(spell)
+		row_icon.set_upgrade_available(_can_upgrade(spell))
 		b.pressed.connect(func(): _on_spell_pressed(spell))
 		_unlocked_box.add_child(b)
 	var slots: Array = _caster.get_slots()
@@ -236,10 +241,11 @@ func _refresh() -> void:
 			sborder = UiStyle.B_SELECTED
 		UiStyle.style_button(_slot_buttons[i], sborder, 4.0, SLOT_ICON_LEFT + UiStyle.ICON_SIZE + ICON_GAP, move_source)
 		_slot_icons[i].show_spell(occupant)
+		_slot_icons[i].set_upgrade_available(_can_upgrade(occupant))
 	# Upgrade section: only when a provider is wired AND a spell is selected.
 	for c in _upgrade_box.get_children():
 		c.queue_free()
-	if _upgrader != null and _selected != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(_selected):
+	if _can_upgrade(_selected):
 		var uheader := Label.new()
 		uheader.text = "Upgrades"
 		uheader.add_theme_font_size_override("font_size", 22)
