@@ -75,6 +75,18 @@ func _entry(spell: Spell, price: int) -> ShopEntry:
 	e.price = price
 	return e
 
+## (#132) Stock render is shuffled and padded with OUT OF STOCK signs, so
+## rows are located by good NAME, never by index.
+func _row_named(good_name: String) -> Control:
+	for r in _rows().get_children():
+		var labels := r.find_children("*", "Label", true, false)
+		if not labels.is_empty() and labels[0].text == good_name:
+			return r
+	return null
+
+func _oos_count() -> int:
+	return _rows().find_children("OutOfStockLabel", "Label", true, false).size()
+
 func _rows() -> VBoxContainer:
 	return panel.get_node("Backdrop/Margin/VBox/Rows") as VBoxContainer
 
@@ -168,35 +180,43 @@ func _run_legs() -> void:
 	p.queue_free()
 	p = _make_player()
 	shop._caster = caster # re-point the shop at the fresh caster
+	## (#132) Stock is a snapshot, not a live offer view: the earlier legs
+	## bought bolt out of it. Re-roll so the stock reflects the fresh
+	## caster's offerable set before the panel legs.
+	shop._reroll_stock()
 	_check(shop.offerable_entries() == [fe, be], "fresh caster: both spells offerable again")
 
 	## 11. Panel render on open: offerable rows only + balance text.
 	panel.open()
 	_check(panel.visible and panel.is_in_group("modal_ui"), "open: visible + modal_ui")
-	_check(_rows().get_child_count() == 2, "two offerable rows rendered")
+	_check(_rows().get_child_count() == 4, "panel renders the 4 stock slots (#132)")
+	_check(_oos_count() == 2, "2 OUT OF STOCK signs pad the unfillable slots (#132)")
+	_check(_row_named("Fire Ball") != null and _row_named("Placeholder Bolt") != null, "both offerable rows rendered by name")
 	_check(_balance_label().text == "Wallet: 10c", "balance label shows wallet (10c)")
 
 	## 12. Buy via the panel button: row drops, grant lands, balance updates.
 	wallet.add(10) # 20c
-	var btn: Button = _rows().get_child(0).find_children("*", "Button", true, false)[0]
-	btn.pressed.emit() # buy fire_ball (row 0) for 10c
+	var btn: Button = _row_named("Fire Ball").find_children("*", "Button", true, false)[0]
+	btn.pressed.emit() # buy fire_ball for 10c
 	_check(caster.get_unlocked().has(fireball), "panel buy granted fire_ball")
 	_check(wallet.balance() == 10, "panel buy charged exactly 10 (20 -> 10)")
-	_check(_rows().get_child_count() == 1, "bought row removed (ownership exclusion)")
+	_check(_row_named("Fire Ball") == null, "bought row removed (ownership exclusion)")
+	_check(_rows().get_child_count() == 4 and _oos_count() == 3, "sold slot signs OUT OF STOCK (#132)")
 	_check(_balance_label().text == "Wallet: 10c", "balance label updated after panel buy")
 
 	## 12b. Panel buy with insufficient funds: no change anywhere.
 	wallet.try_spend(10) # drain to 0 (direct harness setup, not a buy)
-	btn = _rows().get_child(0).find_children("*", "Button", true, false)[0]
+	btn = _row_named("Placeholder Bolt").find_children("*", "Button", true, false)[0]
 	btn.pressed.emit() # bolt costs 10, wallet has 0
 	_check(not caster.get_unlocked().has(bolt), "insufficient panel buy grants nothing")
 	_check(wallet.balance() == 0, "insufficient panel buy charges nothing")
-	_check(_rows().get_child_count() == 1, "unaffordable row remains")
+	_check(_row_named("Placeholder Bolt") != null, "unaffordable row remains")
 
-	## 12c. Everything owned: empty-state hint renders.
+	## 12c. Everything owned: all 4 slots sign OUT OF STOCK (#132 replaced
+	## the old EmptyHint with Daniel's per-slot out-of-stock sign).
 	caster.unlock_spell(bolt)
 	panel._render()
-	_check(_rows().get_node_or_null("EmptyHint") != null, "empty-state hint when nothing offerable")
+	_check(_rows().get_child_count() == 4 and _oos_count() == 4, "all 4 slots sign OUT OF STOCK when nothing is eligible (#132)")
 
 	## 13. Vendor proximity: walk-up opens, walk-away closes.
 	vendor = preload("res://scenes/shop_vendor.tscn").instantiate()

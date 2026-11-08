@@ -77,7 +77,10 @@ func _ready() -> void:
 	shop.name = "Shop"
 	shop.setup(preload("res://resources/shop/demo_catalog.tres"))
 	shop.caster_path = NodePath("../Player/SpellCaster") # explicit, SpellProgress idiom
+	## (#132) Data-driven paid-refresh price schedule (Fibonacci 1,2 seeds).
+	shop.refresh_schedule = preload("res://resources/shop/demo_refresh_schedule.tres")
 	add_child(shop)
+	_shop = shop
 	var shop_panel: ShopPanel = preload("res://scenes/shop_panel.tscn").instantiate()
 	shop_panel.name = "ShopPanel"
 	add_child(shop_panel)
@@ -106,6 +109,9 @@ func _ready() -> void:
 	_load_hub()
 
 var current_area: Node = null
+## (#132) The mounted hub shop, kept so a dungeon victory can trigger its
+## FREE stock refresh + paid-price reset from _on_objective_completed.
+var _shop: Shop = null
 
 func _load_hub() -> void:
 	_swap(preload("res://scenes/hub.tscn").instantiate())
@@ -164,6 +170,11 @@ func _mount_objective(area: Node) -> void:
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
+	## (#132) Confirmed dungeon VICTORY only: free stock refresh and the
+	## paid-refresh price resets (Daniel 2026-11-07). A plain return to hub
+	## (exit portal without a clear) never reaches this path.
+	if _shop != null:
+		_shop.on_dungeon_victory()
 
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
 ## anytime, objective not required). Returns to the hub in the SAME run via a
