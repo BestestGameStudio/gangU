@@ -19,6 +19,9 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+      media-files: ${{ steps.media.outputs.files }}
     permissions:
       contents: read
       pull-requests: read
@@ -85,11 +88,20 @@ jobs:
           claude_args: |
             --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/extract_frames.py:*),Bash(python3 -I tools/sprites/pack_alpha_strip.py:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
             --add-dir /tmp/ci
-            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results."
+            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results. Screenshot evidence is required: whenever your work changes or concerns anything visible or playable, save screenshots (or a short clip) proving it to /tmp/ci/media before you finish; the workflow attaches a download link to your comment automatically. If no screenshot is relevant, say why in one line. This run is ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}; put that URL under a Screenshots heading in any PR body you prefill."
 
       # Screenshots/clips Claude saves in /tmp/ci/media are attached to the run
-      # as a zip, reachable from the "View job" link in Claude's comment.
-      - name: Upload Claude scratch output
+      # as a zip; the evidence-link job below puts the download link in
+      # Claude's comment.
+      - name: List screenshot evidence
+        id: media
+        if: always()
+        run: |
+          files=$(cd /tmp/ci/media 2>/dev/null && find . -type f -printf '%P\n' | LC_ALL=C sort | tr -c 'A-Za-z0-9._/\n-' '_' | head -50 || true)
+          { echo 'files<<__END_FILES__'; echo "$files"; echo '__END_FILES__'; } >> "$GITHUB_OUTPUT"
+
+      - name: Upload screenshot evidence
+        id: upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -97,3 +109,42 @@ jobs:
           path: /tmp/ci/media
           if-no-files-found: ignore
           retention-days: 14
+
+  # Runs after Claude has finished (and updated its comment), with its own
+  # write-scoped token that the Claude job never sees.
+  evidence-link:
+    needs: claude
+    if: always() && needs.claude.outputs.artifact-url != ''
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Add screenshot download link to Claude's comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          ARTIFACT_URL: ${{ needs.claude.outputs.artifact-url }}
+          FILES: ${{ needs.claude.outputs.media-files }}
+        run: |
+          set -euo pipefail
+          list=$(printf '%s\n' "$FILES" | sed '/^$/d; s/.*/- `&`/')
+          section=$(printf '**Screenshot evidence:** [download claude-ci-output.zip](%s) (kept 14 days; GitHub login required)\n%s' "$ARTIFACT_URL" "$list")
+          # Claude's own comment for this run links to actions/runs/<run id>.
+          find_comment() {
+            gh api --paginate "repos/$REPO/$1/$NUMBER/comments" \
+              --jq ".[] | select(.body | contains(\"actions/runs/$RUN_ID\")) | .id" 2>/dev/null | tail -1 || true
+          }
+          kind=issues; id=$(find_comment issues)
+          if [ -z "$id" ]; then kind=pulls; id=$(find_comment pulls); fi
+          if [ -n "$id" ]; then
+            body=$(gh api "repos/$REPO/$kind/comments/$id" --jq .body)
+            case "$body" in *"$ARTIFACT_URL"*) echo "link already present"; exit 0 ;; esac
+            if gh api -X PATCH "repos/$REPO/$kind/comments/$id" -f body="$body"$'\n\n---\n'"$section" > /dev/null; then
+              echo "appended to $kind comment $id"; exit 0
+            fi
+          fi
+          echo "Claude's comment not found or not editable; posting a new comment"
+          gh issue comment "$NUMBER" -R "$REPO" --body "$section"
