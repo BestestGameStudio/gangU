@@ -77,6 +77,21 @@ func _button_style(b: Button, border: Color, left_margin := 4.0) -> void:
 	for st in ["normal", "hover", "pressed", "focus"]:
 		b.add_theme_stylebox_override(st, sb)
 
+## #38: compact ASCII tier suffix on upgrade-channel buttons only (lead UX
+## call: [S]/[M]/[G] for Specialization/Mastery/Signature, Base shows
+## nothing). Reads the path's own tier when the provider exposes one;
+## providers without a tier field degrade to no suffix. Display-only.
+func _tier_suffix(path) -> String:
+	var tier: Variant = path.get("tier") if path is Resource else null
+	match int(tier) if tier != null else 0:
+		1:
+			return " [S]"
+		2:
+			return " [M]"
+		3:
+			return " [G]"
+	return ""
+
 func _ready() -> void:
 	visible = false
 	layer = 10
@@ -237,7 +252,7 @@ func _refresh() -> void:
 			var b := Button.new()
 			b.add_theme_font_size_override("font_size", 22)
 			_button_style(b, B_UPGRADE) # #94: upgrade channel color
-			b.text = path.display_name
+			b.text = path.display_name + _tier_suffix(path)
 			var pid = path.id
 			b.pressed.connect(func(): _on_upgrade_pressed(pid))
 			_upgrade_box.add_child(b)
