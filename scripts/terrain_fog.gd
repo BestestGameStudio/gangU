@@ -10,7 +10,7 @@ extends Node2D
 enum State { UNSEEN, SEEN, VISIBLE }
 
 const UNSEEN_COLOR: Color = Color(0.02, 0.02, 0.03, 1.0)
-const SEEN_COLOR: Color = Color(0.02, 0.02, 0.03, 0.6)
+const SEEN_COLOR: Color = Color(0.02, 0.02, 0.03, 0.4)
 
 @export var map: TerrainMap
 @export var bounds: Rect2i
