@@ -5,7 +5,7 @@ description: "How to work inside the gangU GitHub Actions @claude job (triggered
 
 # Working in the @claude CI job (gangU)
 
-The job is set up by `.github/workflows/claude.yml` and `.github/actions/setup-godot`. You cannot edit either (the GitHub App has no `workflows` permission). If a command you need is missing, say exactly what to add to `claude.yml` and stop rather than working around it.
+The job is set up by `.github/workflows/claude.yml` and `.github/actions/setup-godot`. You cannot edit either (the GitHub App has no `workflows` permission), and you cannot edit anything under `.claude/` (Claude Code protects it and the action resets it to `main`'s copy, so the working tree may not match the branch there). If a command you need is missing, or a review asks for a change in these paths, say exactly what to change and leave it for a human rather than working around it.
 
 ## Scratch space
 Write scratch output only under `/tmp/ci/` (it exists and is one of your working directories; create subfolders with `mkdir -p /tmp/ci/<name>`). Anything else outside the repo checkout is refused.

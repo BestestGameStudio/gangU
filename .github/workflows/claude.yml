@@ -110,7 +110,8 @@ jobs:
           # Images attached to the triggering issue/PR and its comments are
           # downloaded by the action itself and handed to Claude as local files.
           # How to use everything installed here lives in the ci-runner skill
-          # (.claude/skills/ci-runner), which Claude can update via normal PRs.
+          # (.claude/skills/ci-runner). Claude cannot edit .claude/ from CI (Claude
+          # Code protects it and the action resets it to main), so update it locally.
           # Note: allowing godot already means Claude can run arbitrary code in
           # this job (GDScript can call OS.execute), so this list keeps Claude on
           # the intended path; it is not a sandbox.
