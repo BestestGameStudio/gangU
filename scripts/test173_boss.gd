@@ -35,6 +35,7 @@ var t := 0.0
 var _player_hp_before := 0
 var _died_count := 0
 var _saw_ring := false
+var _ring_shot := false
 var _bolts_fired := 0
 var _capture_dir := ""
 
@@ -104,6 +105,9 @@ func _physics_process(delta: float) -> bool:
 		2: # projectile volley at range
 			if boss._state == BossHead.State.WINDUP_AOE and boss._ring != null:
 				_saw_ring = true
+				if not _ring_shot and boss._ring.modulate.a > 0.8:
+					_ring_shot = true
+					_capture("aoe_ring") # the engine-drawn telegraph ring, nearly full
 			if t > 3.2:
 				_check("boss fired a volley at range", _bolts_fired >= 2)
 				_check("player not in AOE range was NOT pulse-damaged at range", p.hp >= _player_hp_before - 30)
@@ -117,6 +121,9 @@ func _physics_process(delta: float) -> bool:
 		3: # AOE pulse up close
 			if boss._state == BossHead.State.WINDUP_AOE and boss._ring != null:
 				_saw_ring = true
+				if not _ring_shot and boss._ring.modulate.a > 0.8:
+					_ring_shot = true
+					_capture("aoe_ring") # the engine-drawn telegraph ring, nearly full
 			if t > 4.0:
 				_check("AOE telegraph ring shown", _saw_ring)
 				_check("AOE pulse damaged the player inside the radius", p.hp < _player_hp_before)
