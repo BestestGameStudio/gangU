@@ -4,7 +4,16 @@ class_name Projectile
 ## point; despawns at max range or on hitting a physics body.
 ## #5 consumes: hit bodies that implement apply_damage(damage) get spell.damage.
 
+## #177: emitted when this projectile damages a body (visual hooks only,
+## e.g. the Warlord orb's impact pop). Hit logic is unchanged.
+signal hit(body: Node2D)
+
 var spell: Spell
+## #177: optional per-instance visual override (e.g. the Warlord orb art).
+## Assign before add_child: it replaces the code-drawn Dart/Visual for THIS
+## projectile only. Radius, movement, hits and despawn are untouched, and
+## projectiles without an override look exactly as before.
+var visual_override: Node2D
 var direction: Vector2 = Vector2.RIGHT
 var source: Node2D ## The caster's owner; never hit by its own projectile.
 var _traveled: float = 0.0
@@ -40,6 +49,11 @@ func _ready() -> void:
 	$Visual.scale = Vector2(_vis_scale, _vis_scale)
 	body_entered.connect(_on_body_entered)
 	_vis_base = $Visual.scale
+	if visual_override != null:
+		$Dart.visible = false
+		$Visual.visible = false
+		visual_override.name = "VisualOverride"
+		add_child(visual_override)
 
 func _physics_process(delta: float) -> void:
 	# #37: a HOMING-tagged spell steers BEFORE moving - toward the nearest
@@ -108,6 +122,7 @@ func _on_body_entered(body: Node2D) -> void:
 	if body.has_method(&"apply_damage"):
 		body.apply_damage(spell.damage)
 		_hit_bodies.append(body)
+		hit.emit(body)
 		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
 		# Untagged spells keep the original despawn-on-hit, and range expiry
 		# is unchanged for both.

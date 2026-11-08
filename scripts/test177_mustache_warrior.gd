@@ -19,6 +19,9 @@ extends SceneTree
 ##   (H) attacks (REAL frames, collisions off like #99): mid range -> lunge
 ##       wind-up line telegraph -> dash hit; close -> spin ring -> damage;
 ##       far -> volley cone -> >= 5 orbs; enraged volley -> two wider waves.
+##   (I) orb art: boss orbs carry the WarlordOrbVisual override (code-drawn
+##       Dart/Visual hidden), player spells keep the default look, and an
+##       orb hit damages the player and spawns the impact pop.
 
 var failures := 0
 
@@ -39,6 +42,7 @@ func _initialize() -> void:
 	await _leg_warlord_scene()
 	await _leg_elimination()
 	await _leg_attacks()
+	await _leg_orb_visual()
 	print("[177] DONE failures=", failures)
 	quit(failures)
 
@@ -202,6 +206,13 @@ func _arena(player_offset: Vector2) -> Array:
 	world.add_child(b)
 	return [world, p, b]
 
+func _orbs(world: Node) -> Array:
+	var out: Array = []
+	for c in world.get_children():
+		if c is Projectile:
+			out.append(c)
+	return out
+
 func _count_projectiles(world: Node) -> int:
 	var n := 0
 	for c in world.get_children():
@@ -293,3 +304,55 @@ func _leg_attacks() -> void:
 		p.remove_from_group("player")
 		world.queue_free()
 		await process_frame
+
+# (I) -----------------------------------------------------------------------
+func _leg_orb_visual() -> void:
+	# Boss volley at a COLLIDING player in the orb lane: art + hit + pop.
+	var world := Node2D.new()
+	root.add_child(world)
+	var p: Player = load("res://scenes/player.tscn").instantiate()
+	p.position = Vector2(800, 300)
+	world.add_child(p)
+	p.add_to_group("player")
+	var b: Enemy = load("res://scenes/mustache_warlord.tscn").instantiate()
+	b.position = Vector2(500, 300)
+	b.collision_layer = 0
+	b.collision_mask = 0
+	world.add_child(b)
+	await process_frame
+	b.speed = 0.0
+	var beh := b._behavior as EnemyBehaviorWarlord
+	var checked := false
+	var art_ok := false
+	var pops := 0
+	for i in 400:
+		await physics_frame
+		pops = maxi(pops, get_nodes_in_group(&"warlord_orb_pops").size())
+		var orbs := _orbs(world)
+		if not checked and orbs.size() > 0:
+			checked = true
+			art_ok = true
+			for o: Projectile in orbs:
+				var v := o.get_node_or_null("VisualOverride")
+				if not (v is WarlordOrbVisual and not o.get_node("Dart").visible and not o.get_node("Visual").visible):
+					art_ok = false
+		if checked and p.hp < p.max_hp and pops > 0:
+			break
+	_check(checked and art_ok, "(I) boss orbs wear WarlordOrbVisual (default Dart/Visual hidden)")
+	_check(p.hp < p.max_hp, "(I) orb hit damages the player (hp %d)" % p.hp)
+	_check(pops > 0, "(I) orb impact pop spawned")
+	_check(beh != null, "(I) warlord behavior present")
+	p.remove_from_group("player")
+	world.queue_free()
+	await process_frame
+	# Player spells are untouched: no override, default visuals shown.
+	var w2 := Node2D.new()
+	root.add_child(w2)
+	var pr: Projectile = load("res://scenes/projectile.tscn").instantiate()
+	pr.setup(load("res://resources/spells/mana_shot.tres"), Vector2.RIGHT, null)
+	w2.add_child(pr)
+	await process_frame
+	_check(pr.get_node_or_null("VisualOverride") == null and pr.get_node("Dart").visible and pr.get_node("Visual").visible,
+		"(I) player projectiles keep the default Dart/Visual")
+	w2.queue_free()
+	await process_frame

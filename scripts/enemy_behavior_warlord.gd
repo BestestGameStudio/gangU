@@ -11,7 +11,8 @@ extends RefCounted
 ##   SPIN   (close)      - ground ring, then a spinning blade storm that
 ##                         drifts after the player and ticks damage.
 ##   VOLLEY (far)        - cone telegraph, then a fan of green orbs fired as
-##                         real Projectiles (scenes/projectile.tscn).
+##                         real Projectiles (scenes/projectile.tscn) wearing
+##                         the sheet's orb art (WarlordOrbVisual).
 ## Enraged at <= 50% HP: shorter gaps, wider double volleys, faster lunges.
 ## The same attack never runs three times in a row (range picks a fallback).
 ##
@@ -243,6 +244,11 @@ func _fire_wave(enemy: Enemy, aim: Vector2, rot: float) -> void:
 		var p: Projectile = PROJECTILE_SCENE.instantiate()
 		p.setup(ORB_SPELL, d, enemy)
 		p.position = origin
+		# Sheet orb art + impact pop, for these projectiles only.
+		p.visual_override = WarlordOrbVisual.new()
+		p.hit.connect(func(_body: Node2D) -> void:
+			if is_instance_valid(p) and is_instance_valid(area):
+				WarlordOrbVisual.spawn_pop(area, p.global_position))
 		# D14: never add to the tree synchronously from a physics step.
 		area.call_deferred("add_child", p)
 	CombatEffects.muzzle(area, origin, aim.angle(), ORB_SPELL.projectile_color)
