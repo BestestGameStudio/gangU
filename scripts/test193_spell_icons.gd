@@ -62,6 +62,12 @@ func _initialize() -> void:
 	var plain := _spell("PlainBolt", null)
 	caster.add_spell(lit)
 	caster.add_spell(plain)
+	# #262: both grants auto-bind on arrival (lit -> slot 3, plain -> slot 4).
+	# Clear those two bindings so the legs below drive their own loadout as
+	# before. Cleared only AFTER both grants: clearing the boot slots first
+	# would shift which slots the auto-binds take.
+	caster.clear_slot(2)
+	caster.clear_slot(3)
 	await _frames(3)
 
 	caster.clear_slot(0) # #238: boot seeds slot 1; this leg drives its own loadout
