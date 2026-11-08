@@ -60,7 +60,7 @@ func request_spawn(entry: Dictionary) -> Enemy:
 	e.reward_table = entry["reward_table"] as RewardTable
 	e.player_path = player_path
 	e.terrain = terrain
-	var idx := entries.find(entry)
+	var idx := _entry_index(entry)
 	if not _alive.has(idx):
 		_alive[idx] = []
 	(_alive[idx] as Array).append(e)
@@ -69,8 +69,17 @@ func request_spawn(entry: Dictionary) -> Enemy:
 	spawned.emit(e, entry)
 	return e
 
+## Index of this exact entry Dictionary (identity, not content), so two
+## entries with identical content keep separate bookkeeping. -1 = an entry
+## that is not in `entries` (one shared bucket).
+func _entry_index(entry: Dictionary) -> int:
+	for i in entries.size():
+		if is_same(entries[i], entry):
+			return i
+	return -1
+
 func alive_count(entry: Dictionary) -> int:
-	var idx := entries.find(entry)
+	var idx := _entry_index(entry)
 	if not _alive.has(idx):
 		return 0
 	var n := 0
