@@ -115,6 +115,15 @@ func _process(delta: float) -> bool:
 					print("[PROG] FAIL cooldown transfer: old=", caster.cooldown_remaining(fire), " new=", caster.cooldown_remaining(split)); ok = false
 				else:
 					print("[PROG] edge semantics OK: unlocked own-index, slot preserved+re-emitted, spell_replaced once, CD transferred (old cleared)")
+				# #36 tier delta legs (clean FAIL on old base: no accessor/field)
+				if not prog.has_method("get_tier") or prog.get_tier(split) != 1:
+					print("[PROG] FAIL tier: split not recorded Specialization on apply"); ok = false
+				elif prog.get_tier(fire) != 0:
+					print("[PROG] FAIL tier: consumed source not back to Base/0"); ok = false
+				elif load("res://resources/upgrades/fireball_split.tres").get("tier") != 1 or load("res://resources/upgrades/fireball_beam.tres").get("tier") != 1:
+					print("[PROG] FAIL tier: spec resources missing tier=1"); ok = false
+				else:
+					print("[PROG] tier recorded on apply (result=1, consumed source=0, spec resources tier=1) OK")
 				if upsig_seen.size() != 1 or upsig_seen[0] != fire:
 					print("[PROG] FAIL upgrades_changed: ", upsig_seen.size(), " calls, payload=", upsig_seen[0] if upsig_seen.size() > 0 else "none"); ok = false
 				else:
