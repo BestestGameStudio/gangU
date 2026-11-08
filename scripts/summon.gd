@@ -51,3 +51,32 @@ func apply_damage(amount: int) -> void:
 	if hp == 0:
 		died.emit()
 		queue_free()
+
+## #245: local cosmetic halo only. An explicit Player owner is required:
+## unowned fixtures or future non-player summons must not inherit this effect.
+## Drawn on the root, behind the unchanged Body child, without environment bloom.
+const GLOW_BLUE := Color(0.16, 0.48, 1.0)
+const GLOW_PERIOD := 2.4
+var _glow_time := 0.0
+
+func _has_player_glow() -> bool:
+	return is_instance_valid(player) and player is Player
+
+func _glow_strength() -> float:
+	return 0.88 + 0.12 * sin(_glow_time * TAU / GLOW_PERIOD)
+
+func _process(delta: float) -> void:
+	_glow_time = fmod(_glow_time + delta, GLOW_PERIOD)
+	# Also redraw after ownership is lost, so no stale halo survives a freed owner.
+	queue_redraw()
+
+func _draw() -> void:
+	if not _has_player_glow():
+		return
+	var strength := _glow_strength()
+	# Low-alpha nested discs form a soft falloff around the 20px placeholder.
+	for layer in range(5):
+		var radius := 22.0 - layer * 2.0
+		var tint := GLOW_BLUE
+		tint.a = (0.018 + layer * 0.010) * strength
+		draw_circle(Vector2.ZERO, radius, tint, true, -1.0, true)
