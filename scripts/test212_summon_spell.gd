@@ -90,7 +90,7 @@ func _initialize() -> void:
 		await physics_frame
 	_check(ally_a.global_position.distance_to(player.global_position) < d0 - 40.0, "follow: ally closes on a too-far player")
 
-	# --- behavior (b): return priority over combat ---
+	# --- behavior (b): #280 engagement beats the follow-return ---
 	var enemy_b: Enemy = load("res://scenes/enemy.tscn").instantiate()
 	stage.add_child(enemy_b)
 	enemy_b.global_position = Vector2(-60, 0)
@@ -98,7 +98,8 @@ func _initialize() -> void:
 	await process_frame
 	for i in 20:
 		await physics_frame
-	_check(ally_b.global_position.x > 10.0, "return priority: ally heads for the far player, not the nearby enemy")
+	_check(ally_b.global_position.distance_to(enemy_b.global_position) < 60.0, "engagement first (#280): ally engages the nearby enemy despite the far player")
+	_check(ally_b.global_position.distance_to(player.global_position) > 1500.0, "no return while an enemy lives (#280): ally does not head for the far player")
 	enemy_b.queue_free()
 	ally_a.queue_free()
 	ally_b.queue_free()
