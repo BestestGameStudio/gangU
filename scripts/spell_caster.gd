@@ -11,7 +11,10 @@ class_name SpellCaster
 ## next_spell/equipped_spell/cast, generic LMB/Space) is preserved untouched
 ## for production and harness compatibility; the cycle's removal and the
 ## generic cast role remain OPEN human choices. The caster never prefills a
-## slot itself; main.gd seeds starting_spells in order at boot (#238). Duplicate unlock grants get no new guard here
+## #262 (Daniel, 2026-11-08, "yes first empty slots, and without replacement"):
+## unlock_spell auto-binds each newly granted spell to the FIRST EMPTY slot;
+## main.gd's starting_spells seeding at boot (#238) rides the same path and
+## stays a no-op safeguard. Duplicate unlock grants get no new guard here
 ## (grant policy OPEN) - equip uniqueness is enforced by assign_slot only.
 
 signal spell_cast(spell: Spell)
@@ -78,9 +81,30 @@ func add_spell(spell: Spell) -> void:
 
 ## #10 slots: grant to the unlock inventory. Duplicate-grant policy is an OPEN
 ## human choice - no guard is added here by design.
+## #262: every newly granted spell also auto-binds to the FIRST EMPTY slot in
+## 1-6 order. Existing bindings are never replaced: when all six slots are
+## occupied the grant stays unlock-only for manual equip in the Tab panel.
+## One funnel covers every grant path - walk-over pickups (add_spell), enemy
+## reward-drop spells, and shop purchases.
 func unlock_spell(spell: Spell) -> void:
 	unlocked.append(spell)
 	spell_unlocked.emit(spell)
+	bind_first_free(spell)
+
+## #262: bind `spell` to the first empty slot in 1-6 order. Returns the slot
+## index the spell ends in (its existing binding when already slotted), or
+## -1 when every slot is occupied: the grant then stays unlock-only and no
+## existing player assignment is touched.
+func bind_first_free(spell: Spell) -> int:
+	if spell == null:
+		return -1
+	var existing := _slots.find(spell)
+	if existing != -1:
+		return existing
+	for i in SLOT_COUNT:
+		if _slots[i] == null:
+			return i if assign_slot(i, spell) else -1
+	return -1
 
 ## #10 slots: one spell one slot (human-settled), enforced by REFUSAL (joint
 ## lead/writer pin): no silent moves, copies, or evictions. Returns true when

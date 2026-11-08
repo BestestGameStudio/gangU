@@ -49,12 +49,13 @@ func _process(delta: float) -> bool:
 					print("[10] FAIL duplicate added"); ok = false
 				else:
 					print("[10] duplicate pickup ignored -> PASS")
-				# #238: the HUD mirrors the six slots, and a pickup never auto-equips.
+				# #262 (Daniel, 2026-11-08): a new pickup auto-binds to the FIRST
+				# EMPTY slot; the HUD keeps mirroring the six slots (#238).
 				var grid: GridContainer = hud.get_node("Root/SpellGrid")
-				if grid.get_child_count() != 6 or caster.get_slots().has(caster.spells[2]):
-					print("[10] FAIL HUD grid after pickup: ", grid.get_child_count()); ok = false
+				if grid.get_child_count() != 6 or caster.get_slots()[2] != caster.spells[2]:
+					print("[10] FAIL auto-bind after pickup: grid=", grid.get_child_count(), " slot3=", caster.get_slots()[2]); ok = false
 				else:
-					print("[10] HUD grid stays six slots after an unequipped pickup -> PASS")
+					print("[10] pickup auto-binds to first empty slot (3), HUD grid stays six -> PASS")
 				caster.next_spell()
 				var s1 := caster.equipped_spell.spell_name
 				caster.next_spell()
