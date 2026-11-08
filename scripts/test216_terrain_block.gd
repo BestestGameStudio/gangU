@@ -260,6 +260,15 @@ func _initialize() -> void:
 	r = await _order_case(stage, omap, oshooter, fast_pierce, Vector2i(3, 0), 96.0, order)
 	_check(r.block_gone and r.enemy_hp < 30.0 and not r.consumed, "piercing: enemy then block both hit in one step, shot continues")
 	_check(r.order == ["body", "block"], "piercing: enemy resolved before the farther block (%s)" % [r.order])
+	# re-review: the shot STARTS overlapping the enemy (x=32, the spawn point);
+	# that initial contact is t=0 and must sort before the farther block (cell 2)
+	r = await _order_case(stage, omap, oshooter, fast, Vector2i(2, 0), 32.0, order)
+	_check(r.enemy_hp < 30.0 and not r.block_gone, "initial overlap, non-piercing: overlapped enemy damaged, farther block intact (hp %s)" % r.enemy_hp)
+	_check(r.consumed and r.order == ["body"], "initial overlap, non-piercing: consumed by the overlapped enemy (%s)" % [r.order])
+	r = await _order_case(stage, omap, oshooter, fast_pierce, Vector2i(2, 0), 32.0, order)
+	_check(r.block_gone and r.enemy_hp < 30.0 and not r.consumed, "initial overlap, piercing: overlapped enemy then block both hit, shot continues")
+	_check(r.order == ["body", "block"], "initial overlap, piercing: overlapped enemy resolved first (%s)" % [r.order])
+	_check(r.enemy_hp == 23.0, "initial overlap, piercing: enemy hit exactly once (hp %s)" % r.enemy_hp)
 
 	print("[216] failures: ", failures)
 	if failures == 0:

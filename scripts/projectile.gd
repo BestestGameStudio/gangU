@@ -373,9 +373,21 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 	var rids: Array[RID] = []
 	for h in hits:
 		rids.append(h.get("rid"))
+	# #216 re-review: cast_motion skips shapes already overlapped at the start
+	# of the motion, so it never reports t=0 for them. Query the start pose
+	# separately; any body touched there is first contact at t=0.
+	var overlapping: Array[RID] = []
+	if not hits.is_empty():
+		params.motion = Vector2.ZERO
+		for h in space.intersect_shape(params, 8):
+			overlapping.append(h.get("rid"))
+		params.motion = motion
 	for idx in hits.size():
 		var b: Node2D = hits[idx].get("collider")
 		if b == null or b == source or _hit_bodies.has(b):
+			continue
+		if overlapping.has(rids[idx]):
+			events.append({"t": 0.0, "body": b})
 			continue
 		# Contact time against this body alone: exclude every other hit.
 		var others: Array[RID] = []
