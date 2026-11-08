@@ -80,6 +80,9 @@ const FRAME_DIM := Color(0.45, 0.48, 0.55, 0.6)
 const FRAME_EMPTY := Color(0.4, 0.42, 0.48, 0.6)
 var _slots_supported := false
 var _slot_widgets: Array = [] ## [{frame,key,name,bar,state,cooling}] x 6
+## #122: dim hint shown only when zero slots are assigned (empty slots
+## collapse - unassigned frames hide instead of rendering placeholder rows).
+var _slot_hint: Label = null
 var _style_track: StyleBoxFlat
 var _style_ready: StyleBoxFlat
 var _style_cooling: StyleBoxFlat
@@ -165,19 +168,19 @@ func _add_spell_row(spell: Spell) -> void:
 	var frame := PanelContainer.new() # #93: flat border frame; border highlights equipped
 	frame.add_theme_stylebox_override("panel", _frame_style(FRAME_DIM))
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", 4)
 	frame.add_child(row)
 	var name_label := Label.new()
-	name_label.add_theme_font_size_override("font_size", 22)
-	name_label.custom_minimum_size = Vector2(120, 0)
+	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.custom_minimum_size = Vector2(110, 0)
 	var bar := ProgressBar.new()
 	bar.min_value = 0.0
 	bar.max_value = 1.0
 	bar.value = 1.0
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(140, 18)
+	bar.custom_minimum_size = Vector2(90, 12)
 	var state := Label.new()
-	state.add_theme_font_size_override("font_size", 22)
+	state.add_theme_font_size_override("font_size", 15)
 	row.add_child(name_label)
 	row.add_child(bar)
 	row.add_child(state)
@@ -191,23 +194,23 @@ func _build_slot_rows() -> void:
 		var frame := PanelContainer.new() # #93: flat border frame; border shows assigned vs empty
 		frame.add_theme_stylebox_override("panel", _frame_style(FRAME_EMPTY))
 		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
+		row.add_theme_constant_override("separation", 4)
 		frame.add_child(row)
 		var key_label := Label.new()
-		key_label.add_theme_font_size_override("font_size", 22)
+		key_label.add_theme_font_size_override("font_size", 15)
 		key_label.custom_minimum_size = Vector2(24, 0)
 		key_label.text = str(i + 1)
 		var name_label := Label.new()
-		name_label.add_theme_font_size_override("font_size", 22)
-		name_label.custom_minimum_size = Vector2(120, 0)
+		name_label.add_theme_font_size_override("font_size", 15)
+		name_label.custom_minimum_size = Vector2(110, 0)
 		var bar := ProgressBar.new()
 		bar.min_value = 0.0
 		bar.max_value = 1.0
 		bar.value = 0.0
 		bar.show_percentage = false
-		bar.custom_minimum_size = Vector2(140, 18)
+		bar.custom_minimum_size = Vector2(90, 12)
 		var state := Label.new()
-		state.add_theme_font_size_override("font_size", 22)
+		state.add_theme_font_size_override("font_size", 15)
 		row.add_child(key_label)
 		row.add_child(name_label)
 		row.add_child(bar)
@@ -215,7 +218,16 @@ func _build_slot_rows() -> void:
 		_apply_bar_state(bar, false) # #93: track + READY fill at build
 		_slot_rows_box.add_child(frame)
 		_slot_widgets.append({"frame": frame, "key": key_label, "name": name_label, "bar": bar, "state": state, "cooling": false})
+	# #122: single dim line when nothing is assigned; hidden otherwise.
+	_slot_hint = Label.new()
+	_slot_hint.name = "EmptyHint"
+	_slot_hint.add_theme_font_size_override("font_size", 15)
+	_slot_hint.modulate = Color(1.0, 1.0, 1.0, 0.55)
+	_slot_hint.text = "(no spells assigned - Tab to equip)"
+	_slot_hint.visible = false
+	_slot_rows_box.add_child(_slot_hint)
 	_update_plate.call_deferred()
+	_update_slot_rows() # settle collapse state on the initial slot data
 
 func _update_slot_rows() -> void:
 	# Freed-instance safe: the caster can die with the run (reload rebuilds
@@ -225,20 +237,19 @@ func _update_slot_rows() -> void:
 		_slots_supported = false
 		return
 	var slots: Array = _caster.get_slots()
+	var any_assigned := false
 	for i in _slot_widgets.size():
 		var w: Dictionary = _slot_widgets[i]
 		var spell: Spell = slots[i] if i < slots.size() else null
 		if spell != null and not is_instance_valid(spell):
 			spell = null
 		if spell == null:
-			w["name"].text = "(empty)"
-			w["bar"].value = 0.0
-			w["state"].text = ""
-			w["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_EMPTY))
-			if w["cooling"]:
-				w["cooling"] = false
-				_apply_bar_state(w["bar"], false)
+			# #122: empty slots collapse - unassigned frames hide entirely
+			# instead of rendering "(empty)" placeholder rows.
+			w["frame"].visible = false
 			continue
+		any_assigned = true
+		w["frame"].visible = true
 		var rem: float = _caster.cooldown_remaining(spell)
 		var frac := 1.0
 		if spell.cooldown > 0.0:
@@ -251,6 +262,8 @@ func _update_slot_rows() -> void:
 		if cooling != w["cooling"]:
 			w["cooling"] = cooling
 			_apply_bar_state(w["bar"], cooling)
+	if _slot_hint != null:
+		_slot_hint.visible = not any_assigned
 
 func _process(delta: float) -> void:
 	_update_objective(delta)
