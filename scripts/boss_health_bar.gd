@@ -10,6 +10,9 @@ const HEIGHT: float = 5.0
 const BG: Color = Color(0.06, 0.05, 0.09, 0.85)
 const FILL: Color = Color(0.62, 0.9, 0.24)
 const FILL_ENRAGED: Color = Color(1.0, 0.55, 0.15)
+## #173: per-boss bar colours (defaults: the Warlord's green / hot orange).
+@export var fill_color: Color = FILL
+@export var fill_enraged_color: Color = FILL_ENRAGED
 const LAG_COLOR: Color = Color(1.0, 1.0, 0.85, 0.8)
 const LAG_RATE: float = 0.8 ## fraction of the bar per second the damage trail drains
 
@@ -34,4 +37,4 @@ func _draw() -> void:
 	var origin := Vector2(-WIDTH * 0.5, 0.0)
 	draw_rect(Rect2(origin - Vector2(1, 1), Vector2(WIDTH + 2, HEIGHT + 2)), BG)
 	draw_rect(Rect2(origin, Vector2(WIDTH * _lag, HEIGHT)), LAG_COLOR)
-	draw_rect(Rect2(origin, Vector2(WIDTH * _ratio, HEIGHT)), FILL_ENRAGED if _ratio <= 0.5 else FILL)
+	draw_rect(Rect2(origin, Vector2(WIDTH * _ratio, HEIGHT)), fill_enraged_color if _ratio <= 0.5 else fill_color)

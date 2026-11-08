@@ -4,7 +4,7 @@ extends Area2D
 ## visuals (tint + label). Entering a gate transports the player to its dungeon.
 ## Red-gate lock-in rules themselves are #9 scope; this is transport + typing only.
 
-enum GateType { NORMAL, RED }
+enum GateType { NORMAL, RED, BOSS }
 
 @export var gate_type: GateType = GateType.NORMAL
 @export var target_dungeon: PackedScene
@@ -13,6 +13,8 @@ signal entered(gate: Gate)
 
 const NORMAL_TINT := Color(0.15, 0.6, 0.9)
 const RED_TINT := Color(0.85, 0.15, 0.15)
+## #173: violet boss gate (DungeonC, the Head boss arena).
+const BOSS_TINT := Color(0.62, 0.28, 0.95)
 const PORTAL_RX := 24.0
 const PORTAL_RY := 34.0
 const PORTAL_POINTS := 48
@@ -27,6 +29,9 @@ func _ready() -> void:
 	var label: Label = $TypeLabel
 	var tint := RED_TINT if gate_type == GateType.RED else NORMAL_TINT
 	label.text = "RED" if gate_type == GateType.RED else "NORMAL"
+	if gate_type == GateType.BOSS:
+		tint = BOSS_TINT
+		label.text = "BOSS"
 	# The hidden ColorRect is the gate's footprint and tint record: label
 	# placement measures neighbor gates by it.
 	($ColorRect as ColorRect).color = tint
