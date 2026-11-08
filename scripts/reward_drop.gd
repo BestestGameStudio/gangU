@@ -16,11 +16,19 @@ func setup(p_entry: RewardEntry) -> void:
 
 func _ready() -> void:
 	add_to_group("reward_drops")
-	if entry == null or entry.spell == null:
+	if entry == null:
+		push_warning("RewardDrop: no entry assigned.")
+		return
+	if entry.kind == RewardEntry.Kind.CURRENCY:
+		# #128 placeholder presentation: gold diamond labeled with the amount.
+		$NameLabel.text = "%dc" % entry.currency_amount
+		$Visual.color = Color(1.0, 0.85, 0.2)
+	elif entry.spell == null:
 		push_warning("RewardDrop: no spell entry assigned.")
 		return
-	$NameLabel.text = entry.spell.spell_name
-	$Visual.color = entry.spell.projectile_color
+	else:
+		$NameLabel.text = entry.spell.spell_name
+		$Visual.color = entry.spell.projectile_color
 	body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node2D) -> void:
@@ -44,11 +52,22 @@ func _on_body_entered(body: Node2D) -> void:
 			# Defensive fallback only: unlock_spell is live on main. If the
 			# caster is absent or predates it, the grant stays pool-recorded.
 			push_warning("RewardDrop: caster.unlock_spell unavailable; pool grant recorded only.")
+		print("spell unlocked: ", entry.spell.spell_name)
+	elif entry.kind == RewardEntry.Kind.CURRENCY:
+		# #128: currency routes to the run wallet mounted on Main. Currency
+		# stays pool-eligible after grant (Daniel, 2026-11-07), so the pool
+		# call above is a no-op for CURRENCY and drops can repeat.
+		var wallet := get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
+		if wallet != null:
+			wallet.add(entry.currency_amount)
+		else:
+			# Defensive fallback only: the wallet mount is live on main.
+			push_warning("RewardDrop: currency wallet unavailable; pool grant recorded only.")
+		print("[rewards] currency collected: +", entry.currency_amount)
 	else:
 		# Item rewards unwired until #54 content approval.
 		print("[rewards] item drop collected; item route unwired (#54 pending)")
 	collected.emit(self, entry)
-	print("spell unlocked: ", entry.spell.spell_name)
 	set_deferred("monitoring", false)
 	visible = false
 	# #72: a GRANTED drop has completed its lifecycle - free it like the stale
