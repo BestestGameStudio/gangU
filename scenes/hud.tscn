@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://bgangu6hud"]
+[gd_scene load_steps=3 format=3 uid="uid://bgangu6hud"]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
+[ext_resource type="Texture2D" path="res://assets/sprites/hp_bar_frame.png" id="2_frame"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -13,9 +14,20 @@ offset_bottom = 200.0
 theme_override_constants/separation = 8
 
 [node name="HPBar" type="ProgressBar" parent="Root"]
-custom_minimum_size = Vector2(360, 32)
+texture_filter = 1
+custom_minimum_size = Vector2(360, 60)
 layout_mode = 2
 show_percentage = false
+
+[node name="HPFrame" type="NinePatchRect" parent="Root/HPBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("2_frame")
+patch_margin_left = 45
+patch_margin_right = 45
 
 [node name="HPLabel" type="Label" parent="Root/HPBar"]
 layout_mode = 1

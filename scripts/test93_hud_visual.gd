@@ -54,10 +54,10 @@ func _spell(n: String, cd: float) -> Spell:
 	return s
 
 func _fill_of(bar: ProgressBar) -> Color:
-	var sb := bar.get_theme_stylebox("fill") as StyleBoxFlat
-	return sb.bg_color if sb != null else Color(-1, -1, -1)
+	var sb := bar.get_theme_stylebox("fill") as StyleBoxTexture
+	return sb.modulate_color if sb != null else Color(-1, -1, -1)
 
-const C_GREEN := Color(0.35, 0.8, 0.4, 1.0)
+const C_GREEN := Color(0.17, 1.0, 0.14, 1.0)
 const C_AMBER := Color(0.95, 0.75, 0.25, 1.0)
 const C_RED := Color(0.9, 0.3, 0.25, 1.0)
 
@@ -96,8 +96,21 @@ func _initialize() -> void:
 
 	# (a) HP bar custom styling + state colors.
 	var hp_bar := hud.get_node("Root/HPBar") as ProgressBar
-	_check(hp_bar.get_theme_stylebox("background") is StyleBoxFlat, "(a) HP track StyleBoxFlat")
-	_check(hp_bar.get_theme_stylebox("fill") is StyleBoxFlat, "(a) HP fill StyleBoxFlat")
+	var track_style := hp_bar.get_theme_stylebox("background") as StyleBoxTexture
+	var fill_style := hp_bar.get_theme_stylebox("fill") as StyleBoxTexture
+	_check(track_style != null and track_style.texture != null, "(a) HP track is textured")
+	_check(fill_style != null and fill_style.texture != null, "(a) HP fill is textured")
+	_check(track_style.get_margin(SIDE_LEFT) > 0.0 and fill_style.get_margin(SIDE_RIGHT) > 0.0, "(a) HP track and fill keep fixed end caps")
+	_check(track_style.axis_stretch_horizontal == StyleBoxTexture.AXIS_STRETCH_MODE_TILE and fill_style.axis_stretch_horizontal == StyleBoxTexture.AXIS_STRETCH_MODE_TILE, "(a) HP track and fill tile their middles")
+	var fill_image := fill_style.texture.get_image()
+	if fill_image.is_compressed():
+		fill_image.decompress()
+	var fill_sample := fill_image.get_pixel(fill_image.get_width() / 2, fill_image.get_height() / 2)
+	_check(fill_sample.a > 0.9 and is_equal_approx(fill_sample.r, fill_sample.b) and fill_sample.g > 0.4, "(a) fill art is a bright untinted value map (got %s)" % str(fill_sample))
+	var hp_frame := hud.get_node_or_null("Root/HPBar/HPFrame") as NinePatchRect
+	_check(hp_frame != null and hp_frame.texture != null and hp_frame.patch_margin_left > 0 and hp_frame.patch_margin_right > 0, "(a) HP frame is a nine-patch with fixed ends")
+	_check(hp_frame != null and hp_frame.mouse_filter == Control.MOUSE_FILTER_IGNORE, "(a) HP frame ignores the mouse")
+	_check(hud.get_node("Root/HPBar").get_children().find(hp_frame) < hud.get_node("Root/HPBar").get_children().find(hp_label), "(a) HP text draws above the frame")
 	_check(_fill_of(hp_bar) == C_GREEN, "(a) HP green at 80 percent")
 	player.hp = 40
 	player.health_changed.emit(40, 100)
@@ -170,7 +183,7 @@ func _initialize() -> void:
 	_check(root_box.offset_right == 372.0, "(i) Root width 360 (offset_right got %s)" % str(root_box.offset_right))
 	_check(root_box.get_theme_constant("separation") == 8, "(i) Root separation 8")
 	_check(hp_label.get_theme_font_size("font_size") == 18, "(i) HPLabel font 18")
-	_check(hp_bar.custom_minimum_size == Vector2(360, 32), "(i) HPBar 360x32 (got %s)" % str(hp_bar.custom_minimum_size))
+	_check(hp_bar.custom_minimum_size == Vector2(360, 60), "(i) HPBar 360x60 (got %s)" % str(hp_bar.custom_minimum_size))
 	var obj_label := hud.get_node("Root/ObjectiveLabel") as Label
 	_check(obj_label.get_theme_font_size("font_size") == 16, "(i) ObjectiveLabel font 16")
 	_check(squares[0].custom_minimum_size == Vector2(48, 48), "(i) squares are 48x48")

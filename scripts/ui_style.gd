@@ -87,9 +87,3 @@ static func icon_placeholder() -> StyleBoxFlat:
 	sb.set_corner_radius_all(BAR_RADIUS)
 	return sb
 
-## Progress bar track or fill.
-static func bar(c: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = c
-	sb.set_corner_radius_all(BAR_RADIUS)
-	return sb

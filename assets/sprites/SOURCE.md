@@ -159,3 +159,30 @@ Reproduce:
   sheet position, with no re-anchoring.
 - SpriteFrames (resources/sprites/upgrade_chevron_frames.tres): `pulse`, 4
   frames, 8 fps loop.
+
+# HP bar (hp_bar_frame / hp_bar_track / hp_bar_fill)
+
+## Source
+Three-piece HP bar sheet for issue #244, supplied by the user as a 2000x667
+WebP with real transparency (same layout as the image attached to the issue).
+The source sheet is not stored in the repo. The shipped PNGs are extracted
+with `tools/sprites/pack_hp_bar.gd`:
+`godot --headless --path . --script res://tools/sprites/pack_hp_bar.gd -- <issue-244-sheet.webp> assets/sprites`.
+Cut 3:1 with a hard alpha cut.
+
+## Layout
+- `hp_bar_frame.png` 100x60: 45 px caps, stretched rails. Drawn over the bar
+  by the `HPFrame` nine-patch.
+- `hp_bar_track.png` 151x60: 42 px caps, 67 px tile (two star periods).
+- `hp_bar_fill.png` 157x60: 44 px ends (30 px transparent padding + 14 px
+  tip), 69 px tile (two stripe periods).
+
+## Changes from the sheet
+- The sheet's middle top rail sits 7 px below the caps' rail; it is moved up
+  to meet them.
+- The fill is squeezed vertically from 105 to 72 sheet px to fit the frame
+  opening, as the sheet's own previews do.
+- The fill is stored as brightness only (max of r, g, b). `hud.gd` tints it
+  green, amber or red, so the green is one hue and loses the sheet's slight
+  yellow in the highlights.
+- The sheet's full/mid/low previews and divider are not extracted.
