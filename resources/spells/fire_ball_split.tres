@@ -1,9 +1,13 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangusplit"]
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangusplit"]
 
 [ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://resources/sprites/spell_icons_frames.tres" id="2_frames"]
 
 [resource]
 script = ExtResource("1_spell")
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"fireball"
+icon_upgraded = true
 spell_name = "Fire Ball Split"
 cooldown = 1.2
 damage = 25.0
