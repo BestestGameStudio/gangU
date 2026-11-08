@@ -1,0 +1,117 @@
+name: TEMP evidence PR test
+'on':
+  pull_request:
+    types:
+    - opened
+jobs:
+  claude:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-url: "${{ steps.upload.outputs.artifact-url }}"
+      media-files: "${{ steps.media.outputs.files }}"
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+    - name: Checkout for assets
+      uses: actions/checkout@v4
+    - name: Fake screenshot
+      run: mkdir -p /tmp/ci/media && cp $GITHUB_WORKSPACE/assets/sprites/*.png /tmp/ci/media/
+        2>/dev/null; ls /tmp/ci/media | head -1 | xargs -I{} mv /tmp/ci/media/{} /tmp/ci/media/stand_in.png;
+        find /tmp/ci/media -type f ! -name stand_in.png -delete; ls -la /tmp/ci/media
+    - name: 'Stand-in: Claude writes run URL into PR B'
+      env:
+        GH_TOKEN: "${{ github.token }}"
+      run: |-
+        gh pr edit 283 -R ${{ github.repository }} --body "Stand-in for a PR Claude opened.
+
+        ## Screenshots
+        ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+    - name: List screenshot evidence
+      id: media
+      if: always()
+      run: |
+        files=$(cd /tmp/ci/media 2>/dev/null && find . -type f -printf '%P\n' | LC_ALL=C sort | tr -c 'A-Za-z0-9._/\n-' '_' | head -50 || true)
+        { echo 'files<<__END_FILES__'; echo "$files"; echo '__END_FILES__'; } >> "$GITHUB_OUTPUT"
+    - name: Upload screenshot evidence
+      id: upload
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: claude-ci-output
+        path: "/tmp/ci/media"
+        if-no-files-found: ignore
+        retention-days: 14
+  post-run:
+    needs: claude
+    if: always() && needs.claude.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+    - name: Remove the claude label
+      if: github.event.action == 'labeled'
+      env:
+        GH_TOKEN: "${{ github.token }}"
+        REPO: "${{ github.repository }}"
+        NUMBER: "${{ github.event.issue.number || github.event.pull_request.number
+          }}"
+      run: gh api -X DELETE "repos/$REPO/issues/$NUMBER/labels/claude" > /dev/null
+        || true
+    - name: Add screenshot download link to Claude's comment
+      if: needs.claude.outputs.artifact-url != ''
+      env:
+        GH_TOKEN: "${{ github.token }}"
+        REPO: "${{ github.repository }}"
+        NUMBER: "${{ github.event.issue.number || github.event.pull_request.number
+          }}"
+        RUN_ID: "${{ github.run_id }}"
+        ARTIFACT_URL: "${{ needs.claude.outputs.artifact-url }}"
+        FILES: "${{ needs.claude.outputs.media-files }}"
+      run: |
+        set -euo pipefail
+        list=$(printf '%s\n' "$FILES" | sed '/^$/d; s/.*/- `&`/')
+        section=$(printf '**Screenshot evidence:** [download claude-ci-output.zip](%s) (kept 14 days; GitHub login required)\n%s' "$ARTIFACT_URL" "$list")
+        # Claude's own comment for this run links to actions/runs/<run id>.
+        find_comment() {
+          gh api --paginate "repos/$REPO/$1/$NUMBER/comments" \
+            --jq ".[] | select(.body | contains(\"actions/runs/$RUN_ID\")) | .id" 2>/dev/null | tail -1 || true
+        }
+        kind=issues; id=$(find_comment issues)
+        if [ -z "$id" ]; then kind=pulls; id=$(find_comment pulls); fi
+        if [ -n "$id" ]; then
+          body=$(gh api "repos/$REPO/$kind/comments/$id" --jq .body)
+          case "$body" in *"$ARTIFACT_URL"*) echo "link already present"; exit 0 ;; esac
+          if gh api -X PATCH "repos/$REPO/$kind/comments/$id" -f body="$body"$'\n\n---\n'"$section" > /dev/null; then
+            echo "appended to $kind comment $id"; exit 0
+          fi
+        fi
+        echo "Claude's comment not found or not editable; posting a new comment"
+        gh issue comment "$NUMBER" -R "$REPO" --body "$section"
+    - name: Add screenshot download link to the PR Claude opened
+      if: needs.claude.outputs.artifact-url != ''
+      env:
+        GH_TOKEN: "${{ github.token }}"
+        REPO: "${{ github.repository }}"
+        NUMBER: "${{ github.event.issue.number || github.event.pull_request.number
+          }}"
+        RUN_ID: "${{ github.run_id }}"
+        ARTIFACT_URL: "${{ needs.claude.outputs.artifact-url }}"
+        FILES: "${{ needs.claude.outputs.media-files }}"
+      run: |
+        set -euo pipefail
+        list=$(printf '%s\n' "$FILES" | sed '/^$/d; s/.*/- `&`/')
+        section=$(printf '**Screenshot evidence:** [download claude-ci-output.zip](%s) (kept 14 days; GitHub login required)\n%s' "$ARTIFACT_URL" "$list")
+        # Recent open PRs whose description links this run (not the search
+        # API, which can lag behind a PR opened seconds ago).
+        prs=$(gh pr list -R "$REPO" --state open --limit 50 --json number,body \
+          --jq ".[] | select(.body | contains(\"actions/runs/$RUN_ID\")) | .number")
+        if [ -z "$prs" ]; then echo "no PR links this run"; exit 0; fi
+        for pr in $prs; do
+          [ "$pr" = "$NUMBER" ] && continue  # already handled via Claude's comment
+          body=$(gh api "repos/$REPO/pulls/$pr" --jq '.body // ""')
+          case "$body" in *"$ARTIFACT_URL"*) echo "PR #$pr already has the link"; continue ;; esac
+          gh api -X PATCH "repos/$REPO/pulls/$pr" -f body="$body"$'\n\n---\n'"$section" > /dev/null
+          echo "appended to PR #$pr description"
+        done
