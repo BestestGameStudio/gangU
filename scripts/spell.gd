@@ -6,6 +6,8 @@ class_name Spell
 ## #11 HUD (name + cooldown state).
 
 @export var spell_name: String = "Spell"
+## UI art for spell rows and slots. Null renders an empty placeholder box.
+@export var icon: Texture2D = null
 @export var cooldown: float = 0.5 ## Seconds before this spell can be recast.
 @export var damage: float = 10.0
 @export var radius: float = 4.0 ## Projectile hit radius in pixels.

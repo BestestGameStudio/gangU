@@ -31,6 +31,8 @@ const ROW_BORDER_WIDTH := 1
 const ROW_BORDER_WIDTH_HIGHLIGHT := 2
 const ROW_RADIUS := 4
 const BAR_RADIUS := 3
+const ICON_SIZE := 22.0
+const ICON_PLACEHOLDER_BG := Color(1.0, 1.0, 1.0, 0.04)
 
 ## Outer plate of a panel: thick border, rounded corners, soft drop shadow.
 static func panel(bg: Color = PANEL_BG) -> StyleBoxFlat:
@@ -77,6 +79,15 @@ static func style_button(b: Button, border: Color, pad: float = 4.0, left_pad: f
 	focus.draw_center = false
 	b.add_theme_stylebox_override("focus", focus)
 	b.add_theme_stylebox_override("disabled", disabled)
+
+## Empty icon slot: a faint outlined box that reads as "no art yet".
+static func icon_placeholder() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = ICON_PLACEHOLDER_BG
+	sb.border_color = B_DIM
+	sb.set_border_width_all(ROW_BORDER_WIDTH)
+	sb.set_corner_radius_all(BAR_RADIUS)
+	return sb
 
 ## Progress bar track or fill.
 static func bar(c: Color) -> StyleBoxFlat:
