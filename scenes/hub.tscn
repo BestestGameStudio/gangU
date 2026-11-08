@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://bgangu7hub"]
+[gd_scene load_steps=7 format=3 uid="uid://bgangu7hub"]
 
 [ext_resource type="Script" path="res://scripts/hub_floor.gd" id="hub_floor"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dnb" path="res://scenes/dungeon_b.tscn" id="4"]
 [ext_resource type="PackedScene" uid="uid://bgangu7shopv" path="res://scenes/shop_vendor.tscn" id="5"]
+[ext_resource type="PackedScene" uid="uid://bgangu218dir" path="res://scenes/spell_directory.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/dungeon_generated.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/dungeon_c.tscn" id="7_dnc"]
 
@@ -94,3 +95,6 @@ target_dungeon = ExtResource("7_dnc")
 
 [node name="ShopVendor" parent="." instance=ExtResource("5")]
 position = Vector2(852, 600)
+
+[node name="SpellDirectory" parent="." instance=ExtResource("8")]
+position = Vector2(700, 600)

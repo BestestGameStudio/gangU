@@ -84,6 +84,12 @@ func _ready() -> void:
 	var shop_panel: ShopPanel = preload("res://scenes/shop_panel.tscn").instantiate()
 	shop_panel.name = "ShopPanel"
 	add_child(shop_panel)
+	## (#218) Hub spell directory: read-only walk-up panel listing the
+	## current-run unlocked spells. Same ONE-persistent-child pattern; the
+	## hub directory location opens/closes it on player proximity.
+	var spell_directory_panel: SpellDirectoryPanel = preload("res://scenes/spell_directory_panel.tscn").instantiate()
+	spell_directory_panel.name = "SpellDirectoryPanel"
+	add_child(spell_directory_panel)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")
