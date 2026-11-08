@@ -37,6 +37,21 @@ func setup(def: SummonDefinition) -> void:
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("summons")
+	# #279: summons never physically block or push players or enemies, and
+	# vice versa (ignore_pair excepts BOTH directions of the solver).
+	# Deferred so same-frame actors have registered their groups; covers the
+	# production spawn orders (persistent main.tscn $Player first, enemies
+	# on either side of casts - enemy.gd pairs late spawns). A Player
+	# entering the tree AFTER a summon exists is NOT covered; there is no
+	# such production route (revive heals in place). Contact damage is
+	# distance-based and projectiles are Area sweeps: both untouched.
+	# Immediate pass for actors already in the tree (a deferred-only wiring
+	# leaves one physics tick of solver push when a cast lands ON a body:
+	# measured 22.7px on the player); deferred pass for same-frame spawns.
+	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group(self, ActorCollision.ENEMY_GROUP)
+	ActorCollision.ignore_group.call_deferred(self, ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
 	damage_rng.randomize()
 	# #212: each Summon instantiates its OWN behavior instance, so per-summon
 	# state (contact cooldown) is never shared across summons.

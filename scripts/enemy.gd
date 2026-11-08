@@ -80,8 +80,11 @@ func _ready() -> void:
 	_ignore_player_bodies.call_deferred()
 
 ## #290: collision exceptions with every Player (plus the resolved target).
+## #279: also every Summon - enemies spawn continuously, so the late side
+## pairs itself here (summon.gd covers the cast-time direction).
 func _ignore_player_bodies() -> void:
 	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group(self, &"summons")
 	if _player != null and is_instance_valid(_player):
 		ActorCollision.ignore_pair(self, _player)
 
