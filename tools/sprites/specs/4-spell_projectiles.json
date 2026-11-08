@@ -1,0 +1,309 @@
+{
+  "_comment": "#210 spell projectile sheet -> assets/sprites/spell_projectiles.png (+ resources/sprites/spell_projectiles_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_projectiles.json <board.png> assets/sprites/spell_projectiles.png --tres resources/sprites/spell_projectiles_frames.tres",
+  "scale": 4,
+  "cell_w": 64,
+  "cell_h": 48,
+  "baseline": 40,
+  "bg": [
+    15,
+    13,
+    25
+  ],
+  "key_dist": 54,
+  "texture_path": "res://assets/sprites/spell_projectiles.png",
+  "rows": [
+    {
+      "name": "flame",
+      "y": [
+        100,
+        250
+      ],
+      "mode": "center",
+      "frames": [
+        [
+          78,
+          207,
+          null
+        ],
+        [
+          273,
+          425,
+          null
+        ],
+        [
+          496,
+          650,
+          null
+        ],
+        [
+          703,
+          865,
+          null
+        ],
+        [
+          909,
+          1072,
+          null
+        ],
+        [
+          1115,
+          1293,
+          null
+        ],
+        [
+          1330,
+          1508,
+          null
+        ],
+        [
+          1542,
+          1724,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "mana",
+      "y": [
+        348,
+        480
+      ],
+      "mode": "center",
+      "frames": [
+        [
+          45,
+          204,
+          null
+        ],
+        [
+          219,
+          409,
+          null
+        ],
+        [
+          422,
+          628,
+          null
+        ],
+        [
+          687,
+          849,
+          null
+        ],
+        [
+          887,
+          1070,
+          null
+        ],
+        [
+          1105,
+          1293,
+          null
+        ],
+        [
+          1319,
+          1503,
+          null
+        ],
+        [
+          1538,
+          1726,
+          null
+        ]
+      ]
+    },
+    {
+      "name": "bolt",
+      "y": [
+        600,
+        750
+      ],
+      "mode": "center",
+      "frames": [
+        [
+          49,
+          231,
+          null
+        ],
+        [
+          245,
+          462,
+          null
+        ],
+        [
+          475,
+          679,
+          null
+        ],
+        [
+          686,
+          873,
+          null
+        ],
+        [
+          902,
+          1083,
+          null
+        ],
+        [
+          1119,
+          1299,
+          null
+        ],
+        [
+          1332,
+          1512,
+          null
+        ],
+        [
+          1572,
+          1725,
+          null
+        ]
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "flame",
+      "speed": 12,
+      "loop": true,
+      "frames": [
+        [
+          0,
+          0,
+          1.0
+        ],
+        [
+          0,
+          1,
+          1.0
+        ],
+        [
+          0,
+          2,
+          1.0
+        ],
+        [
+          0,
+          3,
+          1.0
+        ],
+        [
+          0,
+          4,
+          1.0
+        ],
+        [
+          0,
+          5,
+          1.0
+        ],
+        [
+          0,
+          6,
+          1.0
+        ],
+        [
+          0,
+          7,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "mana",
+      "speed": 12,
+      "loop": true,
+      "frames": [
+        [
+          1,
+          0,
+          1.0
+        ],
+        [
+          1,
+          1,
+          1.0
+        ],
+        [
+          1,
+          2,
+          1.0
+        ],
+        [
+          1,
+          3,
+          1.0
+        ],
+        [
+          1,
+          4,
+          1.0
+        ],
+        [
+          1,
+          5,
+          1.0
+        ],
+        [
+          1,
+          6,
+          1.0
+        ],
+        [
+          1,
+          7,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "bolt",
+      "speed": 12,
+      "loop": true,
+      "frames": [
+        [
+          2,
+          0,
+          1.0
+        ],
+        [
+          2,
+          1,
+          1.0
+        ],
+        [
+          2,
+          2,
+          1.0
+        ],
+        [
+          2,
+          3,
+          1.0
+        ],
+        [
+          2,
+          4,
+          1.0
+        ],
+        [
+          2,
+          5,
+          1.0
+        ],
+        [
+          2,
+          6,
+          1.0
+        ],
+        [
+          2,
+          7,
+          1.0
+        ]
+      ]
+    }
+  ]
+}
