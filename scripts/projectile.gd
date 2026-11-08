@@ -147,6 +147,10 @@ func _wire_glow_and_trail() -> void:
 		var c := _effect_color()
 		grad.set_color(0, Color(c.r, c.g, c.b, 0.0))
 		grad.set_color(1, Color(c.r, c.g, c.b, 0.7))
+		if spell.trail_head_fade > 0.0:
+			# #289: fade out towards the head instead of ending at full strength.
+			grad.add_point(1.0 - spell.trail_head_fade, Color(c.r, c.g, c.b, 0.7))
+			grad.set_color(grad.get_point_count() - 1, Color(c.r, c.g, c.b, 0.0))
 		_trail.gradient = grad
 		_trail.joint_mode = Line2D.LINE_JOINT_ROUND
 		_trail.end_cap_mode = Line2D.LINE_CAP_ROUND

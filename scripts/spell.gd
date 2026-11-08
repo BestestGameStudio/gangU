@@ -36,6 +36,9 @@ class_name Spell
 ## (#289) Halo and trail colour when its alpha is above 0, so they can match the
 ## sprite art. Alpha 0 uses projectile_color. Only the glow and trail read this.
 @export var glow_tint: Color = Color(0, 0, 0, 0)
+## (#289) Fraction of the trail, measured from the head, that fades out so no
+## solid end shows behind the sprite. 0 keeps the full-strength head end.
+@export var trail_head_fade: float = 0.0
 ## (Progression placeholder mechanics, #33/#36) How many projectiles one cast
 ## fans out, and the total fan width. 1/0.0 = today's single-projectile
 ## behavior, so every existing spell is unchanged. Provisional placeholder

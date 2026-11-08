@@ -20,3 +20,4 @@ visual_scale = 0.95
 glow = true
 trail_length = 5
 glow_tint = Color(1, 0.5, 0.12, 1)
+trail_head_fade = 0.5

@@ -164,6 +164,10 @@ func _check_upgrade_effects(result: Spell, path: String) -> void:
 	var glow := p.get_node_or_null("Glow") as Polygon2D
 	var trail := p.get_node_or_null("Trail") as Line2D
 	_check(glow != null and trail != null, "%s spawns Glow and Trail" % path)
+	if trail != null:
+		var head_alpha := trail.gradient.get_color(trail.gradient.get_point_count() - 1).a
+		_check(is_zero_approx(head_alpha) if result.trail_head_fade > 0.0 else is_equal_approx(head_alpha, 0.7),
+			"%s trail head end matches trail_head_fade" % path)
 	if glow != null:
 		var c := glow.vertex_colors[0]
 		_check(is_equal_approx(c.r, result.glow_tint.r) and is_equal_approx(c.g, result.glow_tint.g) and is_equal_approx(c.b, result.glow_tint.b), "%s halo uses glow_tint" % path)
