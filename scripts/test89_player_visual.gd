@@ -17,7 +17,7 @@ extends SceneTree
 ##                rotates to aim (aim/cast contract unchanged)
 ##   contrast   - sprite silhouette: walk_down frame is opaque over its body
 ##                and its robe pixel reads blue-family (b>r, b>g); the three
-##                dungeon enemies still read orange (r>b)
+##                dungeon enemies read green (g>b, #177 Mustache Warrior art)
 ##   aim tint   - AimIndicator is blue-family (was orange-red), same triangle
 ##                at (22,0)
 ##   bar tint   - CooldownBarFill is blue-family, BG stays neutral
@@ -167,17 +167,24 @@ func _process(delta: float) -> bool:
 				_check("contrast: sprite robe pixel is blue-family (b>r, b>g)",
 					_blue_family(_frame_color(walk_down, Vector2i(14, 34))))
 				var enemies := get_nodes_in_group("enemies")
-				var orange_ok: bool = enemies.size() == 3
+				var green_ok: bool = enemies.size() == 3
 				for e in enemies:
-					# Enemy visual is the Spikes Polygon2D on current main (#90);
-					# ColorRect is the pre-#90 shape (old-base fallback). Either way
-					# the enemy body must read orange (r > b) against the blue player.
-					var vis: Node = e.get_node_or_null("Spikes")
-					if vis == null:
-						vis = e.get_node_or_null("ColorRect")
-					if vis == null or not (vis.color.r > vis.color.b):
-						orange_ok = false
-				_check("contrast: 3 orange enemies (r>b) vs blue wizard robe", orange_ok)
+					# #177: the enemy visual is the green Mustache Warrior
+					# AnimatedSprite2D ("Sprite"); it must read green (g > b)
+					# against the blue player robe.
+					var vis := e.get_node_or_null("Sprite") as AnimatedSprite2D
+					if vis == null or vis.sprite_frames == null:
+						green_ok = false
+						continue
+					var etex := vis.sprite_frames.get_frame_texture(&"idle", 0) as AtlasTexture
+					if etex == null:
+						green_ok = false
+						continue
+					var ec: Color = etex.atlas.get_image().get_pixelv(
+						Vector2i(etex.region.position) + Vector2i(32, 30))
+					if not (ec.a > 0.5 and ec.g > ec.b):
+						green_ok = false
+				_check("contrast: 3 green warrior enemies (g>b) vs blue wizard robe", green_ok)
 				if fails == 0:
 					print("[89] ALL PASS")
 				print("[89] DONE fails=", fails)

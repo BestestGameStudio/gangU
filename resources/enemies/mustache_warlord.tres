@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=3 format=3 uid="uid://bgangu177wdef"]
+
+[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://scripts/enemy_behavior_warlord.gd" id="2_beh"]
+
+[resource]
+script = ExtResource("1_def")
+max_hp = 300
+speed = 85.0
+contact_damage = 12
+contact_cooldown = 1.0
+contact_range = 50.0
+behavior = ExtResource("2_beh")
