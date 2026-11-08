@@ -50,6 +50,8 @@ signal stock_refreshed()
 ## Explicit wiring convention (matches SpellProgress/HUD): set before tree
 ## entry; the "player" group fallback applies otherwise.
 @export var caster_path: NodePath
+## #131: optional explicit provider; lazy resolution supports later mount.
+@export var owned_relics_path: NodePath
 ## (#132) Slots the panel renders. Daniel 2026-11-08: "show 4 slots for
 ## now". Data, not a constant, so the count stays human-tunable.
 @export var stock_size: int = 4
@@ -156,6 +158,11 @@ func _reroll_stock() -> void:
 		_stock.append(e)
 	stock_refreshed.emit()
 
+func _relic_provider() -> OwnedRelics:
+	if owned_relics_path != NodePath(""):
+		return get_node_or_null(owned_relics_path) as OwnedRelics
+	return get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+
 func can_grant(good: Resource) -> bool:
 	if good is Spell:
 		return _caster != null and not _caster.get_unlocked().has(good)
@@ -163,7 +170,12 @@ func can_grant(good: Resource) -> bool:
 		# #156: consumables are count-based and RE-PURCHASABLE; Daniel's
 		# never-sell-owned rule names spells, so no ownership exclusion here.
 		return _consumables != null
-	return false # C4 relic grant seam lands here
+	if good is Relic:
+		# #131 (C4): relics are unique per logical id from EVERY source -
+		# owned ids are never offered or granted again.
+		var owned := _relic_provider()
+		return owned != null and (good as Relic).is_valid_definition() and not owned.has_id((good as Relic).id)
+	return false
 
 func grant(good: Resource) -> bool:
 	if good is Spell:
@@ -176,6 +188,12 @@ func grant(good: Resource) -> bool:
 			return false
 		_consumables.add(good)
 		return true
+	if good is Relic:
+		# buy()'s refund path covers a failed add after charge; offerable
+		# and stock filtering both route through can_grant above.
+		if not can_grant(good):
+			return false
+		return _relic_provider().add(good)
 	return false
 
 ## Atomic purchase. Returns true only when the good was granted AND paid

@@ -86,7 +86,7 @@ func _ready() -> void:
 	add_child(shop_panel)
 	## (#209) Summons foundation: ONE persistent manager child (Shop idiom).
 	## Enforces the shared summon cap and spawns from the caster's spell_cast.
-	## Mount order per cross-author ACK: Shop -> SummonManager -> DirectoryPanel.
+	## Mount order per cross-author ACK: Shop -> SummonManager -> DirectoryPanel -> OwnedRelics.
 	var summon_manager := SummonManager.new()
 	summon_manager.name = "SummonManager"
 	summon_manager.caster_path = NodePath("../Player/SpellCaster")
@@ -97,6 +97,12 @@ func _ready() -> void:
 	var spell_directory_panel: SpellDirectoryPanel = preload("res://scenes/spell_directory_panel.tscn").instantiate()
 	spell_directory_panel.name = "SpellDirectoryPanel"
 	add_child(spell_directory_panel)
+	## (#131, foundation C4) Run-scoped owned relics - same ONE-persistent
+	## child pattern as the wallet/satchel/pool; per-run reset comes free
+	## from the reload. Inert until relic content lands (C2 catalog).
+	var owned_relics := OwnedRelics.new()
+	owned_relics.name = "OwnedRelics"
+	add_child(owned_relics)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")

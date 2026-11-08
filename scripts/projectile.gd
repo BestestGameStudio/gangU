@@ -56,6 +56,23 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	if p_source != null:
 		_attacker_modifiers = p_source.get(&"damage_modifiers") as DamageModifiers
 		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
+	# #131 (C4): owned relics contribute their tag-matched passive modifiers
+	# through a COMPOSED COPY - the source's own collection is never mutated,
+	# so repeated casts cannot accumulate relic entries. No owned_relics node,
+	# or no matching relic, leaves the attacker modifiers exactly as before.
+	var relics: OwnedRelics = null
+	if p_source is Player and p_source.is_inside_tree():
+		relics = p_source.get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	if relics != null:
+		var relic_mods := relics.modifiers_for(spell)
+		if not relic_mods.is_empty():
+			var merged := DamageModifiers.new()
+			if _attacker_modifiers != null:
+				for m in _attacker_modifiers.items():
+					merged.add(m)
+			for m in relic_mods:
+				merged.add(m)
+			_attacker_modifiers = merged
 	rotation = direction.angle()
 
 func _ready() -> void:
