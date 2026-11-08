@@ -68,3 +68,21 @@ cd build/web && python3 -m http.server 8123
 ```
 
 The game must load to the boot screen with no console errors.
+
+## Testing
+
+Harnesses are `scripts/test*.gd` (`extends SceneTree`) plus `scenes/test*.tscn` fixtures:
+
+```bash
+godot --headless --path . --script res://scripts/testNNN_topic.gd      # one harness
+GANGU_AUTOTEST=1 godot --headless --path . res://scenes/testNNN_x.tscn --quit-after 2400
+```
+
+macOS has no `timeout`; wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`. Count `-> FAIL` and `SCRIPT ERROR` lines.
+
+**Known baseline noise (main, 2026-11-08):** a full run of every harness and fixture prints
+about 189-190 `SCRIPT ERROR`s, all one pre-existing "freed player `physics_step`" error from
+the `test_objective_flow` fixture, and `test_run_restart` (the restart guard) fails
+intermittently. Compare your run against this instead of rebuilding a copy of main to
+re-baseline. While iterating, run only the harnesses you touched; run the full suite once at
+the end. Anything beyond this baseline is yours.
