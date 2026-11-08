@@ -1,0 +1,5 @@
+# Review requests for every PR go to the reviewers team. With the team's
+# auto assignment enabled (Team settings > Code review), GitHub swaps the
+# team request for individual reviewer(s).
+# Last matching pattern wins; add path-specific owners below this line.
+*  @BestestGameStudio/gangu-reviewers
