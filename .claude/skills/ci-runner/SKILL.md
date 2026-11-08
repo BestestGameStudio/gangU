@@ -5,7 +5,7 @@ description: "How to work inside the gangU GitHub Actions @claude job (triggered
 
 # Working in the @claude CI job (gangU)
 
-The job is set up by `.github/workflows/claude.yml` and `.github/actions/setup-godot`. You cannot edit either (the GitHub App has no `workflows` permission). If a command you need is missing, say exactly what to add to `claude.yml` and stop rather than working around it.
+The job is set up by `.github/workflows/claude.yml` and `.github/actions/setup-godot`. You cannot edit either (the GitHub App has no `workflows` permission), and you cannot edit anything under `.claude/` (Claude Code protects it and the action resets it to `main`'s copy, so the working tree may not match the branch there). If a command you need is missing, or a review asks for a change in these paths, say exactly what to change and leave it for a human rather than working around it.
 
 ## Scratch space
 Write scratch output only under `/tmp/ci/` (it exists and is one of your working directories; create subfolders with `mkdir -p /tmp/ci/<name>`). Anything else outside the repo checkout is refused.
@@ -19,7 +19,7 @@ Write scratch output only under `/tmp/ci/` (it exists and is one of your working
 ## Allowed shell commands
 Only these run, plus whatever git/file tools the action itself provides:
 `godot`, `xvfb-run`, `timeout`, `ffmpeg`, `ffprobe`, `mkdir`, `github-fetch`,
-`python3 -I tools/sprites/extract_frames.py ...`, `python3 -I tools/sprites/pack_alpha_strip.py ...`, `gh issue view`, `gh pr view`, `gh pr diff`.
+`python3 -I tools/sprites/extract_frames.py ...`, `python3 -I tools/sprites/pack_alpha_strip.py ...`, `gh issue view`, `gh pr view`, `gh pr diff`, `gh pr create`.
 Use Read / Glob / Grep instead of `cat`/`ls`/`find`. No `curl`, `cp`, `rm`, `pip`, `apt`, or ad-hoc `python3 -c`.
 
 ## Tests (headless)
@@ -45,7 +45,7 @@ Every run that changes or investigates something visible or playable (scenes, sp
 - Render frame sequences elsewhere in `/tmp/ci/`, then copy only the frames that prove the change into `media/`, under names that say what they show (letters, digits, `-`, `_`, no spaces): `ffmpeg -i /tmp/ci/shots/frame00000059.png /tmp/ci/media/dash_mid_move.png`. A short `.mp4` is fine for motion. Before and after shots are best when you are changing something that already exists.
 - Read every file you put in `media/` and confirm it shows what you claim. A black frame or the wrong scene is not evidence.
 - In your comment, add a **Screenshots** section with one line per file saying what it shows.
-- When you prefill a PR body (the "Create PR" link), add a `Screenshots` heading containing this run's URL (it is in your system prompt), so reviewers can find the artifact.
+- In any PR body you write, add a `Screenshots` heading containing this run's URL (it is in your system prompt), so reviewers can find the artifact.
 - You cannot embed images in GitHub comments. Do not commit screenshots or videos to the repo unless the issue asks for it.
 
 ## Images from issues
@@ -60,6 +60,19 @@ Follow `sprite-sheet-pipeline`, with these changes:
 - `python3 -I tools/sprites/extract_frames.py segment|pack ...` works as written (no venv needed).
 - Ad-hoc Python (ruler overlays, checker previews) is not allowed. Check the packed sheet by Reading the PNG, and by rendering it in Godot with a small harness if needed.
 - After packing, run `godot --headless --path . --import` so the `.png.import` file is generated, and commit it.
+
+## How runs start
+- `@claude` in an issue, PR comment or review: do what the comment asks.
+- The `claude` label on an issue: implement the issue. The label on a PR: finish that PR (the prompt lists the steps), pushing to its branch. The workflow removes the label afterwards, so adding it again starts a new run.
+
+## Opening the pull request
+When you implemented an issue on a new branch, open the PR yourself once everything is pushed. Do not leave a "Create PR" link for a human.
+```
+gh pr create --base main --head <your branch> --title "feat(<area>): <what> (#<issue>)" --body "<body>"
+```
+- Body: a short summary, `Closes #<issue>`, test harnesses run and their results, and the `Screenshots` heading with this run's URL.
+- Put the PR link at the top of your comment. CODEOWNERS requests the review; do not request reviewers yourself.
+- On a run that started from a PR, push to that PR's branch instead and never open a second PR.
 
 ## Before you push
 - Godot is 4.5.1 here, so `.uid` churn from newer editors does not happen. Commit the `.uid` files of scripts you added.

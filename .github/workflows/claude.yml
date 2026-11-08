@@ -6,9 +6,12 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned]
+    types: [opened, assigned, labeled]
   pull_request_review:
     types: [submitted]
+  # Adding the `claude` label to an issue or PR starts a run (see `if` below).
+  pull_request:
+    types: [labeled]
 
 jobs:
   claude:
@@ -16,7 +19,9 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issues' && github.event.action != 'labeled' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'claude') ||
+      (github.event_name == 'pull_request' && github.event.label.name == 'claude' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -68,11 +73,35 @@ jobs:
         with:
           version: "4.5.1"
 
+      # A labeled PR has no comment to act on, so it gets a fixed task.
+      # Every other event leaves the prompt empty and Claude follows the
+      # comment or issue that mentioned it.
+      - name: PR task prompt
+        id: pr-task
+        if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo 'prompt<<__END_PROMPT__'
+            echo "The claude label was added to pull request #${PR_NUMBER}: finish this PR."
+            echo "1. Read the PR description, the issue it closes, every review and review comment (gh pr view ${PR_NUMBER} --comments, and the review threads in your context), and the PR's failing checks."
+            echo "2. Address every unresolved review comment and fix failures this PR caused. Commit and push to this PR's branch. Do not open a new PR."
+            echo "3. Follow the ci-runner skill: run the relevant test harnesses and leave screenshot evidence for anything visible."
+            echo "4. In your comment, list each review comment and what you did about it, the test results, and the Screenshots section. If nothing is actionable, say so and change nothing."
+            echo '__END_PROMPT__'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Labeled PRs: the fixed task above, with the usual progress comment
+          # and the PR branch checked out (track_progress keeps "tag" mode).
+          prompt: ${{ steps.pr-task.outputs.prompt }}
+          track_progress: ${{ github.event_name == 'pull_request' }}
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
@@ -81,15 +110,16 @@ jobs:
           # Images attached to the triggering issue/PR and its comments are
           # downloaded by the action itself and handed to Claude as local files.
           # How to use everything installed here lives in the ci-runner skill
-          # (.claude/skills/ci-runner), which Claude can update via normal PRs.
+          # (.claude/skills/ci-runner). Claude cannot edit .claude/ from CI (Claude
+          # Code protects it and the action resets it to main), so update it locally.
           # Note: allowing godot already means Claude can run arbitrary code in
           # this job (GDScript can call OS.execute), so this list keeps Claude on
           # the intended path; it is not a sandbox.
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/extract_frames.py:*),Bash(python3 -I tools/sprites/pack_alpha_strip.py:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+            --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/extract_frames.py:*),Bash(python3 -I tools/sprites/pack_alpha_strip.py:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr create:*)"
             --add-dir /tmp/ci
-            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results. Screenshot evidence is required: whenever your work changes or concerns anything visible or playable, save screenshots (or a short clip) proving it to /tmp/ci/media before you finish; the workflow attaches a download link to your comment automatically. If no screenshot is relevant, say why in one line. This run is ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}; put that URL under a Screenshots heading in any PR body you prefill."
+            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results. Screenshot evidence is required: whenever your work changes or concerns anything visible or playable, save screenshots (or a short clip) proving it to /tmp/ci/media before you finish; the workflow attaches a download link to your comment automatically. If no screenshot is relevant, say why in one line. This run is ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}; put that URL under a Screenshots heading in any PR body you write. When you implement an issue on a new branch, open the pull request yourself once your commits are pushed: gh pr create --base main --head <your branch> with a conventional-commit title that ends in the issue number, and a body with a summary, Closes #<issue>, the test results and the Screenshots heading. Then put the PR link at the top of your comment instead of a Create PR link."
 
       # Screenshots/clips Claude saves in /tmp/ci/media are attached to the run
       # as a zip; the evidence-link job below puts the download link in
@@ -113,15 +143,25 @@ jobs:
 
   # Runs after Claude has finished (and updated its comment), with its own
   # write-scoped token that the Claude job never sees.
-  evidence-link:
+  post-run:
     needs: claude
-    if: always() && needs.claude.outputs.artifact-url != ''
+    if: always() && needs.claude.result != 'skipped'
     runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
     steps:
+      # Removing the trigger label means adding it again starts a new run.
+      - name: Remove the claude label
+        if: github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: gh api -X DELETE "repos/$REPO/issues/$NUMBER/labels/claude" > /dev/null || true
+
       - name: Add screenshot download link to Claude's comment
+        if: needs.claude.outputs.artifact-url != ''
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
