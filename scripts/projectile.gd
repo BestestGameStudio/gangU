@@ -56,6 +56,9 @@ var _attacker_modifiers: DamageModifiers
 var _attacker_rng: RandomNumberGenerator
 var _traveled: float = 0.0
 var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projectile
+## #216: the source's TerrainMap (Player/Enemy `terrain`), read at setup.
+## Null (hub, hand-built areas, harness fixtures) skips terrain hits entirely.
+var _terrain: TerrainMap = null
 
 ## #37 homing (peer-lead tuning under the Colin-side grant, not owner numbers):
 const HOMING_RANGE: float = 400.0 ## steer only toward enemies within this range
@@ -84,6 +87,7 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	direction = p_direction.normalized()
 	source = p_source
 	if p_source != null:
+		_terrain = p_source.get(&"terrain") as TerrainMap
 		_attacker_modifiers = p_source.get(&"damage_modifiers") as DamageModifiers
 		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
 	# #131 (C4): owned relics contribute their tag-matched passive modifiers
@@ -233,6 +237,9 @@ func _physics_process(delta: float) -> void:
 	_sweep_hits(from, direction * step)
 	if is_queued_for_deletion():
 		return
+	_sweep_terrain(from, direction * step)
+	if is_queued_for_deletion():
+		return
 	_traveled += step
 	if _traveled >= spell.range:
 		queue_free()
@@ -307,6 +314,25 @@ func _on_body_entered(body: Node2D) -> void:
 		if spell.tags.has(SpellTags.PIERCING):
 			return
 	queue_free()
+
+## #216 (wires #169): owner rule "any damage that hits a destroyable tile
+## destroys it, whatever the element". The flight path is sampled at most
+## half a cell apart (no tunnelling through a cell on a big frame step); the
+## first destroyable cell crossed is destroyed through TerrainMap.destroy_at,
+## the single terrain-damage entry point. Like a body hit, the projectile then
+## despawns unless PIERCING. Non-destroyable tiles stay pass-through as before.
+func _sweep_terrain(from: Vector2, motion: Vector2) -> void:
+	if _terrain == null or not is_instance_valid(_terrain):
+		return
+	var length := motion.length()
+	var spacing := _terrain.cell_size * 0.5
+	var samples := maxi(1, ceili(length / spacing))
+	for i in range(1, samples + 1):
+		var pt := from + motion * (float(i) / float(samples))
+		if _terrain.destroy_at(pt):
+			if not spell.tags.has(SpellTags.PIERCING):
+				queue_free()
+				return
 
 ## #109: sweep the hit circle from `from` along `motion`; every body the path
 ## crosses takes the hit even if no single physics frame overlaps it.

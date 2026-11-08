@@ -44,6 +44,7 @@ func _registry_legs() -> void:
 		TerrainTypes.GROUND: [1.0, false], TerrainTypes.OBSTACLE: [1.0, false], TerrainTypes.GRASS: [1.0, false],
 		TerrainTypes.TREE: [1.0, false], TerrainTypes.SNOW: [1.0, false], TerrainTypes.ICE: [0.12, false],
 		TerrainTypes.MUD: [1.0, false], TerrainTypes.WATER: [1.0, true], TerrainTypes.MOUNTAIN: [1.0, false],
+		TerrainTypes.BLOCK: [1.0, false],
 	}
 	_check(expected.size() == TerrainTypes.ALL.size(), "every registered type has an expectation (%d types)" % TerrainTypes.ALL.size())
 	for type: StringName in TerrainTypes.ALL:
