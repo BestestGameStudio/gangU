@@ -37,6 +37,8 @@ const SPELL_SPRITE_ANIMS: Dictionary = {
 	"Mana Volley": &"mana_volley",
 	"Mana Lance": &"mana_lance",
 	"Placeholder Bolt": &"placeholder_bolt",
+	"Bolt Flurry": &"bolt_flurry",
+	"Heavy Bolt": &"bolt_heavy",
 }
 ## Cell art is 64 px wide at scale 1; radius / 10 draws each projectile a little
 ## larger than its hit circle so it reads clearly. Clamped (art only, never the
