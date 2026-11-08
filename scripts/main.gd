@@ -154,11 +154,15 @@ func _mount_area_spawns(area: Node) -> void:
 ## scans the "enemies" group, so the enemies must already be in the tree or
 ## the objective targets 0 and never completes.
 func _mount_objective(area: Node) -> void:
+	if area.name != "DungeonA" and area.name != "DungeonB":
+		return
+	## Constructed only inside the A/B branch so other areas never orphan a
+	## DungeonObjective node.
 	var obj := DungeonObjective.new()
 	obj.name = "DungeonObjective"
 	if area.name == "DungeonA":
 		obj.dungeon_id = &"dungeon_a"
-	elif area.name == "DungeonB":
+	else:
 		## #173: the RED room holds the Head boss. ELIMINATION with no mobs
 		## spawns the boss at ready (mob target 0) and the boss kill is the
 		## clear - the locked red exit opens on objective_completed (D12).
@@ -166,8 +170,6 @@ func _mount_objective(area: Node) -> void:
 		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
 		obj.boss_scene = preload("res://scenes/boss_head.tscn")
 		obj.boss_spawn_position = Vector2(576, 300)
-	else:
-		return
 	obj.objective_completed.connect(_on_objective_completed)
 	area.add_child(obj)
 
