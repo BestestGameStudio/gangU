@@ -36,6 +36,11 @@ const TYPE_COLORS: Dictionary = {
 ## Fallback swatch for a registered type with no listed color.
 const DEFAULT_TILE_COLOR: Color = Color(0.3, 0.3, 0.35, 1.0)
 
+## Cosmetic palette over TYPE_COLORS; never touches the store or properties.
+var season: TerrainSeason.Season = TerrainSeason.Season.SUMMER:
+	set = _set_season
+var _atlas_source: TileSetAtlasSource = null
+
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
 var _ground_layer: TileMapLayer = null
 var _obstacle_layer: TileMapLayer = null
@@ -127,20 +132,29 @@ func assigned_cells() -> Array:
 
 ## --- presentation (output-only; reads the store, never the reverse) ---
 
-func _build_layers() -> void:
+## Swaps the atlas texture only; cell data and placed tiles stay as they are.
+func _set_season(value: TerrainSeason.Season) -> void:
+	season = value
+	if _atlas_source != null:
+		_atlas_source.texture = _atlas_texture()
+
+func _atlas_texture() -> ImageTexture:
 	var n := TerrainTypes.ALL.size()
 	var img := Image.create(cell_size * n, cell_size, false, Image.FORMAT_RGBA8)
 	for i in range(n):
-		var type: StringName = TerrainTypes.ALL[i]
-		img.fill_rect(Rect2i(i * cell_size, 0, cell_size, cell_size), TYPE_COLORS.get(type, DEFAULT_TILE_COLOR))
-	var src := TileSetAtlasSource.new()
-	src.texture = ImageTexture.create_from_image(img)
-	src.texture_region_size = Vector2i(cell_size, cell_size)
+		img.fill_rect(Rect2i(i * cell_size, 0, cell_size, cell_size), TerrainSeason.color(season, TerrainTypes.ALL[i]))
+	return ImageTexture.create_from_image(img)
+
+func _build_layers() -> void:
+	var n := TerrainTypes.ALL.size()
+	_atlas_source = TileSetAtlasSource.new()
+	_atlas_source.texture = _atlas_texture()
+	_atlas_source.texture_region_size = Vector2i(cell_size, cell_size)
 	for i in range(n):
-		src.create_tile(Vector2i(i, 0))
+		_atlas_source.create_tile(Vector2i(i, 0))
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(cell_size, cell_size)
-	ts.add_source(src, 0)
+	ts.add_source(_atlas_source, 0)
 	_ground_layer = TileMapLayer.new()
 	_ground_layer.name = "Ground"
 	_ground_layer.tile_set = ts
