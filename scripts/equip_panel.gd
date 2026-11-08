@@ -43,6 +43,7 @@ var _upgrade_box: VBoxContainer
 
 var _unlocked_box: VBoxContainer
 var _slot_buttons: Array[Button] = []
+var _slot_icons: Array[SpellIcon] = []
 var _status: Label
 
 ## Two state channels per unlocked row: left-edge chip = equipped-in-a-slot,
@@ -50,6 +51,23 @@ var _status: Label
 ## empty border, move-source highlight.
 const CHIP_EQUIPPED := Color(0.5, 0.85, 0.55, 0.95)
 const CHIP_NONE := Color(1.0, 1.0, 1.0, 0.08)
+const ROW_ICON_LEFT := 16.0
+const SLOT_ICON_LEFT := 6.0
+const ICON_GAP := 4.0
+
+## Buttons are not containers, so the icon is pinned inside the button's
+## left edge (vertically centered) and the caller pads the text past it.
+func _pin_icon(b: Button, left: float) -> SpellIcon:
+	var icon := SpellIcon.new()
+	var half := UiStyle.ICON_SIZE * 0.5
+	icon.anchor_top = 0.5
+	icon.anchor_bottom = 0.5
+	icon.offset_left = left
+	icon.offset_right = left + UiStyle.ICON_SIZE
+	icon.offset_top = -half
+	icon.offset_bottom = half
+	b.add_child(icon)
+	return icon
 
 ## #38: compact ASCII tier suffix on upgrade-channel buttons only (lead UX
 ## call: [S]/[M]/[G] for Specialization/Mastery/Signature, Base shows
@@ -140,6 +158,7 @@ func _build_ui() -> void:
 		b.pressed.connect(func(): _on_slot_pressed(idx))
 		slots_box.add_child(b)
 		_slot_buttons.append(b)
+		_slot_icons.append(_pin_icon(b, SLOT_ICON_LEFT))
 	_upgrade_box = VBoxContainer.new()
 	_upgrade_box.add_theme_constant_override("separation", 4)
 	vbox.add_child(_upgrade_box)
@@ -193,7 +212,7 @@ func _refresh() -> void:
 			border = UiStyle.B_ACCENT
 		if s == _selected:
 			border = UiStyle.B_SELECTED
-		UiStyle.style_button(b, border, 4.0, 18.0, s == _selected) # left pad clears the state chip
+		UiStyle.style_button(b, border, 4.0, ROW_ICON_LEFT + UiStyle.ICON_SIZE + ICON_GAP, s == _selected) # left pad clears chip + icon
 		var chip := ColorRect.new()
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chip.color = CHIP_EQUIPPED if slots_now.has(s) else CHIP_NONE
@@ -204,6 +223,7 @@ func _refresh() -> void:
 		chip.offset_bottom = -2.0
 		b.add_child(chip)
 		var spell: Spell = s
+		_pin_icon(b, ROW_ICON_LEFT).show_spell(spell)
 		b.pressed.connect(func(): _on_spell_pressed(spell))
 		_unlocked_box.add_child(b)
 	var slots: Array = _caster.get_slots()
@@ -214,7 +234,8 @@ func _refresh() -> void:
 		var sborder := UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM
 		if move_source:
 			sborder = UiStyle.B_SELECTED
-		UiStyle.style_button(_slot_buttons[i], sborder, 4.0, -1.0, move_source)
+		UiStyle.style_button(_slot_buttons[i], sborder, 4.0, SLOT_ICON_LEFT + UiStyle.ICON_SIZE + ICON_GAP, move_source)
+		_slot_icons[i].show_spell(occupant)
 	# Upgrade section: only when a provider is wired AND a spell is selected.
 	for c in _upgrade_box.get_children():
 		c.queue_free()

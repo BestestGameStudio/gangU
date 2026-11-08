@@ -35,7 +35,7 @@ class_name HUD
 
 var _player: Player
 var _caster: SpellCaster
-var _spell_rows := {} ## Spell -> {name: Label, bar: ProgressBar, state: Label}
+var _spell_rows := {} ## Spell -> {icon: SpellIcon, name: Label, bar: ProgressBar, state: Label}
 
 @onready var _hp_label: Label = $Root/HPLabel
 @onready var _hp_bar: ProgressBar = $Root/HPBar
@@ -75,8 +75,9 @@ const BAR_COOLING := Color(0.35, 0.45, 0.6, 0.9)
 ## the world under it.
 const FRAME_BG := Color(0.05, 0.05, 0.07, 0.55)
 const FRAME_PAD := 3.0
+const ICON_SIDE := 20.0
 var _slots_supported := false
-var _slot_widgets: Array = [] ## [{frame,key,name,bar,state,cooling}] x 6
+var _slot_widgets: Array = [] ## [{frame,key,icon,name,bar,state,cooling}] x 6
 ## #122: dim hint shown only when zero slots are assigned (empty slots
 ## collapse - unassigned frames hide instead of rendering placeholder rows).
 var _slot_hint: Label = null
@@ -156,6 +157,8 @@ func _add_spell_row(spell: Spell) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	frame.add_child(row)
+	var icon := SpellIcon.new(ICON_SIDE)
+	icon.show_spell(spell)
 	var name_label := Label.new()
 	name_label.add_theme_font_size_override("font_size", 15)
 	name_label.custom_minimum_size = Vector2(110, 0)
@@ -167,12 +170,13 @@ func _add_spell_row(spell: Spell) -> void:
 	bar.custom_minimum_size = Vector2(90, 12)
 	var state := Label.new()
 	state.add_theme_font_size_override("font_size", 15)
+	row.add_child(icon)
 	row.add_child(name_label)
 	row.add_child(bar)
 	row.add_child(state)
 	_apply_bar_state(bar, false) # #93: track + READY fill at build
 	_spell_rows_box.add_child(frame)
-	_spell_rows[spell] = {"name": name_label, "bar": bar, "state": state, "frame": frame, "cooling": false, "equipped": false}
+	_spell_rows[spell] = {"icon": icon, "name": name_label, "bar": bar, "state": state, "frame": frame, "cooling": false, "equipped": false}
 	_update_plate.call_deferred() # #93: settle containers, then re-mask (avoids one-frame gate/HUD clip)
 
 func _build_slot_rows() -> void:
@@ -186,6 +190,7 @@ func _build_slot_rows() -> void:
 		key_label.add_theme_font_size_override("font_size", 15)
 		key_label.custom_minimum_size = Vector2(24, 0)
 		key_label.text = str(i + 1)
+		var icon := SpellIcon.new(ICON_SIDE)
 		var name_label := Label.new()
 		name_label.add_theme_font_size_override("font_size", 15)
 		name_label.custom_minimum_size = Vector2(110, 0)
@@ -198,12 +203,13 @@ func _build_slot_rows() -> void:
 		var state := Label.new()
 		state.add_theme_font_size_override("font_size", 15)
 		row.add_child(key_label)
+		row.add_child(icon)
 		row.add_child(name_label)
 		row.add_child(bar)
 		row.add_child(state)
 		_apply_bar_state(bar, false) # #93: track + READY fill at build
 		_slot_rows_box.add_child(frame)
-		_slot_widgets.append({"frame": frame, "key": key_label, "name": name_label, "bar": bar, "state": state, "cooling": false})
+		_slot_widgets.append({"frame": frame, "key": key_label, "icon": icon, "name": name_label, "bar": bar, "state": state, "cooling": false})
 	# #122: single dim line when nothing is assigned; hidden otherwise.
 	_slot_hint = Label.new()
 	_slot_hint.name = "EmptyHint"
@@ -240,6 +246,7 @@ func _update_slot_rows() -> void:
 		var frac := 1.0
 		if spell.cooldown > 0.0:
 			frac = 1.0 - clampf(rem / spell.cooldown, 0.0, 1.0)
+		w["icon"].show_spell(spell)
 		w["name"].text = spell.spell_name + _tier_suffix(spell)
 		w["bar"].value = frac
 		w["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
@@ -311,6 +318,7 @@ func _on_spell_replaced(old_spell: Spell, new_spell: Spell) -> void:
 		return
 	_spell_rows[new_spell] = _spell_rows[old_spell]
 	_spell_rows.erase(old_spell)
+	_spell_rows[new_spell]["icon"].show_spell(new_spell)
 
 ## Upgrade indicator: cached discovery of the mounted SpellProgress provider.
 ## Mirrors _update_objective: is_instance_valid guard (freed providers compare
