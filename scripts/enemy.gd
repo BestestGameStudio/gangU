@@ -133,9 +133,34 @@ func _process(delta: float) -> void:
 		if _flash_t <= 0.0:
 			modulate = Color.WHITE
 
+## #209: target resolution. DEFAULT UNCHANGED: the resolved player. A
+## standard chase/contact enemy may instead pick the nearest live summon
+## whose definition allows enemy targeting ("enemies targeting is
+## configurable", Daniel 2026-11-08). Boss behaviors (head/warlord) keep
+## their Player-typed physics_step and stay player-only, so a summon is
+## never passed to them. With no summons in the tree this returns _player
+## exactly as before.
+func _resolve_target() -> CharacterBody2D:
+	if _behavior is EnemyBehaviorChaseContact:
+		var best: Summon = null
+		var best_d := INF
+		for s in get_tree().get_nodes_in_group("summons"):
+			var summon := s as Summon
+			if summon == null or summon.hp <= 0:
+				continue
+			if summon.definition != null and not summon.definition.enemy_targetable:
+				continue
+			var d := global_position.distance_squared_to(summon.global_position)
+			if d < best_d:
+				best_d = d
+				best = summon
+		if best != null:
+			return best
+	return _player
+
 func _physics_process(delta: float) -> void:
 	if _behavior != null:
-		_behavior.physics_step(self, _player, delta)
+		_behavior.physics_step(self, _resolve_target(), delta)
 
 ## (A, #59) Roll the table against the pool's granted set and defer-spawn the
 ## drop into my parent (the area), so an area swap frees it like any other

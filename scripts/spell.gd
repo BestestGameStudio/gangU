@@ -30,3 +30,8 @@ class_name Spell
 ## numbers only - balance is an open human choice.
 @export var projectile_count: int = 1
 @export var spread_degrees: float = 0.0
+## (#209) Summon hook: when set, casting this spell asks the SummonManager to
+## spawn this definition (the shared cap applies). Null on every existing
+## spell, so casting behavior is unchanged. The first concrete summon spell
+## is #212.
+@export var summon: SummonDefinition = null

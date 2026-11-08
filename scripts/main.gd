@@ -84,6 +84,13 @@ func _ready() -> void:
 	var shop_panel: ShopPanel = preload("res://scenes/shop_panel.tscn").instantiate()
 	shop_panel.name = "ShopPanel"
 	add_child(shop_panel)
+	## (#209) Summons foundation: ONE persistent manager child (Shop idiom).
+	## Enforces the shared summon cap and spawns from the caster's spell_cast.
+	## Mount order per cross-author ACK: Shop -> SummonManager -> DirectoryPanel.
+	var summon_manager := SummonManager.new()
+	summon_manager.name = "SummonManager"
+	summon_manager.caster_path = NodePath("../Player/SpellCaster")
+	add_child(summon_manager)
 	## (#218) Hub spell directory: read-only walk-up panel listing the
 	## current-run unlocked spells. Same ONE-persistent-child pattern; the
 	## hub directory location opens/closes it on player proximity.

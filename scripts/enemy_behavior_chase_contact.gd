@@ -15,7 +15,11 @@ extends RefCounted
 
 var _contact_timer: float = 0.0
 
-func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
+## #209: target parameter widened (Player -> duck-typed) so the default
+## chase/contact behavior can target Summons; the target contract used here
+## is hp, global_position, damage_modifiers and apply_damage, which both
+## Player and Summon provide.
+func physics_step(enemy: Enemy, player, delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
