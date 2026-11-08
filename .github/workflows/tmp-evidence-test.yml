@@ -1,0 +1,78 @@
+name: TEMP evidence-link test
+'on':
+  pull_request:
+    types:
+    - synchronize
+jobs:
+  claude:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-url: "${{ steps.upload.outputs.artifact-url }}"
+      media-files: "${{ steps.media.outputs.files }}"
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+    - name: Fake Claude output
+      run: mkdir -p /tmp/ci/media && python3 -c "import zlib,struct;r=lambda t,d:struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d));open('/tmp/ci/media/hub
+        after dash.png','wb').write(b'\x89PNG\r\n\x1a\n'+r(b'IHDR',struct.pack('>IIBBBBB',1,1,8,2,0,0,0))+r(b'IDAT',zlib.compress(b'\x00\xff\x00\x00'))+r(b'IEND',b''))"
+        && ls -la /tmp/ci/media
+    - name: Stand-in for Claude comment
+      env:
+        GH_TOKEN: "${{ github.token }}"
+      run: gh pr comment ${{ github.event.pull_request.number }} -R ${{ github.repository
+        }} --body "TEMP test of evidence-link (stand-in for Claude tracking comment)
+        [View job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+        github.run_id }})"
+    - name: List screenshot evidence
+      id: media
+      if: always()
+      run: |
+        files=$(cd /tmp/ci/media 2>/dev/null && find . -type f -printf '%P\n' | LC_ALL=C sort | tr -c 'A-Za-z0-9._/\n-' '_' | head -50 || true)
+        { echo 'files<<__END_FILES__'; echo "$files"; echo '__END_FILES__'; } >> "$GITHUB_OUTPUT"
+    - name: Upload screenshot evidence
+      id: upload
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: claude-ci-output
+        path: "/tmp/ci/media"
+        if-no-files-found: ignore
+        retention-days: 14
+  evidence-link:
+    needs: claude
+    if: always() && needs.claude.outputs.artifact-url != ''
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+    - name: Add screenshot download link to Claude's comment
+      env:
+        GH_TOKEN: "${{ github.token }}"
+        REPO: "${{ github.repository }}"
+        NUMBER: "${{ github.event.issue.number || github.event.pull_request.number
+          }}"
+        RUN_ID: "${{ github.run_id }}"
+        ARTIFACT_URL: "${{ needs.claude.outputs.artifact-url }}"
+        FILES: "${{ needs.claude.outputs.media-files }}"
+      run: |
+        set -euo pipefail
+        list=$(printf '%s\n' "$FILES" | sed '/^$/d; s/.*/- `&`/')
+        section=$(printf '**Screenshot evidence:** [download claude-ci-output.zip](%s) (kept 14 days; GitHub login required)\n%s' "$ARTIFACT_URL" "$list")
+        # Claude's own comment for this run links to actions/runs/<run id>.
+        find_comment() {
+          gh api --paginate "repos/$REPO/$1/$NUMBER/comments" \
+            --jq ".[] | select(.body | contains(\"actions/runs/$RUN_ID\")) | .id" 2>/dev/null | tail -1 || true
+        }
+        kind=issues; id=$(find_comment issues)
+        if [ -z "$id" ]; then kind=pulls; id=$(find_comment pulls); fi
+        if [ -n "$id" ]; then
+          body=$(gh api "repos/$REPO/$kind/comments/$id" --jq .body)
+          case "$body" in *"$ARTIFACT_URL"*) echo "link already present"; exit 0 ;; esac
+          if gh api -X PATCH "repos/$REPO/$kind/comments/$id" -f body="$body"$'\n\n---\n'"$section" > /dev/null; then
+            echo "appended to $kind comment $id"; exit 0
+          fi
+        fi
+        echo "Claude's comment not found or not editable; posting a new comment"
+        gh issue comment "$NUMBER" -R "$REPO" --body "$section"
