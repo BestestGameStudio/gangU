@@ -132,6 +132,13 @@ func _ready() -> void:
 		## approved Fire Ball tier-1 precedent.
 		preload("res://resources/upgrades/manashot_volley.tres"),
 		preload("res://resources/upgrades/manashot_lance.tres"),
+		## (#265) Pickup Bolt Specialization paths: Flurry (faster, lighter)
+		## and Heavy (slower piercing hitter). Branch design and numbers are
+		## the implementer's delegated discretion for this issue (Daniel via
+		## staff-lead relay, 2026-11-08); 10-cast threshold mirrors the
+		## approved Fire Ball / Mana Shot tier-1 precedent.
+		preload("res://resources/upgrades/bolt_flurry.tres"),
+		preload("res://resources/upgrades/bolt_heavy.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
