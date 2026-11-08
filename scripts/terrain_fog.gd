@@ -14,7 +14,10 @@ const SEEN_COLOR: Color = Color(0.02, 0.02, 0.03, 0.6)
 
 @export var map: TerrainMap
 @export var bounds: Rect2i
-@export var vision_radius: int = 4
+@export var vision_radius: int = 4:
+	set(value):
+		vision_radius = value
+		_has_center = false
 @export var target: Node2D
 
 var _explored: Dictionary = {} ## Vector2i -> true

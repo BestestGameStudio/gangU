@@ -103,6 +103,12 @@ func _run_logic_legs() -> void:
 	var cell_corner := Vector2(c * map.cell_size) + Vector2(1, 1)
 	fog.update_vision(cell_corner)
 	_check(_count(fog, BOUNDS, TerrainFog.State.VISIBLE) == 13 and _count(fog, BOUNDS, TerrainFog.State.SEEN) == 0, "moved-but-same-cell position is a no-op")
+	fog.vision_radius = 1
+	fog.update_vision(map.cell_to_world(c))
+	_check(_count(fog, BOUNDS, TerrainFog.State.VISIBLE) == 5 and _count(fog, BOUNDS, TerrainFog.State.SEEN) == 8, "radius change applies without moving: r=1 disc is 5 VISIBLE, 8 SEEN")
+	fog.vision_radius = 2
+	fog.update_vision(map.cell_to_world(c))
+	_check(_count(fog, BOUNDS, TerrainFog.State.VISIBLE) == 13 and _count(fog, BOUNDS, TerrainFog.State.SEEN) == 0, "radius restored: r=2 disc is 13 VISIBLE again")
 
 	var d := Vector2i(16, 4)
 	fog.update_vision(map.cell_to_world(d))
