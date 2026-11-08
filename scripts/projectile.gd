@@ -2,11 +2,16 @@ extends Area2D
 class_name Projectile
 ## Spawned by SpellCaster (#3). Travels in a straight line toward the aim
 ## point; despawns at max range or on hitting a physics body.
-## #5 consumes: hit bodies that implement apply_damage(damage) get spell.damage.
+## #5 consumes: hit bodies that implement apply_damage(damage) get spell.damage
+## after DamageCalc applies the caster's and the body's modifiers.
+
+signal hit_resolved(body: Node2D, result: DamageResult)
 
 var spell: Spell
 var direction: Vector2 = Vector2.RIGHT
 var source: Node2D ## The caster's owner; never hit by its own projectile.
+var _attacker_modifiers: DamageModifiers
+var _attacker_rng: RandomNumberGenerator
 var _traveled: float = 0.0
 var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projectile
 
@@ -26,6 +31,9 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
 	direction = p_direction.normalized()
 	source = p_source
+	if p_source != null:
+		_attacker_modifiers = p_source.get(&"damage_modifiers") as DamageModifiers
+		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
 	rotation = direction.angle()
 
 func _ready() -> void:
@@ -106,8 +114,10 @@ func _on_body_entered(body: Node2D) -> void:
 	if _hit_bodies.has(body):
 		return # #37: piercing re-contact never double-hits the same body
 	if body.has_method(&"apply_damage"):
-		body.apply_damage(spell.damage)
+		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, body.get(&"damage_modifiers") as DamageModifiers, _attacker_rng)
+		body.apply_damage(result.amount)
 		_hit_bodies.append(body)
+		hit_resolved.emit(body, result)
 		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
 		# Untagged spells keep the original despawn-on-hit, and range expiry
 		# is unchanged for both.

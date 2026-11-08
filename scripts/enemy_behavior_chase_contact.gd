@@ -26,5 +26,5 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 	enemy.move_and_slide()
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if to_player.length() <= enemy.contact_range and _contact_timer <= 0.0:
-		player.apply_damage(enemy.contact_damage)
+		player.apply_damage(DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng).amount)
 		_contact_timer = enemy.contact_cooldown
