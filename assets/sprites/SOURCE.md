@@ -27,6 +27,15 @@ traced art, no stock files shipped.
   generator script (PIL), iterated against rendered previews.
 - License for this original asset: CC0 (matches project asset licensing).
 
+# spell_projectiles.png - spell projectile sprites (#210)
+- Source: single sprite sheet attached to issue #210 by @Mitravasu
+  (https://github.com/user-attachments/assets/f0f3f901-d1bc-48aa-8f67-d0df7610042b).
+- Rows flame / mana / bolt, 8 loop frames each, 12 fps; packed at scale 4 into
+  64x48 cells via `tools/sprites/specs/spell_projectiles.json`.
+- The sheet's row labels sit close above the art, so the label text was keyed
+  out of a working copy (dim lavender on the dark board) before extraction;
+  the art itself is byte-faithful to the issue attachment.
+
 # mustache_warrior.png - Mustache Warrior (common enemy + Warlord boss)
 
 Art from issue #177 ("common enemy sprite update"): the 1536x1024

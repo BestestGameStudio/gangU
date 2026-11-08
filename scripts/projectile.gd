@@ -17,6 +17,18 @@ var spell: Spell
 ## projectile only. Radius, movement, hits and despawn are untouched, and
 ## projectiles without an override look exactly as before.
 var visual_override: Node2D
+## #210: supplied sprite art replaces the code-drawn Dart/Visual for spells
+## with a mapped animation. Visuals only: radius, movement, hits, despawn and
+## the visual_override hook are untouched; unmapped spells look as before.
+const PROJECTILE_SPRITES: SpriteFrames = preload("res://resources/sprites/spell_projectiles_frames.tres")
+## Cell art is authored ~4x the in-world size at scale 4; radius/16 lands each
+## sprite in the same visual footprint as the radius-scaled code-drawn dart.
+const SPELL_SPRITE_ANIMS: Dictionary = {
+	"Fire Ball": &"flame",
+	"Mana Shot": &"mana",
+	"Placeholder Bolt": &"bolt",
+}
+
 var direction: Vector2 = Vector2.RIGHT
 var source: Node2D ## The caster's owner; never hit by its own projectile.
 var _attacker_modifiers: DamageModifiers
@@ -35,6 +47,7 @@ const PULSE_AMP: float = 0.15 ## +/-15% scale pulse
 
 var _vis_t: float = 0.0
 var _vis_base: Vector2 = Vector2.ONE
+var _sprite: AnimatedSprite2D = null
 
 func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
@@ -62,6 +75,27 @@ func _ready() -> void:
 		$Visual.visible = false
 		visual_override.name = "VisualOverride"
 		add_child(visual_override)
+	else:
+		_wire_sprite()
+
+## #210: hide the code-drawn visuals and fly the mapped supplied-art
+## animation instead. The root already faces the flight direction and the art
+## is authored pointing +X, so no extra rotation is needed.
+func _wire_sprite() -> void:
+	var anim: StringName = SPELL_SPRITE_ANIMS.get(spell.spell_name, &"")
+	if anim == &"":
+		return
+	_sprite = AnimatedSprite2D.new()
+	_sprite.name = "Sprite"
+	_sprite.sprite_frames = PROJECTILE_SPRITES
+	_sprite.animation = anim
+	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var sz: float = spell.radius / 16.0
+	_sprite.scale = Vector2(sz, sz)
+	add_child(_sprite)
+	_sprite.play()
+	$Dart.visible = false
+	$Visual.visible = false
 
 func _physics_process(delta: float) -> void:
 	# #37: a HOMING-tagged spell steers BEFORE moving - toward the nearest
@@ -92,6 +126,8 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	# #109: code-drawn cast feel - the diamond spins and pulses while flying.
+	# (#210: kept running even while a supplied-art sprite hides the diamond,
+	# so the feel state stays live if the visual is ever swapped back.)
 	_vis_t += delta
 	$Visual.rotation += SPIN_RATE * delta
 	var pulse: float = 1.0 + PULSE_AMP * sin(_vis_t * PULSE_RATE)
