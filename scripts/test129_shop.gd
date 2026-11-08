@@ -7,6 +7,7 @@ extends SceneTree
 ## the walk-up panel (Daniel: "yes open a panel") and vendor proximity.
 
 var failures := 0
+var check_count := 0
 var wallet: CurrencyWallet
 var caster: SpellCaster
 var shop: Shop
@@ -17,6 +18,7 @@ var fireball: Spell = preload("res://resources/spells/fire_ball.tres")
 var purchases_seen: Array = []
 
 func _check(cond: bool, name: String) -> void:
+	check_count += 1
 	if cond:
 		print("[129] ", name, " -> PASS")
 	else:
@@ -81,12 +83,13 @@ func _balance_label() -> Label:
 
 var _legs_ran := false
 
+## MainLoop._process true = QUIT: return false always; only _done() quits.
 func _process(_delta: float) -> bool:
 	if _legs_ran:
-		return true
+		return false
 	_legs_ran = true
 	_run_legs()
-	return true
+	return false
 
 func _run_legs() -> void:
 	## 1. Placeholder catalog DATA leg.
@@ -208,6 +211,18 @@ func _run_legs() -> void:
 	_check(not panel.visible, "non-player body does not open panel")
 	stranger.free()
 
+	## 14. Production mount: main.tscn wires the Shop with a RESOLVED caster
+	## (explicit caster_path; the group fallback alone finds no player).
+	var scene: Node = load("res://scenes/main.tscn").instantiate()
+	root.add_child(scene)
+	await process_frame
+	await process_frame
+	var prod_shop: Shop = scene.get_node_or_null("Shop") as Shop
+	_check(prod_shop != null, "main.tscn mounts Shop")
+	_check(prod_shop != null and prod_shop._caster != null, "production Shop caster RESOLVED via caster_path")
+	_check(prod_shop != null and not prod_shop.offerable_entries().is_empty(), "production shop offers the placeholder bolt")
+	scene.queue_free()
+
 	_done()
 
 func _catalog_of(entries: Array[ShopEntry]) -> ShopCatalog:
@@ -216,6 +231,7 @@ func _catalog_of(entries: Array[ShopEntry]) -> ShopCatalog:
 	return c
 
 func _done() -> bool:
+	print("[129] checks=", check_count)
 	if failures == 0:
 		print("[129] PASS")
 	else:
