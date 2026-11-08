@@ -13,11 +13,27 @@ signal health_changed(current: int, max_hp: int)
 
 var hp: int
 
+## #137: wizard sprite facing state. The 8-way movement vector collapses to
+## 4-way facing on the dominant axis (exact diagonals resolve vertically) and
+## the last facing is retained while idle. Down is the at-rest facing.
+var facing: StringName = &"down"
+
 @onready var aim_indicator: Node2D = $AimIndicator
 @onready var body: Polygon2D = $Body
+@onready var nose_edge: Polygon2D = $NoseEdge
+## #137: AnimatedSprite2D wizard, added by main.tscn's Player subtree. Null in
+## bare player.tscn instances (test arenas), which keep the legacy Body dart.
+@onready var sprite: AnimatedSprite2D = get_node_or_null("WizardSprite")
 
 func _ready() -> void:
 	hp = max_hp
+	if sprite != null:
+		# Legacy dart hull + its nose accent both retire when the wizard art
+		# carries the player visual; the AimIndicator is aim, not hull, and
+		# stays. Bare player.tscn instances keep all three legacy visuals.
+		body.visible = false
+		nose_edge.visible = false
+		_update_sprite(false)
 
 ## #5 contract: single damage entry point. Clamps HP at 0 and emits
 ## health_changed ONLY from inside here, so HP can never change silently.
@@ -45,9 +61,29 @@ func _physics_process(_delta: float) -> void:
 	var input_dir := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	velocity = input_dir * speed
 	move_and_slide()
+	if sprite != null:
+		if input_dir != Vector2.ZERO:
+			# 8-way -> 4-way: dominant axis wins, exact diagonals face vertically.
+			if absf(input_dir.x) > absf(input_dir.y):
+				facing = &"right" if input_dir.x > 0.0 else &"left"
+			else:
+				facing = &"down" if input_dir.y > 0.0 else &"up"
+		_update_sprite(input_dir != Vector2.ZERO)
 
 func _process(_delta: float) -> void:
 	# Face the mouse cursor; manual aim only.
 	var aim_dir := global_position.direction_to(get_global_mouse_position())
 	if aim_dir.length_squared() > 0.0:
 		rotation = aim_dir.angle()
+	if sprite != null:
+		# Aim rotation stays on the player node (cast/aim contract, #137):
+		# the wizard art itself must stay upright - its facing comes from
+		# directional animation frames, not node rotation.
+		sprite.global_rotation = 0.0
+
+## #137: drive idle_<dir>/walk_<dir> from the retained facing + movement.
+func _update_sprite(walking: bool) -> void:
+	var prefix := "walk_" if walking else "idle_"
+	var anim := StringName(prefix + String(facing))
+	if sprite.animation != anim or not sprite.is_playing():
+		sprite.play(anim)
