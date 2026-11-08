@@ -27,6 +27,12 @@ func is_eligible(entry: RewardEntry) -> bool:
 
 ## Called by the reward drop when the player actually collects it.
 func remove_on_grant(entry: RewardEntry) -> void:
+	# #128: CURRENCY stays eligible after grant - drops can repeat within a
+	# run (Daniel, 2026-11-07: "Currency should be eligible again"). Nothing
+	# leaves the pool; the grant is only logged.
+	if entry.kind == RewardEntry.Kind.CURRENCY:
+		print("[rewards] currency grant: +", entry.currency_amount, "c (pool keeps entry eligible)")
+		return
 	if _granted.has(entry):
 		return
 	_granted.append(entry)

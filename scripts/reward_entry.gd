@@ -4,13 +4,16 @@ extends Resource
 ## Concurrent pool-API pin (lead, 2026-11-07): {kind, spell, item_scene,
 ## weight}. Item route stays UNWIRED until the #54 content decision lands.
 
-enum Kind { SPELL, ITEM }
+enum Kind { SPELL, ITEM, CURRENCY }
 
 @export var kind: Kind = Kind.SPELL
 ## The spell this entry grants on pickup (kind SPELL).
 @export var spell: Spell
 ## Reserved for item rewards (kind ITEM; open human choice) - unwired.
 @export var item_scene: PackedScene
+## Currency granted on pickup (kind CURRENCY, #128). Routed to the run wallet
+## by the drop; amounts remain human-open placeholder data.
+@export var currency_amount: int = 0
 ## Relative selection weight within the table. Contents/weights/chances are
 ## human-open; placeholder values only.
 @export var weight: float = 1.0
