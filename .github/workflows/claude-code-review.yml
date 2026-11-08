@@ -38,6 +38,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
+          # PRs that @claude opens (and its pushes to them) are triggered by the
+          # claude[bot] actor; without this the action refuses to review them.
+          allowed_bots: 'claude'
           prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
           # Repo rule enforced by review: visible/playable changes need
           # screenshot evidence (see .claude/skills/ci-runner, "Screenshot evidence").
