@@ -117,13 +117,18 @@ func _player_legs() -> void:
 	_fill_row(world, 2, 0, 30, TerrainTypes.MUD)
 	world.set_cell(Vector2i(3, 4), TerrainTypes.MOUNTAIN)
 	_fill_row(world, 6, 0, 30, TerrainTypes.ICE)
-	var starts: Array[Vector2] = [Vector2(32, 32), Vector2(32, 160), Vector2(40, 288), Vector2(32, 416), Vector2(32, 544)]
+	world.set_cell(Vector2i(3, 10), TerrainTypes.WATER)
+	world.set_cell(Vector2i(3, 12), TerrainTypes.WATER)
+	var starts: Array[Vector2] = [Vector2(32, 32), Vector2(32, 160), Vector2(40, 288), Vector2(32, 416), Vector2(32, 544), Vector2(40, 672), Vector2(40, 800)]
 	var ground := _spawn_player(world, starts[0])
 	var mud := _spawn_player(world, starts[1])
 	var wall := _spawn_player(world, starts[2])
 	var ice := _spawn_player(world, starts[3])
 	var plain := _spawn_player(null, starts[4])
-	var players: Array[Player] = [ground, mud, wall, ice, plain]
+	var swimmer := _spawn_player(world, starts[5])
+	var landlocked := _spawn_player(world, starts[6])
+	landlocked.can_swim = false
+	var players: Array[Player] = [ground, mud, wall, ice, plain, swimmer, landlocked]
 	await _physics_frames(2)
 	for i in players.size():
 		players[i].global_position = starts[i]
@@ -140,6 +145,9 @@ func _player_legs() -> void:
 	_check(wall.global_position.x < 192.0 and wall.global_position.x > 180.0, "player stops short of the MOUNTAIN cell at x=192 (x=%.2f)" % wall.global_position.x)
 	_check(wall.velocity == Vector2.ZERO, "player against MOUNTAIN has zero velocity")
 	_check(world.tile_type_at(wall.global_position) == TerrainTypes.GROUND, "player never entered the MOUNTAIN cell")
+	_check(swimmer.can_swim, "player can swim by default")
+	_check(swimmer.global_position.x > 256.0, "default player swims through the WATER cell at x=192..256 (x=%.2f)" % swimmer.global_position.x)
+	_check(landlocked.global_position.x < 192.0 and landlocked.velocity == Vector2.ZERO, "player with can_swim off halts at the WATER edge x=192 (x=%.2f)" % landlocked.global_position.x)
 
 	Input.action_release(&"move_right")
 	var ice_x := ice.global_position.x
