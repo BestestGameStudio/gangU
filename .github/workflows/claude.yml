@@ -18,6 +18,7 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: read
@@ -54,6 +55,11 @@ jobs:
           EOF
           sudo chmod 755 /usr/local/bin/github-fetch
 
+      - name: Set up Godot
+        uses: ./.github/actions/setup-godot
+        with:
+          version: "4.5.1"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -64,13 +70,10 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          # Images attached to the triggering issue/PR and its comments are
+          # downloaded by the action itself and handed to Claude as local files
+          # (read with the Read tool, which is allowed by default). github-fetch
+          # and the read-only gh rules cover images on *other* issues.
           claude_args: |
-            --allowedTools "Bash(github-fetch:*)"
-            --append-system-prompt "To download a file from github.com, such as a user-attachments image on an issue, run: github-fetch URL OUTPUT_FILE. Plain curl is not permitted in this job and github-fetch only accepts https://github.com/ URLs."
-
+            --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+            --append-system-prompt "CI environment notes for gangU. Godot 4.5.1 is installed as godot and the project is already imported. Run a headless test harness with: timeout 300 godot --headless -s scripts/<test>.gd (exit code 0 means pass). To render frames or take screenshots, run under a virtual display with software GL: xvfb-run -a -s \"-screen 0 1920x1080x24\" godot --rendering-driver opengl3 --path . <args>. Movie Maker capture works the same way with --write-movie out.avi --fixed-fps 30 --quit-after <frames>, and ffmpeg is available to convert it. After saving a PNG, open it with the Read tool to look at it yourself. Images attached to this issue or PR were already downloaded for you. To download any other file from github.com, such as a user-attachments image on a different issue (find its URL with gh issue view <n> --comments), run: github-fetch URL OUTPUT_FILE, then Read the file. Plain curl is not permitted in this job and github-fetch only accepts https://github.com/ URLs. Always run the relevant test harnesses before pushing and report the real results."
