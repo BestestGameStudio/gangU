@@ -4,7 +4,9 @@ class_name TerrainTypes
 ## foundation; GRASS/TREE (grass/forest biome) and SNOW/ICE (snow/ice biome)
 ## are the generated biome types. Element tags are classification metadata
 ## (the SpellTags #66 idiom): they describe, nothing executes them yet.
-## ICE friction is a movement rule, so its speed stays 1.0 here.
+## MUD/WATER/MOUNTAIN are placeable movement types the generator does not
+## emit yet. friction 1.0 is full grip; swimmable lets a swim-capable mover
+## enter a non-walkable cell, where speed_multiplier is its swim speed.
 ##
 ## Authority split: TerrainMap owns cell -> type assignments; this registry
 ## owns type -> properties. Downstream issues (A2/A4/B1/B3/C1/C2) consume
@@ -17,41 +19,77 @@ const GRASS: StringName = &"grass"
 const TREE: StringName = &"tree"
 const SNOW: StringName = &"snow"
 const ICE: StringName = &"ice"
+const MUD: StringName = &"mud"
+const WATER: StringName = &"water"
+const MOUNTAIN: StringName = &"mountain"
 
 ## Placeable type vocabulary.
-const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE]
+const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE, MUD, WATER, MOUNTAIN]
 
 ## type -> properties. Data only; no behavior lives here.
 const DEFS: Dictionary = {
 	GROUND: {
 		"walkable": true,
 		"speed_multiplier": 1.0,
+		"friction": 1.0,
+		"swimmable": false,
 		"element_tags": [],
 	},
 	OBSTACLE: {
 		"walkable": false,
 		"speed_multiplier": 0.0,
+		"friction": 1.0,
+		"swimmable": false,
 		"element_tags": [],
 	},
 	GRASS: {
 		"walkable": true,
 		"speed_multiplier": 1.0,
+		"friction": 1.0,
+		"swimmable": false,
 		"element_tags": [],
 	},
 	TREE: {
 		"walkable": false,
 		"speed_multiplier": 0.0,
+		"friction": 1.0,
+		"swimmable": false,
 		"element_tags": [],
 	},
 	SNOW: {
 		"walkable": true,
 		"speed_multiplier": 1.0,
+		"friction": 1.0,
+		"swimmable": false,
 		"element_tags": [],
 	},
 	ICE: {
 		"walkable": true,
 		"speed_multiplier": 1.0,
+		"friction": 0.12,
+		"swimmable": false,
 		"element_tags": [&"ice"],
+	},
+	MUD: {
+		"walkable": true,
+		"speed_multiplier": 0.5,
+		"friction": 1.0,
+		"swimmable": false,
+		"element_tags": [],
+	},
+	WATER: {
+		"walkable": false,
+		"speed_multiplier": 0.6,
+		"friction": 1.0,
+		"swimmable": true,
+		"element_tags": [&"water"],
+	},
+	MOUNTAIN: {
+		"walkable": false,
+		"speed_multiplier": 0.0,
+		"friction": 1.0,
+		"swimmable": false,
+		"element_tags": [],
 	},
 }
 
@@ -60,6 +98,8 @@ const DEFS: Dictionary = {
 const UNKNOWN_PROPS: Dictionary = {
 	"walkable": false,
 	"speed_multiplier": 0.0,
+	"friction": 1.0,
+	"swimmable": false,
 	"element_tags": [],
 }
 
@@ -73,6 +113,8 @@ static func properties(type: StringName) -> Dictionary:
 	return {
 		"walkable": src["walkable"],
 		"speed_multiplier": src["speed_multiplier"],
+		"friction": src["friction"],
+		"swimmable": src["swimmable"],
 		"element_tags": (src["element_tags"] as Array).duplicate(),
 	}
 
@@ -81,6 +123,12 @@ static func is_walkable(type: StringName) -> bool:
 
 static func speed_multiplier(type: StringName) -> float:
 	return properties(type)["speed_multiplier"]
+
+static func friction(type: StringName) -> float:
+	return properties(type)["friction"]
+
+static func is_swimmable(type: StringName) -> bool:
+	return properties(type)["swimmable"]
 
 static func element_tags(type: StringName) -> Array[StringName]:
 	var out: Array[StringName] = []

@@ -10,6 +10,9 @@ signal health_changed(current: int, max_hp: int)
 
 @export var speed: float = 320.0
 @export var max_hp: int = 100
+@export var can_swim: bool = false
+
+var terrain: TerrainMap = null
 
 var hp: int
 
@@ -54,12 +57,12 @@ func heal(amount: int) -> void:
 	hp = clampi(hp + amount, 0, max_hp)
 	health_changed.emit(hp, max_hp)
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if hp <= 0:
 		velocity = Vector2.ZERO
 		return
 	var input_dir := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	velocity = input_dir * speed
+	velocity = TerrainMotion.resolve(terrain, global_position, velocity, input_dir * speed, delta, can_swim)
 	move_and_slide()
 	if sprite != null:
 		if input_dir != Vector2.ZERO:
