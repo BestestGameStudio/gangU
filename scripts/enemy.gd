@@ -14,6 +14,7 @@ signal health_changed(current: int, max_hp: int)
 @export var contact_damage: int = 10
 @export var contact_cooldown: float = 0.8
 @export var contact_range: float = 40.0
+@export var can_swim: bool = false
 ## #34: explicit target wiring FIRST - the production main.tscn Player is in no
 ## group, matching the RunManager/ReviveSatchel/HUD explicit-wiring convention.
 ## The "player" group lookup remains as a fallback so existing test scenes
@@ -33,6 +34,7 @@ signal health_changed(current: int, max_hp: int)
 @export var definition: EnemyDefinition
 
 var hp: int
+var terrain: TerrainMap = null
 var _player: Player
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.

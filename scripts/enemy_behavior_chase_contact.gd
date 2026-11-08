@@ -21,7 +21,8 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 		enemy.move_and_slide()
 		return
 	var to_player: Vector2 = player.global_position - enemy.global_position
-	enemy.velocity = to_player.normalized() * enemy.speed if to_player.length() > 8.0 else Vector2.ZERO
+	var chase: Vector2 = to_player.normalized() * enemy.speed if to_player.length() > 8.0 else Vector2.ZERO
+	enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
 	enemy.move_and_slide()
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if to_player.length() <= enemy.contact_range and _contact_timer <= 0.0:

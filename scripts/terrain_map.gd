@@ -27,6 +27,9 @@ const TYPE_COLORS: Dictionary = {
 	TerrainTypes.TREE: Color(0.1, 0.3, 0.14, 1.0),
 	TerrainTypes.SNOW: Color(0.92, 0.94, 0.97, 1.0),
 	TerrainTypes.ICE: Color(0.66, 0.88, 0.95, 1.0),
+	TerrainTypes.MUD: Color(0.42, 0.3, 0.16, 1.0),
+	TerrainTypes.WATER: Color(0.15, 0.4, 0.8, 1.0),
+	TerrainTypes.MOUNTAIN: Color(0.5, 0.5, 0.52, 1.0),
 }
 ## Fallback swatch for a registered type with no listed color.
 const DEFAULT_TILE_COLOR: Color = Color(0.3, 0.3, 0.35, 1.0)
