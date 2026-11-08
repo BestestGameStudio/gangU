@@ -61,6 +61,9 @@ only.
   applicable.
 - If the only findings are process issues (e.g. the PR description), the reviewer fixes
   them directly instead of bouncing the PR back to the author.
+- If a PR is blocked by conflicts with the base branch, the author fixes the conflicts,
+  pushes the new head, and re-requests review from another Instinct. Approvals and
+  findings on the pre-conflict head do not carry over.
 
 ## 6. Merge after approval, exactly once
 
