@@ -25,18 +25,23 @@ func _ready() -> void:
 	_build_skeleton()
 	var player := get_tree().get_first_node_in_group("player")
 	if player != null:
-		_caster = player.get_node_or_null("SpellCaster") as SpellCaster
-	if _caster != null and not _caster.spell_unlocked.is_connected(_on_spell_unlocked):
-		_caster.spell_unlocked.connect(_on_spell_unlocked)
+		_bind_caster(player.get_node_or_null("SpellCaster") as SpellCaster)
 	visible = false
 
+func _bind_caster(for_caster: SpellCaster) -> void:
+	if for_caster == _caster:
+		return
+	if is_instance_valid(_caster):
+		_caster.spell_unlocked.disconnect(_on_spell_unlocked)
+		_caster.spell_replaced.disconnect(_on_spell_replaced)
+	_caster = for_caster
+	if is_instance_valid(_caster):
+		_caster.spell_unlocked.connect(_on_spell_unlocked)
+		_caster.spell_replaced.connect(_on_spell_replaced)
+
 func open(for_caster: SpellCaster = null) -> void:
-	if for_caster != null and for_caster != _caster:
-		if _caster != null and _caster.spell_unlocked.is_connected(_on_spell_unlocked):
-			_caster.spell_unlocked.disconnect(_on_spell_unlocked)
-		_caster = for_caster
-		if not _caster.spell_unlocked.is_connected(_on_spell_unlocked):
-			_caster.spell_unlocked.connect(_on_spell_unlocked)
+	if for_caster != null:
+		_bind_caster(for_caster)
 	_render()
 	visible = true
 	add_to_group("modal_ui") # caster cast-guard hook (EquipPanel idiom)
@@ -80,10 +85,16 @@ func _build_skeleton() -> void:
 	_count_label.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_count_label)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
 	_rows = VBoxContainer.new()
 	_rows.name = "Rows"
 	_rows.add_theme_constant_override("separation", 6)
-	vbox.add_child(_rows)
+	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_rows)
 	var hint := Label.new()
 	hint.text = "Walk away to close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
@@ -130,5 +141,9 @@ func _make_row(spell: Spell) -> Control:
 	return row
 
 func _on_spell_unlocked(_spell: Spell) -> void:
+	if visible:
+		_render()
+
+func _on_spell_replaced(_old_spell: Spell, _new_spell: Spell) -> void:
 	if visible:
 		_render()
