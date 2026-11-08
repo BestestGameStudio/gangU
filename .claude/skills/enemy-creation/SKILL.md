@@ -53,7 +53,7 @@ Reference implementations: PR #182 (#177) - common enemy `scenes/enemy.tscn` and
 5. Demo clip for the PR: the showcase-video skill (`tools/showcase/record_showcase.gd`). Disclose demo-only tweaks (boss HP floor, player autoheal).
 
 ## PR etiquette (INSTINCT.md)
-- Open a ready-for-review PR by default (the user prefers real PRs); state exact files and evidence; name the engine version tests ran on. Leave reviewers, labels and auto-merge alone.
-- `Refs #N`, not `Closes #N` - issues close manually after LIVE verification.
+- Open a draft PR as soon as work starts and mark it ready when verified; state exact files and evidence; name the engine version tests ran on. Request review from another Instinct on the exact head; leave labels and auto-merge alone.
+- `Closes #N` in the PR body - issues auto-close on merge; the merger confirms closure afterward (see INSTINCT.md).
 - One concern per PR; check open PRs for file/room overlap before starting.
-- Do not approve, resolve threads, merge or post comments without the human's go-ahead.
+- Review and merge follow INSTINCT.md: independent approval on the exact head, then a single designated merge executor.
