@@ -16,6 +16,8 @@ extends Node2D
 ## a non-walkable type on Obstacle; default GROUND renders as the scene
 ## background (no tile), keeping the sparse store literal.
 
+signal cell_destroyed(cell: Vector2i, old_type: StringName, new_type: StringName)
+
 ## Grid cell size in pixels (matches BackgroundGrid's 64 spacing).
 @export var cell_size: int = 64
 
@@ -74,6 +76,22 @@ func set_cells(cells: Dictionary) -> bool:
 func clear_cell(cell: Vector2i) -> void:
 	_cells.erase(cell)
 	_rebuild_presentation()
+
+## The single entry point every damage source calls when it hits terrain.
+## A destroyable cell becomes its registry destroyed_into type; anything
+## else is left untouched. Returns true iff the cell changed.
+func destroy_cell(cell: Vector2i) -> bool:
+	var old_type := tile_type_at_cell(cell)
+	if not TerrainTypes.is_destroyable(old_type):
+		return false
+	var new_type := TerrainTypes.destroyed_into(old_type)
+	if not set_cell(cell, new_type):
+		return false
+	cell_destroyed.emit(cell, old_type, new_type)
+	return true
+
+func destroy_at(world_pos: Vector2) -> bool:
+	return destroy_cell(world_to_cell(world_pos))
 
 ## --- THE lookup seam (downstream consumes only from here) ---
 
