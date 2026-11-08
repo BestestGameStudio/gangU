@@ -1,9 +1,12 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu3bolt"]
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangu3bolt"]
 
 [ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://resources/sprites/spell_icons_frames.tres" id="2_frames"]
 
 [resource]
 script = ExtResource("1_spell")
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"bolt"
 spell_name = "Placeholder Bolt"
 cooldown = 0.6
 damage = 10.0

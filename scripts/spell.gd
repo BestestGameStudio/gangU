@@ -8,6 +8,15 @@ class_name Spell
 @export var spell_name: String = "Spell"
 ## UI art for spell rows and slots. Null renders an empty placeholder box.
 @export var icon: Texture2D = null
+## (#207) Shared SpriteFrames holding "<icon_prefix>_base", "<icon_prefix>_upgraded"
+## and "<icon_prefix>_sweep" animations. Used when icon is null; the placeholder
+## box still renders when both are null.
+@export var icon_frames: SpriteFrames = null
+## Animation-name prefix inside icon_frames, e.g. &"fireball".
+@export var icon_prefix: StringName = &""
+## True on upgrade-result spells (#207): the "<icon_prefix>_upgraded"
+## green-chevron frame replaces the base frame.
+@export var icon_upgraded: bool = false
 @export var cooldown: float = 0.5 ## Seconds before this spell can be recast.
 @export var damage: float = 10.0
 @export var radius: float = 4.0 ## Projectile hit radius in pixels.

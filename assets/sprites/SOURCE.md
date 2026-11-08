@@ -119,3 +119,25 @@ cut by `tools/sprites/extract_frames.py` with
 - Frames are the board's six idle variants (potion sparkle / lighting
   positions). SpriteFrames (resources/sprites/shop_vendor_frames.tres):
   idle, 6 frames, 4 fps loop.
+# spell_icons.png - player spell HUD icons (#207)
+
+Art from issue #207 ("Spell ICON Sprites"): the 1448x1086 sheet attached to
+the issue by Mitravasu (project human). The sheet is a regular 3x7 grid of
+opaque framed tiles on a near-white page background; no keying was needed, so
+the pack used a background colour absent from the sheet ([255, 0, 255] at
+key_dist 54 matches nothing) and every pixel was kept. Cut by
+`tools/sprites/extract_frames.py` with
+`tools/sprites/specs/spell_icons.json` (bbox-anchored to the exact tile
+windows, 4:1 downsample to the 47x48 cells). Reproduce:
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_icons.json <issue-207-sheet.png> assets/sprites/spell_icons.png --tres resources/sprites/spell_icons_frames.tres`.
+
+## Layout
+- Cell: 47x48 px, baseline row 48. Sheet: 7 cols x 3 rows (329x144).
+- Rows: fireball, mana, bolt. Cols: 0 base icon, 1 green-chevron upgrade
+  icon, 2 alternate base (extracted, unused), 3-6 gray cooldown sweep at
+  increasing coverage (~15/40/60/85%). SpriteFrames
+  (resources/sprites/spell_icons_frames.tres): `<row>_base` (1 frame),
+  `<row>_upgraded` (1 frame), `<row>_sweep` (4 frames, cols 3-6).
+- The supplied art has no chevron variant of the sweep frames, so an
+  upgraded spell shows the plain sweep while its cooldown runs and the
+  chevron returns at cooldown end.

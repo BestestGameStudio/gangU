@@ -247,6 +247,7 @@ func _update_slot_rows() -> void:
 		if spell.cooldown > 0.0:
 			frac = 1.0 - clampf(rem / spell.cooldown, 0.0, 1.0)
 		w["icon"].show_spell(spell)
+		w["icon"].set_cooldown_fraction(clampf(rem / spell.cooldown, 0.0, 1.0) if spell.cooldown > 0.0 else 0.0)
 		w["name"].text = spell.spell_name + _tier_suffix(spell)
 		w["bar"].value = frac
 		w["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
@@ -277,6 +278,7 @@ func _process(delta: float) -> void:
 			up_arrow = " ^"
 		row["name"].text = s.spell_name + _tier_suffix(s) + (" *" if s == _caster.equipped_spell else "") + up_arrow
 		row["bar"].value = frac
+		row["icon"].set_cooldown_fraction(clampf(rem / s.cooldown, 0.0, 1.0) if s.cooldown > 0.0 else 0.0)
 		row["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
 		var cooling := rem > 0.0
 		if cooling != row["cooling"]:

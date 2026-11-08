@@ -1,9 +1,12 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu4mana"]
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangu4mana"]
 
 [ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://resources/sprites/spell_icons_frames.tres" id="2_frames"]
 
 [resource]
 script = ExtResource("1_spell")
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"mana"
 spell_name = "Mana Shot"
 cooldown = 0.35
 damage = 8.0
