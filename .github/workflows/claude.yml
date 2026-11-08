@@ -30,6 +30,30 @@ jobs:
         with:
           fetch-depth: 1
 
+      # Claude gets this command instead of curl, so it can only fetch from
+      # github.com. It lives outside the workspace, where Claude cannot edit it.
+      - name: Install github-fetch
+        run: |
+          sudo tee /usr/local/bin/github-fetch > /dev/null <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ "$#" -ne 2 ]; then
+            echo "usage: github-fetch https://github.com/PATH OUTPUT_FILE" >&2
+            exit 2
+          fi
+          case "$1" in
+            https://github.com/*) ;;
+            *)
+              echo "github-fetch: only https://github.com/ URLs are allowed" >&2
+              exit 1
+              ;;
+          esac
+          exec curl --fail --silent --show-error --location --globoff \
+            --proto '=https' --proto-redir '=https' --max-redirs 5 \
+            --output "$2" "$1"
+          EOF
+          sudo chmod 755 /usr/local/bin/github-fetch
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -46,5 +70,7 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr *)'
+          claude_args: |
+            --allowedTools "Bash(github-fetch:*)"
+            --append-system-prompt "To download a file from github.com, such as a user-attachments image on an issue, run: github-fetch URL OUTPUT_FILE. Plain curl is not permitted in this job and github-fetch only accepts https://github.com/ URLs."
 
