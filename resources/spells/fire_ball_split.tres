@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
-spell_name = "Fire Ball Split [placeholder]"
+spell_name = "Fire Ball Split"
 cooldown = 1.2
 damage = 25.0
 radius = 7.0
