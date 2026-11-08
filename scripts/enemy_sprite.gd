@@ -18,7 +18,7 @@ extends AnimatedSprite2D
 const WALK_THRESHOLD: float = 10.0
 ## Telegraph glow: pulse rate (rad/s) and the over-bright peak colour.
 const GLOW_RATE: float = 28.0
-const GLOW_COLOR: Color = Color(1.9, 2.1, 1.2)
+const GLOW_COLOR: Color = Color(1.45, 1.6, 1.05) # bright but keeps the pixel detail
 ## Corpse fade after the death animation ends.
 const CORPSE_FADE: float = 0.35
 

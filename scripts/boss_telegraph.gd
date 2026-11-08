@@ -11,7 +11,7 @@ extends Node2D
 enum Mode { NONE, LINE, RING, CONE }
 
 const WARN_COLOR: Color = Color(0.72, 1.0, 0.26)
-const FILL_ALPHA: float = 0.16
+const FILL_ALPHA: float = 0.09
 const EDGE_ALPHA: float = 0.55
 const PULSE_RATE: float = 18.0
 
@@ -74,7 +74,7 @@ func _draw() -> void:
 	var edge := WARN_COLOR
 	edge.a = EDGE_ALPHA * (0.7 + 0.3 * pulse)
 	var charge := WARN_COLOR
-	charge.a = 0.18 + 0.3 * f
+	charge.a = 0.08 + 0.22 * f
 	match mode:
 		Mode.LINE:
 			var n := _dir.orthogonal() * _half_width
