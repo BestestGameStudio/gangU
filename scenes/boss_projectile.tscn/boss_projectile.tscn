@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=3 uid="uid://bgangu173bolt"]
+
+[ext_resource type="Script" path="res://scripts/boss_projectile.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/sprites/boss_head.png" id="2_atlas"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_slash"]
+atlas = ExtResource("2_atlas")
+region = Rect2(480, 832, 96, 64)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bolt"]
+radius = 10.0
+
+[node name="BossProjectile" type="Area2D"]
+script = ExtResource("1_script")
+
+[node name="BoltSprite" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = SubResource("AtlasTexture_slash")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_bolt")
