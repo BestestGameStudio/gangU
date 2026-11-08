@@ -5,7 +5,10 @@ description: "Add or change a gangU enemy or boss: scene structure, behavior slo
 
 # Enemy creation (gangU)
 
-Reference implementation: PR #182 (#177) - common enemy `scenes/enemy.tscn` and boss `scenes/mustache_warlord.tscn`. Read `ARCHITECTURE.md` (D6, D7, D11, D12, D14, D19, O1) and `INSTINCT.md` first. For new art, use the sprite-sheet-pipeline skill.
+Reference implementations: PR #182 (#177) - common enemy `scenes/enemy.tscn` and boss `scenes/mustache_warlord.tscn`; PR #213 (#173) - Head boss in a new arena. Read `ARCHITECTURE.md` (D6, D7, D11, D12, D14, D19, O1) and `INSTINCT.md` first. For new art, use the sprite-sheet-pipeline skill; for a new area or hub gate, the dungeon-creation skill; for a PR clip, the showcase-video skill.
+
+## 0. Check for prior work
+- `gh pr list --repo BestestGameStudio/gangU --state all --search "<issue#>"` and `gh issue view <n> --repo BestestGameStudio/gangU --comments`: find existing or stale PRs (e.g. #180 vs #182) and reviewer comments before starting.
 
 ## Decide before coding (human-owned)
 - Which area/room an enemy or boss lives in, objective type, and whether a red room allows pre-clear retreat are **human decisions** (ARCHITECTURE "Open human choices", D17). Do not pick them: ask, then record the decision with date in `ARCHITECTURE.md` (see O1) and the PR body. Two PRs claiming one room (#180 vs #182) is a conflict for the human, not for you.
@@ -34,6 +37,7 @@ Reference implementation: PR #182 (#177) - common enemy `scenes/enemy.tscn` and 
 - Objective + boss: `main.gd` `_mount_objective` (mounted AFTER spawns). ELIMINATION: `boss_scene` + `boss_spawn_position`; connect `boss_spawned` and set `boss.player_path = NodePath("../../Player")` before tree entry (production Player is in no group, D6), or the boss stands idle.
 - Portal: `_mount_exit_portal` locks red rooms only when the objective can complete (D12 clear-or-die, #55 no soft-lock).
 - Update docs and comments that described the area's old content (ARCHITECTURE D11/D17/O-entries, `exit_portal.gd`, `hud.gd`, `area_spawn_data.gd`).
+- A brand-new area or gate: follow the dungeon-creation skill's checklist.
 
 ## Tests
 - SceneTree harness `scripts/testNNN_<topic>.gd` (NNN = issue): prints `[NNN] label -> PASS|FAIL`, `quit(failures)`. Example: `scripts/test177_mustache_warrior.gd` (anims, hurt, death corpse, ELIMINATION spawn, each boss attack with collisions off like test99, projectile visual override).
@@ -42,14 +46,14 @@ Reference implementation: PR #182 (#177) - common enemy `scenes/enemy.tscn` and 
 - When visuals change, update tests that assert the old look (test89, test90 asserted the orange polygon).
 
 ## Verify
-1. Engine: `project.godot` pins 4.5.1 (CI image `barichello/godot-ci:4.5.1`). If your local Godot differs, say so and do not commit the `.uid` files it generates for untouched scripts.
+1. Engine: `project.godot` pins 4.5.1 (CI image `barichello/godot-ci:4.5.1`). A newer local Godot (4.7.x) regenerates `.uid` files for untouched scripts: commit only the `.uid` files of scripts you added, and name the Godot version you used in the PR.
 2. `godot --headless --path . --import` - read the output for errors.
-3. Each touched harness: `godot --headless --path . --script res://scripts/testNNN.gd` (macOS has no `timeout`: wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`). Then every `scripts/test*.gd` that `extends SceneTree`, plus fixture scenes with `GANGU_AUTOTEST=1 godot --headless --path . res://scenes/X.tscn --quit-after 2400`. Count `-> FAIL` and `SCRIPT ERROR`; compare any errors against a clean main worktree before calling them pre-existing.
+3. While iterating, run only the touched harness: `godot --headless --path . --script res://scripts/testNNN.gd` (macOS: wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`). Once at the end, run the full suite (README "Testing") and compare `-> FAIL` / `SCRIPT ERROR` counts against its **known baseline noise** (~190 errors from the `test_objective_flow` fixture, flaky `test_run_restart`); do not rebuild main to re-baseline.
 4. Look at it: windowed run of a scratch SceneTree script that saves `root.get_texture().get_image().save_png(...)` at each boss state; Read the PNGs.
-5. Demo clip for the PR: `godot --path . --resolution 1152x648 --write-movie /tmp/x/boss.avi --fixed-fps 30 --quit-after 1800 --script <scratch demo.gd>`, then `ffmpeg -i boss.avi -c:v libx264 -pix_fmt yuv420p -crf 20 -an boss.mp4` and a GIF with `scale=768:-1:flags=neighbor` + palettegen. Keep demo scripts out of the repo; disclose any demo-only tweaks (lowered HP, scripted timing).
+5. Demo clip for the PR: the showcase-video skill (`tools/showcase/record_showcase.gd`). Disclose demo-only tweaks (boss HP floor, player autoheal).
 
 ## PR etiquette (INSTINCT.md)
-- Draft until verified; state exact files and evidence; name the engine version tests ran on.
+- Open a ready-for-review PR by default (the user prefers real PRs); state exact files and evidence; name the engine version tests ran on. Leave reviewers, labels and auto-merge alone.
 - `Refs #N`, not `Closes #N` - issues close manually after LIVE verification.
 - One concern per PR; check open PRs for file/room overlap before starting.
 - Do not approve, resolve threads, merge or post comments without the human's go-ahead.
