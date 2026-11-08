@@ -61,6 +61,16 @@ func _ready() -> void:
 	var wallet := CurrencyWallet.new()
 	wallet.name = "CurrencyWallet"
 	add_child(wallet)
+	## (#129, foundation C2) Hub shop: data-driven catalog + walk-up choice
+	## panel - same ONE-persistent-child pattern. The panel starts hidden;
+	## the hub vendor opens/closes it on player proximity (Daniel, 2026-11-07).
+	var shop := Shop.new()
+	shop.name = "Shop"
+	shop.setup(preload("res://resources/shop/demo_catalog.tres"))
+	add_child(shop)
+	var shop_panel: ShopPanel = preload("res://scenes/shop_panel.tscn").instantiate()
+	shop_panel.name = "ShopPanel"
+	add_child(shop_panel)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")
