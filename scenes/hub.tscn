@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://bgangu7hub"]
+[gd_scene load_steps=5 format=3 uid="uid://bgangu7hub"]
 
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dnb" path="res://scenes/dungeon_b.tscn" id="4"]
+[ext_resource type="PackedScene" uid="uid://bgangu7shopv" path="res://scenes/shop_vendor.tscn" id="5"]
 
 [node name="Hub" type="Node2D"]
 
@@ -74,3 +75,6 @@ target_dungeon = ExtResource("3")
 position = Vector2(852, 380)
 gate_type = 1
 target_dungeon = ExtResource("4")
+
+[node name="ShopVendor" parent="." instance=ExtResource("5")]
+position = Vector2(852, 600)
