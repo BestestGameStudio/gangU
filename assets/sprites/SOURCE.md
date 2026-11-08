@@ -57,6 +57,17 @@ traced art, no stock files shipped.
   flies that shot. The other shots drawn in those cells are not extracted. The
   flight then shows split wide as 5 shots although its cols 2-4 draw 4.
 - `spell_projectiles.png` (#210) is no longer used at runtime.
+- #302 rows 14-15 (bolt upgrades): strip attached to issue #302 by @Mitravasu
+  (https://github.com/user-attachments/assets/1a76faef-5c27-4169-a8c6-9d157faea854;
+  1774x887 RGBA, 2 rows x 4 gold lightning frames, real transparency). Appended
+  with `tools/sprites/append_sheet_rows.py` and
+  `tools/sprites/specs/spell_upgrades_bolt_rows.json`: 6:1 premultiplied box
+  downsample into the same 64x72 cells, source alpha below 32 dropped, each
+  window centred on its frame. The strip draws 4 frames per bolt, so cells are
+  filled 0,1,2,3,2,1 to keep the #289 layout: `<row>_start` (cols 0-2, one-shot,
+  18 fps) then `<row>` (cols 3, 4, 5, 4, loop, 12 fps). Row assignment from the
+  art: the upper thin zigzag is Bolt Flurry (fast multi-shot), the lower broader
+  arrowhead is Heavy Bolt (piercing). Sheet is now 6x16 cells.
 
 # mustache_warrior.png - Mustache Warrior (common enemy + Warlord boss)
 
