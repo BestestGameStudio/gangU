@@ -51,7 +51,8 @@ func _ready() -> void:
 	## pattern as ReviveSatchel. Per-run reset comes free from RunManager's
 	## full scene reload. First playable config (approved by Daniel via his
 	## Instinct, 2026-11-07, "yep!" to the delivered package):
-	## - RewardPool gets the single-entry demo table (Placeholder Bolt).
+	## - RewardPool gets the demo table (Placeholder Bolt, Summon Ally and,
+	##   since #264, a placeholder CURRENCY entry for the current dungeons).
 	## - SpellProgress carries the two approved placeholder fork upgrades,
 	##   both at 10 Fire Ball casts: Split OR Beam, an equal-cost manual
 	##   either/or choice in the non-pausing Tab panel. Only the
