@@ -26,12 +26,17 @@ class_name HUD
 
 const RESERVED_PAD := 8.0
 const SLOT_SIDE := 48.0
-const HP_GREEN := Color(0.35, 0.8, 0.4, 1.0)
+## #244: the fill texture stores brightness only, so these tint it directly.
+## Green is the sheet art's own hue (median r/g and b/g).
+const HP_GREEN := Color(0.17, 1.0, 0.14, 1.0)
 const HP_AMBER := Color(0.95, 0.75, 0.25, 1.0)
 const HP_RED := Color(0.9, 0.3, 0.25, 1.0)
 const HP_AMBER_FRAC := 0.5
 const HP_RED_FRAC := 0.25
-const BAR_TRACK := Color(0.08, 0.08, 0.1, 0.9)
+const HP_TRACK_TEXTURE := preload("res://assets/sprites/hp_bar_track.png")
+const HP_FILL_TEXTURE := preload("res://assets/sprites/hp_bar_fill.png")
+const HP_TRACK_CAP := 42.0
+const HP_FILL_CAP := 44.0 # transparent padding + the fill's tapered tip
 
 var _player: Player
 var _caster: SpellCaster
@@ -52,8 +57,8 @@ var _progress_elapsed := 0.0
 @onready var _objective_label: Label = $Root/ObjectiveLabel
 
 func _ready() -> void:
-	_hp_bar.add_theme_stylebox_override("background", UiStyle.bar(BAR_TRACK))
-	_hp_bar.add_theme_stylebox_override("fill", UiStyle.bar(HP_GREEN))
+	_hp_bar.add_theme_stylebox_override("background", _hp_bar_style(HP_TRACK_TEXTURE, HP_TRACK_CAP))
+	_hp_bar.add_theme_stylebox_override("fill", _hp_bar_style(HP_FILL_TEXTURE, HP_FILL_CAP))
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 	if _player == null:
@@ -67,6 +72,15 @@ func _ready() -> void:
 	_on_health_changed(_player.hp, _player.max_hp)
 	if _caster != null:
 		_build_slot_grid()
+
+## Fixed end caps; the middle repeats so stars and stripes never stretch.
+func _hp_bar_style(texture: Texture2D, cap: float) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = texture
+	sb.texture_margin_left = cap
+	sb.texture_margin_right = cap
+	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	return sb
 
 func _build_slot_grid() -> void:
 	for i in SpellCaster.SLOT_COUNT:
@@ -104,12 +118,12 @@ func _on_health_changed(current: int, max_hp: int) -> void:
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = current
 	# #93: HP state color - green -> amber -> red as the fraction drops.
-	var fill := _hp_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	var fill := _hp_bar.get_theme_stylebox("fill") as StyleBoxTexture
 	if fill != null:
 		var frac := 0.0
 		if max_hp > 0:
 			frac = clampf(float(current) / float(max_hp), 0.0, 1.0)
-		fill.bg_color = HP_GREEN if frac > HP_AMBER_FRAC else (HP_AMBER if frac > HP_RED_FRAC else HP_RED)
+		fill.modulate_color = HP_GREEN if frac > HP_AMBER_FRAC else (HP_AMBER if frac > HP_RED_FRAC else HP_RED)
 
 func _on_player_died() -> void:
 	# Run restart is #6's job; the HUD only reflects the death state.
