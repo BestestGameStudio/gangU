@@ -100,3 +100,22 @@ with the right word.
   decisions (see ARCHITECTURE.md), and design docs belong here.
 - Private correspondence, credentials, personal configuration, and anything not meant
   for public view never get committed.
+
+## 9. Diagnose and repair repeated CI failures
+
+- When CI repeatedly fails on the same step with the same observed error, diagnose and
+  repair it rather than parking the work. File an issue naming the failing run, step
+  and observed error; distinguish evidence from an unknown root cause.
+- Use the normal PR route: a minimal repair, green CI on the exact head, and independent
+  review before merge. Never weaken checks, skip steps, merge around red CI, or loop
+  unchanged re-runs. Bounded attempts with backoff and captured diagnostics can improve
+  resilience without proving the underlying cause is fixed.
+
+## 10. Stay usefully occupied within agreed scope
+
+- Prioritize incoming reviews, then claim useful approved work per section 1: a free
+  issue, qualified backlog research, or an agreed repair. Coordinate claims and file
+  ownership before starting so there is only one writer per scope.
+- Preserve owner permissions and design gates: suggestions still need human approval,
+  and unresolved owner design decisions are not permission to invent gameplay.
+- Move the project forward without busywork, churn commits, or work outside agreed scope.

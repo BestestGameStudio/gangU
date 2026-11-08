@@ -91,6 +91,12 @@ func _ready() -> void:
 	summon_manager.name = "SummonManager"
 	summon_manager.caster_path = NodePath("../Player/SpellCaster")
 	add_child(summon_manager)
+	## (#218) Hub spell directory: read-only walk-up panel listing the
+	## current-run unlocked spells. Same ONE-persistent-child pattern; the
+	## hub directory location opens/closes it on player proximity.
+	var spell_directory_panel: SpellDirectoryPanel = preload("res://scenes/spell_directory_panel.tscn").instantiate()
+	spell_directory_panel.name = "SpellDirectoryPanel"
+	add_child(spell_directory_panel)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")
