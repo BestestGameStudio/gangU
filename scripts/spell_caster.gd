@@ -193,15 +193,22 @@ func _process(delta: float) -> void:
 		_cooldowns[s] = maxf(_cooldowns[s] - delta, 0.0)
 	if _input_casts_suppressed():
 		return
-	if Input.is_action_just_pressed(&"cast") and can_cast():
+	# #246: a HELD cast button auto-refires the moment the cooldown completes
+	# (pressed, not just_pressed). can_cast() gates the cooldown frames, so a
+	# held Space/LMB fires once per press, then refires on completion with no
+	# re-click; releasing the button stops it.
+	if Input.is_action_pressed(&"cast") and can_cast():
 		cast()
 	# #10: switching is caster-owned (player.gd untouched). The action has no
 	# key bound until the human key choice lands; harness drives next_spell().
 	if InputMap.has_action(&"switch_spell") and Input.is_action_just_pressed(&"switch_spell"):
 		next_spell()
 	# #10 slots: direct per-slot cast on keys 1-6 (registered in _ready).
+	# #246: same held-button auto-refire here. can_cast_slot gates empty and
+	# cooling slots up front, so a held key refires on cooldown completion
+	# and never spams cast_slot's refusal warnings while it runs.
 	for i in SLOT_COUNT:
-		if Input.is_action_just_pressed(StringName("spell_slot_%d" % (i + 1))):
+		if Input.is_action_pressed(StringName("spell_slot_%d" % (i + 1))) and can_cast_slot(i):
 			cast_slot(i)
 
 func cast() -> void:
