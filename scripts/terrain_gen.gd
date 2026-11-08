@@ -11,7 +11,8 @@ const DETAIL_THRESHOLD := 0.22
 const PATCH_RADIUS := 1
 
 ## biome -> [open tile, feature tile]. Index 0 is always walkable, so it is
-## also what the path guarantee carves blocked cells into.
+## also what the path guarantee carves blocked cells into. A map with a
+## TerrainPalette (#266) uses the palette's biomes and border instead.
 const BIOMES: Array = [
 	[TerrainTypes.GRASS, TerrainTypes.TREE],
 	[TerrainTypes.SNOW, TerrainTypes.ICE],
@@ -46,14 +47,16 @@ static func generate(map: TerrainMap, map_seed: int, size: Vector2i = DEFAULT_SI
 	var spawn := Vector2i(1, size.y / 2)
 	var exit := Vector2i(size.x - 2, size.y / 2)
 	var enclosed := layout != null and layout.enclosure == TerrainLayout.Enclosure.ENCLOSED
+	var biomes := biomes_for(map)
+	var border := TerrainTypes.OBSTACLE if map.palette == null else map.palette.border()
 	var cells := {}
 	for y in range(size.y):
 		for x in range(size.x):
 			var cell := Vector2i(x, y)
 			if enclosed or x == 0 or y == 0 or x == size.x - 1 or y == size.y - 1:
-				cells[cell] = TerrainTypes.OBSTACLE
+				cells[cell] = border
 				continue
-			var tiles: Array = BIOMES[_biome_index(biome_noise, cell)]
+			var tiles: Array = biomes[_biome_index(biome_noise, cell, biomes.size())]
 			var feature := detail_noise.get_noise_2d(x, y) > DETAIL_THRESHOLD
 			var near_endpoint := _chebyshev(cell, spawn) <= PATCH_RADIUS or _chebyshev(cell, exit) <= PATCH_RADIUS
 			cells[cell] = tiles[0] if near_endpoint or not feature else tiles[1]
@@ -67,7 +70,7 @@ static func generate(map: TerrainMap, map_seed: int, size: Vector2i = DEFAULT_SI
 			for wp: Vector2i in route:
 				if not waypoints.has(wp):
 					waypoints.append(wp)
-		_carve_skeleton(cells, rng, routes, waypoints, enclosed, biome_noise, detail_noise, size, spawn, exit)
+		_carve_skeleton(cells, rng, routes, waypoints, enclosed, biomes, biome_noise, detail_noise, size, spawn, exit)
 	map.set_cells(cells)
 	var carved := ensure_path(map, map_seed, spawn, exit)
 	return {"spawn": spawn, "exit": exit, "carved": carved, "waypoints": waypoints, "routes": routes}
@@ -99,7 +102,7 @@ static func _route_skeleton(rng: RandomNumberGenerator, branches: Array, size: V
 ## Corridors take the cell's biome open tile. Room cells off the corridors
 ## may take the biome feature tile in an enclosed map: the corridor already
 ## crosses each room, so a TREE there can only wall off a pocket.
-static func _carve_skeleton(cells: Dictionary, rng: RandomNumberGenerator, routes: Array[Array], waypoints: Array[Vector2i], enclosed: bool, biome_noise: FastNoiseLite, detail_noise: FastNoiseLite, size: Vector2i, spawn: Vector2i, exit: Vector2i) -> void:
+static func _carve_skeleton(cells: Dictionary, rng: RandomNumberGenerator, routes: Array[Array], waypoints: Array[Vector2i], enclosed: bool, biomes: Array, biome_noise: FastNoiseLite, detail_noise: FastNoiseLite, size: Vector2i, spawn: Vector2i, exit: Vector2i) -> void:
 	var corridor := {}
 	for route in routes:
 		for i in range(route.size() - 1):
@@ -112,12 +115,12 @@ static func _carve_skeleton(cells: Dictionary, rng: RandomNumberGenerator, route
 				var cell := Vector2i(x, y)
 				if corridor.has(cell):
 					continue
-				var tiles: Array = BIOMES[_biome_index(biome_noise, cell)]
+				var tiles: Array = biomes[_biome_index(biome_noise, cell, biomes.size())]
 				var near_endpoint := _chebyshev(cell, spawn) <= PATCH_RADIUS or _chebyshev(cell, exit) <= PATCH_RADIUS
 				var feature := enclosed and not near_endpoint and detail_noise.get_noise_2d(x, y) > DETAIL_THRESHOLD
 				cells[cell] = tiles[1] if feature else tiles[0]
 	for cell: Vector2i in corridor:
-		cells[cell] = BIOMES[_biome_index(biome_noise, cell)][0]
+		cells[cell] = biomes[_biome_index(biome_noise, cell, biomes.size())][0]
 
 ## L-shaped corridor from `a` to `b`. It leaves a waypoint on the middle row
 ## vertically, so the branches of a fork split up and down instead of
@@ -147,13 +150,14 @@ static func ensure_path(map: TerrainMap, map_seed: int, spawn: Vector2i, exit: V
 	if TerrainNav.reachable_from_cell(map, spawn).has(exit):
 		return false
 	var biome_noise := _noise(map_seed, BIOME_FREQUENCY)
+	var biomes := biomes_for(map)
 	var corridor := {}
 	var step_x := signi(exit.x - spawn.x)
 	var step_y := signi(exit.y - spawn.y)
 	var c := spawn
 	while true:
 		if not map.is_walkable_at_cell(c):
-			corridor[c] = BIOMES[_biome_index(biome_noise, c)][0]
+			corridor[c] = biomes[_biome_index(biome_noise, c, biomes.size())][0]
 		if c == exit:
 			break
 		c += Vector2i(step_x, 0) if c.x != exit.x else Vector2i(0, step_y)
@@ -167,8 +171,15 @@ static func _noise(noise_seed: int, frequency: float) -> FastNoiseLite:
 	n.frequency = frequency
 	return n
 
-static func _biome_index(biome_noise: FastNoiseLite, cell: Vector2i) -> int:
-	return 0 if biome_noise.get_noise_2d(cell.x, cell.y) < 0.0 else 1
+## #266: [[open, feature], ...] the map's palette asks for, else BIOMES.
+static func biomes_for(map: TerrainMap) -> Array:
+	return BIOMES if map.palette == null else map.palette.biomes()
+
+## Splits the biome noise range [-1, 1] into `count` equal bands. With two
+## biomes this is the original sign test (negative -> 0).
+static func _biome_index(biome_noise: FastNoiseLite, cell: Vector2i, count: int = 2) -> int:
+	var v := biome_noise.get_noise_2d(cell.x, cell.y)
+	return clampi(floori((v + 1.0) * 0.5 * count), 0, count - 1)
 
 static func _chebyshev(a: Vector2i, b: Vector2i) -> int:
 	return maxi(absi(a.x - b.x), absi(a.y - b.y))

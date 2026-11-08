@@ -15,6 +15,10 @@ extends Node2D
 ## layers are output-only. A walkable non-default type renders on Ground,
 ## a non-walkable type on Obstacle; default GROUND renders as the scene
 ## background (no tile), keeping the sparse store literal.
+##
+## #266: an optional `palette` lets a dungeon add its own tile types and
+## restyle built-in ones. Every property lookup here goes through it, so
+## movement, navigation and generation all see the palette's categories.
 
 signal cell_destroyed(cell: Vector2i, old_type: StringName, new_type: StringName)
 
@@ -41,6 +45,11 @@ var season: TerrainSeason.Season = TerrainSeason.Season.SUMMER:
 	set = _set_season
 var _atlas_source: TileSetAtlasSource = null
 
+## #266: the dungeon's own tiles. Changing it redraws the atlas; the cell
+## store is left as is.
+@export var palette: TerrainPalette = null:
+	set = _set_palette
+
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
 var _ground_layer: TileMapLayer = null
 var _obstacle_layer: TileMapLayer = null
@@ -52,7 +61,7 @@ func _ready() -> void:
 ## Assigns a cell. Returns false and changes nothing for an unregistered
 ## type. Assigning GROUND restores the default (erases the sparse entry).
 func set_cell(cell: Vector2i, type: StringName) -> bool:
-	if not TerrainTypes.is_valid(type):
+	if not is_valid_type(type):
 		return false
 	if type == TerrainTypes.GROUND:
 		_cells.erase(cell)
@@ -66,7 +75,7 @@ func set_cell(cell: Vector2i, type: StringName) -> bool:
 ## since a per-cell set_cell rebuild makes filling a map quadratic.
 func set_cells(cells: Dictionary) -> bool:
 	for type: StringName in cells.values():
-		if not TerrainTypes.is_valid(type):
+		if not is_valid_type(type):
 			return false
 	for cell: Vector2i in cells:
 		var type: StringName = cells[cell]
@@ -87,9 +96,10 @@ func clear_cell(cell: Vector2i) -> void:
 ## else is left untouched. Returns true iff the cell changed.
 func destroy_cell(cell: Vector2i) -> bool:
 	var old_type := tile_type_at_cell(cell)
-	if not TerrainTypes.is_destroyable(old_type):
+	var old_props := type_properties(old_type)
+	if not old_props["destroyable"]:
 		return false
-	var new_type := TerrainTypes.destroyed_into(old_type)
+	var new_type: StringName = old_props["destroyed_into"]
 	if not set_cell(cell, new_type):
 		return false
 	cell_destroyed.emit(cell, old_type, new_type)
@@ -113,16 +123,31 @@ func tile_type_at(world_pos: Vector2) -> StringName:
 	return tile_type_at_cell(world_to_cell(world_pos))
 
 func is_walkable_at_cell(cell: Vector2i) -> bool:
-	return TerrainTypes.is_walkable(tile_type_at_cell(cell))
+	return type_properties(tile_type_at_cell(cell))["walkable"]
 
 func is_walkable_at(world_pos: Vector2) -> bool:
-	return TerrainTypes.is_walkable(tile_type_at(world_pos))
+	return is_walkable_at_cell(world_to_cell(world_pos))
+
+## #266: the cell's TerrainTypes.Movement category.
+func movement_at_cell(cell: Vector2i) -> TerrainTypes.Movement:
+	return type_properties(tile_type_at_cell(cell))["movement"]
+
+func movement_at(world_pos: Vector2) -> TerrainTypes.Movement:
+	return movement_at_cell(world_to_cell(world_pos))
+
+## True iff `type` is a built-in type or one of this map's palette tiles.
+func is_valid_type(type: StringName) -> bool:
+	return TerrainTypes.is_valid(type) or (palette != null and palette.has_tile(type))
+
+## Properties of `type` on this map (palette-aware, fresh copy).
+func type_properties(type: StringName) -> Dictionary:
+	return palette.properties(type) if palette != null else TerrainTypes.properties(type)
 
 ## type + full properties at a world position, in one call. The returned
 ## Dictionary is a fresh copy (registry-safe).
 func properties_at(world_pos: Vector2) -> Dictionary:
 	var type: StringName = tile_type_at(world_pos)
-	var props := TerrainTypes.properties(type)
+	var props := type_properties(type)
 	props["type"] = type
 	return props
 
@@ -138,20 +163,60 @@ func _set_season(value: TerrainSeason.Season) -> void:
 	if _atlas_source != null:
 		_atlas_source.texture = _atlas_texture()
 
+func _set_palette(value: TerrainPalette) -> void:
+	palette = value
+	if palette != null:
+		var errors := palette.validate()
+		if not errors.is_empty():
+			push_warning("TerrainPalette '%s': %s" % [palette.resource_path, "; ".join(errors)])
+	if _atlas_source != null:
+		_sync_atlas_tiles()
+		_rebuild_presentation()
+
+## Atlas column order: built-in types first (stable columns), then the
+## palette's new ids.
+func _atlas_types() -> Array[StringName]:
+	var out: Array[StringName] = TerrainTypes.ALL.duplicate()
+	if palette != null:
+		out.append_array(palette.custom_ids())
+	return out
+
 func _atlas_texture() -> ImageTexture:
-	var n := TerrainTypes.ALL.size()
+	var types := _atlas_types()
+	var n := types.size()
 	var img := Image.create(cell_size * n, cell_size, false, Image.FORMAT_RGBA8)
 	for i in range(n):
-		img.fill_rect(Rect2i(i * cell_size, 0, cell_size, cell_size), TerrainSeason.color(season, TerrainTypes.ALL[i]))
+		var rect := Rect2i(i * cell_size, 0, cell_size, cell_size)
+		var t: TerrainTile = palette.tile(types[i]) if palette != null else null
+		if t == null:
+			img.fill_rect(rect, TerrainSeason.color(season, types[i]))
+		elif t.texture != null:
+			var art := t.texture.get_image()
+			if art.is_compressed():
+				art.decompress()
+			art.convert(Image.FORMAT_RGBA8)
+			art.resize(cell_size, cell_size, Image.INTERPOLATE_NEAREST)
+			img.blit_rect(art, Rect2i(Vector2i.ZERO, art.get_size()), rect.position)
+		else:
+			img.fill_rect(rect, t.color)
 	return ImageTexture.create_from_image(img)
 
-func _build_layers() -> void:
-	var n := TerrainTypes.ALL.size()
-	_atlas_source = TileSetAtlasSource.new()
+## Rebuilds the atlas texture and makes one tile per atlas column.
+func _sync_atlas_tiles() -> void:
 	_atlas_source.texture = _atlas_texture()
-	_atlas_source.texture_region_size = Vector2i(cell_size, cell_size)
+	var n := _atlas_types().size()
+	for i in range(_atlas_source.get_tiles_count() - 1, -1, -1):
+		var id := _atlas_source.get_tile_id(i)
+		if id.x >= n:
+			_atlas_source.remove_tile(id)
 	for i in range(n):
-		_atlas_source.create_tile(Vector2i(i, 0))
+		if not _atlas_source.has_tile(Vector2i(i, 0)):
+			_atlas_source.create_tile(Vector2i(i, 0))
+
+func _build_layers() -> void:
+	_atlas_source = TileSetAtlasSource.new()
+	_atlas_source.texture_region_size = Vector2i(cell_size, cell_size)
+	_sync_atlas_tiles()
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(cell_size, cell_size)
 	ts.add_source(_atlas_source, 0)
@@ -165,17 +230,20 @@ func _build_layers() -> void:
 	add_child(_obstacle_layer)
 
 func _atlas_column(type: StringName) -> int:
-	return TerrainTypes.ALL.find(type)
+	return _atlas_types().find(type)
 
 func _rebuild_presentation() -> void:
 	if _ground_layer == null:
 		return # pre-_ready writes; _ready rebuilds from the store
 	_ground_layer.clear()
 	_obstacle_layer.clear()
+	var types := _atlas_types()
 	for cell: Vector2i in _cells:
 		var type: StringName = _cells[cell]
-		var col := Vector2i(_atlas_column(type), 0)
-		if TerrainTypes.is_walkable(type):
+		var col := Vector2i(types.find(type), 0)
+		if col.x < 0:
+			continue # palette swapped away from this type: no look to draw
+		if type_properties(type)["walkable"]:
 			_ground_layer.set_cell(cell, 0, col)
 		else:
 			_obstacle_layer.set_cell(cell, 0, col)

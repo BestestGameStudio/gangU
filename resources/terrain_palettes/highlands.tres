@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="TerrainPalette" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/terrain_palette.gd" id="1_palette"]
+[ext_resource type="Script" path="res://scripts/terrain_tile.gd" id="2_tile"]
+
+[sub_resource type="Resource" id="meadow"]
+script = ExtResource("2_tile")
+id = &"meadow"
+movement = 0
+color = Color(0.55, 0.7, 0.32, 1)
+
+[sub_resource type="Resource" id="pine_forest"]
+script = ExtResource("2_tile")
+id = &"pine_forest"
+movement = 1
+color = Color(0.12, 0.26, 0.2, 1)
+
+[sub_resource type="Resource" id="scree"]
+script = ExtResource("2_tile")
+id = &"scree"
+movement = 0
+color = Color(0.62, 0.58, 0.5, 1)
+
+[sub_resource type="Resource" id="chasm"]
+script = ExtResource("2_tile")
+id = &"chasm"
+movement = 2
+color = Color(0.05, 0.04, 0.08, 1)
+
+[sub_resource type="Resource" id="cliff"]
+script = ExtResource("2_tile")
+id = &"cliff"
+movement = 2
+color = Color(0.33, 0.22, 0.3, 1)
+
+[sub_resource type="Resource" id="mountain"]
+script = ExtResource("2_tile")
+id = &"mountain"
+movement = 1
+color = Color(0.4, 0.4, 0.46, 1)
+
+[resource]
+script = ExtResource("1_palette")
+tiles = Array[ExtResource("2_tile")]([SubResource("meadow"), SubResource("pine_forest"), SubResource("scree"), SubResource("chasm"), SubResource("cliff"), SubResource("mountain")])
+open_tiles = Array[StringName]([&"meadow", &"scree"])
+feature_tiles = Array[StringName]([&"pine_forest", &"chasm"])
+border_tile = &"mountain"
