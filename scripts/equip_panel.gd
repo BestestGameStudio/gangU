@@ -45,6 +45,38 @@ var _unlocked_box: VBoxContainer
 var _slot_buttons: Array[Button] = []
 var _status: Label
 
+## #94 visual identity: flat code-drawn StyleBoxFlat + ColorRect chips (no
+## assets/gradients/glow), palette consistent with the #93 HUD pass. Texts,
+## providers and flow are unchanged; two state channels per unlocked row:
+## left-edge chip = equipped-in-a-slot, border = selected / upgrade-available /
+## normal. Slot buttons: occupied vs empty border, move-source highlight.
+const PANEL_BG := Color(0.05, 0.05, 0.07, 0.92)
+const ROW_BG := Color(0.08, 0.08, 0.1, 0.9)
+const B_DIM := Color(0.45, 0.48, 0.55, 0.6)
+const B_SELECTED := Color(0.85, 0.9, 1.0, 0.9)
+const B_UPGRADE := Color(0.95, 0.75, 0.25, 0.9)
+const B_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
+const CHIP_EQUIPPED := Color(0.5, 0.85, 0.55, 0.95)
+const CHIP_NONE := Color(1.0, 1.0, 1.0, 0.08)
+
+func _flat(bg: Color, border: Color, left_margin := 4.0) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.border_color = border
+	for side in ["border_width_left", "border_width_top", "border_width_right", "border_width_bottom"]:
+		sb.set(side, 1)
+	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
+		sb.set(corner, 3)
+	sb.content_margin_left = left_margin
+	for m in ["content_margin_top", "content_margin_right", "content_margin_bottom"]:
+		sb.set(m, 4.0)
+	return sb
+
+func _button_style(b: Button, border: Color, left_margin := 4.0) -> void:
+	var sb := _flat(ROW_BG, border, left_margin)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(st, sb)
+
 func _ready() -> void:
 	visible = false
 	layer = 10
@@ -89,6 +121,7 @@ func _build_ui() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _flat(PANEL_BG, B_DIM)) # #93/#94 plate
 	center.add_child(panel)
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
@@ -106,6 +139,10 @@ func _build_ui() -> void:
 	var slots_box := VBoxContainer.new()
 	slots_box.add_theme_constant_override("separation", 4)
 	cols.add_child(slots_box)
+	var slots_header := Label.new() # #94: two-column readability, mirrors "Unlocked"
+	slots_header.text = "Slots"
+	slots_header.add_theme_font_size_override("font_size", 22)
+	slots_box.add_child(slots_header)
 	for i in 6:
 		var b := Button.new()
 		b.add_theme_font_size_override("font_size", 22)
@@ -151,12 +188,32 @@ func _refresh() -> void:
 	header.text = "Unlocked"
 	header.add_theme_font_size_override("font_size", 22)
 	_unlocked_box.add_child(header)
+	var slots_now: Array = _caster.get_slots()
 	for s in _caster.get_unlocked():
+		# #94: Button stays a DIRECT child of _unlocked_box (test_e_mount
+		# white-boxes that structure for keyboard focus); the state chip is a
+		# child ColorRect pinned to the button's left inner edge.
 		var b := Button.new()
 		b.add_theme_font_size_override("font_size", 22)
+		b.custom_minimum_size = Vector2(200, 0)
 		b.toggle_mode = true
 		b.text = (s as Spell).spell_name
 		b.button_pressed = (s == _selected)
+		var border := B_DIM
+		if _upgrader != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(s):
+			border = B_UPGRADE
+		if s == _selected:
+			border = B_SELECTED
+		_button_style(b, border, 18.0) # left margin clears the state chip
+		var chip := ColorRect.new()
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.color = CHIP_EQUIPPED if slots_now.has(s) else CHIP_NONE
+		chip.anchor_bottom = 1.0
+		chip.offset_left = 2.0
+		chip.offset_top = 2.0
+		chip.offset_right = 12.0
+		chip.offset_bottom = -2.0
+		b.add_child(chip)
 		var spell: Spell = s
 		b.pressed.connect(func(): _on_spell_pressed(spell))
 		_unlocked_box.add_child(b)
@@ -164,6 +221,10 @@ func _refresh() -> void:
 	for i in _slot_buttons.size():
 		var occupant: Spell = slots[i] if i < slots.size() else null
 		_slot_buttons[i].text = "%d: %s" % [i + 1, occupant.spell_name if occupant != null else "(empty)"]
+		var sborder := B_ASSIGNED if occupant != null else B_DIM
+		if occupant != null and occupant == _selected:
+			sborder = B_SELECTED # move-source highlight
+		_button_style(_slot_buttons[i], sborder)
 	# Upgrade section: only when a provider is wired AND a spell is selected.
 	for c in _upgrade_box.get_children():
 		c.queue_free()
@@ -175,6 +236,7 @@ func _refresh() -> void:
 		for path in _upgrader.get_upgrade_paths(_selected):
 			var b := Button.new()
 			b.add_theme_font_size_override("font_size", 22)
+			_button_style(b, B_UPGRADE) # #94: upgrade channel color
 			b.text = path.display_name
 			var pid = path.id
 			b.pressed.connect(func(): _on_upgrade_pressed(pid))
