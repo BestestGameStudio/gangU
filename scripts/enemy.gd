@@ -5,6 +5,9 @@ extends CharacterBody2D
 ## #99 (Foundation E2): chase/contact behavior extracted into a per-enemy
 ## behavior instance (see enemy_behavior_chase_contact.gd); swappable via
 ## the definition's behavior slot. Behavior unchanged.
+## #177: optional "Sprite" child (EnemySprite, Mustache Warrior art) drives
+## idle/walk/attack/hurt animation; death hands off to a detached corpse
+## that plays the death animation. Visual only - the contract is unchanged.
 
 signal died()
 signal health_changed(current: int, max_hp: int)
@@ -39,6 +42,8 @@ var _player: Player
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.
 var _behavior: RefCounted
+## #177: animated art, if this enemy scene carries one (null otherwise).
+@onready var sprite: EnemySprite = get_node_or_null("Sprite") as EnemySprite
 
 func _ready() -> void:
 	if definition != null:
@@ -95,11 +100,28 @@ func apply_damage(amount: int) -> void:
 
 ## #110: death burst - visual only; the effect owns its lifetime and is
 ## parented to my area, so it survives my queue_free. HP/drop/AI untouched.
+## #177: sprite enemies burst in their own green and leave a corpse that
+## plays the death animation (it frees itself).
+const SPRITE_BURST_COLOR: Color = Color(0.62, 0.9, 0.24)
+
 func _spawn_death_burst() -> void:
 	var c: Color = Color(0.95, 0.42, 0.06)
 	if has_node("Spikes"):
 		c = $Spikes.color
+	if sprite != null:
+		c = SPRITE_BURST_COLOR
+		EnemySprite.spawn_corpse(sprite, get_parent())
 	CombatEffects.death_burst(get_parent(), global_position, c)
+
+## #177: behaviors request animations through here (attack swing, boss
+## wind-ups...). No-op for enemies without a Sprite. Visual only.
+func play_action(anim: StringName, hold: bool = false) -> void:
+	if sprite != null:
+		sprite.play_action(anim, hold)
+
+func clear_action() -> void:
+	if sprite != null:
+		sprite.clear_action()
 
 func _process(delta: float) -> void:
 	if _flash_t > 0.0:

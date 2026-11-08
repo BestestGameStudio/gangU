@@ -98,10 +98,28 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				var area = scene.current_area
 				var portal: ExitPortal = area.get_node_or_null("ExitPortal")
+				# #177 / O1 (2026-11-08): DungeonB now has an ELIMINATION objective,
+				# so its portal is LOCKED (D12 clear-or-die) until the Warlord dies.
 				print("[9] PROD after RED gate area=", area.name, " portal=", portal != null,
 					" locked=", portal.locked if portal else "?",
-					" -> ", "PASS" if area.name == "DungeonB" and portal and not portal.locked else "FAIL")
-				portal._on_body_entered(p)
+					" -> ", "PASS" if area.name == "DungeonB" and portal and portal.locked else "FAIL")
+				if portal:
+					portal._on_body_entered(p) # must be ignored while locked
+				for e in get_nodes_in_group("enemies"):
+					e.apply_damage(999) # synthetic kills: mobs -> boss spawns
+				phase = 61; t = 0
+		61:
+			if t > 0.3:
+				print("[9] PROD red locked entry ignored -> ", "PASS" if scene.current_area.name == "DungeonB" else "FAIL")
+				for b in get_nodes_in_group("boss"):
+					b.apply_damage(9999) # synthetic Warlord kill
+				phase = 62; t = 0
+		62:
+			if t > 0.3:
+				var portal2: ExitPortal = scene.current_area.get_node_or_null("ExitPortal")
+				print("[9] PROD red cleared -> portal unlocked -> ", "PASS" if portal2 and not portal2.locked else "FAIL")
+				if portal2:
+					portal2._on_body_entered(p)
 				phase = 7; t = 0
 		7:
 			if t > 0.4:

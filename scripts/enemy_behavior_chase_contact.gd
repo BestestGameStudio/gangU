@@ -28,3 +28,4 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 	if to_player.length() <= enemy.contact_range and _contact_timer <= 0.0:
 		player.apply_damage(enemy.contact_damage)
 		_contact_timer = enemy.contact_cooldown
+		enemy.play_action(&"attack") # #177: visual swing only
