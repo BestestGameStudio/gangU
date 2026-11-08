@@ -44,9 +44,6 @@ var _slots: Array[Spell] = [null, null, null, null, null, null]
 
 const SLOT_COUNT := 6
 
-var _bar_fill: Polygon2D
-var _bar_bg: Polygon2D
-
 var equipped_spell: Spell:
 	get:
 		if spells.is_empty():
@@ -57,10 +54,6 @@ func _ready() -> void:
 	for s in starting_spells:
 		add_spell(s)
 	_register_slot_actions()
-	# Simple on-player cooldown bar so a blocked recast is visible in-game (#3
-	# acceptance). The real HUD is #11.
-	_bar_bg = $CooldownBarBG
-	_bar_fill = $CooldownBarFill
 
 ## #10 slots: runtime action+binding registration. Idempotent across scene
 ## reloads (InputMap is global): existing actions are left untouched, so
@@ -198,7 +191,6 @@ func can_cast() -> bool:
 func _process(delta: float) -> void:
 	for s in _cooldowns.keys():
 		_cooldowns[s] = maxf(_cooldowns[s] - delta, 0.0)
-	_update_bar()
 	if _input_casts_suppressed():
 		return
 	if Input.is_action_just_pressed(&"cast") and can_cast():
@@ -248,14 +240,3 @@ func _cast_spell(spell: Spell) -> void:
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
 	CombatEffects.muzzle(get_tree().current_scene, global_position, dir.angle(), spell.projectile_color)
-
-func _update_bar() -> void:
-	if equipped_spell == null:
-		return
-	# Keep the bar upright: the parent player rotates to face the cursor.
-	_bar_bg.global_rotation = 0.0
-	_bar_fill.global_rotation = 0.0
-	var frac := 1.0
-	if equipped_spell.cooldown > 0.0:
-		frac = 1.0 - clampf(cooldown_remaining(equipped_spell) / equipped_spell.cooldown, 0.0, 1.0)
-	_bar_fill.scale.x = maxf(frac, 0.001)

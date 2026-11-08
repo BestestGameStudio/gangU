@@ -48,7 +48,7 @@ var _spell_rows := {} ## Spell -> {name: Label, bar: ProgressBar, state: Label}
 ## masked (lead UX choice); gates read reserved_rect() to keep their world
 ## labels out. Plate mouse_filter=IGNORE in the scene: click-through
 ## behavior in the HUD zone is unchanged.
-@onready var _plate: ColorRect = $BackingPlate
+@onready var _plate: Panel = $BackingPlate
 
 var _objective: DungeonObjective
 var _discover_elapsed := 0.0
@@ -63,8 +63,6 @@ var _progress_elapsed := 0.0
 
 ## #10 slots slice (C): built only when the pinned slot API is present.
 const PLATE_PAD := 8.0
-## #93 visual identity: flat code-drawn styleboxes (no assets), neutral
-## decoration + readable state colors. Labels, texts and data are unchanged.
 const HP_GREEN := Color(0.35, 0.8, 0.4, 1.0)
 const HP_AMBER := Color(0.95, 0.75, 0.25, 1.0)
 const HP_RED := Color(0.9, 0.3, 0.25, 1.0)
@@ -73,11 +71,10 @@ const HP_RED_FRAC := 0.25
 const BAR_TRACK := Color(0.08, 0.08, 0.1, 0.9)
 const BAR_READY := Color(0.8, 0.85, 0.95, 1.0)
 const BAR_COOLING := Color(0.35, 0.45, 0.6, 0.9)
+## Row fill stays as translucent as the plate so the HUD never fully hides
+## the world under it.
 const FRAME_BG := Color(0.05, 0.05, 0.07, 0.55)
-const FRAME_EQUIPPED := Color(0.85, 0.9, 1.0, 0.9)
-const FRAME_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
-const FRAME_DIM := Color(0.45, 0.48, 0.55, 0.6)
-const FRAME_EMPTY := Color(0.4, 0.42, 0.48, 0.6)
+const FRAME_PAD := 3.0
 var _slots_supported := false
 var _slot_widgets: Array = [] ## [{frame,key,name,bar,state,cooling}] x 6
 ## #122: dim hint shown only when zero slots are assigned (empty slots
@@ -88,25 +85,11 @@ var _style_ready: StyleBoxFlat
 var _style_cooling: StyleBoxFlat
 var _frame_cache := {} ## border Color -> StyleBoxFlat
 
-func _bar_style(c: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = c
-	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
-		sb.set(corner, 3)
-	return sb
-
 func _frame_style(border: Color) -> StyleBoxFlat:
 	if _frame_cache.has(border):
 		return _frame_cache[border]
-	var sb := StyleBoxFlat.new()
+	var sb := UiStyle.row(border, FRAME_PAD, -1.0, border == UiStyle.B_SELECTED)
 	sb.bg_color = FRAME_BG
-	sb.border_color = border
-	for side in ["border_width_left", "border_width_top", "border_width_right", "border_width_bottom"]:
-		sb.set(side, 1)
-	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
-		sb.set(corner, 3)
-	for m in ["content_margin_left", "content_margin_top", "content_margin_right", "content_margin_bottom"]:
-		sb.set(m, 3.0)
 	_frame_cache[border] = sb
 	return sb
 
@@ -132,6 +115,9 @@ func _apply_bar_state(bar: ProgressBar, cooling: bool) -> void:
 	bar.add_theme_stylebox_override("fill", _style_cooling if cooling else _style_ready)
 
 func _ready() -> void:
+	_plate.add_theme_stylebox_override("panel", UiStyle.panel(UiStyle.PLATE_BG))
+	_hp_bar.add_theme_stylebox_override("background", UiStyle.bar(BAR_TRACK))
+	_hp_bar.add_theme_stylebox_override("fill", UiStyle.bar(HP_GREEN))
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 	if _player == null:
@@ -140,9 +126,9 @@ func _ready() -> void:
 		push_warning("HUD: no player found (player_path unset, no 'player' group); HUD idle.")
 		return
 	_caster = _player.get_node_or_null("SpellCaster") as SpellCaster
-	_style_track = _bar_style(BAR_TRACK)
-	_style_ready = _bar_style(BAR_READY)
-	_style_cooling = _bar_style(BAR_COOLING)
+	_style_track = UiStyle.bar(BAR_TRACK)
+	_style_ready = UiStyle.bar(BAR_READY)
+	_style_cooling = UiStyle.bar(BAR_COOLING)
 	_player.health_changed.connect(_on_health_changed)
 	_player.died.connect(_on_player_died)
 	_on_health_changed(_player.hp, _player.max_hp)
@@ -166,7 +152,7 @@ func _ready() -> void:
 
 func _add_spell_row(spell: Spell) -> void:
 	var frame := PanelContainer.new() # #93: flat border frame; border highlights equipped
-	frame.add_theme_stylebox_override("panel", _frame_style(FRAME_DIM))
+	frame.add_theme_stylebox_override("panel", _frame_style(UiStyle.B_DIM))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
 	frame.add_child(row)
@@ -192,7 +178,7 @@ func _add_spell_row(spell: Spell) -> void:
 func _build_slot_rows() -> void:
 	for i in 6:
 		var frame := PanelContainer.new() # #93: flat border frame; border shows assigned vs empty
-		frame.add_theme_stylebox_override("panel", _frame_style(FRAME_EMPTY))
+		frame.add_theme_stylebox_override("panel", _frame_style(UiStyle.B_DIM))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 4)
 		frame.add_child(row)
@@ -257,7 +243,7 @@ func _update_slot_rows() -> void:
 		w["name"].text = spell.spell_name + _tier_suffix(spell)
 		w["bar"].value = frac
 		w["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
-		w["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_ASSIGNED))
+		w["frame"].add_theme_stylebox_override("panel", _frame_style(UiStyle.B_ASSIGNED))
 		var cooling := rem > 0.0
 		if cooling != w["cooling"]:
 			w["cooling"] = cooling
@@ -292,7 +278,7 @@ func _process(delta: float) -> void:
 		var equipped: bool = s == _caster.equipped_spell
 		if equipped != row["equipped"]:
 			row["equipped"] = equipped
-			row["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_EQUIPPED if equipped else FRAME_DIM))
+			row["frame"].add_theme_stylebox_override("panel", _frame_style(UiStyle.B_SELECTED if equipped else UiStyle.B_DIM))
 
 func _on_health_changed(current: int, max_hp: int) -> void:
 	_hp_label.text = "HP %d/%d" % [current, max_hp]

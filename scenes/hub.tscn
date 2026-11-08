@@ -1,5 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://bgangu7hub"]
 
+[ext_resource type="Script" path="res://scripts/hub_floor.gd" id="hub_floor"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dnb" path="res://scenes/dungeon_b.tscn" id="4"]
@@ -7,6 +8,9 @@
 [ext_resource type="PackedScene" path="res://scenes/dungeon_c.tscn" id="7_dnc"]
 
 [node name="Hub" type="Node2D"]
+
+[node name="Floor" type="Node2D" parent="."]
+script = ExtResource("hub_floor")
 
 [node name="Background" type="Node2D" parent="."]
 z_index = -50

@@ -71,12 +71,6 @@ func _initialize() -> void:
 	_caster = load("res://scripts/spell_caster.gd").new()
 	_caster.projectile_scene = load("res://scenes/projectile.tscn")
 	_caster.position = Vector2(400, 300)
-	var bg := Polygon2D.new()
-	bg.name = "CooldownBarBG"
-	_caster.add_child(bg)
-	var fill := Polygon2D.new()
-	fill.name = "CooldownBarFill"
-	_caster.add_child(fill)
 	_area.add_child(_caster)
 
 func _process(_dt: float) -> bool:

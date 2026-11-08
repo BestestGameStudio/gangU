@@ -109,7 +109,7 @@ func _process(_d: float) -> bool:
 				return false
 			_check(root.get_visible_rect().size == Vector2(1152, 648), "viewport is the real 1152x648 (not headless default)")
 			_check(hud != null, "HUD mounted")
-			var plate: ColorRect = hud.get_node_or_null("BackingPlate")
+			var plate: Panel = hud.get_node_or_null("BackingPlate")
 			_check(plate != null, "BackingPlate exists")
 			_check(plate != null and plate.mouse_filter == Control.MOUSE_FILTER_IGNORE, "plate click-through (mouse_filter IGNORE)")
 			_check(plate != null and plate.visible, "plate visible")

@@ -20,7 +20,8 @@ extends SceneTree
 ##                dungeon enemies read green (g>b, #177 Mustache Warrior art)
 ##   aim tint   - AimIndicator is blue-family (was orange-red), same triangle
 ##                at (22,0)
-##   bar tint   - CooldownBarFill is blue-family, BG stays neutral
+##   no overhead bar - the SpellCaster draws nothing above the player for
+##                cooldowns (the HUD slot rows own cooldown display)
 ##   aim track  - player rotation follows the cursor, warped mouse positions
 ##                produce the expected angles
 ##   hub boot   - production hub boots with the player present
@@ -92,8 +93,11 @@ func _process(delta: float) -> bool:
 				_check("aim tint: AimIndicator blue-family, triangle at (22,0)",
 					_blue_family(aim.color) and aim.position == Vector2(22, 0)
 					and aim.polygon.size() == 3)
-				var fill: Polygon2D = p.get_node("SpellCaster/CooldownBarFill")
-				_check("bar tint: CooldownBarFill blue-family", _blue_family(fill.color))
+				var caster := p.get_node("SpellCaster")
+				_check("no overhead bar: SpellCaster draws no cooldown bar",
+					caster.get_node_or_null("CooldownBarBG") == null
+					and caster.get_node_or_null("CooldownBarFill") == null
+					and caster.find_children("*", "CanvasItem").is_empty())
 				Input.action_press("move_right")
 				phase = 1; t = 0
 		1:
