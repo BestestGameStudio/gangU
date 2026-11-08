@@ -58,6 +58,14 @@ func _ready() -> void:
 	if definition != null and definition.behavior != null:
 		_behavior = definition.behavior.new()
 
+## #301: unpair on exit - a freed body otherwise leaves a stale entry in
+## peers' collision exception lists, and the engine logs
+## "Parameter \"body\" is null" the next time a peer reads its list.
+func _exit_tree() -> void:
+	for e in get_collision_exceptions():
+		if is_instance_valid(e):
+			e.remove_collision_exception_with(self)
+
 func _physics_process(delta: float) -> void:
 	if _behavior != null and hp > 0:
 		_behavior.physics_step(self, player, delta)

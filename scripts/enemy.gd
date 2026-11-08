@@ -88,6 +88,14 @@ func _ignore_player_bodies() -> void:
 	if _player != null and is_instance_valid(_player):
 		ActorCollision.ignore_pair(self, _player)
 
+## #301: unpair on exit - a freed body otherwise leaves a stale entry in
+## peers' collision exception lists, and the engine logs
+## "Parameter \"body\" is null" the next time a peer reads its list.
+func _exit_tree() -> void:
+	for e in get_collision_exceptions():
+		if is_instance_valid(e):
+			e.remove_collision_exception_with(self)
+
 ## #109: hit feedback - brief over-bright flash so a registered hit is
 ## visible even when the enemy survives (25 dmg vs 30 hp). Additive only.
 var _flash_t: float = 0.0
