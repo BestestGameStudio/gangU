@@ -15,6 +15,8 @@ signal health_changed(current: int, max_hp: int)
 var terrain: TerrainMap = null
 
 var hp: int
+var damage_modifiers := DamageModifiers.new()
+var damage_rng := RandomNumberGenerator.new()
 
 ## #137: wizard sprite facing state. The 8-way movement vector collapses to
 ## 4-way facing on the dominant axis (exact diagonals resolve vertically) and
@@ -30,6 +32,7 @@ var facing: StringName = &"down"
 
 func _ready() -> void:
 	hp = max_hp
+	damage_rng.randomize()
 	if sprite != null:
 		# Legacy dart hull + its nose accent both retire when the wizard art
 		# carries the player visual; the AimIndicator is aim, not hull, and

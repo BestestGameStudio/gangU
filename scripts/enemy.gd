@@ -37,6 +37,8 @@ signal health_changed(current: int, max_hp: int)
 @export var definition: EnemyDefinition
 
 var hp: int
+var damage_modifiers := DamageModifiers.new()
+var damage_rng := RandomNumberGenerator.new()
 var terrain: TerrainMap = null
 var _player: Player
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
@@ -53,6 +55,7 @@ func _ready() -> void:
 		contact_cooldown = definition.contact_cooldown
 		contact_range = definition.contact_range
 	hp = max_hp
+	damage_rng.randomize()
 	add_to_group("enemies")
 	# #99: instantiate MY OWN behavior (never a shared Resource). Slot unset
 	# or no definition = the current chase/contact implementation; a slot
