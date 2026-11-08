@@ -6,9 +6,9 @@ extends SceneTree
 ##   structure  - gate.tscn and exit_portal.tscn keep every script-coupled
 ##                node exactly (scripts drive $ColorRect/$TypeLabel/
 ##                $StateLabel by name; test50b measures label geometry)
-##   decor      - gate: HeaderBar + ChevronTop + ChevronBottom flat
-##                Polygon2D (dark slate, DOWN = entry); portal: ExitArrow
-##                flat Polygon2D (light lavender, UP = exit) - exact points
+##   decor      - gate: oval portal (Rim Line2D + Body Polygon2D, full
+##                look proven by test189); portal: ExitArrow flat Polygon2D
+##                (light lavender, UP = exit) - exact points
 ##   families   - hub boot: NORMAL gate tint blue, RED gate tint red
 ##                (script-driven, intact over the neutral decor)
 ##   portal     - real normal-gate entry into DungeonA: ExitPortal decor
@@ -17,11 +17,7 @@ extends SceneTree
 ## negative. Gate use follows the test9 direct _on_body_entered idiom -
 ## NOT real-input movement proof.
 
-const SLATE := Color(0.12, 0.14, 0.18, 0.9)
 const LAVENDER := Color(0.85, 0.8, 0.95, 0.9)
-const HEADER_BAR: Array[Vector2] = [Vector2(-26, -36), Vector2(26, -36), Vector2(26, -29), Vector2(-26, -29)]
-const CHEVRON_TOP: Array[Vector2] = [Vector2(-12, -27), Vector2(0, -17), Vector2(12, -27), Vector2(12, -21), Vector2(0, -11), Vector2(-12, -21)]
-const CHEVRON_BOTTOM: Array[Vector2] = [Vector2(-12, 11), Vector2(0, 21), Vector2(12, 11), Vector2(12, 17), Vector2(0, 27), Vector2(-12, 17)]
 const EXIT_ARROW: Array[Vector2] = [Vector2(0, -26), Vector2(14, -6), Vector2(6, -6), Vector2(6, 18), Vector2(-6, 18), Vector2(-6, -6), Vector2(-14, -6)]
 
 var scene: Node
@@ -64,15 +60,10 @@ func _gate_structure(gate: Node, where: String) -> void:
 	var cs: CollisionShape2D = gate.get_node_or_null("CollisionShape2D")
 	_check(where + ": collision RectangleShape2D (52,72) untouched",
 		cs != null and cs.shape is RectangleShape2D and cs.shape.size == Vector2(52, 72))
-	var hb: Node = gate.get_node_or_null("HeaderBar")
-	var ct: Node = gate.get_node_or_null("ChevronTop")
-	var cb: Node = gate.get_node_or_null("ChevronBottom")
-	_check(where + ": HeaderBar flat slate lintel",
-		hb is Polygon2D and _poly_eq(hb.polygon, HEADER_BAR) and _color_eq(hb.color, SLATE))
-	_check(where + ": ChevronTop DOWN chevron slate",
-		ct is Polygon2D and _poly_eq(ct.polygon, CHEVRON_TOP) and _color_eq(ct.color, SLATE))
-	_check(where + ": ChevronBottom DOWN chevron slate",
-		cb is Polygon2D and _poly_eq(cb.polygon, CHEVRON_BOTTOM) and _color_eq(cb.color, SLATE))
+	var rim: Node = gate.get_node_or_null("Rim")
+	var body: Node = gate.get_node_or_null("Body")
+	_check(where + ": oval portal decor (48-point rim, filled body)",
+		rim is Line2D and rim.points.size() == 48 and body is Polygon2D and body.polygon.size() == 96)
 
 func _process(delta: float) -> bool:
 	t += delta
