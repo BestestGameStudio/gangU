@@ -29,6 +29,7 @@ signal purchased(entry: ShopEntry)
 var _catalog: ShopCatalog
 var _wallet: CurrencyWallet
 var _caster: SpellCaster
+var _consumables: Consumables
 
 func setup(catalog: ShopCatalog) -> void:
 	_catalog = catalog
@@ -36,6 +37,7 @@ func setup(catalog: ShopCatalog) -> void:
 func _ready() -> void:
 	add_to_group("shop")
 	_wallet = get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
+	_consumables = get_tree().get_first_node_in_group("consumables") as Consumables
 	if caster_path != NodePath(""):
 		_caster = get_node_or_null(caster_path) as SpellCaster
 	if _caster == null:
@@ -46,6 +48,8 @@ func _ready() -> void:
 		push_warning("Shop: no currency_wallet group node; all buys refuse.")
 	if _caster == null:
 		push_warning("Shop: no player SpellCaster found; spell grants refuse.")
+	if _consumables == null:
+		push_warning("Shop: no consumables group node; consumable grants refuse.")
 
 ## Catalog entries the player can currently buy: valid, priced, and not
 ## already owned (ownership exclusion, Daniel 2026-11-07).
@@ -61,13 +65,22 @@ func offerable_entries() -> Array[ShopEntry]:
 func can_grant(good: Resource) -> bool:
 	if good is Spell:
 		return _caster != null and not _caster.get_unlocked().has(good)
-	return false # C3/C4 consumable/relic grant seams land here
+	if good is Consumable:
+		# #156: consumables are count-based and RE-PURCHASABLE; Daniel's
+		# never-sell-owned rule names spells, so no ownership exclusion here.
+		return _consumables != null
+	return false # C4 relic grant seam lands here
 
 func grant(good: Resource) -> bool:
 	if good is Spell:
 		if not can_grant(good):
 			return false
 		_caster.unlock_spell(good)
+		return true
+	if good is Consumable:
+		if _consumables == null:
+			return false
+		_consumables.add(good)
 		return true
 	return false
 
