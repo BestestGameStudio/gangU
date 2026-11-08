@@ -17,6 +17,9 @@ extends SceneTree
 ##               unlocks the exit portal, and the crumble animation is the
 ##               last thing playing before despawn
 ##   escape    - after the unlock the portal returns to the hub
+##   guard     - anti-soft-lock negatives: a DungeonB WITHOUT an objective,
+##               and one whose objective has NO boss_scene, both mount the
+##               exit portal UNLOCKED (the #55 escape path stays safe)
 ## Negative leg: on the pre-#173 base there is no BossHead / boss spawn in
 ## DungeonB, so red-entry, sprite, volley, aoe and death legs all FAIL.
 ## GANGU_CAPTURE_DIR set + real renderer: saves harness PNG captures.
@@ -140,6 +143,7 @@ func _physics_process(delta: float) -> bool:
 				_check("exit portal unlocked on completion", not portal.locked)
 				_check("death animation playing", boss.sprite.animation == &"death")
 				_capture("death")
+				_capture("unlock")
 				phase = 6
 				t = 0.0
 		6: # despawn after crumble
@@ -151,11 +155,42 @@ func _physics_process(delta: float) -> bool:
 		7:
 			if t > 0.5:
 				_check("unlocked portal returns to the hub", scene.current_area != null and scene.current_area.name == "Hub")
+				_capture("hub")
+				_guard_legs()
 				return _finish()
 	if t > 12.0:
 		_check("watchdog: phase " + str(phase) + " finished in time", false)
 		return _finish()
 	return false
+
+## Anti-soft-lock negatives (lead boundary rule): the red exit may only be
+## locked when BOTH a live objective AND its boss_scene exist.
+func _guard_legs() -> void:
+	# No objective at all: portal must stay unlocked.
+	var bare := Node2D.new()
+	bare.name = "DungeonB"
+	scene.add_child(bare)
+	scene._mount_exit_portal(bare)
+	var bp: Node = bare.get_node_or_null("ExitPortal")
+	_check("guard: no objective -> portal stays UNLOCKED", bp != null and not bp.locked)
+	## Immediate free: a deferred free would leave a live "DungeonB" sibling
+	## and the next bare node would be auto-renamed off the mount guards.
+	scene.remove_child(bare)
+	bare.free()
+	# Objective present but boss_scene missing: portal must stay unlocked.
+	var bare2 := Node2D.new()
+	bare2.name = "DungeonB"
+	scene.add_child(bare2)
+	scene._mount_objective(bare2)
+	var obj2: Node = bare2.get_node_or_null("DungeonObjective")
+	_check("guard: objective mounted for the leg", obj2 != null)
+	if obj2 != null:
+		obj2.boss_scene = null
+	scene._mount_exit_portal(bare2)
+	var bp2: Node = bare2.get_node_or_null("ExitPortal")
+	_check("guard: objective without boss_scene -> portal stays UNLOCKED", bp2 != null and not bp2.locked)
+	scene.remove_child(bare2)
+	bare2.free()
 
 func _check_spriteframes() -> void:
 	var sf: SpriteFrames = boss.sprite.sprite_frames
