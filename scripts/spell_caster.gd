@@ -28,6 +28,9 @@ signal slot_cleared(index: int)
 signal spell_replaced(old_spell: Spell, new_spell: Spell)
 
 @export var projectile_scene: PackedScene
+
+## #110: muzzle accent - code-drawn, tinted per spell (visual only).
+const CombatEffects = preload("res://scripts/combat_effects.gd")
 @export var starting_spells: Array[Spell] = []
 
 var spells: Array[Spell] = []
@@ -242,6 +245,9 @@ func _cast_spell(spell: Spell) -> void:
 	_cooldowns[spell] = spell.cooldown
 	cooldown_started.emit(spell, spell.cooldown)
 	spell_cast.emit(spell)
+	# #110: brief muzzle accent at the cast point, facing the aim direction.
+	# Visual only; parented to the scene root, lifetime owned by the effect.
+	CombatEffects.muzzle(get_tree().current_scene, global_position, dir.angle(), spell.projectile_color)
 
 func _update_bar() -> void:
 	if equipped_spell == null:
