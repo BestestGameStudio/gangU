@@ -153,14 +153,34 @@ func _mount_area_spawns(area: Node) -> void:
 ## DungeonA. Mounted AFTER _mount_area_spawns - DungeonObjective._ready
 ## scans the "enemies" group, so the enemies must already be in the tree or
 ## the objective targets 0 and never completes.
+## #177 / O1 (human decision 2026-11-08): red-gate DungeonB runs ELIMINATION -
+## clear its mobs, then the Mustache Warlord spawns; the boss kill clears it.
+## The boss enters the tree deferred, so its player_path (production Player is
+## in no group, D6) is assigned in boss_spawned, before tree entry.
+const WARLORD_SCENE: PackedScene = preload("res://scenes/mustache_warlord.tscn")
+const DUNGEON_B_BOSS_SPAWN: Vector2 = Vector2(576, 240)
+
 func _mount_objective(area: Node) -> void:
-	if area.name != "DungeonA":
-		return
 	var obj := DungeonObjective.new()
 	obj.name = "DungeonObjective"
-	obj.dungeon_id = &"dungeon_a"
+	if area.name == "DungeonA":
+		obj.dungeon_id = &"dungeon_a"
+	elif area.name == "DungeonB":
+		obj.dungeon_id = &"dungeon_b"
+		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
+		obj.boss_scene = WARLORD_SCENE
+		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_B_BOSS_SPAWN) if area is Node2D else DUNGEON_B_BOSS_SPAWN
+		obj.boss_spawned.connect(_on_boss_spawned)
+	else:
+		obj.free()
+		return
 	obj.objective_completed.connect(_on_objective_completed)
 	area.add_child(obj)
+
+## Boss -> Main/<Area>/<Boss>, so the Player is "../../Player" (AreaSpawnData idiom).
+func _on_boss_spawned(boss: Node) -> void:
+	if boss is Enemy:
+		boss.player_path = NodePath("../../Player")
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
@@ -168,17 +188,19 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
 ## anytime, objective not required). Returns to the hub in the SAME run via a
 ## deferred swap - the shared Player is repositioned, never recreated, so
-## spells and current HP are retained. #55: red-gate DungeonB mounts it
-## UNLOCKED too - DungeonB has no enemies/objective, so without a portal an
-## entered run could not end (soft-lock). Locked objective-gated portal
-## mechanics remain proven by the labeled fixture regression in
-## scripts/test9_exit_flow.gd.
+## spells and current HP are retained. Red-gate DungeonB (#177 / O1, human
+## decision 2026-11-08) now has an ELIMINATION objective, so it mounts the
+## portal LOCKED per D12 (clear-or-die): it opens when the Warlord dies. The
+## #55 unlocked mount only existed because DungeonB had no objective.
 func _mount_exit_portal(area: Node) -> void:
 	if area.name != "DungeonA" and area.name != "DungeonB":
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
 	portal.position = Vector2(576, 120)
+	if area.name == "DungeonB" and area.has_node("DungeonObjective"):
+		portal.locked = true
+		portal.objective_path = NodePath("../DungeonObjective")
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 

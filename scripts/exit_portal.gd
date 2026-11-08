@@ -7,9 +7,10 @@ extends Area2D
 ## Normal-gate dungeons mount it unlocked (retreat at any time, objective not
 ## required). Red-gate dungeons WITH an objective mount it locked; it opens
 ## when the dungeon objective completes (clear-or-die: death restarts the run
-## via RunManager). #55: a red-gate dungeon WITHOUT an objective (DungeonB in
-## the demo config) mounts it unlocked - no objective exists to open a locked
-## one, so a locked mount would soft-lock the run.
+## via RunManager). #55: a red-gate dungeon WITHOUT an objective mounts it
+## unlocked - no objective exists to open a locked one, so a locked mount
+## would soft-lock the run. (DungeonB gained an ELIMINATION objective in
+## #177 / O1, 2026-11-08, and now mounts it locked.)
 
 signal entered(portal: ExitPortal)
 
