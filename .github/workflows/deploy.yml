@@ -30,7 +30,24 @@ jobs:
       - name: Install Web (nothreads) export templates
         run: |
           mkdir -p "$HOME/.local/share/godot/export_templates/4.5.1.stable"
-          wget -q -O /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz
+          ok=0
+          for attempt in 1 2 3 4; do
+            if timeout --kill-after=10 300 wget --tries=1 --continue --timeout=60 --progress=dot:giga -o "/tmp/dl_attempt_${attempt}.log" -O /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz; then
+              ok=1
+              break
+            else
+              rc=$?
+              echo "template download attempt ${attempt}/4 failed (exit ${rc}); last log lines:" >&2
+              tail -n 5 "/tmp/dl_attempt_${attempt}.log" >&2
+            fi
+            if [ "$attempt" -lt 4 ]; then sleep 15; fi
+          done
+          if [ "$ok" -ne 1 ] || [ ! -s /tmp/templates.tpz ]; then
+            echo "template download FAILED after 4 attempts (no further network calls)" >&2
+            rm -f /tmp/templates.tpz
+            exit 1
+          fi
+          unzip -t -qq /tmp/templates.tpz "templates/web_nothreads_debug.zip" "templates/web_nothreads_release.zip" >/dev/null || { echo "template archive failed integrity check" >&2; exit 1; }
           unzip -o -j /tmp/templates.tpz "templates/web_nothreads_debug.zip" "templates/web_nothreads_release.zip" -d "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
           rm -f /tmp/templates.tpz
       - name: Export Web build
