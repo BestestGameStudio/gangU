@@ -14,15 +14,11 @@ extends CanvasLayer
 ## disabled while Shop.can_paid_refresh() is false. Victory re-rolls and
 ## price resets arrive live through Shop.stock_refreshed.
 ##
-## UI is code-built in the #94 flat identity (StyleBoxFlat, no assets).
+## UI is code-built; the look comes from UiStyle.
 ## While visible the panel joins "modal_ui" so the caster skips casting on
 ## panel clicks (EquipPanel idiom). Found via the "shop_panel" group.
 
-const PANEL_BG := Color(0.05, 0.05, 0.07, 0.92)
-const ROW_BG := Color(0.08, 0.08, 0.1, 0.9)
-const B_DIM := Color(0.45, 0.48, 0.55, 0.6)
-const B_BUY := Color(0.95, 0.75, 0.25, 0.9)
-const TEXT_DIM := Color(0.7, 0.72, 0.78, 1.0)
+const ROW_PAD := 6.0
 const OUT_OF_STOCK_TEXT := "OUT OF STOCK"
 
 var _shop: Shop
@@ -55,19 +51,10 @@ func close() -> void:
 	visible = false
 	remove_from_group("modal_ui")
 
-func _flat(bg: Color, border: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.border_color = border
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(2)
-	sb.set_content_margin_all(6.0)
-	return sb
-
 func _build_skeleton() -> void:
-	var backdrop := ColorRect.new()
+	var backdrop := Panel.new()
 	backdrop.name = "Backdrop"
-	backdrop.color = PANEL_BG
+	backdrop.add_theme_stylebox_override("panel", UiStyle.panel())
 	backdrop.anchor_left = 0.5
 	backdrop.anchor_top = 0.5
 	backdrop.anchor_right = 0.5
@@ -96,7 +83,7 @@ func _build_skeleton() -> void:
 	vbox.add_child(title)
 	_balance_label = Label.new()
 	_balance_label.name = "BalanceLabel"
-	_balance_label.add_theme_color_override("font_color", TEXT_DIM)
+	_balance_label.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	_balance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_balance_label)
 	_rows = VBoxContainer.new()
@@ -105,12 +92,12 @@ func _build_skeleton() -> void:
 	vbox.add_child(_rows)
 	_refresh_button = Button.new()
 	_refresh_button.name = "RefreshButton"
-	_refresh_button.add_theme_stylebox_override("normal", _flat(ROW_BG, B_BUY))
+	UiStyle.style_button(_refresh_button, UiStyle.B_ACCENT, ROW_PAD)
 	_refresh_button.pressed.connect(_on_refresh_pressed)
 	vbox.add_child(_refresh_button)
 	var hint := Label.new()
 	hint.text = "Walk away to close"
-	hint.add_theme_color_override("font_color", TEXT_DIM * Color(1, 1, 1, 0.6))
+	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
 	hint.add_theme_font_size_override("font_size", 11)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
@@ -137,7 +124,7 @@ func _render() -> void:
 
 func _make_row(entry: ShopEntry) -> Control:
 	var row := PanelContainer.new()
-	row.add_theme_stylebox_override("panel", _flat(ROW_BG, B_DIM))
+	row.add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_DIM, ROW_PAD))
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
 	row.add_child(hbox)
@@ -147,12 +134,12 @@ func _make_row(entry: ShopEntry) -> Control:
 	hbox.add_child(name_label)
 	var price_label := Label.new()
 	price_label.text = "%dc" % entry.price
-	price_label.add_theme_color_override("font_color", B_BUY)
+	price_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
 	hbox.add_child(price_label)
 	var buy_button := Button.new()
 	buy_button.name = "BuyButton"
 	buy_button.text = "BUY"
-	buy_button.add_theme_stylebox_override("normal", _flat(ROW_BG, B_BUY))
+	UiStyle.style_button(buy_button, UiStyle.B_ACCENT, ROW_PAD)
 	buy_button.pressed.connect(_on_buy_pressed.bind(entry))
 	hbox.add_child(buy_button)
 	return row
@@ -162,12 +149,12 @@ func _make_row(entry: ShopEntry) -> Control:
 func _make_out_of_stock_row() -> Control:
 	var row := PanelContainer.new()
 	row.name = "OutOfStockRow"
-	row.add_theme_stylebox_override("panel", _flat(ROW_BG, B_DIM))
+	row.add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_DIM, ROW_PAD))
 	var label := Label.new()
 	label.name = "OutOfStockLabel"
 	label.text = OUT_OF_STOCK_TEXT
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_color_override("font_color", TEXT_DIM * Color(1, 1, 1, 0.7))
+	label.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.7))
 	row.add_child(label)
 	return row
 

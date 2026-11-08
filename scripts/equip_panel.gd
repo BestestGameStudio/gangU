@@ -45,37 +45,11 @@ var _unlocked_box: VBoxContainer
 var _slot_buttons: Array[Button] = []
 var _status: Label
 
-## #94 visual identity: flat code-drawn StyleBoxFlat + ColorRect chips (no
-## assets/gradients/glow), palette consistent with the #93 HUD pass. Texts,
-## providers and flow are unchanged; two state channels per unlocked row:
-## left-edge chip = equipped-in-a-slot, border = selected / upgrade-available /
-## normal. Slot buttons: occupied vs empty border, move-source highlight.
-const PANEL_BG := Color(0.05, 0.05, 0.07, 0.92)
-const ROW_BG := Color(0.08, 0.08, 0.1, 0.9)
-const B_DIM := Color(0.45, 0.48, 0.55, 0.6)
-const B_SELECTED := Color(0.85, 0.9, 1.0, 0.9)
-const B_UPGRADE := Color(0.95, 0.75, 0.25, 0.9)
-const B_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
+## Two state channels per unlocked row: left-edge chip = equipped-in-a-slot,
+## border = selected / upgrade-available / normal. Slot buttons: occupied vs
+## empty border, move-source highlight.
 const CHIP_EQUIPPED := Color(0.5, 0.85, 0.55, 0.95)
 const CHIP_NONE := Color(1.0, 1.0, 1.0, 0.08)
-
-func _flat(bg: Color, border: Color, left_margin := 4.0) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.border_color = border
-	for side in ["border_width_left", "border_width_top", "border_width_right", "border_width_bottom"]:
-		sb.set(side, 1)
-	for corner in ["corner_radius_top_left", "corner_radius_top_right", "corner_radius_bottom_right", "corner_radius_bottom_left"]:
-		sb.set(corner, 3)
-	sb.content_margin_left = left_margin
-	for m in ["content_margin_top", "content_margin_right", "content_margin_bottom"]:
-		sb.set(m, 4.0)
-	return sb
-
-func _button_style(b: Button, border: Color, left_margin := 4.0) -> void:
-	var sb := _flat(ROW_BG, border, left_margin)
-	for st in ["normal", "hover", "pressed", "focus"]:
-		b.add_theme_stylebox_override(st, sb)
 
 ## #38: compact ASCII tier suffix on upgrade-channel buttons only (lead UX
 ## call: [S]/[M]/[G] for Specialization/Mastery/Signature, Base shows
@@ -136,7 +110,7 @@ func _build_ui() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _flat(PANEL_BG, B_DIM)) # #93/#94 plate
+	panel.add_theme_stylebox_override("panel", UiStyle.panel())
 	center.add_child(panel)
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
@@ -214,12 +188,12 @@ func _refresh() -> void:
 		b.toggle_mode = true
 		b.text = (s as Spell).spell_name
 		b.button_pressed = (s == _selected)
-		var border := B_DIM
+		var border := UiStyle.B_DIM
 		if _upgrader != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(s):
-			border = B_UPGRADE
+			border = UiStyle.B_ACCENT
 		if s == _selected:
-			border = B_SELECTED
-		_button_style(b, border, 18.0) # left margin clears the state chip
+			border = UiStyle.B_SELECTED
+		UiStyle.style_button(b, border, 4.0, 18.0, s == _selected) # left pad clears the state chip
 		var chip := ColorRect.new()
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chip.color = CHIP_EQUIPPED if slots_now.has(s) else CHIP_NONE
@@ -236,10 +210,11 @@ func _refresh() -> void:
 	for i in _slot_buttons.size():
 		var occupant: Spell = slots[i] if i < slots.size() else null
 		_slot_buttons[i].text = "%d: %s" % [i + 1, occupant.spell_name if occupant != null else "(empty)"]
-		var sborder := B_ASSIGNED if occupant != null else B_DIM
-		if occupant != null and occupant == _selected:
-			sborder = B_SELECTED # move-source highlight
-		_button_style(_slot_buttons[i], sborder)
+		var move_source := occupant != null and occupant == _selected
+		var sborder := UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM
+		if move_source:
+			sborder = UiStyle.B_SELECTED
+		UiStyle.style_button(_slot_buttons[i], sborder, 4.0, -1.0, move_source)
 	# Upgrade section: only when a provider is wired AND a spell is selected.
 	for c in _upgrade_box.get_children():
 		c.queue_free()
@@ -251,7 +226,7 @@ func _refresh() -> void:
 		for path in _upgrader.get_upgrade_paths(_selected):
 			var b := Button.new()
 			b.add_theme_font_size_override("font_size", 22)
-			_button_style(b, B_UPGRADE) # #94: upgrade channel color
+			UiStyle.style_button(b, UiStyle.B_ACCENT)
 			b.text = path.display_name + _tier_suffix(path)
 			var pid = path.id
 			b.pressed.connect(func(): _on_upgrade_pressed(pid))
