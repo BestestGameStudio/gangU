@@ -55,6 +55,12 @@ func _ready() -> void:
 	pool.name = "RewardPool"
 	pool.setup(loot_table)
 	add_child(pool)
+	## (#128, foundation C1) Run-scoped currency wallet - same ONE-persistent
+	## child pattern; per-run reset comes free from the full scene reload.
+	## Inert until currency content lands (amounts/carriers human-open).
+	var wallet := CurrencyWallet.new()
+	wallet.name = "CurrencyWallet"
+	add_child(wallet)
 	var progress := SpellProgress.new()
 	progress.name = "SpellProgress"
 	progress.caster_path = NodePath("../Player/SpellCaster")
