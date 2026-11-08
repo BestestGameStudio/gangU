@@ -30,12 +30,6 @@ func _ready() -> void:
 	player.add_child(nose)
 	_caster = SpellCaster.new()
 	_caster.name = "SpellCaster"
-	var bg := Polygon2D.new()
-	bg.name = "CooldownBarBG"
-	_caster.add_child(bg)
-	var fill := Polygon2D.new()
-	fill.name = "CooldownBarFill"
-	_caster.add_child(fill)
 	player.add_child(_caster)
 	player.add_to_group("player")
 	add_child(player)

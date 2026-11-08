@@ -41,12 +41,6 @@ func _make_player() -> Player:
 	p.add_child(nose)
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
-	var bg := Polygon2D.new()
-	bg.name = "CooldownBarBG"
-	caster.add_child(bg)
-	var fill := Polygon2D.new()
-	fill.name = "CooldownBarFill"
-	caster.add_child(fill)
 	p.add_child(caster)
 	p.add_to_group("player")
 	root.add_child(p)
