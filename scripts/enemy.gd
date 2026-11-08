@@ -109,7 +109,7 @@ func _spawn_death_burst() -> void:
 	if has_node("Spikes"):
 		c = $Spikes.color
 	if sprite != null:
-		c = SPRITE_BURST_COLOR
+		c = sprite.burst_color
 		EnemySprite.spawn_corpse(sprite, get_parent())
 	CombatEffects.death_burst(get_parent(), global_position, c)
 

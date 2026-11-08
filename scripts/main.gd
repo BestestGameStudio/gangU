@@ -165,6 +165,10 @@ func _mount_area_spawns(area: Node) -> void:
 ## in no group, D6) is assigned in boss_spawned, before tree entry.
 const WARLORD_SCENE: PackedScene = preload("res://scenes/mustache_warlord.tscn")
 const DUNGEON_B_BOSS_SPAWN: Vector2 = Vector2(576, 240)
+## #173 (human decision 2026-11-08): boss-gate DungeonC is a boss arena only -
+## ELIMINATION with zero mobs, so the Head boss spawns on entry.
+const HEAD_BOSS_SCENE: PackedScene = preload("res://scenes/head_boss.tscn")
+const DUNGEON_C_BOSS_SPAWN: Vector2 = Vector2(576, 300)
 
 func _mount_objective(area: Node) -> void:
 	var obj := DungeonObjective.new()
@@ -176,6 +180,12 @@ func _mount_objective(area: Node) -> void:
 		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
 		obj.boss_scene = WARLORD_SCENE
 		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_B_BOSS_SPAWN) if area is Node2D else DUNGEON_B_BOSS_SPAWN
+		obj.boss_spawned.connect(_on_boss_spawned)
+	elif area.name == "DungeonC":
+		obj.dungeon_id = &"dungeon_c"
+		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
+		obj.boss_scene = HEAD_BOSS_SCENE
+		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_C_BOSS_SPAWN) if area is Node2D else DUNGEON_C_BOSS_SPAWN
 		obj.boss_spawned.connect(_on_boss_spawned)
 	else:
 		obj.free()
@@ -204,7 +214,7 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## portal LOCKED per D12 (clear-or-die): it opens when the Warlord dies. The
 ## #55 unlocked mount only existed because DungeonB had no objective.
 func _mount_exit_portal(area: Node) -> void:
-	if area.name != "DungeonA" and area.name != "DungeonB":
+	if not area.name in [&"DungeonA", &"DungeonB", &"DungeonC"]:
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
@@ -214,7 +224,8 @@ func _mount_exit_portal(area: Node) -> void:
 	# soft-lock the run (#55). Fail open instead.
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var completable := obj != null and (obj.objective_type != DungeonObjective.ObjectiveType.ELIMINATION or obj.boss_scene != null)
-	if area.name == "DungeonB" and completable:
+	# #173: boss-gate DungeonC is clear-or-die too (locked until the Head dies).
+	if area.name in [&"DungeonB", &"DungeonC"] and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
 	portal.entered.connect(_on_exit_portal_entered)

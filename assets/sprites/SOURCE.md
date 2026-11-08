@@ -49,3 +49,46 @@ here is cut from it by `tools/sprites/extract_frames.py` with
   extracted yet (no consumer); the board labels Lunge (4) / Spin (6) /
   Ranged (4) but draws 2 / 3 / 3 frames - the drawn frames are used.
 - SpriteFrames: resources/sprites/mustache_warrior_frames.tres.
+
+# head_boss.png - the Head (boss of DungeonC, #173)
+
+Art from issue #173 ("BOSS SPRITE"): the 1536x1024 "Boss: Head (Top-Down
+2D)" concept sheet attached to the issue by Mitravasu (project human). It is
+a presentation board (labels, panels, dark background, uneven spacing and
+panels drawn at different character sizes), so it is NOT shipped as-is; the
+engine sheet here is cut from it by `tools/sprites/extract_frames.py` with
+`tools/sprites/specs/head_boss.json` (background keyed out, 3:1
+alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/head_boss.json <board.png> assets/sprites/head_boss.png --tres resources/sprites/head_boss_frames.tres`.
+
+## Layout
+- Cell: 48x48 px, chin on row 44, head ~24 px tall (the scene draws it 3x).
+  Sheet: 11 cols x 7 rows (528x336).
+- Rows (frames drawn on the board -> packed): 0 idle (6), 1 walk (7),
+  2 projectile attack (8), 3 AoE pulse (8), 4 hurt (4), 5 stun (4),
+  6 death (11).
+- Animations (resources/sprites/head_boss_frames.tres): idle 6 (loop),
+  walk 7 (loop), attack 4 (projectile frames 3-6, contact bite),
+  windup_projectile 4 + projectile 4 (projectile row split at the scream),
+  windup_aoe 4 + aoe 4 (AoE row split at the release), hurt 4, stun 4
+  (loop), death 11 (last three frames held longer).
+- Facing: idle/attack/stun are front views; the walk row faces LEFT, so the
+  scene sets `EnemySprite.art_faces_left` and flip_h mirrors it toward the
+  right.
+
+## Board vs. extraction (labels lie)
+- "Move (8, 4 dir)" draws 7 frames per row, and the rows are mislabelled:
+  "Up" and "Down" are front views, "Right" faces LEFT and turns to the
+  front, "Left" faces left. Only the consistent "Left" row is used (as walk).
+- "Death (10)" draws 11 frames; all 11 are used.
+- Per-row size normalisation (nearest resize before the downsample): the
+  board draws walk heads ~0.8x, AoE heads ~0.9x and death heads ~1.25x the
+  idle head, so those rows are resized 1.25 / 1.1 / 0.8 (stun 1.05). The
+  walk panel also has a soft grey glow keyed out as a second backdrop colour.
+- AoE: the board's pulse rings overlap the neighbouring frames and fade into
+  the background, so only the heads are cut (`keep_largest`); the ring is
+  drawn in-engine by `BossTelegraph`. A few ring pixels remain touching the
+  head on the brightest pulse frame.
+- Not extracted (no consumer, and drawn ~1.5x larger than the rows): the
+  "FX / Telegraphed Variants" panels (Charge, Dash, Invulnerable/Shield,
+  Targeted/Warning) and the "VFX Elements" overlays; the large portrait.

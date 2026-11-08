@@ -14,6 +14,8 @@ const WARN_COLOR: Color = Color(0.72, 1.0, 0.26)
 const FILL_ALPHA: float = 0.09
 const EDGE_ALPHA: float = 0.55
 const PULSE_RATE: float = 18.0
+## #173: per-boss telegraph colour (the Head boss uses its crimson).
+@export var warn_color: Color = WARN_COLOR
 
 var mode: int = Mode.NONE
 var _dir: Vector2 = Vector2.RIGHT
@@ -69,11 +71,11 @@ func _draw() -> void:
 		return
 	var f: float = clampf(_t / _duration, 0.0, 1.0)
 	var pulse: float = 0.5 + 0.5 * sin(_t * PULSE_RATE)
-	var fill := WARN_COLOR
+	var fill := warn_color
 	fill.a = FILL_ALPHA * (0.6 + 0.4 * pulse)
-	var edge := WARN_COLOR
+	var edge := warn_color
 	edge.a = EDGE_ALPHA * (0.7 + 0.3 * pulse)
-	var charge := WARN_COLOR
+	var charge := warn_color
 	charge.a = 0.08 + 0.22 * f
 	match mode:
 		Mode.LINE:
@@ -86,7 +88,7 @@ func _draw() -> void:
 			draw_polyline(PackedVector2Array([n, _dir * _length + n, _dir * _length - n, -n, n]), edge, 1.5)
 		Mode.RING:
 			if _active:
-				var live := WARN_COLOR
+				var live := warn_color
 				live.a = 0.10 + 0.08 * pulse
 				draw_circle(Vector2.ZERO, _radius, live)
 				draw_arc(Vector2.ZERO, _radius, 0.0, TAU, 48, edge, 2.0)
