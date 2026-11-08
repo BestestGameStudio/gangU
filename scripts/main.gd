@@ -198,7 +198,12 @@ func _mount_exit_portal(area: Node) -> void:
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
 	portal.position = Vector2(576, 120)
-	if area.name == "DungeonB" and area.has_node("DungeonObjective"):
+	# Lock only when a completable objective exists: an ELIMINATION objective
+	# without a boss_scene could never clear, so a locked portal would
+	# soft-lock the run (#55). Fail open instead.
+	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
+	var completable := obj != null and (obj.objective_type != DungeonObjective.ObjectiveType.ELIMINATION or obj.boss_scene != null)
+	if area.name == "DungeonB" and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
 	portal.entered.connect(_on_exit_portal_entered)
