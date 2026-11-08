@@ -10,15 +10,26 @@ extends RefCounted
 ## max distance - ENGAGEMENT IS NOW THE TOP PRIORITY and aggro_range no
 ## longer gates target selection (the field stays on SummonDefinition as
 ## inert data for later tuning).
+## #281 (Daniel, 2026-11-08): "summons should pathfind around terrain not
+## walk through it". Movement requests route through the TerrainMap lookup
+## seam (world_to_cell/cell_to_world/is_walkable_at - read-only): a clear
+## straight line steers direct, a blocked line triggers a bounded 4-dir A*
+## over the walkability grid, replanned on a short timer because the target
+## moves. TerrainMotion.resolve still shapes the final velocity (speed
+## multiplier/friction/wall cancel), so corner cells can never be entered.
+## summon.terrain == null (harnesses without a Terrain node) behaves exactly
+## as #280 - no lookup, no pathfinding.
 ##
 ## Contract:
 ##   (a) ENGAGE FIRST - while any live enemy exists, chase the nearest one at
-##       ANY distance to contact_range, then apply contact_damage with
+##       ANY distance to contact_range (pathfinding around terrain when a
+##       terrain grid is wired), then apply contact_damage with
 ##       contact_cooldown between hits through the one DamageCalc path. The
 ##       timer lives on this per-summon instance and is never shared
 ##       (EnemyBehaviorChaseContact idiom).
 ##   (b) RETURN - with NO live enemies, when the player is beyond follow_far,
-##       move toward the player ("will follow if you get too far").
+##       move toward the player ("will follow if you get too far"), with the
+##       same terrain routing.
 ##   (c) Otherwise hold position ("stays at a distance from you").
 ##
 ## Taunt is NOT implemented here: enemies retarget through enemy.gd's
@@ -27,8 +38,18 @@ extends RefCounted
 
 var _contact_timer: float = 0.0
 
+## #281: path state (per-summon instance, never shared).
+const REPLAN_INTERVAL: float = 0.25
+const WAYPOINT_EPS: float = 8.0
+const MAX_EXPANSIONS: int = 2000
+const SEARCH_MARGIN: int = 16
+var _path: Array[Vector2i] = []
+var _path_index: int = 0
+var _replan_timer: float = 0.0
+
 func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 	_contact_timer = maxf(0.0, _contact_timer - delta)
+	_replan_timer = maxf(0.0, _replan_timer - delta)
 	var def := summon.definition
 	if def == null:
 		summon.velocity = Vector2.ZERO
@@ -40,7 +61,7 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 	if target != null:
 		var to_enemy: Vector2 = target.global_position - summon.global_position
 		if to_enemy.length() > def.contact_range:
-			summon.velocity = to_enemy.normalized() * def.speed
+			summon.velocity = _steer_toward(summon, target.global_position, def.speed, delta)
 		else:
 			summon.velocity = Vector2.ZERO
 			if _contact_timer <= 0.0:
@@ -52,7 +73,7 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 	if player != null and is_instance_valid(player):
 		var to_player: Vector2 = player.global_position - summon.global_position
 		if to_player.length() > def.follow_far:
-			summon.velocity = to_player.normalized() * def.speed
+			summon.velocity = _steer_toward(summon, player.global_position, def.speed, delta)
 			summon.move_and_slide()
 			return
 	# (c) Hold position.
@@ -72,3 +93,121 @@ func _nearest_enemy(summon: Summon) -> Enemy:
 			best_d = d
 			best = enemy
 	return best
+
+## #281: desired velocity toward dest, routed around unwalkable terrain when
+## a grid is wired. Direct when the straight line is walkable; A* waypoint
+## steering otherwise. TerrainMotion.resolve always has the last word on the
+## velocity, so a blocked step is cancelled (never entered) even at corners.
+func _steer_toward(summon: Summon, dest: Vector2, speed: float, delta: float) -> Vector2:
+	var map: TerrainMap = summon.terrain
+	var desired: Vector2 = (dest - summon.global_position).normalized() * speed
+	if map == null:
+		return desired
+	if _line_walkable(map, summon.global_position, dest):
+		_path = []
+		_replan_timer = REPLAN_INTERVAL
+		return TerrainMotion.resolve(map, summon.global_position, summon.velocity, desired, delta, false)
+	if _replan_timer <= 0.0 or _path.is_empty():
+		_path = _find_path(map, summon.global_position, dest)
+		_path_index = 0
+		_replan_timer = REPLAN_INTERVAL
+	if _path.is_empty():
+		# No route found within the search bounds: keep the #165 slide
+		# behavior (blocked step cancels) rather than freezing or clipping.
+		return TerrainMotion.resolve(map, summon.global_position, summon.velocity, desired, delta, false)
+	var waypoint: Vector2 = map.cell_to_world(_path[_path_index])
+	if summon.global_position.distance_to(waypoint) < WAYPOINT_EPS and _path_index < _path.size() - 1:
+		_path_index += 1
+		waypoint = map.cell_to_world(_path[_path_index])
+	var wp_desired: Vector2 = (waypoint - summon.global_position).normalized() * speed
+	var resolved := TerrainMotion.resolve(map, summon.global_position, summon.velocity, wp_desired, delta, false)
+	if resolved == Vector2.ZERO:
+		# Wedged (corner or moving target shifted the map): replan next frame.
+		_replan_timer = 0.0
+	return resolved
+
+## Straight-line walkability, sampled at half-cell steps so no unwalkable
+## cell is skipped between samples.
+func _line_walkable(map: TerrainMap, from: Vector2, to: Vector2) -> bool:
+	var dist := from.distance_to(to)
+	var steps := int(ceil(dist / (map.cell_size * 0.5))) + 1
+	for i in steps + 1:
+		if not map.is_walkable_at(from.lerp(to, float(i) / steps)):
+			return false
+	return true
+
+## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
+## cutting between blocked cells). Returns the cell path EXCLUDING the start
+## cell, ending at the goal cell or the reachable walkable cell nearest to it
+## (the target may hug a wall); empty when nothing reachable improves on the
+## start cell.
+func _find_path(map: TerrainMap, from: Vector2, to: Vector2) -> Array[Vector2i]:
+	var start := map.world_to_cell(from)
+	var goal := map.world_to_cell(to)
+	if start == goal:
+		return []
+	var min_c := Vector2i(mini(start.x, goal.x) - SEARCH_MARGIN, mini(start.y, goal.y) - SEARCH_MARGIN)
+	var max_c := Vector2i(maxi(start.x, goal.x) + SEARCH_MARGIN, maxi(start.y, goal.y) + SEARCH_MARGIN)
+	var open: Array[Vector2i] = [start]
+	var came := {}
+	var g := {start: 0.0}
+	var best := start
+	var best_h := _h(start, goal)
+	var expansions := 0
+	while not open.is_empty() and expansions < MAX_EXPANSIONS:
+		var current := _pop_lowest_f(open, g, goal)
+		if map.is_walkable_at_cell(current) and _h(current, goal) < best_h:
+			best = current
+			best_h = _h(current, goal)
+		if current == goal:
+			best = current
+			break
+		expansions += 1
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var next: Vector2i = current + d
+			if next.x < min_c.x or next.y < min_c.y or next.x > max_c.x or next.y > max_c.y:
+				continue
+			if not map.is_walkable_at_cell(next):
+				continue
+			var ng: float = g[current] + 1.0 + _clearance_penalty(map, next, goal)
+			if ng < g.get(next, INF):
+				g[next] = ng
+				came[next] = current
+				if not open.has(next):
+					open.append(next)
+	if best == start:
+		return []
+	var rev: Array[Vector2i] = [best]
+	var c := best
+	while came.has(c):
+		c = came[c]
+		if c != start:
+			rev.push_front(c)
+	return rev
+
+func _pop_lowest_f(open: Array[Vector2i], g: Dictionary, goal: Vector2i) -> Vector2i:
+	var best_i := 0
+	var best_f := INF
+	for i in open.size():
+		var f: float = g.get(open[i], INF) + _h(open[i], goal)
+		if f < best_f:
+			best_f = f
+			best_i = i
+	var cell := open[best_i]
+	open.remove_at(best_i)
+	return cell
+
+func _h(a: Vector2i, b: Vector2i) -> float:
+	return absf(a.x - b.x) + absf(a.y - b.y)
+
+## Soft one-cell clearance around blocked cells: keeps waypoints (and the
+## sprite) off wall corners so the ally never visibly brushes terrain. The
+## goal cell is exempt - an enemy hugging a wall must stay reachable.
+func _clearance_penalty(map: TerrainMap, cell: Vector2i, goal: Vector2i) -> float:
+	if cell == goal:
+		return 0.0
+	var blocked := 0
+	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		if not map.is_walkable_at_cell(cell + d):
+			blocked += 1
+	return 0.75 * blocked
