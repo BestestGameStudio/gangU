@@ -1,0 +1,63 @@
+name: Set up Godot
+description: >
+  Installs the Godot editor binary (headless-capable), a virtual display and
+  software GL so the game can render screenshots/video on a CI runner, then
+  imports the project so scripts and resources resolve.
+
+inputs:
+  version:
+    description: Godot version, must match project.godot / deploy.yml.
+    default: "4.5.1"
+
+runs:
+  using: composite
+  steps:
+    - name: Restore Godot binary
+      id: godot-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/godot-bin
+        key: godot-bin-${{ inputs.version }}-linux-x86_64
+
+    - name: Download Godot ${{ inputs.version }}
+      if: steps.godot-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        name="Godot_v${{ inputs.version }}-stable_linux.x86_64"
+        mkdir -p ~/.cache/godot-bin
+        curl -fsSL --retry 4 --retry-delay 15 -o /tmp/godot.zip \
+          "https://github.com/godotengine/godot/releases/download/${{ inputs.version }}-stable/${name}.zip"
+        unzip -q -o /tmp/godot.zip -d /tmp/godot
+        mv "/tmp/godot/${name}" ~/.cache/godot-bin/godot
+        chmod +x ~/.cache/godot-bin/godot
+        rm -rf /tmp/godot /tmp/godot.zip
+
+    - name: Put Godot on PATH
+      shell: bash
+      run: |
+        sudo ln -sf ~/.cache/godot-bin/godot /usr/local/bin/godot
+        godot --version
+
+    # xvfb + Mesa (llvmpipe) let Godot open a real window with the
+    # gl_compatibility renderer, so screenshots and Movie Maker work.
+    # numpy + Pillow are for tools/sprites/*.py (sprite-sheet-pipeline skill).
+    - name: Install virtual display, software GL, ffmpeg and sprite-tool deps
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends \
+          xvfb xauth libgl1 libgl1-mesa-dri libglx-mesa0 libegl1 \
+          libxcursor1 libxinerama1 libxrandr2 libxi6 libasound2t64 \
+          libpulse0 ffmpeg python3-numpy python3-pil >/dev/null
+
+    - name: Restore import cache
+      uses: actions/cache@v4
+      with:
+        path: .godot
+        key: godot-import-${{ inputs.version }}-${{ hashFiles('project.godot', 'assets/**', 'resources/**', 'scenes/**') }}
+        restore-keys: godot-import-${{ inputs.version }}-
+
+    - name: Import project
+      shell: bash
+      run: timeout 600 godot --headless --path . --import

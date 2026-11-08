@@ -18,6 +18,7 @@ jobs:
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: read
@@ -54,6 +55,16 @@ jobs:
           EOF
           sudo chmod 755 /usr/local/bin/github-fetch
 
+      # Claude may only write inside its working directories; /tmp/ci is
+      # added as one (--add-dir below) for renders and downloads.
+      - name: Create scratch dir
+        run: mkdir -p /tmp/ci/media
+
+      - name: Set up Godot
+        uses: ./.github/actions/setup-godot
+        with:
+          version: "4.5.1"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -64,13 +75,25 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          # Images attached to the triggering issue/PR and its comments are
+          # downloaded by the action itself and handed to Claude as local files.
+          # How to use everything installed here lives in the ci-runner skill
+          # (.claude/skills/ci-runner), which Claude can update via normal PRs.
+          # Note: allowing godot already means Claude can run arbitrary code in
+          # this job (GDScript can call OS.execute), so this list keeps Claude on
+          # the intended path; it is not a sandbox.
           claude_args: |
-            --allowedTools "Bash(github-fetch:*)"
-            --append-system-prompt "To download a file from github.com, such as a user-attachments image on an issue, run: github-fetch URL OUTPUT_FILE. Plain curl is not permitted in this job and github-fetch only accepts https://github.com/ URLs."
+            --allowedTools "Bash(github-fetch:*),Bash(godot:*),Bash(xvfb-run:*),Bash(timeout:*),Bash(ffmpeg:*),Bash(ffprobe:*),Bash(mkdir:*),Bash(python3 -I tools/sprites/extract_frames.py:*),Bash(python3 -I tools/sprites/pack_alpha_strip.py:*),Bash(gh issue view:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+            --add-dir /tmp/ci
+            --append-system-prompt "You are running in the gangU GitHub Actions job, not on a developer machine. Before doing anything else, load the ci-runner skill: it lists what is installed (Godot 4.5.1, xvfb, ffmpeg, python3 with numpy and Pillow), which commands are allowed, how to run test harnesses, take screenshots, and get images from issues into the repo with github-fetch. Write scratch files (renders, downloads) only under /tmp/ci. It overrides local-only steps in the other gangU skills. Always run the relevant test harnesses before pushing and report the real results."
 
+      # Screenshots/clips Claude saves in /tmp/ci/media are attached to the run
+      # as a zip, reachable from the "View job" link in Claude's comment.
+      - name: Upload Claude scratch output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-ci-output
+          path: /tmp/ci/media
+          if-no-files-found: ignore
+          retention-days: 14
