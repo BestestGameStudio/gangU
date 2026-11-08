@@ -61,6 +61,15 @@ func _ready() -> void:
 	var wallet := CurrencyWallet.new()
 	wallet.name = "CurrencyWallet"
 	add_child(wallet)
+	## (#130, foundation C3) Generic carried consumables - same ONE-persistent
+	## child pattern; per-run reset comes free from the reload. ReviveSatchel's
+	## auto-revive path stays untouched beside it. No production consumable
+	## content or effects exist yet (human-open); the manager is inert until
+	## they land.
+	var consumables := Consumables.new()
+	consumables.name = "Consumables"
+	consumables.player_path = NodePath("../Player") # explicit, ReviveSatchel idiom
+	add_child(consumables)
 	## (#129, foundation C2) Hub shop: data-driven catalog + walk-up choice
 	## panel - same ONE-persistent-child pattern. The panel starts hidden;
 	## the hub vendor opens/closes it on player proximity (Daniel, 2026-11-07).
