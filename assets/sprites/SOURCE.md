@@ -186,3 +186,10 @@ Cut 3:1 with a hard alpha cut.
   green, amber or red, so the green is one hue and loses the sheet's slight
   yellow in the highlights.
 - The sheet's full/mid/low previews and divider are not extracted.
+
+# spell_icon_placeholder.png - no-icon spell placeholder (#257)
+
+Supplied by Mitravasu on issue #257 (1254x1254 concept image). Cropped to the
+frame, outer black keyed to transparent and area-downscaled to 64x64 with
+ffmpeg. Shown by SpellIcon for any spell without art. Pixel-art import
+(nearest).

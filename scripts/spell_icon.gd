@@ -1,8 +1,9 @@
 class_name SpellIcon
 extends TextureRect
 ## Fixed-size icon area for a spell in the UI. Shows Spell.icon when the
-## spell has one; otherwise an empty UiStyle placeholder box of the same
-## size, so rows never shift when an icon appears or disappears.
+## spell has one; a spell without art shows the placeholder sprite (#257); an
+## empty slot (null spell) shows an empty UiStyle box of the same size, so
+## rows never shift when an icon appears or disappears.
 ## #207: a spell can instead carry a shared SpriteFrames (Spell.icon_frames +
 ## icon_prefix).
 ## #238: two independent overlays, above the art and below each other in this
@@ -14,6 +15,9 @@ extends TextureRect
 ##     "<prefix>_base" art; other surfaces keep the baked "<prefix>_upgraded"
 ##     frame for upgrade-result spells.
 
+## #257: a real spell with no art shows this sprite; a null spell (empty slot)
+## keeps the empty UiStyle box.
+const NO_ICON_TEXTURE: Texture2D = preload("res://assets/sprites/spell_icon_placeholder.png")
 const CHEVRON_FRAMES: SpriteFrames = preload("res://resources/sprites/upgrade_chevron_frames.tres")
 const CHEVRON_ANIM := &"pulse"
 const CHEVRON_SIDE_FRAC := 0.75
@@ -105,4 +109,4 @@ func _base_texture(spell: Spell) -> Texture2D:
 		var anim: StringName = spell.icon_prefix + ("_upgraded" if baked else "_base")
 		if spell.icon_frames.has_animation(anim):
 			return spell.icon_frames.get_frame_texture(anim, 0)
-	return null
+	return NO_ICON_TEXTURE
