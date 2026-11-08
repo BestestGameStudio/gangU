@@ -8,6 +8,8 @@ enum GateType { NORMAL, RED, BOSS }
 
 @export var gate_type: GateType = GateType.NORMAL
 @export var target_dungeon: PackedScene
+## Replaces the type name on the gate's label when set.
+@export var label_text: String = ""
 
 signal entered(gate: Gate)
 
@@ -32,6 +34,8 @@ func _ready() -> void:
 	if gate_type == GateType.BOSS:
 		tint = BOSS_TINT
 		label.text = "BOSS"
+	if label_text != "":
+		label.text = label_text
 	# The hidden ColorRect is the gate's footprint and tint record: label
 	# placement measures neighbor gates by it.
 	($ColorRect as ColorRect).color = tint
