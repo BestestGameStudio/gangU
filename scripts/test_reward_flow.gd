@@ -7,6 +7,10 @@ extends SceneTree
 ## when the group is empty. The
 ## caster unlock seam is now live (B unlock_spell on main): pickup must call
 ## caster.unlock_spell and emit spell_unlocked with the granted spell.
+## Fixture isolation: assertions run against a deterministic in-code
+## bolt-only RewardTable fixture mounted on the pool/enemy below - the
+## production demo_table.tres gained a second entry (Summon Ally, #241),
+## which made drop content and exhaustion assertions table-content-dependent.
 var scene: Node
 var p: Player
 var pool: RewardPool
@@ -34,6 +38,17 @@ func _process(delta: float) -> bool:
 			# frame, not during add_child - wait for current_area first.
 			if scene.current_area == null:
 				return false
+			# Deterministic fixture table: one bolt entry, built in code (no
+			# new resource file). The SAME fixture table feeds the harness
+			# pool mount, the enemy drop roll and every assertion below, so
+			# production table contents can no longer break this driver.
+			table = RewardTable.new()
+			var bolt_entry := RewardEntry.new()
+			bolt_entry.kind = RewardEntry.Kind.SPELL
+			bolt_entry.spell = load("res://resources/spells/placeholder_bolt.tres")
+			bolt_entry.weight = 1.0
+			var fixture_entries: Array[RewardEntry] = [bolt_entry]
+			table.entries = fixture_entries
 			# Reuse the production reward pool when present (group-first
 			# semantics: drops and grants resolve to the FIRST pool in the
 			# reward_pool group, so a second harness mount would be bypassed).
@@ -45,11 +60,10 @@ func _process(delta: float) -> bool:
 				pool = RewardPool.new()
 				pool.name = "RewardPool"
 				scene.add_child(pool)
-				pool.setup(load("res://resources/rewards/demo_table.tres"))
+				pool.setup(table)
 			enemy = load("res://scenes/enemy.tscn").instantiate()
 			enemy.position = Vector2(576, 300)
 			enemy.player_path = NodePath("../../Player")
-			table = load("res://resources/rewards/demo_table.tres")
 			enemy.reward_table = table
 			scene.current_area.add_child(enemy)
 			caster = p.get_node_or_null("SpellCaster")
