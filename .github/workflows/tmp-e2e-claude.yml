@@ -1,8 +1,8 @@
 name: TEMP e2e claude ci
 'on':
-  push:
-    branches:
-    - ci/claude-godot-images
+  pull_request:
+    types:
+    - synchronize
 jobs:
   claude:
     runs-on: ubuntu-latest
