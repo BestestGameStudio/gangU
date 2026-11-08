@@ -93,6 +93,23 @@ alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
   "FX / Telegraphed Variants" panels (Charge, Dash, Invulnerable/Shield,
   Targeted/Warning) and the "VFX Elements" overlays; the large portrait.
 
+# shop_vendor.png - hub shop vendor stall (#217)
+
+Art from issue #217 ("Shop Sprite Update"): the 1536x1024 six-frame board
+attached to the issue by Mitravasu (project human). The board's background
+is light/white with interior highlights, so the exterior background was
+flood-filled to magenta before extraction (interior whites preserved), then
+cut by `tools/sprites/extract_frames.py` with
+`tools/sprites/specs/shop_vendor.json` (magenta keyed out, bbox-anchored,
+2:1 alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres resources/sprites/shop_vendor_frames.tres`.
+
+## Layout
+- Cell: 224x224 px, baseline row 220 (stall base). Sheet: 3 cols x 2 rows
+  (672x448), one stall per cell; the scene draws it at 0.5 scale (~112 px).
+- Frames are the board's six idle variants (potion sparkle / lighting
+  positions). SpriteFrames (resources/sprites/shop_vendor_frames.tres):
+  idle, 6 frames, 4 fps loop.
 # spell_projectiles.png - spell projectile sprites (#210)
 - Source: single sprite sheet attached to issue #210 by @Mitravasu
   (https://github.com/user-attachments/assets/f0f3f901-d1bc-48aa-8f67-d0df7610042b).
