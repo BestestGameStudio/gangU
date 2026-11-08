@@ -42,6 +42,7 @@ jobs:
           # Repo rule enforced by review: visible/playable changes need
           # screenshot evidence (see .claude/skills/ci-runner, "Screenshot evidence").
           claude_args: |
+            --model claude-sonnet-5-5
             --allowedTools "mcp__github_inline_comment__create_inline_comment"
             --append-system-prompt "gangU repository rule, treat it like a CLAUDE.md rule: a PR that changes anything visible or playable (scenes/, assets/, resources/, UI/HUD, or gameplay code in scripts/ other than test harnesses) must include screenshot evidence. Evidence is any image in the PR description or PR comments (markdown image, <img> tag, or a github.com/user-attachments link), a claude-ci-output artifact link, or a GitHub Actions run URL given under a Screenshots heading. Read the PR description and comments with gh pr view <number> --comments. If the rule applies and there is no evidence, report it in your review comment as a finding titled Missing screenshot evidence, naming the visible change that needs a screenshot. Report it even if you found no code issues; it is not subject to the usual confidence filter. If the PR only touches CI, docs, tests or tooling, the rule does not apply; do not mention it." 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
