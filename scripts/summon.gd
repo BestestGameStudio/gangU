@@ -52,6 +52,22 @@ func apply_damage(amount: int) -> void:
 		died.emit()
 		queue_free()
 
+## #256: friendly fire off - source-aware entry point used by the #248
+## projectile dispatch (apply_damage kept unchanged for every other caller).
+## A projectile from the player side never damages this summon: any actual
+## Player source is player-side regardless of identity (production boundary:
+## a single Player lives in main.tscn), and a Summon source is player-side
+## only when it shares this summon's owner. The caller must be an actual
+## Projectile before its source is trusted; enemy, null, unknown, and
+## non-Projectile callers - and any ownerless summon target, which has no
+## side to protect - fall through to the legacy damage path unchanged.
+func apply_damage_from(amount: int, projectile: Node2D) -> void:
+	if is_instance_valid(player) and player is Player and projectile is Projectile:
+		var src: Node2D = projectile.source
+		if is_instance_valid(src) and (src is Player or (src is Summon and src.player == player)):
+			return
+	apply_damage(amount)
+
 ## #245: local cosmetic halo only. An explicit Player owner is required:
 ## unowned fixtures or future non-player summons must not inherit this effect.
 ## Drawn on the root, behind the unchanged Body child, without environment bloom.
