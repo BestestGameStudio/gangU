@@ -44,6 +44,9 @@ func exit_world() -> Vector2:
 	return map.cell_to_world(exit_cell)
 
 func _draw() -> void:
+	# Background first: drawn here (not a ColorRect child) so it cannot
+	# cover the grid lines and markers below.
+	draw_rect(Rect2(Vector2.ZERO, Vector2(GRID_W, GRID_H) * map.cell_size), Color(0.1, 0.12, 0.16, 1.0))
 	# Grid lines (first-pass square-grid presentation) behind the markers.
 	for x in range(GRID_W + 1):
 		draw_line(Vector2(x * map.cell_size, 0), Vector2(x * map.cell_size, GRID_H * map.cell_size), Color(0.3, 0.32, 0.36, 0.6))
