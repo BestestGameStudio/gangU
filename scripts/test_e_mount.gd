@@ -64,8 +64,16 @@ func _process(delta: float) -> bool:
 			for u in paths:
 				if u.xp_threshold != 10:
 					print("[E] FAIL threshold: ", u.id, "=", u.xp_threshold); ok = false
-			if not progress.get_upgrade_paths(mana).is_empty():
-				print("[E] FAIL unexpected Mana Shot paths"); ok = false
+			# #211: Mana Shot now has its two Specialization paths (Volley +
+			# Lance), same 10-cast tier-1 gate as the Fire Ball forks.
+			var mana_paths: Array = progress.get_upgrade_paths(mana)
+			if mana_paths.size() == 2 and mana_paths[0].id == &"manashot_volley" and mana_paths[1].id == &"manashot_lance":
+				print("[E] provider exposes both Mana Shot paths OK")
+			else:
+				print("[E] FAIL Mana Shot paths: ", mana_paths.map(func(u): return u.id)); ok = false
+			for u in mana_paths:
+				if u.xp_threshold != 10 or u.tier != 1:
+					print("[E] FAIL mana threshold/tier: ", u.id); ok = false
 			# Threshold gate via the REAL signal path: 9 casts no, 10 yes.
 			var caster: Node = scene.get_node("Player/SpellCaster")
 			for i in 9:

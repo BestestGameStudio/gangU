@@ -99,6 +99,13 @@ func _ready() -> void:
 		preload("res://resources/upgrades/fireball_m2_beam_heavy.tres"),
 		preload("res://resources/upgrades/fireball_m2_beam_piercing.tres"),
 		preload("res://resources/upgrades/fireball_m2_beam_homing.tres"),
+		## (#211) Mana Shot Specialization paths: Volley (3-bolt fan) and
+		## Lance (heavy piercing rail). Branch design and numbers are the
+		## implementer's delegated discretion for this issue (Daniel via
+		## staff-lead relay, 2026-11-08); 10-cast threshold mirrors the
+		## approved Fire Ball tier-1 precedent.
+		preload("res://resources/upgrades/manashot_volley.tres"),
+		preload("res://resources/upgrades/manashot_lance.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
