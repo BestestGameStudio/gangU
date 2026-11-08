@@ -39,6 +39,7 @@ const CombatEffects = preload("res://scripts/combat_effects.gd")
 var spells: Array[Spell] = []
 var current_index: int = 0
 var _cooldowns: Dictionary = {} ## Spell -> remaining seconds
+var _cooldown_totals: Dictionary = {} ## #268: Spell -> last started cooldown length
 
 ## #10 slots: unlock inventory (grants land here only, never auto-equip) and
 ## the six nullable equip slots. Read via get_unlocked()/get_slots() (copies).
@@ -174,6 +175,9 @@ func replace_spell(old_spell: Spell, new_spell: Spell) -> bool:
 	# Cooldown transfer: new inherits old's remaining time, old entry removed.
 	_cooldowns[new_spell] = maxf(_cooldowns.get(old_spell, 0.0), 0.0)
 	_cooldowns.erase(old_spell)
+	if _cooldown_totals.has(old_spell):
+		_cooldown_totals[new_spell] = _cooldown_totals[old_spell]
+		_cooldown_totals.erase(old_spell)
 	if sidx != -1:
 		slot_assigned.emit(sidx, new_spell)
 	spell_replaced.emit(old_spell, new_spell)
@@ -208,6 +212,19 @@ func next_spell() -> void:
 
 func cooldown_remaining(spell: Spell) -> float:
 	return _cooldowns.get(spell, 0.0)
+
+## #268: full length of the spell's last started cooldown (after cooldown
+## reduction), for HUD fill ratios. spell.cooldown before the first cast.
+func cooldown_duration(spell: Spell) -> float:
+	if spell == null:
+		return 0.0
+	return _cooldown_totals.get(spell, spell.cooldown)
+
+func _effective_cooldown(base: float) -> float:
+	var owner_node := get_parent()
+	if owner_node is Player:
+		return (owner_node as Player).effective_cooldown(base)
+	return base
 
 func can_cast() -> bool:
 	return equipped_spell != null and cooldown_remaining(equipped_spell) <= 0.0
@@ -269,8 +286,12 @@ func _cast_spell(spell: Spell) -> void:
 			p.setup(spell, d, get_parent())
 			get_tree().current_scene.add_child(p)
 			p.global_position = global_position
-	_cooldowns[spell] = spell.cooldown
-	cooldown_started.emit(spell, spell.cooldown)
+	# #268: the owning Player's cooldown reduction shortens the cooldown this
+	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
+	var duration := _effective_cooldown(spell.cooldown)
+	_cooldowns[spell] = duration
+	_cooldown_totals[spell] = duration
+	cooldown_started.emit(spell, duration)
 	spell_cast.emit(spell)
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.

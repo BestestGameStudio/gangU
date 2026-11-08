@@ -34,6 +34,18 @@ var hp: int
 var damage_modifiers := DamageModifiers.new()
 var damage_rng := RandomNumberGenerator.new()
 
+## #268: run-scoped stat modifiers (HP, damage amp, armor, move speed,
+## cooldown reduction). Formulas, caps and expiry live in player_stats.gd.
+## `max_hp` stays the EFFECTIVE max (HUD, clamps); `base_max_hp` is the
+## unmodified value captured from the export at _ready. `speed` stays the
+## base move speed; read the modified value with move_speed().
+var stats := PlayerStats.new()
+var base_max_hp: int
+## Damage amp and armor reach DamageCalc through these two entries in
+## damage_modifiers; they are present only while the stat is non-zero.
+var _amp_bridge := DamageModifier.amp(0.0)
+var _armor_bridge := DamageModifier.reduction(0.0)
+
 ## #205: spell-triggered invincibility window. Default OFF. Future spell code
 ## opens and closes it with set_invulnerable() around the spell phases that
 ## grant iframes. Taking a hit never opens it. No durations live here: each
@@ -53,6 +65,7 @@ var facing: StringName = &"down"
 @onready var sprite: AnimatedSprite2D = get_node_or_null("WizardSprite")
 
 func _ready() -> void:
+	base_max_hp = max_hp
 	hp = max_hp
 	damage_rng.randomize()
 	# #290: players never physically block or push enemies. The "players"
@@ -60,6 +73,7 @@ func _ready() -> void:
 	# legacy "player" group); deferred so same-frame enemies are registered.
 	add_to_group(ActorCollision.PLAYER_GROUP)
 	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
+	stats.changed.connect(_on_stat_changed)
 	if sprite != null:
 		# Legacy dart hull + its nose accent both retire when the wizard art
 		# carries the player visual; the AimIndicator is aim, not hull, and
@@ -101,7 +115,60 @@ func heal(amount: int) -> void:
 	hp = clampi(hp + amount, 0, max_hp)
 	health_changed.emit(hp, max_hp)
 
+## #268: final stat values (modifiers applied, caps enforced).
+func move_speed() -> float:
+	return stats.value(PlayerStats.MOVE_SPEED, speed)
+
+func damage_amp() -> float:
+	return stats.value(PlayerStats.DAMAGE_AMP, 0.0)
+
+func armor() -> float:
+	return stats.value(PlayerStats.ARMOR, 0.0)
+
+func cooldown_reduction() -> float:
+	return stats.value(PlayerStats.COOLDOWN_REDUCTION, 0.0)
+
+## Spell cooldown after cooldown reduction. Applied when a cast STARTS a
+## cooldown; cooldowns already running keep their length.
+func effective_cooldown(base: float) -> float:
+	return maxf(base * (1.0 - cooldown_reduction()), 0.0)
+
+
+func _on_stat_changed(stat: StringName) -> void:
+	match stat:
+		PlayerStats.MAX_HP:
+			_refresh_max_hp()
+		PlayerStats.DAMAGE_AMP:
+			_sync_bridge(_amp_bridge, damage_amp())
+		PlayerStats.ARMOR:
+			_sync_bridge(_armor_bridge, armor())
+
+
+## #268 max HP rule: raising max HP also heals by the same amount (so a
+## "+max HP on kill" spell is felt at once); lowering it only clamps HP down
+## and never kills. A dead player gets no HP from a max HP change.
+func _refresh_max_hp() -> void:
+	var new_max := maxi(roundi(stats.value(PlayerStats.MAX_HP, base_max_hp)), 1)
+	if new_max == max_hp:
+		return
+	var gained := new_max - max_hp
+	max_hp = new_max
+	if hp > 0:
+		hp = clampi(hp + maxi(gained, 0), 1, max_hp)
+	health_changed.emit(hp, max_hp)
+
+
+func _sync_bridge(bridge: DamageModifier, amount: float) -> void:
+	bridge.amount = amount
+	var present := damage_modifiers.items().has(bridge)
+	if amount != 0.0 and not present:
+		damage_modifiers.add(bridge)
+	elif amount == 0.0 and present:
+		damage_modifiers.remove(bridge)
+
+
 func _physics_process(delta: float) -> void:
+	stats.tick(delta)
 	if hp <= 0:
 		velocity = Vector2.ZERO
 		if _dash_time_left > 0.0:
@@ -114,7 +181,7 @@ func _physics_process(delta: float) -> void:
 	_dash_cooldown_left = maxf(_dash_cooldown_left - delta, 0.0)
 	if Input.is_action_just_pressed(&"dash"):
 		try_dash(input_dir)
-	var desired := input_dir * speed
+	var desired := input_dir * move_speed()
 	if _dash_time_left > 0.0:
 		desired = _dash_dir * dash_speed
 		_dash_time_left = maxf(_dash_time_left - delta, 0.0)
