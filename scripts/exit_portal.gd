@@ -12,6 +12,14 @@ extends Area2D
 ## would soft-lock the run. (DungeonB gained an ELIMINATION objective in
 ## #177 / O1, 2026-11-08, and now mounts it locked. The boss-gate arena
 ## DungeonC (#173 / O6) mounts it locked until the Head boss dies.)
+## #204: opt-in portal look (red_portal_look). The RED dungeon's locked gate
+## and exit gate are this same portal in its two states, so both get the
+## #195 gate portal look - desaturated gray while locked, red tint once
+## unlocked. OFF (the default everywhere else) keeps the flat decor every
+## other dungeon and generated-dungeon exit has always had. Visuals only:
+## lock/unlock logic, objective wiring, collision shape and label text are
+## untouched, and the geometry reuses Gate's portal statics (no gate.gd
+## changes).
 
 signal entered(portal: ExitPortal)
 
@@ -21,6 +29,17 @@ signal entered(portal: ExitPortal)
 ## Optional path to a node with an `objective_completed` signal (the #8
 ## DungeonObjective). Duck-typed by signal name so this file stands alone.
 @export var objective_path: NodePath
+## #204: opt-in #195 portal look for the RED DungeonB mount only. main.gd
+## turns this on for area DungeonB; every other mount keeps the flat look.
+@export var red_portal_look: bool = false
+
+## #204: locked-state portal tint - the desaturated gray family of the flat
+## locked tint (0.35,0.35,0.4), so locked and unlocked read as two states of
+## one portal; the LOCKED text and dimmed (gray-tinted) particles carry the
+## locked semantics.
+const LOCKED_TINT := Color(0.4, 0.4, 0.45)
+
+var _anim_t := 0.0
 
 func _ready() -> void:
 	add_to_group("exit_portals")
@@ -58,3 +77,64 @@ func _refresh_visual() -> void:
 	else:
 		tint.color = Color(0.5, 0.2, 0.8)
 		label.text = "EXIT"
+	if red_portal_look:
+		_apply_portal_look(LOCKED_TINT if locked else Gate.RED_TINT)
+
+## #204: build the #195 portal look in the given state tint. The flat decor
+## (ColorRect + ExitArrow) hides but stays in the tree: the ColorRect keeps
+## its role as the footprint/tint record, mirroring the gate (#195). The
+## StateLabel stays live in both states so LOCKED/EXIT reads identically.
+func _apply_portal_look(tint: Color) -> void:
+	$ColorRect.visible = false
+	$ExitArrow.visible = false
+	var rim_color := tint.lightened(0.6)
+	Gate._fill_band($Halo, Vector2(Gate.PORTAL_RX, Gate.PORTAL_RY), Color(tint, 0.45),
+		Vector2(Gate.PORTAL_RX + Gate.HALO_SPREAD, Gate.PORTAL_RY + Gate.HALO_SPREAD), Color(tint, 0.0))
+	Gate._fill_band($Body, Vector2.ZERO, tint.darkened(0.85), Vector2(Gate.PORTAL_RX, Gate.PORTAL_RY), tint)
+
+	# The swirl is drawn as a circle and squashed by its pivot, so spinning
+	# it keeps it inside the ellipse.
+	var pivot: Node2D = $SwirlPivot
+	pivot.scale = Vector2(1.0, Gate.PORTAL_RY / Gate.PORTAL_RX)
+	var swirl: Line2D = $SwirlPivot/Swirl
+	var r := Gate.PORTAL_RX * 0.8
+	var arm := PackedVector2Array()
+	for i in range(Gate.SWIRL_STEPS, -1, -1):
+		var t := float(i) / Gate.SWIRL_STEPS
+		arm.append(Vector2.from_angle(t * TAU * 0.9) * r * t)
+	for i in range(1, Gate.SWIRL_STEPS + 1):
+		var t := float(i) / Gate.SWIRL_STEPS
+		arm.append(Vector2.from_angle(PI + t * TAU * 0.9) * r * t)
+	swirl.points = arm
+	swirl.default_color = Color(tint.lightened(0.4), 0.55)
+
+	var rim: Line2D = $Rim
+	rim.points = Gate.ellipse_points(Gate.PORTAL_RX, Gate.PORTAL_RY, Gate.PORTAL_POINTS)
+	rim.default_color = rim_color
+
+	var light: PointLight2D = $Light
+	light.color = tint
+
+	var particles: CPUParticles2D = $Particles
+	particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINTS
+	particles.emission_points = Gate.ellipse_points(Gate.PORTAL_RX, Gate.PORTAL_RY, Gate.PORTAL_POINTS)
+	particles.color = rim_color
+	var fade := Gradient.new()
+	fade.set_color(0, Color.WHITE)
+	fade.set_color(1, Color(1, 1, 1, 0))
+	particles.color_ramp = fade
+	particles.emitting = true
+
+	for n in ["Halo", "Body", "SwirlPivot", "Rim", "Particles", "Light"]:
+		get_node(n).visible = true
+
+## #204: portal idle animation, only while the look is on. Same pulse as the
+## gate (#195); the locked state's gray tint keeps it visibly dimmed.
+func _process(delta: float) -> void:
+	if not red_portal_look:
+		return
+	_anim_t += delta
+	var pulse := sin(_anim_t * 2.4)
+	($SwirlPivot/Swirl as Line2D).rotation = _anim_t * 1.6
+	($Rim as Line2D).width = 2.5 + 0.8 * pulse
+	($Light as PointLight2D).energy = 0.9 + 0.15 * pulse

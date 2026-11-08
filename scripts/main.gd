@@ -247,6 +247,7 @@ func _mount_exit_portal(area: Node) -> void:
 	if area.name in [&"DungeonB", &"DungeonC"] and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
+	portal.red_portal_look = area.name == &"DungeonB"  # #204: portal look only on the RED dungeon's exit portal (both its locked and unlocked states)
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 
