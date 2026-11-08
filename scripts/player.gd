@@ -10,7 +10,7 @@ signal health_changed(current: int, max_hp: int)
 
 @export var speed: float = 320.0
 @export var max_hp: int = 100
-@export var can_swim: bool = false
+@export var can_swim: bool = true
 
 var terrain: TerrainMap = null
 
