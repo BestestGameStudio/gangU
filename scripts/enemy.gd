@@ -151,6 +151,10 @@ func _resolve_target() -> CharacterBody2D:
 			if summon.definition != null and not summon.definition.enemy_targetable:
 				continue
 			var d := global_position.distance_squared_to(summon.global_position)
+			# #212: local taunt - a definition with taunt_range > 0 only draws
+			# enemies within that radius; 0.0 keeps the #209 global semantics.
+			if summon.definition != null and summon.definition.taunt_range > 0.0 and d > summon.definition.taunt_range * summon.definition.taunt_range:
+				continue
 			if d < best_d:
 				best_d = d
 				best = summon
