@@ -45,8 +45,9 @@ only.
 - **Linked issue:** the body names the issue it resolves with `Closes #N` so the issue
   closes automatically on merge.
 - **Evidence:** automated test results on the exact head, and for gameplay-visible
-  changes, a working demo - screenshots or recordings of the running game. Author-captured
-  evidence supports the PR; it never substitutes for the reviewer's own check.
+  changes, a working demo video of the running game attached to the PR. Screenshots may
+  supplement the video but never replace it. Author-captured evidence supports the PR;
+  it never substitutes for the reviewer's own check.
 
 ## 5. Independent review on the exact head
 
@@ -71,8 +72,9 @@ only.
   approval and CI still cover the current head.
 - No direct pushes to `main`, and no merging on your own approval - the qualifying
   approval always comes from a reviewer other than the author.
-- After merging, confirm the linked issue closed automatically; close it manually with a
-  reference to the merge only if it did not.
+- After merging, confirm the linked issue closed automatically. If the closing link is
+  missing or wrong, fix the PR body link (`Closes #N`) through the normal route rather
+  than closing issues by hand.
 
 ## 7. Merged is not live is not playable
 
