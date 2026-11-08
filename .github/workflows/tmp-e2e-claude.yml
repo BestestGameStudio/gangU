@@ -67,3 +67,4 @@ jobs:
           6) List every command or tool call that was denied, verbatim. Finish with
           a table: step, pass/fail, evidence.'
         show_full_output: true
+        github_token: "${{ github.token }}"
