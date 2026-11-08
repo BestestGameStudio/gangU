@@ -32,6 +32,10 @@ func _ready() -> void:
 	$CollisionShape2D.shape = $CollisionShape2D.shape.duplicate() # per-spell radius must not leak across instances (#4 gate)
 	$CollisionShape2D.shape.radius = spell.radius
 	$Visual.color = spell.projectile_color
+	# #96: direction-legible dart - same per-spell tint and radius scale as the
+	# core. Points +X; the root's rotation already faces the flight direction.
+	$Dart.color = spell.projectile_color
+	$Dart.scale = Vector2(spell.radius / 4.0, spell.radius / 4.0)
 	var _vis_scale := spell.radius / 4.0 # Visual polygon is authored at radius 4
 	$Visual.scale = Vector2(_vis_scale, _vis_scale)
 	body_entered.connect(_on_body_entered)
