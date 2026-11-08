@@ -107,6 +107,21 @@ func _frame_style(border: Color) -> StyleBoxFlat:
 	_frame_cache[border] = sb
 	return sb
 
+## #38: compact ASCII tier suffix for HUD spell rows. Reads the progression
+## provider's get_tier() (#36 source of truth, recorded on successful apply);
+## no provider, no accessor, or a Base tier (0) renders nothing. Display-only.
+func _tier_suffix(spell: Spell) -> String:
+	if not is_instance_valid(_progress) or not _progress.has_method("get_tier"):
+		return ""
+	match int(_progress.get_tier(spell)):
+		1:
+			return " [S]"
+		2:
+			return " [M]"
+		3:
+			return " [G]"
+	return ""
+
 func _apply_bar_state(bar: ProgressBar, cooling: bool) -> void:
 	if _style_ready == null:
 		return
@@ -228,7 +243,7 @@ func _update_slot_rows() -> void:
 		var frac := 1.0
 		if spell.cooldown > 0.0:
 			frac = 1.0 - clampf(rem / spell.cooldown, 0.0, 1.0)
-		w["name"].text = spell.spell_name
+		w["name"].text = spell.spell_name + _tier_suffix(spell)
 		w["bar"].value = frac
 		w["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
 		w["frame"].add_theme_stylebox_override("panel", _frame_style(FRAME_ASSIGNED))
@@ -254,7 +269,7 @@ func _process(delta: float) -> void:
 		var up_arrow := ""
 		if _progress != null and _progress.has_method("can_upgrade") and _progress.can_upgrade(s):
 			up_arrow = " ^"
-		row["name"].text = s.spell_name + (" *" if s == _caster.equipped_spell else "") + up_arrow
+		row["name"].text = s.spell_name + _tier_suffix(s) + (" *" if s == _caster.equipped_spell else "") + up_arrow
 		row["bar"].value = frac
 		row["state"].text = "READY" if rem <= 0.0 else "%.1fs" % rem
 		var cooling := rem > 0.0
