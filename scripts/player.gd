@@ -55,6 +55,11 @@ var facing: StringName = &"down"
 func _ready() -> void:
 	hp = max_hp
 	damage_rng.randomize()
+	# #290: players never physically block or push enemies. The "players"
+	# group is collision-only (targeting still uses explicit wiring / the
+	# legacy "player" group); deferred so same-frame enemies are registered.
+	add_to_group(ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
 	if sprite != null:
 		# Legacy dart hull + its nose accent both retire when the wizard art
 		# carries the player visual; the AimIndicator is aim, not hull, and
