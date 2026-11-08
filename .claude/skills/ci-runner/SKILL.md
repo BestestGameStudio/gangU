@@ -38,7 +38,15 @@ timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" godot --rendering-driver ope
 - Add `--script res://<driver>.gd` (e.g. `tools/showcase/record_showcase.gd`) to drive gameplay. Input cannot be typed live, so scripts must drive it.
 - Software rendering runs at about 15% of real time. Keep clips short, and use `timeout` generously.
 - `showcase-video` in CI: skip `override.cfg` and pass `--resolution 1920x1080` instead, write to `/tmp/ci/`, and encode with `ffmpeg` as that skill describes.
-- You cannot embed images in your GitHub comment. Files in `/tmp/ci/media/` (and only there) are uploaded when the job ends as the `claude-ci-output` artifact (a zip on the run page, kept 14 days). Render frame sequences into another `/tmp/ci/` folder, then put only the shots worth seeing into `media/` under clear names, e.g. `ffmpeg -i /tmp/ci/shots/frame00000059.png /tmp/ci/media/hub_after_dash.png`, or an encoded `.mp4`. In your comment, list the files and say they are in the `claude-ci-output` artifact behind the "View job" link. Describe what each one shows. Do not commit screenshots or videos to the repo unless the issue asks for it.
+
+## Screenshot evidence (required)
+Every run that changes or investigates something visible or playable (scenes, sprites, HUD/UI, gameplay scripts, enemy or spell behaviour) must leave screenshot evidence. Pure CI, docs, test-only or text answers are exempt; say "No screenshots: <reason>" in your comment instead.
+- Put the evidence in `/tmp/ci/media/`, and only there. When the job ends, the workflow uploads that folder as the `claude-ci-output` artifact (kept 14 days) and appends a download link plus the file list to your comment. You do not write the link yourself.
+- Render frame sequences elsewhere in `/tmp/ci/`, then copy only the frames that prove the change into `media/`, under names that say what they show (letters, digits, `-`, `_`, no spaces): `ffmpeg -i /tmp/ci/shots/frame00000059.png /tmp/ci/media/dash_mid_move.png`. A short `.mp4` is fine for motion. Before and after shots are best when you are changing something that already exists.
+- Read every file you put in `media/` and confirm it shows what you claim. A black frame or the wrong scene is not evidence.
+- In your comment, add a **Screenshots** section with one line per file saying what it shows.
+- When you prefill a PR body (the "Create PR" link), add a `Screenshots` heading containing this run's URL (it is in your system prompt), so reviewers can find the artifact.
+- You cannot embed images in GitHub comments. Do not commit screenshots or videos to the repo unless the issue asks for it.
 
 ## Images from issues
 - Images in the issue/PR that triggered you, and in its comments, are already downloaded to `/tmp/github-images/` (the prompt lists their paths). Read them from there.
@@ -56,4 +64,4 @@ Follow `sprite-sheet-pipeline`, with these changes:
 ## Before you push
 - Godot is 4.5.1 here, so `.uid` churn from newer editors does not happen. Commit the `.uid` files of scripts you added.
 - Do not commit `.godot/`, `/tmp/ci` output or videos.
-- In your final comment: what changed, which harnesses you ran and their results, what you looked at in screenshots, and anything you could not verify in CI.
+- In your final comment: what changed, which harnesses you ran and their results, the Screenshots section (or why none apply), and anything you could not verify in CI.
