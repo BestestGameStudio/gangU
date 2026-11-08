@@ -38,7 +38,7 @@ timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" godot --rendering-driver ope
 - Add `--script res://<driver>.gd` (e.g. `tools/showcase/record_showcase.gd`) to drive gameplay. Input cannot be typed live, so scripts must drive it.
 - Software rendering runs at about 15% of real time. Keep clips short, and use `timeout` generously.
 - `showcase-video` in CI: skip `override.cfg` and pass `--resolution 1920x1080` instead, write to `/tmp/ci/`, and encode with `ffmpeg` as that skill describes.
-- You cannot attach images to your GitHub comment. Describe what you saw. Commit a screenshot only if the issue asks for one; never commit videos.
+- You cannot embed images in your GitHub comment. Files in `/tmp/ci/media/` (and only there) are uploaded when the job ends as the `claude-ci-output` artifact (a zip on the run page, kept 14 days). Render frame sequences into another `/tmp/ci/` folder, then put only the shots worth seeing into `media/` under clear names, e.g. `ffmpeg -i /tmp/ci/shots/frame00000059.png /tmp/ci/media/hub_after_dash.png`, or an encoded `.mp4`. In your comment, list the files and say they are in the `claude-ci-output` artifact behind the "View job" link. Describe what each one shows. Do not commit screenshots or videos to the repo unless the issue asks for it.
 
 ## Images from issues
 - Images in the issue/PR that triggered you, and in its comments, are already downloaded to `/tmp/github-images/` (the prompt lists their paths). Read them from there.
