@@ -182,7 +182,14 @@ func _on_body_entered(body: Node2D) -> void:
 		return # #37: piercing re-contact never double-hits the same body
 	if body.has_method(&"apply_damage"):
 		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, body.get(&"damage_modifiers") as DamageModifiers, _attacker_rng)
-		body.apply_damage(result.amount)
+		# #214: bodies with a source gate (destroyable containers) receive the
+		# projectile for caller-identity checks; every other receiver keeps the
+		# legacy call unchanged (window ACK 2026-11-08: additive branch only,
+		# source exclusion / hit bookkeeping / RNG / signals / pierce preserved).
+		if body.has_method(&"apply_damage_from"):
+			body.apply_damage_from(result.amount, self)
+		else:
+			body.apply_damage(result.amount)
 		_hit_bodies.append(body)
 		hit.emit(body)
 		hit_resolved.emit(body, result)
