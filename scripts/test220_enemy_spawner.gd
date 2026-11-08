@@ -56,6 +56,27 @@ func _initialize() -> void:
 	_check(died_log.size() == 1 and died_log[0][0] == got[0], "spawn_died emitted with enemy and entry")
 	_check(sp.alive_count(entries[0]) == 0 and sp.alive_count(entries[1]) == 1, "alive count drops on died")
 
+	# --- real Enemy death (apply_damage) + real TerrainMap + identical entries ---
+	var areaR := Node2D.new()
+	root.add_child(areaR)
+	var tm := TerrainMap.new()
+	areaR.add_child(tm)
+	var dup_a := { "position": Vector2(5, 5), "enemy": enemy_scene, "reward_table": table }
+	var dup_b := { "position": Vector2(5, 5), "enemy": enemy_scene, "reward_table": table }
+	var spR := EnemySpawner.new()
+	areaR.add_child(spR)
+	spR.setup([dup_a, dup_b], path, tm, areaR)
+	var real_died: Array = []
+	spR.spawn_died.connect(func(e, entry): real_died.append([e, entry]))
+	var rs2 := spR.spawn_initial()
+	await process_frame
+	_check(rs2[0].terrain == tm and rs2[1].terrain == tm, "real TerrainMap handed to every spawn")
+	_check(spR.alive_count(dup_a) == 1 and spR.alive_count(dup_b) == 1, "identical-content entries keep separate bookkeeping")
+	rs2[0].apply_damage(rs2[0].max_hp)
+	await process_frame
+	_check(real_died.size() == 1 and is_same(real_died[0][1], dup_a), "real lethal damage emits spawn_died for the right entry")
+	_check(spR.alive_count(dup_a) == 0 and spR.alive_count(dup_b) == 1 and spR.total_alive() == 1, "only the killed entry's count drops")
+
 	# --- policy refusal ---
 	var area2 := Node2D.new()
 	root.add_child(area2)
