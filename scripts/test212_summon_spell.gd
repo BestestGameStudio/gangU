@@ -48,6 +48,13 @@ func _initialize() -> void:
 	await process_frame
 	var caster: SpellCaster = player.get_node("SpellCaster")
 
+	# #262: the real player's default spells now self-bind at caster._ready.
+	# Clear BOTH default slots BEFORE the grants below so this fixture's
+	# grant + assign flow runs against free slots exactly as before
+	# (summon -> slot 0, bolt -> slot 1, via the new auto-bind).
+	caster.clear_slot(0)
+	caster.clear_slot(1)
+
 	# --- acquisition -> equip -> cast ---
 	caster.unlock_spell(spell)
 	_check(caster.get_unlocked().has(spell), "grant lands the spell in the unlock inventory (reward-drop route)")

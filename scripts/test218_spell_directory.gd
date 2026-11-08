@@ -87,6 +87,10 @@ func _run_legs() -> void:
 	## 2. Walk-up opens; rows list exactly the current unlock set.
 	caster.unlock_spell(fireball)
 	caster.unlock_spell(bolt)
+	# #262: both grants auto-bind on arrival now; snapshot the actual slots
+	# AFTER the grants, BEFORE the walk-up, so the read-only check below
+	# still proves opening/rendering changed nothing.
+	var slots_before_open := caster.get_slots()
 	directory._on_body_entered(p)
 	_check(panel.visible and panel.is_in_group("modal_ui"), "walk-up opens panel (visible + modal_ui)")
 	_check(_rows().get_child_count() == 2, "one row per unlocked spell (2)")
@@ -96,7 +100,7 @@ func _run_legs() -> void:
 
 	## 3. READ-ONLY: opening/rendering changed nothing.
 	_check(caster.get_unlocked() == [fireball, bolt], "read-only: unlock inventory untouched")
-	_check(caster.get_slots() == [null, null, null, null, null, null], "read-only: equip slots untouched")
+	_check(caster.get_slots() == slots_before_open, "read-only: equip slots untouched")
 
 	## 4. Live refresh: a new unlock while open adds a row.
 	caster.unlock_spell(mana)

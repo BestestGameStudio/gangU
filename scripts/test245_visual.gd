@@ -23,6 +23,10 @@ func _initialize() -> void:
 	await process_frame
 	var spell: Spell = load("res://resources/spells/summon_ally.tres")
 	var caster: SpellCaster = p.get_node("SpellCaster")
+	# #262: default spells self-bind at caster._ready; clear BOTH default
+	# slots BEFORE the grant so the fixture's slot-0 flow is unchanged.
+	caster.clear_slot(0)
+	caster.clear_slot(1)
 	caster.unlock_spell(spell)
 	caster.assign_slot(0, spell)
 	caster.cast_slot(0)
