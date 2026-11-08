@@ -16,3 +16,7 @@ tags = Array[StringName]([&"projectile", &"piercing"])
 range = 800.0
 projectile_speed = 900.0
 projectile_color = Color(0.2, 0.55, 1, 1)
+visual_scale = 2.0
+glow = true
+trail_length = 4
+glow_tint = Color(0.92, 0.74, 0.28, 1)
