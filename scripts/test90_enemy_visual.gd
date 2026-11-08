@@ -1,19 +1,21 @@
 extends SceneTree
 ## #90 (Graphics B) harness: enemy visual identity - shape-first threat
-## readability via a jagged Polygon2D silhouette (orange family), visual
-## nodes only in scenes/enemy.tscn. Collision, scripts, combat unchanged.
+## readability, visual nodes only in scenes/enemy.tscn. Collision, scripts,
+## combat unchanged.
+## #177 supersedes the #90 orange Polygon2D silhouette with the Mustache
+## Warrior pixel-art sprite (issue #177 art); legs (b)/(c) now assert that
+## art instead of the retired polygon.
 ##
-## Legs (stringly loads so the harness RUNS on base 1a4756e and FAILs):
+## Legs:
 ##   (a) collision unchanged: CollisionShape2D circle radius == 13.0.
-##   (b) jagged silhouette: an outer Polygon2D with >= 8 vertices, ALL
-##       within radius <= 13.5 (visual footprint never exceeds r13).
-##   (c) orange family fill: r > g > b and r >= 0.8.
+##   (b) animated sprite: an AnimatedSprite2D "Sprite" with idle/walk
+##       animations, nearest filtering, footprint near the r13 body.
+##   (c) green warrior family: an opaque idle-frame pixel reads green
+##       (g > r, g > b) - distinct from the blue wizard player.
 ##   (d) square language removed: NO ColorRect child (distinct from the
 ##       player's square and pickup squares).
 ##   (e) script attachment unchanged: still res://scripts/enemy.gd.
 ##   (f) mounts clean: instantiates, _ready runs, hp == 30.
-## FAIL-when-broken: (b)/(d) FAIL on base 1a4756e (ColorRect square, no
-## Polygon2D).
 
 var failures := 0
 
@@ -41,32 +43,38 @@ func _initialize() -> void:
 		radius = (cs.shape as CircleShape2D).radius
 	_check(is_equal_approx(radius, 13.0), "(a) collision circle radius unchanged (13.0, got %.2f)" % radius)
 
-	# (b) jagged silhouette within footprint.
-	var outer: Polygon2D = null
-	for c in e.get_children():
-		if c is Polygon2D and (c as Polygon2D).scale == Vector2.ONE:
-			outer = c as Polygon2D
-			break
-	var count_ok := false
-	var footprint_ok := false
-	var max_r := 0.0
-	if outer != null:
-		var poly: PackedVector2Array = outer.polygon
-		count_ok = poly.size() >= 8
-		footprint_ok = poly.size() > 0
-		for v in poly:
-			max_r = maxf(max_r, v.length())
-			if v.length() > 13.5:
-				footprint_ok = false
-	_check(outer != null and count_ok, "(b) jagged Polygon2D silhouette present (>= 8 vertices)")
-	_check(footprint_ok, "(b) all vertices within r13.5 footprint (max %.2f)" % max_r)
+	# (b) animated sprite (#177 Mustache Warrior).
+	var spr := e.get_node_or_null("Sprite") as AnimatedSprite2D
+	var frames_ok := spr != null and spr.sprite_frames != null \
+		and spr.sprite_frames.has_animation(&"idle") and spr.sprite_frames.has_animation(&"walk")
+	_check(frames_ok, "(b) AnimatedSprite2D 'Sprite' with idle/walk animations")
+	_check(spr != null and spr.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "(b) nearest filter (crisp pixel art)")
+	var feet_ok := false
+	if spr != null:
+		# Cell is 64x48, centered, feet on row 44 -> feet sit at y = pos.y + 20.
+		var feet_y: float = spr.position.y + 20.0 * spr.scale.y
+		feet_ok = absf(feet_y - 13.0) <= 3.0
+	_check(feet_ok, "(b) sprite feet sit on the r13 body footprint")
 
-	# (c) orange family fill.
+	# (c) green warrior family, sampled from the first idle frame's opaque pixels.
 	var col_ok := false
-	if outer != null:
-		var c: Color = outer.color
-		col_ok = c.r > c.g and c.g > c.b and c.r >= 0.8
-	_check(col_ok, "(c) orange family fill (r > g > b, r >= 0.8)")
+	if frames_ok:
+		var tex := spr.sprite_frames.get_frame_texture(&"idle", 0) as AtlasTexture
+		if tex != null:
+			var img := tex.atlas.get_image()
+			var r := tex.region
+			var sum := Vector3.ZERO
+			var n := 0
+			for y in range(int(r.position.y), int(r.end.y)):
+				for x in range(int(r.position.x), int(r.end.x)):
+					var c: Color = img.get_pixel(x, y)
+					if c.a > 0.5:
+						sum += Vector3(c.r, c.g, c.b)
+						n += 1
+			if n > 120:
+				var avg := sum / float(n)
+				col_ok = avg.y > avg.x and avg.y > avg.z
+	_check(col_ok, "(c) green warrior family (avg g > r, g > b)")
 
 	# (d) square language removed.
 	var has_colorrect := false

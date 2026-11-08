@@ -7,7 +7,7 @@ class_name HUD
 ## swaps, so it discovers that node lazily by exact name, connects its
 ## signals, and drops the reference when the swap frees it. No main.gd or
 ## dungeon_objective.gd changes; no fake objective data is rendered - the row
-## stays hidden wherever no objective exists (hub, DungeonB).
+## stays hidden wherever no objective exists (the hub).
 ##
 ## Isolated by design: this scene is self-contained and mounted by the scene
 ## that owns the player. Wiring into main.tscn is coordinated separately

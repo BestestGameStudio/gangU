@@ -5,8 +5,8 @@ extends Node
 ## An area scene (e.g. scenes/dungeon_a.tscn) attaches ONE child named
 ## "SpawnData" with this script. Main._mount_area_spawns reads it on every
 ## area swap; an area WITHOUT a SpawnData child gets NO enemies (the hub
-## stays empty, and a carrier with zero entries - like DungeonB's - spawns
-## nothing). No area-name checks live in code anymore.
+## stays empty, and a carrier with zero entries spawns nothing). No area-name
+## checks live in this mounter.
 ##
 ## Each Dictionary in `entries` carries EXACTLY these keys:
 ##   "position":     Vector2 - spawn position in the area's local space

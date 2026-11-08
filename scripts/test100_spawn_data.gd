@@ -11,8 +11,12 @@ extends SceneTree
 ##   ordering    - enemies mount BEFORE DungeonObjective._ready scans the
 ##                 "enemies" group, so the objective target is 3, not 0
 ##   completion  - three real apply_damage kills complete dungeon_a
-##   DB empty    - DungeonB carries an explicit-empty SpawnData and gets
-##                 ZERO enemies (data-driven; no name check in the mounter)
+##   DB carrier  - #177 / O1 (human decision 2026-11-08): DungeonB carries
+##                 3 mob entries and mounts them (data-driven mounter)
+##   DB boss     - DungeonB's ELIMINATION objective: killing the 3 mobs
+##                 spawns the Mustache Warlord (boss group, wired to the
+##                 production Player); its kill clears dungeon_b and opens
+##                 the LOCKED red-gate portal
 ## The harness duck-types the carrier (no AreaSpawnData reference) so the
 ## carrier legs FAIL on the old base instead of erroring at parse time.
 ## Gate/portal use follows the test9 direct _on_body_entered idiom - NOT
@@ -133,9 +137,36 @@ func _process(delta: float) -> bool:
 				_check("DB carrier: SpawnData child present", sd != null)
 				if sd != null:
 					var entries: Array = sd.get("entries")
-					_check("DB carrier: explicit-empty entries", entries != null and entries.size() == 0)
-				_check("DB mount: zero enemies", _area_enemies().size() == 0)
-				_check("DB unchanged: no objective", area.get_node_or_null("DungeonObjective") == null)
+					_check("DB carrier: 3 mob entries", entries != null and entries.size() == 3)
+				_check("DB mount: 3 mobs", _area_enemies().size() == 3)
+				var obj: DungeonObjective = area.get_node_or_null("DungeonObjective")
+				_check("DB objective: ELIMINATION", obj != null and obj.objective_type == DungeonObjective.ObjectiveType.ELIMINATION)
+				_check("DB objective: progress 0/4 (3 mobs + boss)", obj != null and obj.progress() == Vector2i(0, 4))
+				var portal: ExitPortal = area.get_node_or_null("ExitPortal")
+				_check("DB portal: locked (red gate, clear-or-die)", portal != null and portal.locked)
+				_check("DB boss: none before the mobs die", get_nodes_in_group("boss").is_empty())
+				for e in _area_enemies():
+					e.apply_damage(999) # synthetic kills
+				phase = 5; t = 0
+		5:
+			if t > 0.3:
+				var bosses := get_nodes_in_group("boss")
+				_check("DB boss: exactly one boss after the mobs", bosses.size() == 1)
+				if bosses.size() == 1:
+					var boss: Enemy = bosses[0] as Enemy
+					_check("DB boss: is the Mustache Warlord",
+						boss != null and boss.scene_file_path == "res://scenes/mustache_warlord.tscn")
+					_check("DB boss: in DungeonB", boss != null and boss.get_parent() == scene.current_area)
+					_check("DB boss: targets the production Player", boss != null and boss._player == p)
+					if boss != null:
+						boss.apply_damage(9999)
+				phase = 6; t = 0
+		6:
+			if t > 0.3:
+				var obj: DungeonObjective = scene.current_area.get_node("DungeonObjective")
+				_check("DB clear: dungeon_b cleared by the boss kill", obj.is_cleared() and obj.progress() == Vector2i(4, 4))
+				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
+				_check("DB clear: red portal unlocked", not portal.locked)
 				if fails == 0:
 					print("[100] ALL PASS")
 				print("[100] DONE fails=", fails)

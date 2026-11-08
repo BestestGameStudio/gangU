@@ -2,9 +2,17 @@ class_name ShopPanel
 extends CanvasLayer
 ## (#129, foundation C2) Shop choice panel. Hidden by default; the hub
 ## vendor opens it on walk-up and closes it on walk-away (Daniel,
-## 2026-11-07). Shows only OFFERABLE entries - a spell the player already
-## owns never appears (ownership exclusion), and buying one removes its
-## row immediately. Wallet balance rides the #128 balance_changed signal.
+## 2026-11-07). Shows the shop's STOCK: a spell the player already owns
+## never appears (ownership exclusion), and buying one removes its row
+## immediately. Wallet balance rides the #128 balance_changed signal.
+##
+## (#132, foundation C5) The panel renders exactly Shop.stock_size slots
+## (Daniel 2026-11-08: "show 4 slots for now"). A slot with no eligible
+## item shows an OUT OF STOCK sign ("if theres no eligible item display
+## an out of stock sign"). A RE-ROLL STOCK button buys a paid refresh at
+## the shop's current schedule price (1, 2, 3, 5, 8... Fibonacci); it is
+## disabled while Shop.can_paid_refresh() is false. Victory re-rolls and
+## price resets arrive live through Shop.stock_refreshed.
 ##
 ## UI is code-built in the #94 flat identity (StyleBoxFlat, no assets).
 ## While visible the panel joins "modal_ui" so the caster skips casting on
@@ -15,11 +23,13 @@ const ROW_BG := Color(0.08, 0.08, 0.1, 0.9)
 const B_DIM := Color(0.45, 0.48, 0.55, 0.6)
 const B_BUY := Color(0.95, 0.75, 0.25, 0.9)
 const TEXT_DIM := Color(0.7, 0.72, 0.78, 1.0)
+const OUT_OF_STOCK_TEXT := "OUT OF STOCK"
 
 var _shop: Shop
 var _wallet: CurrencyWallet
 var _balance_label: Label
 var _rows: VBoxContainer
+var _refresh_button: Button
 
 func _ready() -> void:
 	add_to_group("shop_panel")
@@ -29,8 +39,11 @@ func _ready() -> void:
 	_wallet = get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
 	if _wallet != null and not _wallet.balance_changed.is_connected(_on_balance_changed):
 		_wallet.balance_changed.connect(_on_balance_changed)
-	if _shop != null and not _shop.purchased.is_connected(_on_purchased):
-		_shop.purchased.connect(_on_purchased)
+	if _shop != null:
+		if not _shop.purchased.is_connected(_on_purchased):
+			_shop.purchased.connect(_on_purchased)
+		if not _shop.stock_refreshed.is_connected(_on_stock_refreshed):
+			_shop.stock_refreshed.connect(_on_stock_refreshed)
 	visible = false
 
 func open() -> void:
@@ -90,6 +103,11 @@ func _build_skeleton() -> void:
 	_rows.name = "Rows"
 	_rows.add_theme_constant_override("separation", 6)
 	vbox.add_child(_rows)
+	_refresh_button = Button.new()
+	_refresh_button.name = "RefreshButton"
+	_refresh_button.add_theme_stylebox_override("normal", _flat(ROW_BG, B_BUY))
+	_refresh_button.pressed.connect(_on_refresh_pressed)
+	vbox.add_child(_refresh_button)
 	var hint := Label.new()
 	hint.text = "Walk away to close"
 	hint.add_theme_color_override("font_color", TEXT_DIM * Color(1, 1, 1, 0.6))
@@ -97,6 +115,10 @@ func _build_skeleton() -> void:
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
 
+## (#132) Exactly stock_size slot rows: stocked entries first, then one
+## OUT OF STOCK sign per unfillable slot. The re-roll button always shows
+## the CURRENT paid price and disables when no re-roll could surface a
+## new good.
 func _render() -> void:
 	_update_balance_text()
 	for c in _rows.get_children():
@@ -104,14 +126,14 @@ func _render() -> void:
 		c.queue_free()
 	if _shop == null:
 		return
-	for entry in _shop.offerable_entries():
-		_rows.add_child(_make_row(entry))
-	if _rows.get_child_count() == 0:
-		var empty := Label.new()
-		empty.name = "EmptyHint"
-		empty.text = "Nothing for sale right now"
-		empty.add_theme_color_override("font_color", TEXT_DIM)
-		_rows.add_child(empty)
+	var stock := _shop.stock_entries()
+	for i in range(maxi(_shop.stock_size, 0)):
+		if i < stock.size():
+			_rows.add_child(_make_row(stock[i]))
+		else:
+			_rows.add_child(_make_out_of_stock_row())
+	_refresh_button.text = "RE-ROLL STOCK (%dc)" % _shop.paid_refresh_price()
+	_refresh_button.disabled = not _shop.can_paid_refresh()
 
 func _make_row(entry: ShopEntry) -> Control:
 	var row := PanelContainer.new()
@@ -135,6 +157,20 @@ func _make_row(entry: ShopEntry) -> Control:
 	hbox.add_child(buy_button)
 	return row
 
+## (#132) The OUT OF STOCK sign for a slot with no eligible item: dimmed,
+## no buy button, no price.
+func _make_out_of_stock_row() -> Control:
+	var row := PanelContainer.new()
+	row.name = "OutOfStockRow"
+	row.add_theme_stylebox_override("panel", _flat(ROW_BG, B_DIM))
+	var label := Label.new()
+	label.name = "OutOfStockLabel"
+	label.text = OUT_OF_STOCK_TEXT
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", TEXT_DIM * Color(1, 1, 1, 0.7))
+	row.add_child(label)
+	return row
+
 func _update_balance_text() -> void:
 	_balance_label.text = "Wallet: %dc" % (_wallet.balance() if _wallet != null else 0)
 
@@ -145,7 +181,19 @@ func _on_purchased(_entry: ShopEntry) -> void:
 	if visible:
 		_render()
 
+func _on_stock_refreshed() -> void:
+	if visible:
+		_render()
+
 func _on_buy_pressed(entry: ShopEntry) -> void:
 	if _shop != null:
 		_shop.buy(entry)
 	_render() # re-render either way: success drops the row, failure is visible
+
+## (#132) Paid re-roll. buy_paid_refresh refuses (and charges nothing)
+## when unaffordable or when no new good could surface; the re-render
+## shows the unchanged stock and price either way.
+func _on_refresh_pressed() -> void:
+	if _shop != null:
+		_shop.buy_paid_refresh()
+	_render()
