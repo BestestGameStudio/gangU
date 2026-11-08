@@ -12,6 +12,22 @@ signal health_changed(current: int, max_hp: int)
 @export var max_hp: int = 100
 @export var can_swim: bool = true
 
+## #198: Shift dash. A short burst along the held WASD direction (or the last
+## movement direction when standing still). Terrain rules still apply because
+## the dash velocity goes through TerrainMotion.resolve like walking does.
+## No stamina cost and no iframes (the issue left both open).
+signal dash_started(direction: Vector2)
+signal dash_ended()
+
+@export var dash_speed: float = 900.0
+@export var dash_duration: float = 0.15
+@export var dash_cooldown: float = 0.6
+
+var _dash_time_left := 0.0
+var _dash_cooldown_left := 0.0
+var _dash_dir := Vector2.DOWN
+var _last_move_dir := Vector2.DOWN
+
 var terrain: TerrainMap = null
 
 var hp: int
@@ -83,9 +99,24 @@ func heal(amount: int) -> void:
 func _physics_process(delta: float) -> void:
 	if hp <= 0:
 		velocity = Vector2.ZERO
+		if _dash_time_left > 0.0:
+			_dash_time_left = 0.0
+			_end_dash()
 		return
 	var input_dir := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
-	velocity = TerrainMotion.resolve(terrain, global_position, velocity, input_dir * speed, delta, can_swim)
+	if input_dir != Vector2.ZERO:
+		_last_move_dir = input_dir.normalized()
+	_dash_cooldown_left = maxf(_dash_cooldown_left - delta, 0.0)
+	if Input.is_action_just_pressed(&"dash"):
+		try_dash(input_dir)
+	var desired := input_dir * speed
+	if _dash_time_left > 0.0:
+		desired = _dash_dir * dash_speed
+		_dash_time_left = maxf(_dash_time_left - delta, 0.0)
+		_spawn_dash_ghost()
+		if _dash_time_left == 0.0:
+			_end_dash()
+	velocity = TerrainMotion.resolve(terrain, global_position, velocity, desired, delta, can_swim)
 	move_and_slide()
 	if sprite != null:
 		if input_dir != Vector2.ZERO:
@@ -94,7 +125,7 @@ func _physics_process(delta: float) -> void:
 				facing = &"right" if input_dir.x > 0.0 else &"left"
 			else:
 				facing = &"down" if input_dir.y > 0.0 else &"up"
-		_update_sprite(input_dir != Vector2.ZERO)
+		_update_sprite(input_dir != Vector2.ZERO or is_dashing())
 
 func _process(_delta: float) -> void:
 	# Face the mouse cursor; manual aim only.
@@ -106,6 +137,58 @@ func _process(_delta: float) -> void:
 		# the wizard art itself must stay upright - its facing comes from
 		# directional animation frames, not node rotation.
 		sprite.global_rotation = 0.0
+
+## #198: start a dash if not dead, not already dashing and off cooldown.
+## `input_dir` zero falls back to the last movement direction. Returns whether
+## a dash started.
+func try_dash(input_dir: Vector2 = Vector2.ZERO) -> bool:
+	if hp <= 0 or _dash_time_left > 0.0 or _dash_cooldown_left > 0.0:
+		return false
+	_dash_dir = input_dir.normalized() if input_dir != Vector2.ZERO else _last_move_dir
+	_dash_time_left = dash_duration
+	_dash_cooldown_left = dash_cooldown
+	if sprite != null:
+		sprite.modulate = Color(0.75, 0.9, 1.6)
+	dash_started.emit(_dash_dir)
+	return true
+
+
+func is_dashing() -> bool:
+	return _dash_time_left > 0.0
+
+
+func dash_cooldown_remaining() -> float:
+	return _dash_cooldown_left
+
+
+func _end_dash() -> void:
+	if sprite != null:
+		sprite.modulate = Color.WHITE
+	dash_ended.emit()
+
+
+## Afterimage trail: a fading copy of the current wizard frame left behind each
+## physics frame of the dash. Skipped for bare player.tscn (no sprite).
+func _spawn_dash_ghost() -> void:
+	if sprite == null or sprite.sprite_frames == null or get_parent() == null:
+		return
+	var tex := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
+	if tex == null:
+		return
+	var ghost := Sprite2D.new()
+	ghost.texture = tex
+	ghost.centered = sprite.centered
+	ghost.offset = sprite.offset
+	ghost.flip_h = sprite.flip_h
+	ghost.texture_filter = sprite.texture_filter
+	ghost.global_transform = sprite.global_transform
+	ghost.modulate = Color(0.55, 0.8, 1.0, 0.6)
+	ghost.z_index = z_index - 1
+	get_parent().add_child(ghost)
+	var tween := ghost.create_tween()
+	tween.tween_property(ghost, "modulate:a", 0.0, 0.25)
+	tween.tween_callback(ghost.queue_free)
+
 
 ## #137: drive idle_<dir>/walk_<dir> from the retained facing + movement.
 func _update_sprite(walking: bool) -> void:
