@@ -170,7 +170,7 @@ func _process(delta: float) -> bool:
 							texts.append(c.text)
 							buttons.append(c)
 					texts.sort()
-					if texts != ["Beam", "Split shot"] or buttons.size() != 2:
+					if texts != ["Beam [S]", "Split shot [S]"] or buttons.size() != 2:
 						print("[E] FAIL fork buttons: ", texts); ok = false
 						return _done()
 					print("[E] both fork buttons render after fix OK")
@@ -259,7 +259,7 @@ func _process(delta: float) -> bool:
 					for c2 in panel._upgrade_box.get_children():
 						if c2 is Button:
 							buttons2.append(c2)
-					var split_btn: Button = buttons2[0] if buttons2[0].text == "Split shot" else buttons2[1]
+					var split_btn: Button = buttons2[0] if buttons2[0].text.begins_with("Split shot") else buttons2[1]
 					split_btn.pressed.emit()
 					if sig_log.size() != 1 or sig_log[0] != fireball:
 						print("[E] FAIL upgrades_changed: ", sig_log.size(), " calls"); ok = false
@@ -305,6 +305,8 @@ func _process(delta: float) -> bool:
 					var hud2: Node = scene.get_node("HUD")
 					if hud2._spell_rows.has(fireball):
 						print("[E] FAIL fireball row kept after replace"); ok = false
+					elif not hud2._spell_rows.has(split):
+						print("[E] FAIL split row missing after replace"); ok = false
 					elif hud2._spell_rows[split]["name"].text.find("^") >= 0:
 						print("[E] FAIL arrow on fresh Split row: ", hud2._spell_rows[split]["name"].text); ok = false
 					else:
@@ -371,4 +373,5 @@ func _process(delta: float) -> bool:
 
 func _done() -> bool:
 	print("[E] ", "PASS" if ok else "FAIL")
+	quit(0 if ok else 1)
 	return true
