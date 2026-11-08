@@ -170,14 +170,13 @@ func _mount_area_spawns(area: Node) -> void:
 	if data == null:
 		return
 	var terrain := area.get_node_or_null("Terrain") as TerrainMap
-	for entry: Dictionary in data.entries:
-		var enemy_scene := entry["enemy"] as PackedScene
-		var e := enemy_scene.instantiate() as Enemy
-		e.position = entry["position"] as Vector2
-		e.reward_table = entry["reward_table"] as RewardTable
-		e.player_path = data.player_path
-		e.terrain = terrain
-		area.add_child(e)
+	# #220: all spawning goes through the area's EnemySpawner (one per mount,
+	# freed with the area). Default policy = mount every entry once.
+	var spawner := EnemySpawner.new()
+	spawner.name = "EnemySpawner"
+	area.add_child(spawner)
+	spawner.setup(data.entries, data.player_path, terrain, area)
+	spawner.spawn_initial()
 
 ## #8 production objective: CLEAR_ALL over the spawned enemies in
 ## DungeonA. Mounted AFTER _mount_area_spawns - DungeonObjective._ready
