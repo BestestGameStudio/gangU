@@ -7,7 +7,7 @@ extends Node2D
 ## TileMapLayer internals and never the raw store.
 ##
 ## Sparse store: unset cells read as GROUND (flat-world default), so only
-## non-ground cells are recorded. Writes go through set_cell/clear_cell.
+## non-ground cells are recorded. Writes go through set_cell/set_cells/clear_cell.
 ##
 ## Presentation: ground + obstacle TileMapLayers are BUILT FROM the data on
 ## every change; colored square tiles are the disclosed first-pass debug
@@ -23,6 +23,10 @@ extends Node2D
 const TYPE_COLORS: Dictionary = {
 	TerrainTypes.GROUND: Color(0.16, 0.24, 0.18, 1.0),
 	TerrainTypes.OBSTACLE: Color(0.45, 0.28, 0.22, 1.0),
+	TerrainTypes.GRASS: Color(0.36, 0.62, 0.3, 1.0),
+	TerrainTypes.TREE: Color(0.1, 0.3, 0.14, 1.0),
+	TerrainTypes.SNOW: Color(0.92, 0.94, 0.97, 1.0),
+	TerrainTypes.ICE: Color(0.66, 0.88, 0.95, 1.0),
 }
 ## Fallback swatch for a registered type with no listed color.
 const DEFAULT_TILE_COLOR: Color = Color(0.3, 0.3, 0.35, 1.0)
@@ -44,6 +48,22 @@ func set_cell(cell: Vector2i, type: StringName) -> bool:
 		_cells.erase(cell)
 	else:
 		_cells[cell] = type
+	_rebuild_presentation()
+	return true
+
+## Bulk write (Vector2i -> StringName). All-or-nothing: any unregistered
+## type refuses the whole batch with no change. Presentation rebuilds once,
+## since a per-cell set_cell rebuild makes filling a map quadratic.
+func set_cells(cells: Dictionary) -> bool:
+	for type: StringName in cells.values():
+		if not TerrainTypes.is_valid(type):
+			return false
+	for cell: Vector2i in cells:
+		var type: StringName = cells[cell]
+		if type == TerrainTypes.GROUND:
+			_cells.erase(cell)
+		else:
+			_cells[cell] = type
 	_rebuild_presentation()
 	return true
 
