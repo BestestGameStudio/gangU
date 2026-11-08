@@ -19,6 +19,7 @@ signal upgrades_changed(spell)
 @export var upgrades: Array[SpellUpgrade] = []
 
 var _cast_counts: Dictionary = {} # Spell -> int, read-only XP observation
+var _tiers: Dictionary = {} # Spell -> int tier, written ONLY on successful apply (#36)
 var _caster: Node
 
 func _ready() -> void:
@@ -42,6 +43,12 @@ func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
 		if u != null and u.source_spell == spell:
 			out.append(u)
 	return out
+
+## Tier of a held spell (#36): 1/2/3 = Specialization/Mastery/Signature,
+## 0 = Base or never-upgraded. Written only by a successful apply_upgrade;
+## #38's HUD tier display reads this accessor.
+func get_tier(spell: Spell) -> int:
+	return int(_tiers.get(spell, 0))
 
 func can_upgrade(spell: Spell) -> bool:
 	if _caster == null or not _caster.has_method("get_unlocked"):
@@ -68,6 +75,11 @@ func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
 				return false
 			var ok: bool = _caster.replace_spell(u.source_spell, u.result_spell)
 			if ok:
+				# #36: record tier ON successful apply only. The result
+				# instance becomes the tier source of truth; the consumed
+				# source drops back to Base (0).
+				_tiers.erase(u.source_spell)
+				_tiers[u.result_spell] = u.tier
 				upgrades_changed.emit(spell)
 			return ok
 	push_warning("SpellProgress: unknown upgrade id '%s' for %s." % [upgrade_id, spell])

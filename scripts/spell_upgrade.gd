@@ -17,3 +17,9 @@ extends Resource
 @export var result_spell: Spell
 ## XP threshold placeholder - thresholds are an open human choice.
 @export var xp_threshold: int = 0
+## Tier this upgrade advances TO: 1 = Specialization, 2 = Mastery,
+## 3 = Signature (Base > Specialization > Mastery > Signature, #33/#36).
+## Base (0) is the un-upgraded spell and is never an upgrade row.
+## SpellProgress records this on the result spell at a successful apply -
+## the source of truth #38's tier display reads via get_tier().
+@export var tier: int = 1

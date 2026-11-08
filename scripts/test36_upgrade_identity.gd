@@ -24,6 +24,8 @@ var progress: SpellProgress
 var hud: HUD
 var fb: Spell = preload("res://resources/spells/fire_ball.tres")
 var split: Spell = preload("res://resources/spells/fire_ball_split.tres")
+var split_up: SpellUpgrade = preload("res://resources/upgrades/fireball_split.tres")
+var beam_up: SpellUpgrade = preload("res://resources/upgrades/fireball_beam.tres")
 var phase := 0
 var t := 0.0
 var fails := 0
@@ -82,6 +84,9 @@ func _process(delta: float) -> bool:
 					caster.spell_cast.emit(fb)
 				last_cast = null
 				_check("pre: can_upgrade(fb) at 10 casts", progress.can_upgrade(fb))
+				# #36 tier delta legs (clean FAIL on old base: no field/accessor)
+				_check("tier: spec resource fields tier=1", split_up.get("tier") == 1 and beam_up.get("tier") == 1)
+				_check("tier: base spell is 0 pre-apply", not progress.has_method("get_tier") or progress.get_tier(fb) == 0)
 				_check("pre: HUD row keyed to fb", hud._spell_rows.has(fb) and not hud._spell_rows.has(split))
 				caster.cast_slot(2) # REAL cast: fb cooldown starts
 				apply_ok = progress.apply_upgrade(fb, &"fireball_split")
@@ -107,6 +112,10 @@ func _process(delta: float) -> bool:
 				_check("signals: upgrades_changed emitted once", upgrades_changed_count == 1)
 				_check("HUD: row re-keyed to split, stale fb row gone", hud._spell_rows.has(split) and not hud._spell_rows.has(fb))
 				_check("HUD: visible name follows upgraded object", hud._spell_rows[split]["name"].text.contains("Split"))
+				_check("tier: split recorded Specialization ON apply", progress.has_method("get_tier") and progress.get_tier(split) == 1)
+				_check("tier: consumed source drops to Base/0", progress.has_method("get_tier") and progress.get_tier(fb) == 0)
+				var m2: Array = progress.get_upgrade_paths(split)
+				_check("tier: mastery forks carry tier=2", m2.size() == 2 and m2.all(func(u): return u.get("tier") == 2))
 				_check("shared base .tres unmutated", _unmutated(fb, snap["fb"]))
 				_check("shared result .tres unmutated", _unmutated(split, snap["split"]))
 				phase = 2; t = 0
