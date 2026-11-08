@@ -35,6 +35,9 @@ func _make_player() -> Player:
 	var bod := Polygon2D.new()
 	bod.name = "Body"
 	p.add_child(bod)
+	var nose := Polygon2D.new()
+	nose.name = "NoseEdge"
+	p.add_child(nose)
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
@@ -43,7 +46,7 @@ func _make_player() -> Player:
 	return p
 
 func _rows() -> VBoxContainer:
-	return panel.get_node("Backdrop/Margin/VBox/Rows") as VBoxContainer
+	return panel.get_node("Backdrop/Margin/VBox/Scroll/Rows") as VBoxContainer
 
 func _row_named(spell_name: String) -> Control:
 	for row in _rows().get_children():
@@ -59,6 +62,7 @@ func _process(_delta: float) -> bool:
 		return false
 	_legs_ran = true
 	_run_legs()
+	quit(1 if failures > 0 else 0)
 	return false
 
 func _run_legs() -> void:
@@ -68,6 +72,13 @@ func _run_legs() -> void:
 	root.add_child(directory)
 	panel = preload("res://scenes/spell_directory_panel.tscn").instantiate()
 	root.add_child(panel)
+
+	var wallet := CurrencyWallet.new()
+	root.add_child(wallet)
+	wallet.add(25)
+	panel.open(caster)
+	_check(_rows().get_node_or_null("EmptyLabel") != null, "empty inventory displays an honest empty state")
+	panel.close()
 
 	## 1. Panel: hidden by default, outside modal_ui.
 	_check(not panel.visible, "panel hidden by default")
@@ -91,6 +102,11 @@ func _run_legs() -> void:
 	caster.unlock_spell(mana)
 	_check(_rows().get_child_count() == 3, "spell_unlocked live-refreshes the open panel (3 rows)")
 	_check(_row_named("Mana Shot") != null, "new unlock row rendered by name")
+
+	var split: Spell = preload("res://resources/spells/fire_ball_split.tres")
+	_check(caster.replace_spell(fireball, split), "real upgrade replacement accepted")
+	_check(_row_named("Fire Ball") == null and _row_named(split.spell_name) != null, "spell_replaced refreshes current inventory, no stale base spell")
+	_check(wallet.balance() == 25, "read-only: wallet unchanged")
 
 	## 5. Walk-away closes; a later unlock does not resurrect it.
 	directory._on_body_exited(p)
@@ -126,6 +142,16 @@ func _run_legs() -> void:
 	_check(_row_named("Fire Ball") != null and _row_named("Mana Shot") != null, "production rows come from the real caster, not the group")
 	directory._on_body_exited(real_player)
 	_check(not panel.visible, "production walk-away closes")
+
+	for i in range(20):
+		var extra := Spell.new()
+		extra.spell_name = "Extra %d" % i
+		real_caster.unlock_spell(extra)
+	directory._on_body_entered(real_player)
+	_check(_rows().get_child_count() == real_caster.get_unlocked().size(), "large inventory lists ALL unlocked spells")
+	_check(_rows().get_parent() is ScrollContainer, "large listing has scroll access, not clipped overflow")
+	_check(_rows().find_children("*", "Button", true, false).is_empty(), "directory has no purchase/equip/grant buttons")
+	directory._on_body_exited(real_player)
 
 	print("test218 done: %d checks, %d failures" % [check_count, failures])
 
