@@ -91,6 +91,20 @@ func _initialize() -> void:
 	_check(green, "idle frame has green body pixels")
 	var bs: Dictionary = Bestiary.catalog_entry(&"slime")
 	_check(not bs.is_empty() and bs["scene"] == "res://scenes/enemy_slime.tscn", "bestiary lists slime")
+	# Placement (Daniel 2026-11-09): normal dungeon A, added alongside the
+	# three existing enemies, and near its normal gate in the overworld.
+	var da := (load("res://scenes/dungeon_a.tscn") as PackedScene).instantiate()
+	var da_entries: Array = da.get_node("SpawnData").entries
+	var da_slimes := da_entries.filter(func(e): return (e["enemy"] as PackedScene).resource_path == "res://scenes/enemy_slime.tscn")
+	_check(da_entries.size() == 5 and da_slimes.size() == 2, "dungeon A: 3 original + 2 slimes")
+	da.free()
+	var ow := (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
+	var gn: Node = ow.get_node("EntranceGuards/GuardsNormal")
+	var ow_slimes: Array = gn.entries.filter(func(e): return (e["enemy"] as PackedScene).resource_path == "res://scenes/enemy_slime.tscn")
+	_check(gn.dungeon_id == &"dungeon_a" and ow_slimes.size() == 1 and ow_slimes[0].has("definition"), "overworld GuardsNormal has a slime guard")
+	var gate_pos: Vector2 = (ow.get_node("GateNormal") as Node2D).position
+	_check(ow_slimes.size() == 1 and (ow_slimes[0]["position"] as Vector2).distance_to(gate_pos) < 150.0, "slime guard is near the normal gate")
+	ow.free()
 	# 39 max HP does not split
 	var a2 := Node2D.new()
 	root.add_child(a2)

@@ -171,7 +171,8 @@ func _process(delta: float) -> bool:
 					opaque > 300)
 				_check("contrast: sprite robe pixel is blue-family (b>r, b>g)",
 					_blue_family(_frame_color(walk_down, Vector2i(14, 34))))
-				var enemies := get_nodes_in_group("enemies")
+				# #392: DungeonA also holds slimes (their own sheet); this leg is the Mustache Warrior art.
+				var enemies := get_nodes_in_group("enemies").filter(func(n): return n.scene_file_path == "res://scenes/enemy.tscn")
 				var green_ok: bool = enemies.size() == 3
 				for e in enemies:
 					# #177: the enemy visual is the green Mustache Warrior

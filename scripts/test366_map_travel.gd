@@ -27,8 +27,11 @@ func _click(canvas: MapCanvas, local: Vector2) -> void:
 	canvas._gui_input(up)
 
 func _kill_all() -> void:
-	for i in 2: # A may roll RED and spawn the Warlord after its mobs die
-		for enemy in get_nodes_in_group("enemies"):
+	for i in 8: # A may roll RED and spawn the Warlord after its mobs die; #392 slimes split
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty() and i >= 2:
+			break
+		for enemy in alive:
 			enemy.apply_damage(99999)
 		await _frames()
 

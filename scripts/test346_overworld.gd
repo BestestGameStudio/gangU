@@ -130,9 +130,9 @@ func _flow_legs() -> void:
 	_check(ow.name == "Overworld", "(C) hub GateOverworld -> Overworld (got %s)" % ow.name)
 	_check(p.global_position == (ow.get_node("PlayerSpawn") as Node2D).global_position, "(C) player placed at the overworld PlayerSpawn")
 	var guards := _guards(main)
-	_check(guards.size() == 15, "(C) 15 guards around the 5 uncleared entrances (got %d)" % guards.size())
+	_check(guards.size() == 16, "(C) 16 guards around the 5 uncleared entrances, incl. #392 slime (got %d)" % guards.size())
 	_check(guards.all(func(e: Enemy) -> bool: return e._behavior is EnemyBehaviorGuard), "(C) every guard runs the leashed guard behavior")
-	_check(_near(guards, ow.get_node("GateNormal").global_position, 160.0) == 2, "(C) 2 guards posted at the DungeonA entrance")
+	_check(_near(guards, ow.get_node("GateNormal").global_position, 160.0) == 3, "(C) 3 guards posted at the DungeonA entrance (gate guard, patrol, #392 slime)")
 	_check(_near(guards, ow.get_node("GateBoss").global_position, 180.0) == 4, "(C) 4 guards posted at the boss entrance")
 	_check(_near(guards, ow.get_node("GateBeast").global_position, 180.0) == 4, "(C) 4 guards posted at the Beast entrance (#326)")
 	var posts := {}
@@ -179,9 +179,14 @@ func _flow_legs() -> void:
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _enter(main, "GateNormal")
 	_check(main.current_area.name == "DungeonA", "(E) overworld GateNormal -> DungeonA")
-	for e in get_nodes_in_group("enemies"):
-		e.apply_damage(999) # synthetic kills
-	await _frames(3)
+	# #392: DungeonA slimes split, so keep killing until no enemy is left.
+	for _round in 8:
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for e in alive:
+			e.apply_damage(999) # synthetic kills
+		await _frames(3)
 	_check(main.cleared_dungeons.has(&"dungeon_a"), "(E) clearing DungeonA records it as cleared")
 	var portal: ExitPortal = main.current_area.get_node("ExitPortal")
 	portal._on_body_entered(p)
@@ -208,4 +213,4 @@ func _flow_legs() -> void:
 	_check(fresh.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
 	fresh.enter_overworld()
 	await _frames(3)
-	_check(_guards(fresh).size() == 15, "(F) every entrance is guarded again (got %d)" % _guards(fresh).size())
+	_check(_guards(fresh).size() == 16, "(F) every entrance is guarded again (got %d)" % _guards(fresh).size())
