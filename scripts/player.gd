@@ -32,10 +32,23 @@ signal launch_cancelled()
 
 @export var dash_speed: float = 900.0
 @export var dash_duration: float = 0.15
+## Seconds to recharge ONE dash charge. With the base single charge this is
+## the classic #198 cooldown (counted from dash start).
 @export var dash_cooldown: float = 0.6
 
+## #426: dash CHARGES. The base is one charge; owned relics add more through
+## the DASH_CHARGES_KEY scalar effect (the boss-drop Twin Dash relic adds
+## one, so the player can dash twice). Charges recharge ONE AT A TIME, each
+## taking dash_cooldown; a dash spent while a recharge is already running
+## does not restart it. Provisional rule - the issue left recharge timing
+## open, and this keeps the single-charge behavior exactly as before.
+const BASE_DASH_CHARGES := 1
+const DASH_CHARGES_KEY := &"dash_charges"
+
 var _dash_time_left := 0.0
-var _dash_cooldown_left := 0.0
+var _dash_charges := BASE_DASH_CHARGES
+## Time left on the charge currently recharging (0 = none recharging).
+var _dash_recharge_left := 0.0
 var _dash_dir := Vector2.DOWN
 var _last_move_dir := Vector2.DOWN
 
@@ -284,7 +297,7 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	if input_dir != Vector2.ZERO:
 		_last_move_dir = input_dir.normalized()
-	_dash_cooldown_left = maxf(_dash_cooldown_left - delta, 0.0)
+	_tick_dash_recharge(delta)
 	if Input.is_action_just_pressed(&"dash"):
 		try_dash(input_dir)
 	var desired := input_dir * move_speed()
@@ -338,15 +351,17 @@ func _process(_delta: float) -> void:
 		# directional animation frames, not node rotation.
 		sprite.global_rotation = 0.0
 
-## #198: start a dash if not dead, not already dashing and off cooldown.
-## `input_dir` zero falls back to the last movement direction. Returns whether
-## a dash started.
+## #198: start a dash if not dead, not already dashing and a dash charge is
+## available (#426). `input_dir` zero falls back to the last movement
+## direction. Returns whether a dash started.
 func try_dash(input_dir: Vector2 = Vector2.ZERO) -> bool:
-	if hp <= 0 or _dash_time_left > 0.0 or _dash_cooldown_left > 0.0 or _launch_time_left > 0.0:
+	if hp <= 0 or _dash_time_left > 0.0 or _dash_charges <= 0 or _launch_time_left > 0.0:
 		return false
 	_dash_dir = input_dir.normalized() if input_dir != Vector2.ZERO else _last_move_dir
 	_dash_time_left = dash_duration
-	_dash_cooldown_left = dash_cooldown
+	_dash_charges -= 1
+	if _dash_recharge_left <= 0.0:
+		_dash_recharge_left = dash_cooldown
 	if sprite != null:
 		sprite.modulate = Color(0.75, 0.9, 1.6)
 	dash_started.emit(_dash_dir)
@@ -357,8 +372,40 @@ func is_dashing() -> bool:
 	return _dash_time_left > 0.0
 
 
+## Seconds until a dash is available again: 0 while any charge is ready.
 func dash_cooldown_remaining() -> float:
-	return _dash_cooldown_left
+	return 0.0 if _dash_charges > 0 else _dash_recharge_left
+
+
+## #426: dash charges ready right now.
+func dash_charges() -> int:
+	return _dash_charges
+
+
+## #426: charge cap = base + owned relics' DASH_CHARGES_KEY effects. Queried
+## live (the OwnedRelics apply seam), so a relic gained mid-run counts at
+## once and nothing goes stale. No OwnedRelics mounted = base charges.
+func dash_max_charges() -> int:
+	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics if is_inside_tree() else null
+	var extra := 0
+	if relics != null:
+		extra = int(relics.scalar_total(DASH_CHARGES_KEY))
+	return maxi(BASE_DASH_CHARGES + extra, 1)
+
+
+## #426: one charge recharges at a time; the next starts as soon as the
+## previous lands. A newly gained charge slot (relic pickup) fills at once.
+func _tick_dash_recharge(delta: float) -> void:
+	var cap := dash_max_charges()
+	if _dash_charges >= cap:
+		_dash_charges = cap
+		_dash_recharge_left = 0.0
+		return
+	_dash_recharge_left = maxf(_dash_recharge_left - delta, 0.0)
+	if _dash_recharge_left == 0.0:
+		_dash_charges += 1
+		if _dash_charges < cap:
+			_dash_recharge_left = dash_cooldown
 
 
 ## #305: start a spell launch (Mastery: launched forward BEFORE attacking).

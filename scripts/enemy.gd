@@ -137,6 +137,7 @@ func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	if hp == 0:
 		died.emit()
 		_spawn_reward_drop()
+		_spawn_boss_relic_drop()
 		_spawn_death_burst()
 		queue_free()
 
@@ -314,3 +315,21 @@ func _spawn_reward_drop() -> void:
 	drop.setup(entry)
 	drop.global_position = global_position
 	get_parent().call_deferred("add_child", drop)
+
+## #426: any boss (the "boss" group) rolls BossRelicDrop on death, separately
+## from its reward table. The relic lands beside the table drop (offset so
+## the two pickups do not overlap) as a walk-over pickup.
+const BOSS_RELIC_OFFSET := Vector2(96, 0)
+
+func _spawn_boss_relic_drop() -> void:
+	if not is_in_group("boss") or get_parent() == null:
+		return
+	var owned := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	var relic := BossRelicDrop.pick(owned, randf())
+	if relic == null:
+		return
+	var drop: RewardDrop = preload("res://scenes/reward_drop.tscn").instantiate()
+	drop.setup(BossRelicDrop.entry_for(relic))
+	drop.global_position = global_position + BOSS_RELIC_OFFSET
+	get_parent().call_deferred("add_child", drop)
+	print("[rewards] boss dropped relic: ", relic.display_name)

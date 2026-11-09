@@ -121,7 +121,8 @@ func _process(delta: float) -> bool:
 			if t < 0.3:
 				return false
 			for c in scene.current_area.get_children():
-				if c is RewardDrop:
+				# #426: a boss may also drop a relic beside the token; pick the token.
+				if c is RewardDrop and c.entry != null and c.entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
 					drop = c
 			_check(drop != null and drop.entry.kind == RewardEntry.Kind.UPGRADE_TOKEN, "boss kill drops an Upgrade Token")
 			if drop == null:
