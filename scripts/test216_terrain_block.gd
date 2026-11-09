@@ -209,15 +209,15 @@ func _initialize() -> void:
 	events.clear()
 	var wall := map.cell_to_world(Vector2i(20, 1))
 	var p3 := _fire(stage, bolt, wall + Vector2(-150, 0), Vector2.RIGHT, shooter)
-	var blocked_at := Vector2(-1, -1)
-	p3.blocked.connect(func(): blocked_at = p3.global_position)
+	var blocked_at: Array = [] # lambda writes need a reference type
+	p3.blocked.connect(func(): blocked_at.append(p3.global_position))
 	for i in 25:
 		await physics_frame
 	_check(events.is_empty() and map.tile_type_at_cell(Vector2i(20, 1)) == TerrainTypes.OBSTACLE, "an OBSTACLE wall is not destroyed")
 	# #433: the pass-through carve-out is superseded - a non-destroyable
 	# wall cell is solid cover now and stops the shot at its face (the
 	# cell's left edge here: 20 * 64 = 1280).
-	_check(blocked_at.x > 0.0 and absf(blocked_at.x - (wall.x - 32.0)) < 1.0, "a non-destroyable wall now blocks the shot at its face (#433)")
+	_check(not blocked_at.is_empty() and absf((blocked_at[0] as Vector2).x - (wall.x - 32.0)) < 1.0, "a non-destroyable wall now blocks the shot at its face (#433)")
 
 	# a source with no terrain never touches the map
 	map.set_cell(gap, TerrainTypes.BLOCK)
