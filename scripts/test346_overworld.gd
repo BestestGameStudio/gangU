@@ -76,6 +76,7 @@ func _scene_legs() -> void:
 		"GateRed": "res://scenes/dungeon_b.tscn",
 		"GateGenerated": "res://scenes/dungeon_generated.tscn",
 		"GateBoss": "res://scenes/dungeon_c.tscn",
+		"GateBeast": "res://scenes/dungeon_d.tscn",
 	}
 	for gname: String in expect:
 		var g := ow.get_node_or_null(gname) as Gate
@@ -88,7 +89,7 @@ func _scene_legs() -> void:
 	ground.build_from(ow)
 	var spawn: Vector2 = (ow.get_node("PlayerSpawn") as Node2D).position
 	_check(ground.covers(spawn), "(B) ground covers the arrival point")
-	_check(ground.roads.size() == 5, "(B) one road per gate (got %d)" % ground.roads.size())
+	_check(ground.roads.size() == 6, "(B) one road per gate (got %d)" % ground.roads.size())
 	var far := 0.0
 	for c in ow.get_children():
 		if c is Gate:
@@ -123,10 +124,11 @@ func _flow_legs() -> void:
 	_check(ow.name == "Overworld", "(C) hub GateOverworld -> Overworld (got %s)" % ow.name)
 	_check(p.global_position == (ow.get_node("PlayerSpawn") as Node2D).global_position, "(C) player placed at the overworld PlayerSpawn")
 	var guards := _guards(main)
-	_check(guards.size() == 11, "(C) 11 guards around the 4 uncleared entrances (got %d)" % guards.size())
+	_check(guards.size() == 15, "(C) 15 guards around the 5 uncleared entrances (got %d)" % guards.size())
 	_check(guards.all(func(e: Enemy) -> bool: return e._behavior is EnemyBehaviorGuard), "(C) every guard runs the leashed guard behavior")
 	_check(_near(guards, ow.get_node("GateNormal").global_position, 160.0) == 2, "(C) 2 guards posted at the DungeonA entrance")
 	_check(_near(guards, ow.get_node("GateBoss").global_position, 180.0) == 4, "(C) 4 guards posted at the boss entrance")
+	_check(_near(guards, ow.get_node("GateBeast").global_position, 180.0) == 4, "(C) 4 guards posted at the Beast entrance (#326)")
 	var posts := {}
 	for e in guards:
 		posts[e] = e.global_position
@@ -182,7 +184,7 @@ func _flow_legs() -> void:
 	await _enter(main, "GateOverworld")
 	ow = main.current_area
 	guards = _guards(main)
-	_check(guards.size() == 9, "(E) 9 guards after clearing DungeonA (got %d)" % guards.size())
+	_check(guards.size() == 13, "(E) 13 guards after clearing DungeonA (got %d)" % guards.size())
 	_check(_near(guards, ow.get_node("GateNormal").global_position, 200.0) == 0, "(E) the cleared DungeonA entrance has no guards")
 	_check(_near(guards, ow.get_node("GateRed").global_position, 160.0) == 2, "(E) the uncleared DungeonB entrance keeps its guards")
 	await _enter(main, "GateHub")
@@ -200,4 +202,4 @@ func _flow_legs() -> void:
 	_check(fresh.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
 	fresh.enter_overworld()
 	await _frames(3)
-	_check(_guards(fresh).size() == 11, "(F) every entrance is guarded again (got %d)" % _guards(fresh).size())
+	_check(_guards(fresh).size() == 15, "(F) every entrance is guarded again (got %d)" % _guards(fresh).size())
