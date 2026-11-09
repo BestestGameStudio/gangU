@@ -60,6 +60,30 @@ func _run() -> void:
 	main._request_fast_return()
 	await _frames()
 	_check(main.current_area.name == "Hub", "re-entry shortcut returns without clearing fresh objective")
+	main.enter_overworld()
+	await _frames()
+	main._on_gate_entered(main.current_area.get_node("GateDefense"))
+	await _frames()
+	var defense := main.current_area.get_node("DungeonObjective") as DungeonObjective
+	_check(not main.can_fast_return(), "fresh defense before wave spawn is not a safe area")
+	while defense.waves_spawned() < defense.wave_count:
+		defense.spawn_next_wave()
+	for enemy in get_nodes_in_group("enemies"):
+		enemy.apply_damage(99999)
+	await _frames()
+	_check(defense.is_cleared() and main.is_cleared(&"dungeon_e"), "real defense completion enters canonical clear store")
+	main._request_fast_return()
+	await _frames()
+	_check(main.current_area.name == "Hub" and main._fast_travel._rows.get_child_count() == 2, "hub includes completed defense alongside DungeonA")
+	main._request_fast_travel(&"dungeon_e")
+	await _frames()
+	defense = main.current_area.get_node("DungeonObjective") as DungeonObjective
+	_check(main.current_area.name == "DungeonE" and not defense.is_cleared() and defense.waves_spawned() == 0, "defense shortcut mounts fresh objective and core")
+	_check(not (main.current_area.get_node("ExitPortal") as ExitPortal).locked and main._entry_gate_type == Gate.GateType.NORMAL, "defense shortcut preserves normal gate exit semantics")
+	_check(main.can_fast_return(), "historically cleared defense returns immediately despite future wave capability")
+	main._request_fast_return()
+	await _frames()
+	_check(main.current_area.name == "Hub", "defense re-entry shortcut returns to Hub")
 	main.cleared_dungeons.clear() # synthetic death-state invalidation for stale click check
 	main._request_fast_travel(&"dungeon_a")
 	await _frames()
