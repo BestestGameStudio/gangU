@@ -5,12 +5,14 @@ class_name SpellCaster
 ## Supports many spells and later switching (#10) via add_spell/next_spell.
 ##
 ## #10 slots extension (Contract B, ADDITIVE): an UNLOCKED inventory plus six
-## nullable equip SLOTS with direct per-slot casting on keys 1-6 (human-settled:
-## 6 slots, keys 1-6, direct per-slot cast, run-scoped reset, equip panel, one
-## spell one slot). The legacy cycle path (spells/add_spell/spell_added/
-## next_spell/equipped_spell/cast, generic LMB/Space) is preserved untouched
-## for production and harness compatibility; the cycle's removal and the
-## generic cast role remain OPEN human choices. The caster never prefills a
+## nullable equip SLOTS with direct per-slot casting (human-settled: 6 slots,
+## one key per slot, direct per-slot cast, run-scoped reset, equip panel, one
+## spell one slot; slot keys were digits 1-6, re-settled to LMB/RMB/Q/E/R/F by
+## #319). The legacy cycle path (spells/add_spell/spell_added/
+## next_spell/equipped_spell/cast) keeps Space as its generic cast key; LMB
+## left the `cast` action in #319 because it is now slot 1 (a press would
+## otherwise fire BOTH the cycle-equipped spell and slot 1). The cycle's
+## removal and the generic cast role remain OPEN human choices. The caster never prefills a
 ## #262 (Daniel, 2026-11-08, "yes first empty slots, and without replacement"):
 ## unlock_spell auto-binds each newly granted spell to the FIRST EMPTY slot;
 ## main.gd's starting_spells seeding at boot (#238) rides the same path and
@@ -61,18 +63,33 @@ func _ready() -> void:
 		add_spell(s)
 	_register_slot_actions()
 
+## #319 (Daniel, 2026-11-08): slot cast keys are LMB, RMB, Q, E, R, F for
+## slots 1-6 (was digits 1-6). Slots 1-2 bind mouse buttons, 3-6 physical
+## letter keys. SLOT_KEY_LABELS is the single source for UI display.
+const SLOT_KEY_LABELS: Array[String] = ["LMB", "RMB", "Q", "E", "R", "F"]
+const SLOT_KEYCODES: Array[int] = [0, 0, KEY_Q, KEY_E, KEY_R, KEY_F]
+
 ## #10 slots: runtime action+binding registration. Idempotent across scene
 ## reloads (InputMap is global): existing actions are left untouched, so
-## nothing stacks. project.godot stays untouched; keys 1-6 are human-settled.
+## nothing stacks. project.godot stays untouched; #319 keys are human-settled.
 func _register_slot_actions() -> void:
 	for i in SLOT_COUNT:
 		var action := StringName("spell_slot_%d" % (i + 1))
 		if InputMap.has_action(action):
 			continue
 		InputMap.add_action(action)
-		var ev := InputEventKey.new()
-		ev.physical_keycode = KEY_1 + i
-		InputMap.action_add_event(action, ev)
+		if i < 2:
+			var mev := InputEventMouseButton.new()
+			mev.button_index = MOUSE_BUTTON_LEFT if i == 0 else MOUSE_BUTTON_RIGHT
+			InputMap.action_add_event(action, mev)
+		else:
+			var ev := InputEventKey.new()
+			ev.physical_keycode = SLOT_KEYCODES[i]
+			InputMap.action_add_event(action, ev)
+
+## #319: HUD/equip-panel display name for a slot's cast key (single source).
+static func slot_key_label(index: int) -> String:
+	return SLOT_KEY_LABELS[index] if index >= 0 and index < SLOT_COUNT else "?"
 
 func add_spell(spell: Spell) -> void:
 	unlock_spell(spell)
