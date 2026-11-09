@@ -333,6 +333,19 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	if _hit_bodies.has(body):
 		return # #37: piercing re-contact never double-hits the same body
+	# #282: player-side spells IGNORE friendly summons - they neither damage
+	# nor block the shot. Same side rule as #256's apply_damage_from gate:
+	# any actual Player source is player-side regardless of identity
+	# (production has a single Player in main.tscn), a Summon source is
+	# player-side only when it shares this summon's owner, and an ownerless
+	# summon has no side, so it keeps the legacy hit (damage + despawn).
+	# Enemy projectiles are unaffected: summons still tank their shots.
+	# Returning before damage dispatch and hit bookkeeping means piercing
+	# counts and _hit_bodies are untouched - the summon simply never happened.
+	if body is Summon:
+		var s := body as Summon
+		if is_instance_valid(s.player) and s.player is Player and is_instance_valid(source) and (source is Player or (source is Summon and source.player == s.player)):
+			return
 	if body.has_method(&"apply_damage"):
 		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, body.get(&"damage_modifiers") as DamageModifiers, _attacker_rng)
 		# #214: bodies with a source gate (destroyable containers) receive the
