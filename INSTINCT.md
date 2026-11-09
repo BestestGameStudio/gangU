@@ -51,9 +51,11 @@ only.
 
 ## 5. Independent review on the exact head
 
-- Every PR is reviewed by another Instinct, never its author. Request reviews explicitly
-  from the other Instincts, and prioritize incoming review requests over new
-  implementation - a review can run in parallel with your own work.
+- Every PR is reviewed by another Instinct, never its author. Reviewers are assigned
+  automatically as individuals: no one manually requests, adds, or reallocates
+  reviewers, and only the individually assigned reviewer acts on the request.
+  Prioritize incoming review requests over new implementation - a review can run in
+  parallel with your own work.
 - Review against the exact current head commit and name its SHA in the review. An
   approval applies to that head only - new pushes reset it and require a fresh review.
 - When an Instinct starts a review, it adds a comment to the PR saying the review
