@@ -14,12 +14,14 @@ extends Node
 ##   - Run-scoped (#351 death = full reset): kept across area trips within a
 ##     run, wiped on death by RunManager's reload.
 ##
-## OPEN (Colin's call, ARCHITECTURE.md O7): reveal TIMING - when/how a cell
-## becomes explored. This node does not pick a rule. `reveal_rule` is the
+## SETTLED (Colin, 2026-11-08): reveal TIMING - terrain appears as you
+## explore. Production wires `explore_rule`: each physics tick the cells
+## inside EXPLORE_RADIUS_CELLS of the player become explored - the same
+## circle TerrainFog clears around the player (vision_radius = 4), so the
+## map shows what the player has actually seen. `reveal_rule` stays the
 ## seam: a Callable `func(player_pos: Vector2, cell_size: int) -> Array`
-## returning the Vector2i cells to mark explored this tick. Production
-## leaves it unset, so nothing auto-reveals until the rule is decided.
-## `radius_cells()` is a helper a rule MAY use; it is not wired anywhere.
+## returning the Vector2i cells to mark explored this tick; main.gd
+## installs `explore_rule` at mount.
 ##
 ## Data is keyed by area id (main.gd passes the area node's name), in world
 ## coordinates, on the same 64 px cells as TerrainMap/BackgroundGrid.
@@ -34,11 +36,15 @@ enum Symbol { CROSS, CIRCLE, TRIANGLE, STAR }
 const SYMBOL_NAMES: Array[String] = ["X", "O", "^", "*"]
 
 const CELL_SIZE := 64
+## Explore-reveal radius in cells, matched to TerrainFog.vision_radius:
+## the map reveals the circle the player can see.
+const EXPLORE_RADIUS_CELLS := 4
 const MAX_MARKERS := 32
 const MAX_STROKES := 64
 const MAX_STROKE_POINTS := 256
 
-## Optional reveal rule (see header). Unset in production (O7 open).
+## Reveal rule (see header). main.gd installs `explore_rule` in production;
+## unset only in bare/harness instances.
 var reveal_rule: Callable = Callable()
 ## Player whose position is fed to reveal_rule each physics tick.
 var player: Node2D = null
@@ -86,8 +92,12 @@ static func world_to_cell(world_pos: Vector2) -> Vector2i:
 static func cell_center(cell: Vector2i) -> Vector2:
 	return (Vector2(cell) + Vector2(0.5, 0.5)) * float(CELL_SIZE)
 
-## Helper for a future rule (NOT wired): cells within `radius` cells of
-## `world_pos`, the TerrainFog circle shape.
+## Production rule (Colin, 2026-11-08): terrain appears as you explore -
+## the vision circle around the player every tick.
+static func explore_rule(player_pos: Vector2, _cell_size: int) -> Array:
+	return radius_cells(player_pos, EXPLORE_RADIUS_CELLS)
+
+## Cells within `radius` cells of `world_pos`, the TerrainFog circle shape.
 static func radius_cells(world_pos: Vector2, radius: int) -> Array:
 	var center := world_to_cell(world_pos)
 	var out: Array = []
