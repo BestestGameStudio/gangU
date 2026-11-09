@@ -99,25 +99,58 @@ func _register_slot_actions() -> void:
 static func slot_key_label(index: int) -> String:
 	return SLOT_KEY_LABELS[index] if index >= 0 and index < SLOT_COUNT else "?"
 
-func add_spell(spell: Spell) -> void:
-	unlock_spell(spell)
+func add_spell(spell: Spell) -> bool:
+	if not unlock_spell(spell):
+		return false
 	spells.append(spell)
 	spell_added.emit(spell)
 	if spells.size() == 1:
 		current_index = 0
 		spell_equipped.emit(spell)
+	return true
+
+## #383: true when the player already holds this logical spell this run: the
+## exact resource, or any upgraded form descended from it (so a base copy
+## cannot be re-acquired after Base -> upgrade). Only the spell's OWN descendants
+## count; unrelated spells and other upgrade branches are unaffected.
+func has_logical_spell(spell: Spell) -> bool:
+	if spell == null:
+		return false
+	if unlocked.has(spell) or spells.has(spell):
+		return true
+	var progress := get_tree().get_first_node_in_group("spell_progress") if is_inside_tree() else null
+	if progress == null or not ("upgrades" in progress):
+		return false
+	var parent_of: Dictionary = {}
+	for u in progress.upgrades:
+		if u != null and u.result_spell != null and u.source_spell != null:
+			parent_of[u.result_spell] = u.source_spell
+	for held in unlocked:
+		var cur: Spell = held
+		for _i in 16: # bounded walk; guards bad cyclic data
+			if not parent_of.has(cur):
+				break
+			cur = parent_of[cur]
+			if cur == spell:
+				return true
+	return false
 
 ## #10 slots: grant to the unlock inventory. Duplicate-grant policy is an OPEN
-## human choice - no guard is added here by design.
+## human choice - #383 now refuses a second copy of a held logical spell.
 ## #262: every newly granted spell also auto-binds to the FIRST EMPTY slot in
 ## 1-6 order. Existing bindings are never replaced: when all six slots are
 ## occupied the grant stays unlock-only for manual equip in the Tab panel.
 ## One funnel covers every grant path - walk-over pickups (add_spell), enemy
 ## reward-drop spells, and shop purchases.
-func unlock_spell(spell: Spell) -> void:
+## #383: refuses (returns false) when the logical spell is already held, with
+## no inventory/slot change and no signal.
+func unlock_spell(spell: Spell) -> bool:
+	if spell == null or has_logical_spell(spell):
+		return false
 	unlocked.append(spell)
 	spell_unlocked.emit(spell)
 	bind_first_free(spell)
+	return true
 
 ## #262: bind `spell` to the first empty slot in 1-6 order. Returns the slot
 ## index the spell ends in (its existing binding when already slotted), or
