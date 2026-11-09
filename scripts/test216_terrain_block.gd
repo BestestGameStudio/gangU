@@ -87,7 +87,7 @@ func _initialize() -> void:
 		if e.spell == spell:
 			entry = e
 	_check(entry != null and entry.kind == RewardEntry.Kind.SPELL and entry.weight == 1.0, "demo reward table carries Stone Block (weight 1.0)")
-	_check(table.entries.size() == 6 and table.entries[0].spell.spell_name == "Placeholder Bolt", "existing demo entries preserved, bolt still first (#305 Spirit Punch, #331 Water Ball added as unlockable drops)")
+	_check(table.entries.size() == 7 and table.entries[0].spell.spell_name == "Placeholder Bolt", "existing demo entries preserved, bolt still first (#305 Spirit Punch, #331 Water Ball, #370 Stone Hammer added as unlockable drops)")
 
 	# --- pure placement rules ---
 	var m := _new_map(stage)

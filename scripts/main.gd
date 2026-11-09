@@ -174,6 +174,16 @@ func _ready() -> void:
 		preload("res://resources/upgrades/water_bubble.tres"),
 		preload("res://resources/upgrades/water_surging_bubble.tres"),
 		preload("res://resources/upgrades/water_big_ball.tres"),
+		## Stone Hammer tree (#370): two routes from the base, tiers 1/2/3
+		## each - Crush (reaper -> titan -> vortex) and Rhythm (rhythm ->
+		## leap -> dice roll). One route per run, like Water Ball.
+		## Thresholds 10/15/20 mirror #305/#331 and are provisional.
+		preload("res://resources/upgrades/hammer_reaper.tres"),
+		preload("res://resources/upgrades/hammer_titan.tres"),
+		preload("res://resources/upgrades/hammer_vortex.tres"),
+		preload("res://resources/upgrades/hammer_rhythm.tres"),
+		preload("res://resources/upgrades/hammer_leap.tres"),
+		preload("res://resources/upgrades/hammer_gambler.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
