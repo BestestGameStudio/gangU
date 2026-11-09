@@ -97,6 +97,7 @@ func _process(delta: float) -> bool:
 				_check("hub boot", scene.current_area.name == "Hub")
 				_check_flat_leg()
 				var red: Gate = scene.current_area.get_node_or_null("GateRed")
+				red.gate_type = Gate.GateType.RED # #350 pin: offerings roll 50/50 per run (test350 covers the roll)
 				_check("hub: red gate present", red != null)
 				red._on_body_entered(p)
 				phase = 1; t = 0
