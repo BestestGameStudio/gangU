@@ -218,8 +218,31 @@ func _physics_process(delta: float) -> void:
 			bubble.claim(self)
 	if _freeze_count > 0:
 		return
+	# #331: a strong knockback owns the body until it decays below
+	# KNOCKBACK_CONTROL, so the push reads; the behavior resumes after.
+	if _knockback.length() > KNOCKBACK_CONTROL:
+		move_and_collide(_knockback * delta)
+		_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECEL * delta)
+		return
+	_knockback = Vector2.ZERO
 	if _behavior != null:
 		_behavior.physics_step(self, _resolve_target(), delta)
+
+## #331 Water Ball bubble Mastery: push this enemy along `push` (px/s),
+## decaying at KNOCKBACK_DECEL px/s^2. Walls stop it (move_and_collide).
+## Stronger pushes replace weaker ones; they never stack.
+const KNOCKBACK_DECEL := 1800.0
+const KNOCKBACK_CONTROL := 60.0
+var _knockback := Vector2.ZERO
+
+func knockback(push: Vector2) -> void:
+	if hp <= 0:
+		return
+	if push.length() > _knockback.length():
+		_knockback = push
+
+func is_knocked_back() -> bool:
+	return _knockback.length() > KNOCKBACK_CONTROL
 
 ## (A, #59) Roll the table against the pool's granted set and defer-spawn the
 ## drop into my parent (the area), so an area swap frees it like any other
