@@ -57,6 +57,13 @@ class_name Spell
 ## numbers only - balance is an open human choice.
 @export var launch_speed: float = 0.0
 @export var launch_duration: float = 0.12
+## #305 Signature freeze bubble: when freeze_radius > 0, casting also
+## spawns a FreezeBubble anchored at the cast point for freeze_duration
+## seconds (Daniel: 5s, stays where you cast). Default 0 on every existing
+## spell, so casting behavior is unchanged. Provisional placeholder numbers
+## only - balance is an open human choice.
+@export var freeze_radius: float = 0.0
+@export var freeze_duration: float = 0.0
 ## (#209) Summon hook: when set, casting this spell asks the SummonManager to
 ## spawn this definition (the shared cap applies). Null on every existing
 ## spell, so casting behavior is unchanged. The first concrete summon spell

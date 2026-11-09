@@ -57,6 +57,11 @@ func _ready() -> void:
 	hp = max_hp
 	damage_rng.randomize()
 	add_to_group("enemies")
+	# #305: freeze spawn hook - if I spawn inside an active freeze bubble,
+	# it claims me before my first physics step (Area2D overlap registration
+	# lags a frame, so the bubble's scan alone can miss a mid-frame spawn).
+	for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+		bubble.claim(self)
 	# #99: instantiate MY OWN behavior (never a shared Resource). Slot unset
 	# or no definition = the current chase/contact implementation; a slot
 	# script without physics_step falls back to it with a warning.
@@ -183,7 +188,19 @@ func _resolve_target() -> CharacterBody2D:
 			return best
 	return _player
 
+## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
+## positive, the behavior physics_step (which accumulates ALL behavior
+## clocks from delta) never runs, so the whole enemy freezes.
+var _freeze_count := 0
+
+## #305: Signature freeze contract. Claims are reference-counted so
+## overlapping bubbles freeze and release independently.
+func set_frozen(frozen: bool) -> void:
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+
 func _physics_process(delta: float) -> void:
+	if _freeze_count > 0:
+		return
 	if _behavior != null:
 		_behavior.physics_step(self, _resolve_target(), delta)
 

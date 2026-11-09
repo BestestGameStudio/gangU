@@ -44,8 +44,8 @@ func _static_checks() -> void:
 	_check(currency_entry != null and currency_entry.currency_amount > 0 and currency_entry.weight > 0.0,
 		"currency entry has a positive amount and weight")
 	spell_names.sort()
-	_check(spell_names == ["Placeholder Bolt", "Stone Block", "Summon Ally"],
-		"spell entries are Placeholder Bolt + Summon Ally + Stone Block")
+	_check(spell_names == ["Placeholder Bolt", "Spirit Punch", "Stone Block", "Summon Ally"],
+		"spell entries are Placeholder Bolt + Spirit Punch + Summon Ally + Stone Block (#305: base Spirit Punch added as an unlockable drop)")
 	_check(table.entries[0].kind == RewardEntry.Kind.SPELL, "entries[0] is still the bolt spell entry")
 
 	for path in ["res://scenes/dungeon_a.tscn", "res://scenes/dungeon_b.tscn"]:

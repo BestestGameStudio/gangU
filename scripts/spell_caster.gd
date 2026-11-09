@@ -276,6 +276,10 @@ func _input_casts_suppressed() -> bool:
 func _cast_spell(spell: Spell) -> void:
 	if spell == null:
 		return
+	# #305: the Signature bubble anchors at the CAST POINT, captured before
+	# any launch can move the player (Daniel: the bubble stays "where you
+	# cast"). For a launch spell this is the pre-launch position.
+	var cast_pos := global_position
 	var dir := global_position.direction_to(get_global_mouse_position())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
@@ -299,6 +303,12 @@ func _cast_spell(spell: Spell) -> void:
 	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
 	# signals below stay unconditional; positive counts are byte-identical.
 	# #305: a launch spell defers this whole block to launch_ended.
+	# #305: Signature freeze bubble. ADDS to the attack - the fan-out (or
+	# its launch-deferred equivalent) and the ONE cooldown/signal pair below
+	# are untouched. A refused launch/terrain placement returned above, so a
+	# bubble here always belongs to a committed cast.
+	if spell.freeze_radius > 0.0:
+		FreezeBubble.spawn(get_tree().current_scene, cast_pos, spell.freeze_radius, spell.freeze_duration)
 	if spell.projectile_count > 0 and spell.launch_speed <= 0.0:
 		_spawn_fanout(spell, dir)
 		# #305: a burst re-fires the fan-out burst_count times, one immediately

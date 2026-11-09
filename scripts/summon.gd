@@ -37,6 +37,11 @@ func setup(def: SummonDefinition) -> void:
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("summons")
+	# #305: freeze spawn hook - if I spawn inside an active freeze bubble,
+	# it claims me before my first physics step (Area2D overlap registration
+	# lags a frame, so the bubble's scan alone can miss a mid-frame spawn).
+	for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+		bubble.claim(self)
 	# #279: summons never physically block or push players or enemies, and
 	# vice versa (ignore_pair excepts BOTH directions of the solver).
 	# Deferred so same-frame actors have registered their groups; covers the
@@ -66,7 +71,19 @@ func _exit_tree() -> void:
 		if is_instance_valid(e):
 			e.remove_collision_exception_with(self)
 
+## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
+## positive, the behavior physics_step (which accumulates ALL behavior
+## clocks from delta) never runs, so the whole summon freezes.
+var _freeze_count := 0
+
+## #305: Signature freeze contract. Claims are reference-counted so
+## overlapping bubbles freeze and release independently.
+func set_frozen(frozen: bool) -> void:
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+
 func _physics_process(delta: float) -> void:
+	if _freeze_count > 0:
+		return
 	if _behavior != null and hp > 0:
 		_behavior.physics_step(self, player, delta)
 
