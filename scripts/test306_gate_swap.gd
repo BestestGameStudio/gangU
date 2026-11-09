@@ -42,9 +42,30 @@ func _run() -> void:
 	if _player == null or _main.current_area == null or _main.current_area.name != &"Hub":
 		await _finish()
 		return
+	# #346: the NORMAL gate lives in the overworld. Walk up from the hub
+	# spawn (576,480) into the hub's TRAVEL gate (576,240) with real input.
+	var hub_area: Node = _main.current_area
+	var travel := hub_area.get_node_or_null("GateOverworld") as Gate
+	_check("Hub has the TRAVEL gate to the overworld", travel != null and travel.gate_type == Gate.GateType.TRAVEL)
+	Input.action_press(&"move_up")
+	var travel_frames := 0
+	while _main.current_area == hub_area and travel_frames < MAX_ENTRY_FRAMES:
+		await physics_frame
+		travel_frames += 1
+	_release_movement()
+	_check("walking up through the hub passage reaches the Overworld", _main.current_area != null and _main.current_area.name == &"Overworld")
+	if _main.current_area == null or _main.current_area.name != &"Overworld":
+		await _finish()
+		return
+	var ow_spawn := _main.current_area.get_node("PlayerSpawn") as Node2D
+	_check("travel lands exactly on the overworld PlayerSpawn", _player.global_position == ow_spawn.global_position)
 	var hub: Node = _main.current_area
 	var gate := hub.get_node_or_null("GateNormal") as Gate
-	_check("Hub has production NORMAL gate with a target", gate != null and gate.gate_type == Gate.GateType.NORMAL and gate.target_dungeon != null)
+	# #350 pin (test350 covers the roll): this driver verifies NORMAL-gate
+	# transport, so the gate is pinned NORMAL after its own _ready roll.
+	if gate != null:
+		gate.gate_type = Gate.GateType.NORMAL
+	_check("Overworld has production NORMAL gate with a target", gate != null and gate.gate_type == Gate.GateType.NORMAL and gate.target_dungeon != null)
 	if gate == null or gate.target_dungeon == null:
 		await _finish()
 		return
@@ -54,7 +75,7 @@ func _run() -> void:
 		if body_gate == gate:
 			entries[0] += 1
 	)
-	# Hub spawn (576,480) to gate row (y380), then left into GateNormal.
+	# Overworld spawn (576,480) to gate row (y380), then left into GateNormal.
 	# Sample at physics_frame, before Player's next movement step. On the
 	# first frame after deferred transport, release input before it can move
 	# away from the destination spawn, then assert the exact spawn position.
