@@ -7,6 +7,10 @@ class_name Player
 
 signal died()
 signal health_changed(current: int, max_hp: int)
+## #388: shields - temporary health beyond max HP. Emitted ONLY from
+## add_shield / clear_shield / apply_damage, so the pool never changes
+## silently.
+signal shield_changed(current: int)
 
 @export var speed: float = 320.0
 @export var max_hp: int = 100
@@ -44,6 +48,12 @@ var _launch_time_left := 0.0
 var terrain: TerrainMap = null
 
 var hp: int
+## #388 foundation: shield pool, separate from hp/max_hp and uncapped. Takes
+## damage before HP. Provisional rules (the issue left them open): grants
+## stack additively, a shield persists until depleted (no decay), and it
+## absorbs the FINAL damage amount, i.e. after armor/damage reduction, since
+## apply_damage already receives post-modifier damage.
+var shield: int = 0
 var damage_modifiers := DamageModifiers.new()
 var damage_rng := RandomNumberGenerator.new()
 
@@ -104,10 +114,36 @@ func apply_damage(amount: int) -> void:
 		return
 	if hp <= 0:
 		return
+	# #388: the shield soaks the hit first; only the overflow reaches HP. A
+	# fully absorbed hit leaves HP untouched and emits no health_changed.
+	if shield > 0 and amount > 0:
+		var absorbed := mini(shield, amount)
+		shield -= absorbed
+		amount -= absorbed
+		shield_changed.emit(shield)
+		if amount == 0:
+			return
 	hp = clampi(hp - amount, 0, max_hp)
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()
+
+
+## #388: grant shield. Uncapped and additive; ignored when dead or for
+## non-positive amounts.
+func add_shield(amount: int) -> void:
+	if amount <= 0 or hp <= 0:
+		return
+	shield += amount
+	shield_changed.emit(shield)
+
+
+## #388: drop the whole shield pool (for future expiry/strip effects).
+func clear_shield() -> void:
+	if shield == 0:
+		return
+	shield = 0
+	shield_changed.emit(shield)
 
 
 ## #205: open (true) or close (false) the spell-triggered invincibility window.

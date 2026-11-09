@@ -16,7 +16,8 @@ class_name HUD
 ## fallback.
 ##
 ## Consumed contracts:
-##   Player: hp, max_hp, health_changed(current, max_hp), died().
+##   Player: hp, max_hp, health_changed(current, max_hp), died(),
+##     shield, shield_changed(current) (#388).
 ##   SpellCaster: get_slots(), cooldown_remaining(spell), polled every frame.
 ##   Spell: cooldown.
 ##   SpellProgress (discovered by name): can_upgrade(spell), get_tier(spell).
@@ -37,6 +38,11 @@ const HP_TRACK_TEXTURE := preload("res://assets/sprites/hp_bar_track.png")
 const HP_FILL_TEXTURE := preload("res://assets/sprites/hp_bar_fill.png")
 const HP_TRACK_CAP := 42.0
 const HP_FILL_CAP := 44.0 # transparent padding + the fill's tapered tip
+## #388: shield bar under the HP bar. White fill; the value is uncapped, so
+## the bar is scaled against max HP (full once shield >= max HP) and the label
+## always shows the exact number. Hidden while the shield is 0.
+const SHIELD_WHITE := Color(1.0, 1.0, 1.0, 1.0)
+const SHIELD_TRACK := Color(0.08, 0.08, 0.1, 0.75)
 
 var _player: Player
 var _caster: SpellCaster
@@ -53,6 +59,8 @@ var _progress_elapsed := 0.0
 @onready var _root: VBoxContainer = $Root
 @onready var _hp_label: Label = $Root/HPBar/HPLabel
 @onready var _hp_bar: ProgressBar = $Root/HPBar
+@onready var _shield_bar: ProgressBar = $Root/ShieldBar
+@onready var _shield_label: Label = $Root/ShieldBar/ShieldLabel
 @onready var _spell_grid: GridContainer = $Root/SpellGrid
 @onready var _objective_label: Label = $Root/ObjectiveLabel
 ## #369: top-center defense wave bar; mounted with the discovered objective.
@@ -61,6 +69,8 @@ var _progress_elapsed := 0.0
 func _ready() -> void:
 	_hp_bar.add_theme_stylebox_override("background", _hp_bar_style(HP_TRACK_TEXTURE, HP_TRACK_CAP))
 	_hp_bar.add_theme_stylebox_override("fill", _hp_bar_style(HP_FILL_TEXTURE, HP_FILL_CAP))
+	_shield_bar.add_theme_stylebox_override("background", _flat_style(SHIELD_TRACK))
+	_shield_bar.add_theme_stylebox_override("fill", _flat_style(SHIELD_WHITE))
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 	if _player == null:
@@ -71,6 +81,7 @@ func _ready() -> void:
 	_caster = _player.get_node_or_null("SpellCaster") as SpellCaster
 	_player.health_changed.connect(_on_health_changed)
 	_player.died.connect(_on_player_died)
+	_player.shield_changed.connect(_on_shield_changed)
 	_on_health_changed(_player.hp, _player.max_hp)
 	if _caster != null:
 		_build_slot_grid()
@@ -82,6 +93,12 @@ func _hp_bar_style(texture: Texture2D, cap: float) -> StyleBoxTexture:
 	sb.texture_margin_left = cap
 	sb.texture_margin_right = cap
 	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE
+	return sb
+
+func _flat_style(color: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = color
+	sb.set_corner_radius_all(3)
 	return sb
 
 func _build_slot_grid() -> void:
@@ -138,6 +155,17 @@ func _on_health_changed(current: int, max_hp: int) -> void:
 		if max_hp > 0:
 			frac = clampf(float(current) / float(max_hp), 0.0, 1.0)
 		fill.modulate_color = HP_GREEN if frac > HP_AMBER_FRAC else (HP_AMBER if frac > HP_RED_FRAC else HP_RED)
+	# Max HP changes rescale the shield bar.
+	_on_shield_changed(_player.shield if is_instance_valid(_player) else 0)
+
+## #388: white shield bar. Scale is max HP (bar full at shield >= max HP);
+## the label carries the uncapped value.
+func _on_shield_changed(current: int) -> void:
+	_shield_bar.visible = current > 0
+	var bar_scale := maxi(_player.max_hp if is_instance_valid(_player) else 1, 1)
+	_shield_bar.max_value = bar_scale
+	_shield_bar.value = mini(current, bar_scale)
+	_shield_label.text = str(current)
 
 func _on_player_died() -> void:
 	# Run restart is #6's job; the HUD only reflects the death state.
