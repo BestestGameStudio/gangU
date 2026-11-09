@@ -150,6 +150,46 @@ alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
   "FX / Telegraphed Variants" panels (Charge, Dash, Invulnerable/Shield,
   Targeted/Warning) and the "VFX Elements" overlays; the large portrait.
 
+# beast_boss.png - the Beast (second boss, #174)
+
+Art from issue #174 ("BOSS SPRITE 2"): the 1448x1086 "Boss: Beast (Top-Down
+2D)" concept sheet attached to the issue by Mitravasu (project human)
+(https://github.com/user-attachments/assets/4ff27f56-7025-45e2-b605-2791a7899ad4).
+It is a presentation board, so it is NOT shipped as-is; the engine sheet is
+cut from it by `tools/sprites/extract_frames.py` with
+`tools/sprites/specs/beast_boss.json` (background keyed out, 3:1
+alpha-weighted downsample, hard alpha cut). Reproduce:
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/beast_boss.json <board.png> assets/sprites/beast_boss.png --tres resources/sprites/beast_boss_frames.tres`.
+
+## Layout
+- Cell: 48x48 px, feet on row 44, body ~29 px tall (the scene draws it
+  2.5x). Sheet: 11 cols x 7 rows (528x336).
+- Rows (frames drawn -> packed): 0 idle (6), 1 walk (7), 2 bite/lunge (8),
+  3 AoE scream (8), 4 hurt (4), 5 stun (4), 6 death (11).
+- Animations (resources/sprites/beast_boss_frames.tres): idle 6 (loop),
+  walk 7 (loop), attack 4 (bite frames 3-6, contact bite), windup_bite 4 +
+  bite 4 (bite row split at the snap), windup_aoe 3 + aoe 5 (scream row split
+  where the mouth opens wide), hurt 4, stun 4 (loop), death 11 (last three
+  frames held longer).
+- Facing: every row faces LEFT, so the scene sets `EnemySprite.art_faces_left`
+  and flip_h mirrors it toward the right.
+
+## Board vs. extraction
+- "Move (8, 4 dir)" draws 7 frames per row, and both "Right" and "Left" rows
+  face left. The "Right" row (cleanly separated frames) is used as walk,
+  resized 1.6x (nearest) because the move panel draws the beast ~0.6x the
+  idle size. "Up" / "Down" are not extracted (no 4-direction consumer).
+- "Death (10)" draws 11 frames; all 11 are used (resized 0.8x).
+- Bite / hurt sparks and motion arcs are kept; those frames are anchored on a
+  hand-measured body centre so the FX do not shift the body.
+- AoE scream: the ground ring overlaps neighbouring frames, so the rows are
+  cut at the feet line (the ring's front arc is dropped; the dome and back
+  arcs remain) and the full ring is drawn in-engine by `BossTelegraph`. A few
+  pixels of neighbouring rings remain at cell edges.
+- Not extracted (no consumer): the "FX / Telegraphed Variants" panels
+  (Charge, Dash, Invulnerable/Shield, Targeted/Warning), the "VFX Elements"
+  overlays and the large portrait.
+
 # shop_vendor.png - hub shop vendor stall (#217)
 
 Art from issue #217 ("Shop Sprite Update"): the 1536x1024 six-frame board
