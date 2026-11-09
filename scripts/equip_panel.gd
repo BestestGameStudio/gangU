@@ -1,24 +1,33 @@
 extends CanvasLayer
 class_name EquipPanel
-## #10 equip panel (F): pick an unlocked spell, assign it to one of the six
-## caster slots. Implements exactly the approved flow ("pick a spell and
-## assign it to one of the six slots, each spell in only one slot") against
-## the pinned B slot API (REFUSAL semantics): the panel composes user intent
-## with clear_slot()/assign_slot() calls; the caster stays a strict
-## primitive. Move-not-copy is the panel's composition, never hidden caster
-## behavior.
+## #375 Tab menu (Daniel, 2026-11-09): "spell menu should only show your
+## slots and allow you to rearrange the 6 spells ... You can still upgrade
+## currently equipped spells from the tab menu." The panel shows ONLY the
+## six slots (plus the #376 stat grid); the old Unlocked column is gone -
+## equipping from the unlock inventory lives at the hub spell directory
+## (#375 directory slice, #393).
+##
+## Interaction: click an occupied slot to SELECT its spell - the stat grid
+## swaps to that spell's stats and its upgrade buttons appear. Click a
+## second slot to REARRANGE: the two occupants swap, or the spell moves
+## into an empty slot. Clicking the same slot again deselects.
+##
+## Rearrange is composed out of the pinned strict slot primitives
+## (REFUSAL semantics): the selection is validated BEFORE any clear_slot(),
+## then the panel clears and re-assigns; a refusal rolls the layout back
+## toward its prior state (best effort) and refreshes from caster truth.
+## Move-not-copy and one-spell-one-slot stay the caster's own refusals,
+## never hidden panel behavior.
 ##
 ## SETTLED (Daniel's user, 11:05:49 EST): Tab toggles the panel; NO pause -
-## combat stays live ("players should find a safe space"); this panel is ALSO
-## the manual upgrade UI. Panel owns its own input (equip_panel/Tab), kept
-## clear of the caster's spell_slot_1..6 bindings.
+## combat stays live ("players should find a safe space"); this panel is
+## ALSO the manual upgrade UI. Panel owns its own input (equip_panel/Tab),
+## kept clear of the caster's spell_slot_1..6 bindings.
 ##
 ## STILL BOUNDED:
 ##   - Mounted in production by main.gd (ONE persistent child); harness
 ##     mounts (test_e_mount et al.) keep working the same way.
 ##   - Style is provisional (pending the open human style choice).
-##   - NO duplicate-grant policy: the panel renders get_unlocked() verbatim,
-##     duplicates included (unsettled human choice, no silent dedupe).
 ##   - While visible the panel joins the "modal_ui" group so the caster can
 ##     skip casting on panel clicks (one-line guard coordinated with B).
 ##
@@ -42,19 +51,15 @@ var _upgrader: Node = null
 var _selected: Spell = null
 var _upgrade_box: VBoxContainer
 
-var _unlocked_box: VBoxContainer
+var _slots_box: VBoxContainer
 var _stats_box: StatGrid
 var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
 var _status: Label
 
-## Two state channels per unlocked row: left-edge chip = equipped-in-a-slot,
-## border = selected / upgrade-available / normal. Slot buttons: occupied vs
-## empty border, move-source highlight.
-const CHIP_EQUIPPED := Color(0.5, 0.85, 0.55, 0.95)
-const CHIP_NONE := Color(1.0, 1.0, 1.0, 0.08)
-const ROW_ICON_LEFT := 16.0
+## Slot button state channels: occupied vs empty border, and a bright
+## selected / move-source highlight on the slot whose spell is selected.
 const SLOT_ICON_LEFT := 6.0
 const ICON_GAP := 4.0
 
@@ -68,7 +73,7 @@ func _pin_icon(b: Button, left: float) -> SpellIcon:
 	icon.offset_left = left
 	icon.offset_right = left + UiStyle.ICON_SIZE
 	icon.offset_top = -half
-	icon.offset_bottom = half
+	icon.offset_bottom = -half
 	b.add_child(icon)
 	return icon
 
@@ -172,37 +177,36 @@ func _build_ui() -> void:
 	vbox.add_theme_constant_override("separation", 10)
 	panel.add_child(vbox)
 	var title := Label.new()
-	title.text = "Equip Spells"
+	title.text = "Spells"
 	title.add_theme_font_size_override("font_size", 26)
 	vbox.add_child(title)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 20)
 	vbox.add_child(cols)
-	_unlocked_box = VBoxContainer.new()
-	_unlocked_box.add_theme_constant_override("separation", 4)
-	cols.add_child(_unlocked_box)
-	var slots_box := VBoxContainer.new()
-	slots_box.add_theme_constant_override("separation", 4)
-	cols.add_child(slots_box)
-	var slots_header := Label.new() # #94: two-column readability, mirrors "Unlocked"
+	# #375: the ONLY spell column is the six slots. Buttons stay DIRECT
+	# children of _slots_box (harnesses white-box that structure for
+	# keyboard focus).
+	_slots_box = VBoxContainer.new()
+	_slots_box.add_theme_constant_override("separation", 4)
+	cols.add_child(_slots_box)
+	var slots_header := Label.new()
 	slots_header.text = "Slots"
 	slots_header.add_theme_font_size_override("font_size", 22)
-	slots_box.add_child(slots_header)
+	_slots_box.add_child(slots_header)
 	for i in 6:
 		var b := Button.new()
 		b.add_theme_font_size_override("font_size", 22)
 		b.custom_minimum_size = Vector2(220, 0)
 		var idx := i
 		b.pressed.connect(func(): _on_slot_pressed(idx))
-		slots_box.add_child(b)
+		_slots_box.add_child(b)
 		_slot_buttons.append(b)
 		_slot_icons.append(_pin_icon(b, SLOT_ICON_LEFT))
 	# #269 stats block, restyled by #376 (Daniel, 2026-11-09): a TFT-style
 	# grid of icon + value cells (details on hover) on the RIGHT side of the
-	# Tab menu, as the third column after Unlocked and Slots, so the #94
-	# white-boxed indices (cols 0/1, vbox title 0, cols 1, upgrades 2, status
-	# last) stay intact. Shows the player's stats; while a spell is selected
-	# it shows that spell's stats instead (StatSheet builds both, read-only).
+	# Tab menu, as the second column after the slots. Shows the player's
+	# stats; while a slot's spell is selected it shows that spell's stats
+	# instead (StatSheet builds both, read-only).
 	var divider := VSeparator.new()
 	cols.add_child(divider)
 	_stats_box = StatGrid.new()
@@ -257,45 +261,6 @@ func _refresh() -> void:
 	if _caster == null:
 		return
 	_refresh_stats()
-	for c in _unlocked_box.get_children():
-		c.queue_free()
-	var header := Label.new()
-	header.text = "Unlocked"
-	header.add_theme_font_size_override("font_size", 22)
-	_unlocked_box.add_child(header)
-	var slots_now: Array = _caster.get_slots()
-	for s in _caster.get_unlocked():
-		# #94: Button stays a DIRECT child of _unlocked_box (test_e_mount
-		# white-boxes that structure for keyboard focus); the state chip is a
-		# child ColorRect pinned to the button's left inner edge.
-		var b := Button.new()
-		b.add_theme_font_size_override("font_size", 22)
-		b.custom_minimum_size = Vector2(200, 0)
-		b.toggle_mode = true
-		b.text = (s as Spell).spell_name
-		b.button_pressed = (s == _selected)
-		var border := UiStyle.B_DIM
-		if _can_upgrade(s):
-			border = UiStyle.B_ACCENT
-		if s == _selected:
-			border = UiStyle.B_SELECTED
-		UiStyle.style_button(b, border, 4.0, ROW_ICON_LEFT + UiStyle.ICON_SIZE + ICON_GAP, s == _selected) # left pad clears chip + icon
-		var chip := ColorRect.new()
-		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		chip.color = CHIP_EQUIPPED if slots_now.has(s) else CHIP_NONE
-		chip.anchor_bottom = 1.0
-		chip.offset_left = 2.0
-		chip.offset_top = 2.0
-		chip.offset_right = 12.0
-		chip.offset_bottom = -2.0
-		b.add_child(chip)
-		var spell: Spell = s
-		var row_icon := _pin_icon(b, ROW_ICON_LEFT)
-		row_icon.show_spell(spell)
-		row_icon.set_upgrade_available(_can_upgrade(spell))
-		row_icon.set_rank_tier(_rank_tier(spell))
-		b.pressed.connect(func(): _on_spell_pressed(spell))
-		_unlocked_box.add_child(b)
 	var slots: Array = _caster.get_slots()
 	for i in _slot_buttons.size():
 		var occupant: Spell = slots[i] if i < slots.size() else null
@@ -361,33 +326,63 @@ func _on_token_upgrade_pressed(path_id) -> void:
 		_selected = null
 	_refresh()
 
-func _on_spell_pressed(spell: Spell) -> void:
-	# Refuse selections the caster no longer holds (e.g. a base spell consumed
-	# by an upgrade): acting on a removed resource must never reach a slot.
-	if _caster != null and not _caster.get_unlocked().has(spell):
-		_selected = null
-		_refresh()
-		return
-	_selected = spell
-	_refresh()
-
+## #375 Tab interaction: one click selects a slot's spell (stats + upgrades),
+## a second click on another slot rearranges (swap, or move into an empty
+## slot), a second click on the SAME slot deselects. Composed from the
+## strict primitives; the caster is never asked for a hidden move.
 func _on_slot_pressed(index: int) -> void:
-	if _selected == null or _caster == null:
-		return
-	if not _caster.get_unlocked().has(_selected):
-		# Stale/removed selection: refuse BEFORE any clear so an occupied
-		# target slot is never erased by an assign that cannot succeed.
-		_selected = null
-		_refresh()
+	if _caster == null:
 		return
 	var slots: Array = _caster.get_slots()
-	# Compose the approved move semantics out of strict primitives.
-	for j in slots.size():
-		if slots[j] == _selected and j != index:
-			_caster.clear_slot(j)
-	if index < slots.size() and slots[index] != null and slots[index] != _selected:
+	if index < 0 or index >= slots.size():
+		return
+	if _selected == null:
+		# Nothing held: an occupied slot selects its spell; an empty slot
+		# has nothing to select.
+		var occupant: Spell = slots[index]
+		if occupant != null:
+			_selected = occupant
+			_refresh()
+		return
+	# A selection is held: this click is the rearrange target (or a
+	# deselect). Validate BEFORE any clear so a failed rearrange never
+	# erases an occupied slot.
+	if not _caster.get_unlocked().has(_selected):
+		# Stale/removed selection (e.g. a base spell consumed by an
+		# upgrade): refuse before any mutation.
+		_selected = null
+		_refresh()
+		return
+	var source := slots.find(_selected)
+	if source == -1:
+		# The selected spell is no longer slotted; nothing to rearrange.
+		_selected = null
+		_refresh()
+		return
+	if index == source:
+		_selected = null # click the same slot again: put it back / deselect
+		_refresh()
+		return
+	var target: Spell = slots[index]
+	_caster.clear_slot(source)
+	if target != null:
 		_caster.clear_slot(index)
-	if not _caster.assign_slot(index, _selected):
-		push_warning("EquipPanel: assign_slot refused; refreshing from caster state.")
+	var ok := _caster.assign_slot(index, _selected)
+	if ok and target != null:
+		ok = _caster.assign_slot(source, target)
+	if not ok:
+		# Roll back toward the original layout (best effort, primitives
+		# only, re-reading caster truth after each step), then refresh
+		# from caster truth either way.
+		push_warning("EquipPanel: rearrange refused; restoring prior layout.")
+		var now: Array = _caster.get_slots()
+		if not now.has(_selected) and now[source] == null:
+			_caster.assign_slot(source, _selected)
+			now = _caster.get_slots()
+		if target != null and not now.has(target):
+			if now[index] == null:
+				_caster.assign_slot(index, target)
+			elif now[source] == null:
+				_caster.assign_slot(source, target)
 	_selected = null
 	_refresh()

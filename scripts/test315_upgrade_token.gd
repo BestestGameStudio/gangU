@@ -145,7 +145,7 @@ func _process(delta: float) -> bool:
 			_check(not prog.apply_upgrade_with_token(base, &"nope"), "unknown path refuses")
 			_check(prog.upgrade_tokens() == 1, "refusal keeps the token")
 			panel.show_panel()
-			panel._on_spell_pressed(base)
+			panel._on_slot_pressed(2) # #375: select the equipped base via its slot
 			var bs := _token_buttons()
 			_check(_header() == "Upgrades (Upgrade Tokens: 1)", "panel header shows token count")
 			_check(bs.size() == 1 and bs[0].text == "Burst [S] - use token" if bs.size() == 1 else false,
@@ -169,7 +169,7 @@ func _process(delta: float) -> bool:
 			_check(prog.cast_count(burst) == 0, "cast counts untouched (Burst starts at 0)")
 			_check(not prog.can_token_upgrade(burst) and not prog.apply_upgrade_with_token(burst, &"spirit_punch_launch"),
 				"no second step without a second token")
-			panel._on_spell_pressed(burst)
+			panel._on_slot_pressed(2) # #375: Burst inherited base's slot; click to select
 			_shot("4_after_token_upgrade")
 			# A qualified spell uses the free cast route: the token is kept.
 			prog.add_upgrade_token(1)

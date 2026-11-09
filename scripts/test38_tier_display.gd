@@ -5,8 +5,8 @@ extends SceneTree
 ## Pins the lead UX call: compact ASCII suffix [S]/[M]/[G] for tiers 1/2/3,
 ## Base (0) shows nothing, read from SpellProgress.get_tier() (the #36 source
 ## of truth), rows keep their identity across the upgrade swap, and the
-## equip-panel suffix appears in the UPGRADE CHANNEL ONLY (unlocked rows and
-## slot buttons stay plain). Negative leg is run against the pre-change base
+## equip-panel suffix appears in the UPGRADE CHANNEL ONLY (slot buttons stay
+## plain; #375 removed the unlocked rows). Negative leg is run against the pre-change base
 ## by the reviewer (suffix assertions must FAIL there).
 
 class StubPlayer extends Player:
@@ -79,7 +79,7 @@ func _initialize() -> void:
 	var sig := _spell("SigBolt")
 	caster.spells = [base, spec, mast, sig]
 	caster.unlocked = [base, spec, mast, sig]
-	caster.fake_slots = [spec, null, null, null, null, null]
+	caster.fake_slots = [spec, base, null, null, null, null] # #375: only slotted spells are selectable in Tab
 
 	var hud := hud_scene.instantiate()
 	root.add_child(hud)
@@ -144,7 +144,7 @@ func _initialize() -> void:
 	root.add_child(panel)
 	for i in range(5):
 		await process_frame
-	panel._on_spell_pressed(base)
+	panel._on_slot_pressed(1) # base sits in slot 2; clicking it selects its spell
 	var buttons: Array = []
 	for c in panel._upgrade_box.get_children():
 		if c is Button:
@@ -153,13 +153,8 @@ func _initialize() -> void:
 	if buttons.size() == 2:
 		_check(buttons[0].text == "Split shot [S]", "(e) upgrade button carries [S] (got '%s')" % buttons[0].text)
 		_check(buttons[1].text == "Beam [M]", "(e) upgrade button carries [M] (got '%s')" % buttons[1].text)
-	# Unlocked rows stay plain: the suffix is upgrade-channel-only.
-	var unlocked_plain := true
-	for c in panel._unlocked_box.get_children():
-		if c is Button and (c as Button).text.find("[") != -1:
-			unlocked_plain = false
-	_check(unlocked_plain, "(e) unlocked rows carry NO tier suffix")
-	# Slot buttons stay plain too.
+	# Slot buttons stay plain: the suffix is upgrade-channel-only (#375
+	# removed the unlocked rows, so the slots are the whole spell list).
 	var slots_plain := true
 	for b in panel._slot_buttons:
 		if (b as Button).text.find("[") != -1:

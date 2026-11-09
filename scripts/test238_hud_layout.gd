@@ -139,24 +139,15 @@ func _initialize() -> void:
 	_check(in_bounds, "chevron stays within the icon")
 	_check(chevron.visible and wipe.visible, "chevron remains visible over an active wipe")
 
-	# Tab panel: chevron overlay, no cooldown, with the spell cooling.
+	# Tab panel: chevron overlay, no cooldown, with the spell cooling. (#375
+	# removed the unlocked rows, so the slot icons are the Tab surface.)
 	caster._cooldowns[fire] = fire.cooldown
 	equip.show_panel()
 	await _frames(2)
-	var fire_row: Button = null
-	for c in equip._unlocked_box.get_children():
-		if c is Button and c.text == "Fire Ball":
-			fire_row = c
-	var mana_row: Button = null
-	for c in equip._unlocked_box.get_children():
-		if c is Button and c.text == "Mana Shot":
-			mana_row = c
-	var panel_icons: Array = _icons_in(fire_row) + [equip._slot_icons[0]]
-	for pi in panel_icons:
+	for pi in [equip._slot_icons[0]]:
 		_check(pi.get_node("UpgradeChevron").visible, "Tab icon shows the chevron")
 		_check(not pi.get_node("CooldownWipe").visible, "Tab icon shows no cooldown wipe")
 		_check(pi.texture == frames.get_frame_texture(&"fireball_base", 0), "Tab icon keeps base art while cooling")
-	_check(not _icons_in(mana_row)[0].get_node("UpgradeChevron").visible, "Tab row without an upgrade shows no chevron")
 	_check(not equip._slot_icons[1].get_node("UpgradeChevron").visible, "Tab slot without an upgrade shows no chevron")
 	_check(not equip._slot_icons[2].get_node("UpgradeChevron").visible, "Tab empty slot shows no chevron")
 

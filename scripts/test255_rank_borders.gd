@@ -108,19 +108,13 @@ func _initialize() -> void:
 	await _frames(2)
 	_check(squares[0].rank_tier() == 3, "HUD follows Signature (purple)")
 
-	# Tab panel: rows and slots match the HUD; empty slots stay bare.
+	# Tab panel: slots match the HUD; empty slots stay bare. (#375 removed
+	# the unlocked rows, so the slots are the whole Tab spell surface.)
 	equip.show_panel()
 	await _frames(2)
 	_check(equip._slot_icons[0].rank_tier() == 3, "Tab slot 1 shows Signature")
 	_check(equip._slot_icons[1].rank_tier() == 0, "Tab slot 2 shows Base")
 	_check(equip._slot_icons[2].rank_tier() == SpellRankBorder.NONE, "Tab empty slot shows none")
-	var row_tiers := {}
-	for c in equip._unlocked_box.get_children():
-		if c is Button:
-			var icons: Array = c.find_children("SpellIcon", "TextureRect", true, false)
-			row_tiers[c.text] = icons[0].rank_tier()
-	_check(row_tiers.get(spec.spell_name) == 3, "Tab row for the upgraded spell shows Signature (got %s)" % str(row_tiers))
-	_check(row_tiers.get("Mana Shot") == 0, "Tab row for Mana Shot shows Base")
 	equip.hide_panel()
 
 	# Unowned-spell surfaces never drive a rank.
