@@ -32,6 +32,7 @@ jobs:
     needs: make
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       issues: write
       pull-requests: write
     env:
@@ -46,13 +47,11 @@ jobs:
       - name: gh version
         run: gh --version; ls -la /tmp/ci/media
       - name: Comment with --attach (GITHUB_TOKEN)
-        continue-on-error: true
         run: |
           gh pr comment "$PR" -R "$REPO" --body "attach test: comment, run $GITHUB_RUN_ID" \
             --attach '/tmp/ci/media/shot1.png#testsrc frame' \
             --attach /tmp/ci/media/clip.mp4
       - name: Edit PR body with --attach (GITHUB_TOKEN)
-        continue-on-error: true
         run: gh pr edit "$PR" -R "$REPO" --attach '/tmp/ci/media/shot2.png#smpte bars'
       - name: Show resulting body
         if: always()
