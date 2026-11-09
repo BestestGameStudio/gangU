@@ -13,6 +13,9 @@ extends Node2D
 ## mounter reads it on every area swap. No SpawnData child => no enemies for
 ## that area (the hub stays empty; DungeonB's carrier holds zero entries).
 ## No area-name checks and no hardcoded positions/tables remain in code.
+## #346: boot -> hub -> (TRAVEL gate) -> overworld -> (entrance) -> dungeon;
+## exit portals return to the hub. Overworld entrance guards mount from
+## "EntranceGuards" carriers only while their dungeon is uncleared this run.
 
 func _ready() -> void:
 	print("gangU booted OK")
@@ -185,14 +188,33 @@ var _shop: Shop = null
 ## the gate actually entered, not the target area's name.
 var _entry_gate_type: int = -1
 
+## #346 core loop (Colin, 2026-11-08): the hub sits OUTSIDE the overworld and
+## keeps its services; one TRAVEL gate in the hub leads to the overworld,
+## whose entrances lead into the dungeons. Leaving a dungeon by its exit
+## portal still returns to the hub (shop refresh, bestiary, directory).
+const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
+
+## #346: dungeon_ids cleared this run. Per-run for free: a death restart
+## reloads Main. An overworld entrance only gets its guards while its
+## dungeon is absent from here.
+var cleared_dungeons: Dictionary = {}
+
 func _load_hub() -> void:
 	_entry_gate_type = -1
 	_swap(preload("res://scenes/hub.tscn").instantiate())
 
+## #346: go straight to the overworld (same swap a hub TRAVEL gate makes).
+func enter_overworld() -> void:
+	_swap((load(OVERWORLD_SCENE) as PackedScene).instantiate())
+
 func _on_gate_entered(gate: Gate) -> void:
-	print("gate entered: ", Gate.GateType.keys()[gate.gate_type])
+	print("gate entered: ", Gate.GateType.keys()[gate.gate_type], " -> ", gate.target_dungeon.resource_path if gate.target_dungeon else gate.target_path)
 	_entry_gate_type = gate.gate_type
-	_swap.call_deferred(gate.target_dungeon.instantiate())
+	var target := gate.target_scene()
+	if target == null:
+		push_warning("Gate %s has no target scene" % gate.name)
+		return
+	_swap.call_deferred(target.instantiate())
 
 ## (#350) RED semantics for the mounted area: the entered gate's type when there
 ## is one; otherwise the authored default (DungeonB is the RED dungeon).
@@ -227,6 +249,7 @@ func _swap(area: Node) -> void:
 	if p:
 		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
 	_mount_area_spawns(current_area)
+	_mount_entrance_guards(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
 	_mount_revive_item(current_area)
@@ -258,6 +281,32 @@ func _mount_area_spawns(area: Node) -> void:
 	spawner.name = "EnemySpawner"
 	area.add_child(spawner)
 	spawner.setup(data.entries, data.player_path, terrain, area)
+	spawner.spawn_initial()
+
+## #346: overworld entrance guards. Every EntranceGuards node under the
+## area's "EntranceGuards" container whose dungeon is still uncleared this
+## run contributes its entries; all of them go through ONE EnemySpawner
+## (#220 seam), parented to the area so leaving the overworld frees them.
+func _mount_entrance_guards(area: Node) -> void:
+	var holder := area.get_node_or_null("EntranceGuards")
+	if holder == null:
+		return
+	var entries: Array = []
+	var player_path := NodePath("../../Player")
+	for g in holder.get_children():
+		var guards := g as EntranceGuards
+		if guards == null:
+			continue
+		if guards.dungeon_id != &"" and cleared_dungeons.has(guards.dungeon_id):
+			continue
+		entries.append_array(guards.entries)
+		player_path = guards.player_path
+	if entries.is_empty():
+		return
+	var spawner := EnemySpawner.new()
+	spawner.name = "GuardSpawner"
+	area.add_child(spawner)
+	spawner.setup(entries, player_path, area.get_node_or_null("Terrain") as TerrainMap, area)
 	spawner.spawn_initial()
 
 ## #8 production objective: CLEAR_ALL over the spawned enemies in
@@ -316,6 +365,7 @@ func _on_boss_spawned(boss: Node) -> void:
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
+	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
 	## (#132) Confirmed dungeon VICTORY only: free stock refresh and the
 	## paid-refresh price resets (Daniel 2026-11-07). A plain return to hub
 	## (exit portal without a clear) never reaches this path.
