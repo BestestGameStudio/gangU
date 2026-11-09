@@ -50,8 +50,15 @@ func _check(label: String, ok: bool) -> void:
 		fails += 1
 	print("[100] ", label, " -> ", "PASS" if ok else "FAIL")
 
-func _enter_gate(gate_name: String) -> void:
+func _enter_gate(gate_name: String, pin_type: int = -1) -> void:
+	if scene.current_area.get_node_or_null(gate_name) == null:
+		scene.enter_overworld() # #346: dungeon entrances live in the overworld
+		mounted_positions.clear() # drop the overworld guards; the legs measure the dungeon mount
 	var g: Gate = scene.current_area.get_node(gate_name)
+	# #350 pin (test350 covers the roll): after the gate's own _ready roll,
+	# before entry, so main.gd's RED lock-in follows the pinned type.
+	if pin_type >= 0:
+		g.gate_type = pin_type
 	g._on_body_entered(p)
 
 func _area_enemies() -> Array:
@@ -67,7 +74,7 @@ func _process(delta: float) -> bool:
 		0:
 			if scene.get_node_or_null("Player") != null and t > 0.3:
 				p = scene.get_node("Player")
-				_enter_gate("GateNormal")
+				_enter_gate("GateNormal", Gate.GateType.NORMAL) # #350 pin
 				phase = 1; t = 0
 		1:
 			if t > 0.4:
@@ -127,7 +134,7 @@ func _process(delta: float) -> bool:
 		3:
 			if t > 0.4:
 				_check("retreat: back in hub, same run", scene.current_area.name == "Hub")
-				_enter_gate("GateRed")
+				_enter_gate("GateRed", Gate.GateType.RED) # #350 pin
 				phase = 4; t = 0
 		4:
 			if t > 0.4:
