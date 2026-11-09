@@ -23,6 +23,10 @@ var _projectile: MockFreezableArea
 var _player: CharacterBody2D
 var _late_projectile: MockFreezableArea
 var _anchored: Area2D
+var _real_bubble: Area2D
+var _real_bubble2: Area2D
+var _real_proj: Projectile
+var _real_spawn_pos := Vector2.ZERO
 var _frame := 0
 var _phase := 0
 var _ended_emitted := false
@@ -127,6 +131,58 @@ func _physics_process(_delta: float) -> bool:
 			_check(_projectile.freeze_calls == [true, false], "projectile released with set_frozen(false) at end")
 			_check(_late_projectile.freeze_calls == [true, false], "late projectile released with set_frozen(false) at end")
 			_check(not _enemy.frozen and not _projectile.frozen and not _late_projectile.frozen, "all actors unfrozen after bubble ends")
-			print("---\n%d checks, %d failures" % [_checks, _failures])
-			quit(1 if _failures > 0 else 0)
+			# Real-entity phase: an actual Projectile claimed by the SPAWN
+			# HOOK (position set before entering the tree) must never move.
+			_real_bubble = FreezeBubbleScript.spawn(_root_node, Vector2(400, 300), 200.0, 60.0)
+			_phase = 4
+			_frame = 0
+		4:  # let the bubble fully expand, then spawn a real projectile inside
+			if _frame >= 20:
+				var pscene: PackedScene = load("res://scenes/projectile.tscn")
+				_real_proj = pscene.instantiate()
+				_real_proj.setup(load("res://resources/spells/spirit_punch.tres"), Vector2.RIGHT, null)
+				_real_proj.global_position = Vector2(420, 300)
+				_real_spawn_pos = _real_proj.global_position
+				_root_node.add_child(_real_proj)  # _ready spawn hook fires here
+				_phase = 5
+				_frame = 0
+		5:  # frozen before its first physics step: zero movement
+			if _frame >= 12:
+				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "REAL projectile spawned inside an active bubble never moves (spawn hook, not scan)")
+				_check(_real_proj._freeze_count == 1, "real projectile claimed exactly once (count=1)")
+				_real_bubble2 = FreezeBubbleScript.spawn(_root_node, Vector2(430, 300), 200.0, 60.0)
+				_phase = 6
+				_frame = 0
+		6:  # overlapping second bubble claims the same projectile once
+			if _frame >= 20:
+				_check(_real_proj._freeze_count == 2, "overlapping bubble also claims it once (count=2)")
+				_real_bubble._begin_release()
+				_phase = 7
+				_frame = 0
+		7:  # first bubble released; the second still holds the freeze
+			if _frame >= 25:
+				_check(_real_proj._freeze_count == 1, "first release leaves the second claim (count=1)")
+				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "still frozen while any bubble holds it")
+				_real_bubble2._begin_release()
+				_phase = 8
+				_frame = 0
+		8:  # fully released: claims balanced, projectile moves again. The
+			# Spirit Punch range is short, so a resumed projectile can despawn
+			# before the poll lands - reaching max range is itself proof the
+			# movement gate reopened (count must be 0 for any movement).
+			if _frame >= 2:
+				if not is_instance_valid(_real_proj):
+					_check(true, "claims balanced after both bubbles end (resumed projectile despawned at max range)")
+					_check(true, "projectile resumes moving after final release")
+					print("---\n%d checks, %d failures" % [_checks, _failures])
+					quit(1 if _failures > 0 else 0)
+				elif _real_proj.global_position.distance_to(_real_spawn_pos) > 10.0:
+					_check(_real_proj._freeze_count == 0, "claims balanced after both bubbles end (count=0)")
+					_check(true, "projectile resumes moving after final release")
+					print("---\n%d checks, %d failures" % [_checks, _failures])
+					quit(1 if _failures > 0 else 0)
+			if _frame >= 120:
+				_check(false, "projectile resumed moving within 120 frames of final release")
+				print("---\n%d checks, %d failures" % [_checks, _failures])
+				quit(1)
 	return false

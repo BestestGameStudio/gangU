@@ -75,6 +75,16 @@ var _vis_base: Vector2 = Vector2.ONE
 var _sprite: AnimatedSprite2D = null
 var _sprite_base: Vector2 = Vector2.ONE
 
+## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
+## positive, _physics_process skips movement/steer/sweep AND the
+## distance-based lifetime, so a frozen punch simply waits.
+var _freeze_count := 0
+
+## #305: Signature freeze contract. Claims are reference-counted so
+## overlapping bubbles freeze and release independently.
+func set_frozen(frozen: bool) -> void:
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+
 ## #263: glow halo + fading trail (opt-in per spell, visuals only).
 const GLOW_RADIUS_MULT: float = 2.2 ## halo radius vs. the sprite's visual radius
 const GLOW_ALPHA: float = 0.35
@@ -111,6 +121,11 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	rotation = direction.angle()
 
 func _ready() -> void:
+	# #305: spawn hook - if I spawn inside an active freeze bubble, it claims
+	# me before my first physics step (Area2D overlap registration lags a
+	# frame, so the bubble's scan alone can miss a mid-frame spawn).
+	for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+		bubble.claim(self)
 	$CollisionShape2D.shape = $CollisionShape2D.shape.duplicate() # per-spell radius must not leak across instances (#4 gate)
 	$CollisionShape2D.shape.radius = spell.radius
 	$Visual.color = spell.projectile_color
@@ -215,6 +230,8 @@ func _wire_sprite() -> void:
 	$Visual.visible = false
 
 func _physics_process(delta: float) -> void:
+	if _freeze_count > 0:
+		return
 	# #37: a HOMING-tagged spell steers BEFORE moving - toward the nearest
 	# living enemy within HOMING_RANGE, retargeted every frame, capped at
 	# HOMING_TURN_RATE rad/s. No target in range: flies straight. Speed,

@@ -53,6 +53,7 @@ static func spawn(parent: Node, anchor: Vector2, p_radius: float, p_duration: fl
 
 
 func _ready() -> void:
+	add_to_group(&"freeze_bubbles")
 	_collision = CollisionShape2D.new()
 	_shape = CircleShape2D.new()
 	_shape.radius = 0.0
@@ -126,6 +127,17 @@ func _finish() -> void:
 
 func is_frozen_actor(node: Node) -> bool:
 	return _frozen.has(node)
+
+
+## Spawn hook (#305): a newly spawned actor inside my CURRENT radius asks
+## to be claimed. Area2D overlap registration lags up to a physics frame,
+## so the scan/signal path alone can miss a body spawned mid-frame; this
+## closes the gap. Once-per-pair: _try_freeze already tracks held nodes.
+func claim(node: Node) -> void:
+	if _releasing:
+		return
+	if node is Node2D and global_position.distance_to(node.global_position) <= _shape.radius:
+		_try_freeze(node)
 
 
 func _on_node_entered(node: Node) -> void:
