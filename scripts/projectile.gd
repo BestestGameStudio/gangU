@@ -129,26 +129,34 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	source = p_source
 	if p_source != null:
 		_terrain = p_source.get(&"terrain") as TerrainMap
-		_attacker_modifiers = p_source.get(&"damage_modifiers") as DamageModifiers
 		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
-	# #131 (C4): owned relics contribute their tag-matched passive modifiers
-	# through a COMPOSED COPY - the source's own collection is never mutated,
-	# so repeated casts cannot accumulate relic entries. No owned_relics node,
-	# or no matching relic, leaves the attacker modifiers exactly as before.
+	_attacker_modifiers = attacker_modifiers_for(p_source, spell)
+	rotation = direction.angle()
+
+## #131 (C4): the attacker modifiers a hit from `p_source` casting `p_spell`
+## rolls with. Owned relics contribute their tag-matched passive modifiers
+## through a COMPOSED COPY - the source's own collection is never mutated,
+## so repeated casts cannot accumulate relic entries. No owned_relics node,
+## or no matching relic, returns the source's collection exactly as before.
+## #331: shared with the Water Ball splash / rain / shield damage path.
+static func attacker_modifiers_for(p_source: Node, p_spell: Spell) -> DamageModifiers:
+	if p_source == null or not is_instance_valid(p_source):
+		return null
+	var mods := p_source.get(&"damage_modifiers") as DamageModifiers
 	var relics: OwnedRelics = null
 	if p_source is Player and p_source.is_inside_tree():
 		relics = p_source.get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
 	if relics != null:
-		var relic_mods := relics.modifiers_for(spell)
+		var relic_mods := relics.modifiers_for(p_spell)
 		if not relic_mods.is_empty():
 			var merged := DamageModifiers.new()
-			if _attacker_modifiers != null:
-				for m in _attacker_modifiers.items():
+			if mods != null:
+				for m in mods.items():
 					merged.add(m)
 			for m in relic_mods:
 				merged.add(m)
-			_attacker_modifiers = merged
-	rotation = direction.angle()
+			mods = merged
+	return mods
 
 ## #331: the world point a cursor-steered shot aims at.
 func cursor_point() -> Vector2:

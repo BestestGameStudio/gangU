@@ -20,6 +20,7 @@ var _elapsed := 0.0
 var _next_drop := 0.0
 var drops := 0
 var _ending := false
+var _freeze_count := 0
 
 static func spawn(parent: Node, p_spell: Spell, p_source: Node2D, at: Vector2) -> WaterRain:
 	var r := WaterRain.new()
@@ -34,7 +35,23 @@ func _ready() -> void:
 	rng.randomize()
 	z_index = -1
 
+## Freeze contract (#305 / #323 The World): a rain zone anchored inside a
+## FreezeBubble is held - its clock stops, so it neither drops nor expires
+## until released. Drops it already made (or makes from outside into a
+## bubble) are WaterSplash nodes and are claimed on their own.
+func set_frozen(frozen: bool) -> void:
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+
+func is_frozen() -> bool:
+	return _freeze_count > 0
+
+func freeze_count() -> int:
+	return _freeze_count
+
 func _physics_process(delta: float) -> void:
+	WaterSplash.claim_by_bubbles(self)
+	if _freeze_count > 0:
+		return
 	_elapsed += delta
 	queue_redraw()
 	if _ending:

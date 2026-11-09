@@ -6,8 +6,17 @@ extends Node2D
 ## spell.splash_radius of the landing point. Heavy Rain (WaterRain) drops the
 ## same node straight down from the sky.
 ##
-## Damage goes through DamageCalc with the source's modifiers and RNG, like a
-## Projectile hit, so crits, damage numbers and hit flashes all apply.
+## Damage goes through DamageCalc with the source's modifiers (plus matching
+## owned relics) and RNG, like a Projectile hit, so crits, damage numbers and
+## hit flashes all apply.
+##
+## Freeze contract (#305 / #323 The World): a lob or drop whose ground point
+## is inside a FreezeBubble is claimed by it (set_frozen, reference-counted
+## so overlapping bubbles hold and release independently). While held the
+## flight clock, position, sprite animation and landing ring all stop; on
+## release it resumes where it was. Being a plain Node2D (no overlap
+## signals) it asks every bubble to claim it each physics step - claim() is
+## once per pair and refuses while releasing, so this never doubles a claim.
 
 signal landed(position: Vector2, hits: int)
 
@@ -28,6 +37,32 @@ var _t := 0.0
 var _landed := false
 var _ring_t := 0.0
 var _ball: AnimatedSprite2D
+var _freeze_count := 0
+
+## Freeze contract: balanced claims from FreezeBubble.
+func set_frozen(frozen: bool) -> void:
+	var was := _freeze_count
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+	if _ball == null or not is_instance_valid(_ball):
+		return
+	if _freeze_count > 0 and was == 0:
+		# pause() alone does not hold an AnimatedSprite2D; stop its processing.
+		_ball.pause()
+		_ball.process_mode = Node.PROCESS_MODE_DISABLED
+	elif _freeze_count == 0 and was > 0:
+		_ball.process_mode = Node.PROCESS_MODE_INHERIT
+		_ball.play()
+
+func is_frozen() -> bool:
+	return _freeze_count > 0
+
+func freeze_count() -> int:
+	return _freeze_count
+
+## Ask every live bubble to claim me (shared with WaterRain).
+static func claim_by_bubbles(node: Node2D) -> void:
+	for bubble in node.get_tree().get_nodes_in_group(&"freeze_bubbles"):
+		bubble.claim(node)
 
 ## Spawn a lob under `parent`. A zero-length lob (`from == target`) is a drop
 ## from the sky that still takes `flight_time` seconds to fall.
@@ -59,6 +94,9 @@ func _ready() -> void:
 	_update_ball()
 
 func _physics_process(delta: float) -> void:
+	claim_by_bubbles(self)
+	if _freeze_count > 0:
+		return
 	if _landed:
 		_ring_t += delta
 		queue_redraw()
@@ -129,10 +167,12 @@ func _draw() -> void:
 static func deal_damage(body: Node, p_spell: Spell, p_source: Node) -> void:
 	if body == null or not body.has_method(&"apply_damage"):
 		return
-	var mods: DamageModifiers = null
+	# Same attacker composition as Projectile.setup: the source's modifiers
+	# plus tag-matched owned-relic modifiers in a fresh copy (never mutates
+	# the source's collection, so repeated hits cannot accumulate).
+	var mods := Projectile.attacker_modifiers_for(p_source, p_spell)
 	var rng: RandomNumberGenerator = null
 	if p_source != null and is_instance_valid(p_source):
-		mods = p_source.get(&"damage_modifiers") as DamageModifiers
 		rng = p_source.get(&"damage_rng") as RandomNumberGenerator
 	if rng == null:
 		rng = RandomNumberGenerator.new()
