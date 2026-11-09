@@ -1,0 +1,59 @@
+name: TEMP gh --attach test
+
+# Throwaway: checks whether `gh ... --attach` can put CI screenshots inline in
+# a PR comment and PR body using the job's GITHUB_TOKEN, with the files passed
+# between jobs as an artifact (same shape as claude.yml's post-run job).
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths: ['.github/workflows/temp-gh-attach-test.yml']
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Make test media
+        run: |
+          mkdir -p /tmp/ci/media
+          command -v ffmpeg || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
+          ffmpeg -loglevel error -f lavfi -i testsrc=size=480x270 -frames:v 1 /tmp/ci/media/shot1.png
+          ffmpeg -loglevel error -f lavfi -i smptebars=size=480x270 -frames:v 1 /tmp/ci/media/shot2.png
+          ffmpeg -loglevel error -f lavfi -i testsrc=size=320x180:rate=15 -t 2 -pix_fmt yuv420p /tmp/ci/media/clip.mp4
+          ls -la /tmp/ci/media
+      - uses: actions/upload-artifact@v4
+        with:
+          name: claude-ci-output
+          path: /tmp/ci/media
+          retention-days: 1
+
+  attach:
+    needs: make
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: claude-ci-output
+          path: /tmp/ci/media
+      - name: gh version
+        run: gh --version; ls -la /tmp/ci/media
+      - name: Comment with --attach (GITHUB_TOKEN)
+        continue-on-error: true
+        run: |
+          gh pr comment "$PR" -R "$REPO" --body "attach test: comment, run $GITHUB_RUN_ID" \
+            --attach '/tmp/ci/media/shot1.png#testsrc frame' \
+            --attach /tmp/ci/media/clip.mp4
+      - name: Edit PR body with --attach (GITHUB_TOKEN)
+        continue-on-error: true
+        run: gh pr edit "$PR" -R "$REPO" --attach '/tmp/ci/media/shot2.png#smpte bars'
+      - name: Show resulting body
+        if: always()
+        run: gh pr view "$PR" -R "$REPO" --json body --jq .body
