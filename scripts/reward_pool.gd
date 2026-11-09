@@ -37,6 +37,10 @@ func remove_on_grant(entry: RewardEntry) -> void:
 	if entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
 		print("[rewards] upgrade token grant (pool keeps entry eligible)")
 		return
+	# #426: relic uniqueness is OwnedRelics' job (its add() refuses owned
+	# ids from every source), so the pool records nothing for relics.
+	if entry.kind == RewardEntry.Kind.RELIC:
+		return
 	if _granted.has(entry):
 		return
 	_granted.append(entry)

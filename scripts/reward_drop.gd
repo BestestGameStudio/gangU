@@ -12,6 +12,7 @@ signal collected(drop: RewardDrop, entry: RewardEntry)
 var entry: RewardEntry
 
 const TOKEN_COLOR := Color(0.75, 0.45, 1.0)
+const RELIC_COLOR := Color(0.3, 0.95, 0.85)
 
 func setup(p_entry: RewardEntry) -> void:
 	entry = p_entry
@@ -29,6 +30,14 @@ func _ready() -> void:
 		# #315 placeholder presentation (art is human-open): violet diamond.
 		$NameLabel.text = "Upgrade Token"
 		$Visual.color = TOKEN_COLOR
+	elif entry.kind == RewardEntry.Kind.RELIC:
+		# #426 placeholder presentation (art is human-open): teal diamond
+		# labeled with the relic name.
+		if entry.relic == null:
+			push_warning("RewardDrop: no relic entry assigned.")
+			return
+		$NameLabel.text = entry.relic.display_name
+		$Visual.color = RELIC_COLOR
 	elif entry.spell == null:
 		push_warning("RewardDrop: no spell entry assigned.")
 		return
@@ -87,6 +96,16 @@ func _on_body_entered(body: Node2D) -> void:
 		else:
 			push_warning("RewardDrop: SpellProgress unavailable; upgrade token lost.")
 		print("[rewards] upgrade token collected")
+	elif entry.kind == RewardEntry.Kind.RELIC:
+		# #426: OwnedRelics.add refuses an already-owned id (a second boss
+		# drop picked up after the first), so the copy is consumed with no
+		# grant and no signal - Daniel's "no duplicates from any source".
+		var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+		if relics == null or not relics.add(entry.relic):
+			print("[rewards] relic not granted (already owned or no OwnedRelics) - copy consumed (#426)")
+			queue_free()
+			return
+		print("[rewards] relic collected: ", entry.relic.display_name)
 	else:
 		# Item rewards unwired until #54 content approval.
 		print("[rewards] item drop collected; item route unwired (#54 pending)")
