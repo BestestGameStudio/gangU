@@ -49,7 +49,7 @@ static func clamp_displacement(map: TerrainMap, from: Vector2, to: Vector2, can_
 		var p := from.lerp(to, float(i) / float(steps))
 		var c := map.world_to_cell(p)
 		if c != cell:
-			if not can_enter(map, p, can_swim):
+			if not can_enter(map, p, can_swim) or _cuts_corner(map, cell, c, can_swim):
 				return reached
 			cell = c
 		reached = p
@@ -61,6 +61,21 @@ static func _enterable(props: Dictionary, can_swim: bool) -> bool:
 	return props["walkable"] or (props["swimmable"] and can_swim)
 
 static func _can_step(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool) -> bool:
-	if map.world_to_cell(from) == map.world_to_cell(to):
+	var a := map.world_to_cell(from)
+	var b := map.world_to_cell(to)
+	if a == b:
 		return true
-	return _enterable(map.properties_at(to), can_swim)
+	return _enterable(map.properties_at(to), can_swim) and not _cuts_corner(map, a, b, can_swim)
+
+## #328: a move that changes both the column and the row of the mover's
+## cell passes the shared corner of the two side cells, so it is only
+## allowed when both of them are enterable. Without this a diagonal step
+## slips between two diagonally touching walls, or clips the corner of a
+## single wall, because only the destination cell was checked.
+static func _cuts_corner(map: TerrainMap, a: Vector2i, b: Vector2i, can_swim: bool) -> bool:
+	if a.x == b.x or a.y == b.y:
+		return false
+	for side: Vector2i in [Vector2i(b.x, a.y), Vector2i(a.x, b.y)]:
+		if not _enterable(map.properties_at(map.cell_to_world(side)), can_swim):
+			return true
+	return false
