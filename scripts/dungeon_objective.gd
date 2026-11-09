@@ -164,6 +164,10 @@ func _spawn_boss() -> void:
 	var boss := boss_scene.instantiate()
 	if boss is Node2D:
 		boss.global_position = boss_spawn_position
+	# #396: a boss moves on its area's terrain like the mobs do (spawned
+	# mobs get it from EnemySpawner); no Terrain node = flat, as before.
+	if boss is Enemy and get_parent() != null:
+		boss.terrain = get_parent().get_node_or_null("Terrain") as TerrainMap
 	# Group consistency with the shipped convention (test_dungeon_boss.tscn,
 	# DEFEAT_BOSS ready-scan): the boss joins the "boss" group. Its own
 	# script may also add "enemies" on ready; mob connections were already
