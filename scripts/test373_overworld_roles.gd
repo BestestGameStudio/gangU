@@ -235,8 +235,7 @@ func _flow_legs() -> void:
 	await _frames(3)
 	_check(main.cleared_dungeons.has(&"dungeon_a"), "(F) DungeonA cleared")
 	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
-	await _frames(3)
-	await _enter(main, "GateOverworld")
+	await _frames(3) # #378: the exit lands back in the overworld at the DungeonA entrance
 	var gate_a: Vector2 = main.current_area.get_node("GateNormal").global_position
 	var near_a := 0
 	for e in _by_role(main, "guard") + _by_role(main, "patrol"):

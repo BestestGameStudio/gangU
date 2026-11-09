@@ -1,7 +1,7 @@
 extends SceneTree
 ## #9 acceptance driver (headless, local composition).
 ## PRODUCTION (main.tscn composition): normal-dungeon DungeonA mounts an
-## UNLOCKED exit portal (retreat anytime); using it returns to the hub in the
+## UNLOCKED exit portal (retreat anytime); using it returns to its overworld entrance (#378) in the
 ## same run (HP + SpellCaster instance retained); death restarts the run.
 ## #350 FIXTURE (clearly labeled): production offerings roll 50/50 per run,
 ## so the entered gates' types are pinned (GateNormal=NORMAL, GateRed=RED)
@@ -59,9 +59,12 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				print("[9] PROD normal retreat area=", scene.current_area.name, " hp=", p.hp,
 					" same_caster=", p.get_node("SpellCaster") == caster,
-					" -> ", "PASS" if scene.current_area.name == "Hub" and p.hp == 42 and p.get_node("SpellCaster") == caster else "FAIL")
+					" -> ", "PASS" if scene.current_area.name == "Overworld" and p.hp == 42 and p.get_node("SpellCaster") == caster else "FAIL")
 				# --- labeled FIXTURE: red lock-in regression (not production config) ---
-				fixture = load("res://scenes/test_dungeon_clear.tscn").instantiate()
+				# #378: the retreat landed in the guarded overworld; the fixture's
+				# objective counts the global "enemies" group, so park in the hub.
+				scene._load_hub()
+				fixture =load("res://scenes/test_dungeon_clear.tscn").instantiate()
 				fixture_portal = load("res://scenes/exit_portal.tscn").instantiate()
 				fixture_portal.locked = true
 				fixture_portal.objective_path = NodePath("../DungeonObjective")
@@ -134,7 +137,7 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				print("[9] PROD red retreat area=", scene.current_area.name, " hp=", p.hp,
 					" same_caster=", p.get_node("SpellCaster") == caster,
-					" -> ", "PASS" if scene.current_area.name == "Hub" and p.hp == 100 and p.get_node("SpellCaster") == caster else "FAIL")
+					" -> ", "PASS" if scene.current_area.name == "Overworld" and p.hp == 100 and p.get_node("SpellCaster") == caster else "FAIL")
 				print("[9] DONE")
 				quit()
 	return false

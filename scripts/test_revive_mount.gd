@@ -78,7 +78,7 @@ func _process(delta: float) -> bool:
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
-				_check("retreat to hub same run", scene.current_area.name == "Hub")
+				_check("retreat to the overworld entrance same run (#378)", scene.current_area.name == "Overworld")
 				_enter_gate("GateNormal")
 				phase = 3; t = 0
 		3:

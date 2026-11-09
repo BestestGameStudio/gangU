@@ -14,7 +14,7 @@ extends Node2D
 ## that area (the hub stays empty; DungeonB's carrier holds zero entries).
 ## No area-name checks and no hardcoded positions/tables remain in code.
 ## #346: boot -> hub -> (TRAVEL gate) -> overworld -> (entrance) -> dungeon;
-## exit portals return to the hub. Overworld entrance guards mount from
+## exit portals return to that dungeon's overworld entrance (#378). Overworld entrance guards mount from
 ## "EntranceGuards" carriers only while their dungeon is uncleared this run.
 
 func _ready() -> void:
@@ -232,7 +232,8 @@ var _entry_gate_type: int = -1
 ## #346 core loop (Colin, 2026-11-08): the hub sits OUTSIDE the overworld and
 ## keeps its services; one TRAVEL gate in the hub leads to the overworld,
 ## whose entrances lead into the dungeons. Leaving a dungeon by its exit
-## portal still returns to the hub (shop refresh, bestiary, directory).
+## portal returns to its overworld entrance (#378); the hub is one TRAVEL
+## gate away, and #349 fast return still goes straight to the hub.
 const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
 
 ## #346: dungeon_ids cleared this run. Per-run for free: a death restart
@@ -487,7 +488,8 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 		boss_music.fade_out() # #359: boss down, theme fades
 
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
-## anytime, objective not required). Returns to the hub in the SAME run via a
+## anytime, objective not required). Returns (#378: to the dungeon's overworld
+## entrance; formerly the hub) in the SAME run via a
 ## deferred swap - the shared Player is repositioned, never recreated, so
 ## spells and current HP are retained. Red-gate DungeonB (#177 / O1, human
 ## decision 2026-11-08) now has an ELIMINATION objective, so it mounts the
@@ -519,7 +521,41 @@ func _mount_exit_portal(area: Node) -> void:
 	area.add_child(portal)
 
 func _on_exit_portal_entered(_portal: ExitPortal) -> void:
-	_load_hub.call_deferred()
+	_exit_dungeon.call_deferred(current_area.scene_file_path if current_area else "")
+
+## #378: leaving a dungeon by its exit portal returns the player to that
+## dungeon's entrance in the overworld, standing just in front of (below) the
+## entrance gate so they do not walk straight back in. A dungeon without an
+## overworld entrance (test fixtures, direct swaps) falls back to the hub.
+## The #349 fast-return shortcut is a separate path and still goes to the hub.
+const ENTRANCE_EXIT_OFFSET := Vector2(0, 80)
+
+func _exit_dungeon(dungeon_scene: String) -> void:
+	var overworld := (load(OVERWORLD_SCENE) as PackedScene).instantiate()
+	var entrance := _entrance_gate_for(overworld, dungeon_scene)
+	if entrance == null:
+		overworld.free()
+		_load_hub()
+		return
+	_entry_gate_type = -1
+	_swap(overworld)
+	var p := get_node_or_null("Player") as Player
+	if p:
+		p.global_position = entrance.global_position + ENTRANCE_EXIT_OFFSET
+
+## #378: the overworld gate whose target is `dungeon_scene` (scene path), or null.
+## Walks the not-yet-mounted overworld so no swap happens when there is none.
+func _entrance_gate_for(area: Node, dungeon_scene: String) -> Gate:
+	if dungeon_scene == "":
+		return null
+	for n in area.find_children("*", "", true, false):
+		var g := n as Gate
+		if g == null:
+			continue
+		var scene := g.target_scene()
+		if scene != null and scene.resource_path == dungeon_scene:
+			return g
+	return null
 
 ## #54: ONE revive item (green cross) per run, spawned in DungeonA only, away
 ## from the entrance spawn (576,560), the demo enemies (y<=280) and the exit

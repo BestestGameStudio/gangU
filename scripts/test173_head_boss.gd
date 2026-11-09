@@ -187,7 +187,7 @@ func _leg_production() -> void:
 	_check(obj.is_cleared() and not portal.locked, "(D) boss death clears the arena and unlocks the portal")
 	portal._on_body_entered(p)
 	await _physics(4)
-	_check(scene.current_area.name == "Hub", "(D) unlocked portal returns to the hub")
+	_check(scene.current_area.name == "Overworld", "(D) unlocked portal returns to the overworld entrance (#378)")
 	scene.queue_free()
 	current_scene = null
 	await process_frame

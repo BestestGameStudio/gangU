@@ -78,10 +78,9 @@ func _initialize() -> void:
 	_check(not main.cleared_dungeons.has(&"dungeon_b"), "(A) dungeon_b is not recorded")
 	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "exit portal returns to the hub")
+	_check(main.current_area.name == "Overworld", "exit portal returns to the overworld (#378)")
 
 	# (B)
-	await _enter(main, "GateOverworld")
 	ow = main.current_area
 	var after := _guards(main)
 	_check(_near(after, ow.get_node("GateNormal").global_position, 200.0) == 0, "(B) cleared DungeonA entrance has no guards")
@@ -106,7 +105,7 @@ func _initialize() -> void:
 	_check(main.cleared_dungeons.size() == 1 and main.cleared_dungeons.has(&"dungeon_a"), "(D) still a single dungeon_a entry")
 	(area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	await _enter(main, "GateOverworld")
+	_check(main.current_area.name == "Overworld", "(D) exit lands back in the overworld (#378)")
 	_check(_near(_guards(main), main.current_area.get_node("GateNormal").global_position, 200.0) == 0, "(D) DungeonA entrance stays unguarded")
 
 	# (E) death restart forgets clears

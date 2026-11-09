@@ -186,8 +186,8 @@ func _flow_legs() -> void:
 	var portal: ExitPortal = main.current_area.get_node("ExitPortal")
 	portal._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "(E) the exit portal returns to the hub")
-	await _enter(main, "GateOverworld")
+	# #378: the exit portal now lands at DungeonA's overworld entrance.
+	_check(main.current_area.name == "Overworld", "(E) the exit portal returns to the overworld")
 	ow = main.current_area
 	guards = _guards(main)
 	_check(guards.size() == 13, "(E) 13 guards after clearing DungeonA (got %d)" % guards.size())
