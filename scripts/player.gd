@@ -7,6 +7,10 @@ class_name Player
 
 signal died()
 signal health_changed(current: int, max_hp: int)
+## #388: shields - temporary health beyond max HP. Emitted ONLY from
+## add_shield / clear_shield / apply_damage / tick_shield_decay, so the pool
+## never changes silently.
+signal shield_changed(current: int)
 
 @export var speed: float = 320.0
 @export var max_hp: int = 100
@@ -44,6 +48,24 @@ var _launch_time_left := 0.0
 var terrain: TerrainMap = null
 
 var hp: int
+## #388 foundation: shield pool, separate from hp/max_hp and uncapped. Takes
+## damage before HP. Owner-clarified rules: no cap, grants stack additively,
+## and the pool decays after a timer - it holds for shield_decay_delay
+## seconds, then gradually drains at shield_decay_rate per second. Any new
+## grant refreshes that single pooled delay clock; damage does not. It
+## absorbs the FINAL damage amount (after armor/damage reduction), since
+## apply_damage already receives post-modifier damage.
+var shield: int = 0
+## #388: seconds a shield holds before it starts to decay. Engineering
+## placeholder, not owner-approved tuning; adjust freely.
+@export var shield_decay_delay: float = 3.0
+## #388: shield points drained per second once decay starts. Engineering
+## placeholder, not owner-approved tuning; adjust freely.
+@export var shield_decay_rate: float = 10.0
+## Seconds left before decay starts; reset by every add_shield.
+var _shield_delay_left := 0.0
+## Fractional decay carried between frames so the int pool drains smoothly.
+var _shield_decay_carry := 0.0
 var damage_modifiers := DamageModifiers.new()
 var damage_rng := RandomNumberGenerator.new()
 
@@ -104,12 +126,75 @@ func apply_damage(amount: int) -> void:
 		return
 	if hp <= 0:
 		return
+	# #388: the shield soaks the hit first; only the overflow reaches HP. A
+	# fully absorbed hit leaves HP untouched and emits no health_changed.
+	if shield > 0 and amount > 0:
+		var absorbed := mini(shield, amount)
+		shield -= absorbed
+		amount -= absorbed
+		shield_changed.emit(shield)
+		if amount == 0:
+			# #390: a shield-soaked hit is ACCEPTED (unlike #205 iframes,
+			# which refuse the hit entirely): it lands with hp_lost 0, the
+			# same shape as an accepted 0-damage roll.
+			OnHit.record(self, hp, hp)
+			return
 	var before := hp
 	hp = clampi(hp - amount, 0, max_hp)
 	OnHit.record(self, before, hp) # #390: outcome captured before died()/revive
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()
+
+
+## #388: grant shield. Uncapped and additive; ignored when dead or for
+## non-positive amounts.
+func add_shield(amount: int) -> void:
+	if amount <= 0 or hp <= 0:
+		return
+	shield += amount
+	# A new grant refreshes the pooled decay clock for the whole pool.
+	_shield_delay_left = shield_decay_delay
+	_shield_decay_carry = 0.0
+	shield_changed.emit(shield)
+
+
+## #388: drop the whole shield pool (for strip effects).
+func clear_shield() -> void:
+	_shield_delay_left = 0.0
+	_shield_decay_carry = 0.0
+	if shield == 0:
+		return
+	shield = 0
+	shield_changed.emit(shield)
+
+
+## #388: seconds until the shield starts decaying (0 once draining).
+func shield_decay_delay_left() -> float:
+	return _shield_delay_left if shield > 0 else 0.0
+
+
+## #388: advance the shield decay clock. Called from _physics_process; public
+## so harnesses can step it deterministically. Holds for the delay, then
+## drains shield_decay_rate points/s (fractions carried) down to 0.
+func tick_shield_decay(delta: float) -> void:
+	if shield <= 0 or delta <= 0.0:
+		return
+	if _shield_delay_left > 0.0:
+		if delta <= _shield_delay_left:
+			_shield_delay_left -= delta
+			return
+		delta -= _shield_delay_left
+		_shield_delay_left = 0.0
+	_shield_decay_carry += maxf(shield_decay_rate, 0.0) * delta
+	var drain := int(floor(_shield_decay_carry))
+	if drain <= 0:
+		return
+	_shield_decay_carry -= drain
+	shield = maxi(shield - drain, 0)
+	if shield == 0:
+		_shield_decay_carry = 0.0
+	shield_changed.emit(shield)
 
 
 ## #205: open (true) or close (false) the spell-triggered invincibility window.
@@ -184,6 +269,7 @@ func _sync_bridge(bridge: DamageModifier, amount: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	stats.tick(delta)
+	tick_shield_decay(delta)
 	if hp <= 0:
 		velocity = Vector2.ZERO
 		if _dash_time_left > 0.0:
