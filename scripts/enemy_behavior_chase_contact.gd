@@ -22,7 +22,7 @@ var _contact_timer: float = 0.0
 func physics_step(enemy: Enemy, player, delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		_slide(enemy)
 		return
 	var to_player: Vector2 = player.global_position - enemy.global_position
 	# #337: a target with a contact_radius (DefenseCore) is hit at its rim.
@@ -30,11 +30,32 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 	var pad: float = 0.0
 	if player is DefenseCore:
 		pad = player.contact_radius
-	var chase: Vector2 = to_player.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
+	# #367: an enemy with a FlowNav (maze defense) steers along the grid path
+	# instead of straight at the target; range checks still use the target.
+	var heading: Vector2 = to_player
+	if enemy.nav != null:
+		heading = enemy.nav.waypoint(enemy.global_position, player.global_position) - enemy.global_position
+	var chase: Vector2 = heading.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
 	enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	_slide(enemy)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if to_player.length() <= enemy.contact_range + pad and _contact_timer <= 0.0:
 		player.apply_damage(DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng).amount)
 		_contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack") # #177: visual swing only
+
+## move_and_slide, plus (#367, nav enemies only) a terrain clamp on the result.
+## TerrainMotion.resolve only vets the requested velocity. When a crowding
+## peer overlaps this body, the physics recovery step pushes it out in a
+## direction nobody checked, even at zero velocity. In the maze that push
+## carried enemies into OBSTACLE cells, which are terrain, not colliders, and
+## left them stuck there (seed 22, crowded waves). Clamping the frame's
+## displacement with the same seam pushes use keeps a nav enemy on walkable
+## cells. Nav-less enemies keep the plain move_and_slide they had before.
+static func _slide(enemy: Enemy) -> void:
+	if enemy.nav == null:
+		enemy.move_and_slide()
+		return
+	var before := enemy.global_position
+	enemy.move_and_slide()
+	enemy.global_position = TerrainMotion.clamp_displacement(enemy.terrain, before, enemy.global_position, enemy.can_swim)

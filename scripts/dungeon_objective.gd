@@ -66,6 +66,9 @@ enum ObjectiveType { CLEAR_ALL_ENEMIES, DEFEAT_BOSS, ELIMINATION, DEFENSE }
 @export var wave_spawn_points: Array[Vector2] = []
 ## Relative to a spawned enemy (child of the area): "../../Player" in Main.
 @export var wave_player_path: NodePath = NodePath("../../Player")
+## #367: grid pathfinding handed to every wave enemy (maze defense). Null -
+## DungeonE - keeps the straight-line chase.
+@export var wave_nav: FlowNav
 
 var _current: int = 0
 var _target: int = 0
@@ -229,6 +232,7 @@ func spawn_next_wave() -> void:
 		var e := _spawner.request_spawn({"position": at, "enemy": wave_enemy_scene, "reward_table": wave_reward_table})
 		if e == null:
 			continue
+		e.nav = wave_nav
 		# Spread core attackers evenly through the wave: i is one when the
 		# running share crosses an integer.
 		if floori((i + 1) * core_attacker_share) > floori(i * core_attacker_share):
