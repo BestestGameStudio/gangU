@@ -32,6 +32,17 @@ const ICON_SIZE := 22.0
 const ICON_PLACEHOLDER_BG := Color(1.0, 1.0, 1.0, 0.04)
 ## #278: translucent so the spell icon stays visible beneath the wipe.
 const COOLDOWN_WIPE := Color(0.08, 0.09, 0.13, 0.6)
+## #255 rank border palette, indexed by SpellProgress tier: Base silver,
+## Specialization gold, Mastery red, Signature purple (Daniel's mapping,
+## accepted by Mitra 2026-11-08). Shapes live in SpellRankBorder.
+const RANK_COLORS: Array[Color] = [
+	Color(0.78, 0.8, 0.86, 1.0),
+	Color(0.96, 0.77, 0.24, 1.0),
+	Color(0.88, 0.2, 0.2, 1.0),
+	Color(0.68, 0.36, 0.96, 1.0),
+]
+## Dark outer halo behind the Signature frame.
+const RANK_HALO := Color(0.12, 0.03, 0.2, 0.9)
 
 ## Outer plate of a panel: thick border, rounded corners, soft drop shadow.
 static func panel(bg: Color = PANEL_BG) -> StyleBoxFlat:

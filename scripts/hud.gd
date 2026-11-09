@@ -19,7 +19,7 @@ class_name HUD
 ##   Player: hp, max_hp, health_changed(current, max_hp), died().
 ##   SpellCaster: get_slots(), cooldown_remaining(spell), polled every frame.
 ##   Spell: cooldown.
-##   SpellProgress (discovered by name): can_upgrade(spell).
+##   SpellProgress (discovered by name): can_upgrade(spell), get_tier(spell).
 
 ## Set by the mounting scene. If unset, falls back to the "player" group.
 @export var player_path: NodePath
@@ -105,6 +105,16 @@ func _update_slot_icons() -> void:
 			remaining = clampf(_caster.cooldown_remaining(spell) / total, 0.0, 1.0)
 		icon.set_cooldown_fraction(remaining)
 		icon.set_upgrade_available(_can_upgrade(spell))
+		icon.set_rank_tier(_rank_tier(spell))
+
+## #255: owned spells show their tier border (Base without a provider);
+## empty slots show none.
+func _rank_tier(spell: Spell) -> int:
+	if spell == null:
+		return SpellRankBorder.NONE
+	if is_instance_valid(_progress) and _progress.has_method("get_tier"):
+		return _progress.get_tier(spell)
+	return 0
 
 func _can_upgrade(spell: Spell) -> bool:
 	return spell != null and is_instance_valid(_progress) \
