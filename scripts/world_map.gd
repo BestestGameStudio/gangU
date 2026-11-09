@@ -10,6 +10,9 @@ extends Node
 ##   - Details (dungeons, points of interest) are NEVER shown automatically;
 ##     nothing here records gates, portals or enemies. Players mark those
 ##     themselves with markers and freehand strokes.
+##     EXCEPTION (#366): dungeons the player has CLEARED this run are marked
+##     at their entrance, and selecting one on the map offers fast travel
+##     (see "dungeon sites" below). Uncleared dungeons stay unmarked.
 ##
 ##   - Run-scoped (#351 death = full reset): kept across area trips within a
 ##     run, wiped on death by RunManager's reload.
@@ -57,15 +60,74 @@ var terrain: TerrainMap = null
 ## "strokes": Array[PackedVector2Array] }
 var _areas: Dictionary = {}
 
+## (#366) Cleared dungeons are marked on the map. This is a request on top of
+## the #347 settlement: only CLEARED dungeons show automatically. Uncleared
+## entrances are never shown. main.gd records each area's dungeon entrance
+## positions here ({dungeon_id: world_pos}); `cleared_rule`
+## (func(dungeon_id) -> bool, main.gd's canonical is_cleared) filters them.
+## Unset rule = nothing counts as cleared.
+var cleared_rule: Callable = Callable()
+## area_id -> {dungeon_id: Vector2}
+var _sites: Dictionary = {}
+## area_id -> last world position of the player there (#366: centers the map
+## when viewing an area the player is not in).
+var _last_pos: Dictionary = {}
+
 func set_area(id: StringName, area_terrain: TerrainMap) -> void:
 	area_id = id
 	terrain = area_terrain
 	changed.emit(id)
 
 func _physics_process(_delta: float) -> void:
-	if not reveal_rule.is_valid() or not is_instance_valid(player) or area_id == &"":
+	if not is_instance_valid(player) or area_id == &"":
+		return
+	_last_pos[area_id] = player.global_position
+	if not reveal_rule.is_valid():
 		return
 	reveal_cells(area_id, reveal_rule.call(player.global_position, CELL_SIZE))
+
+## --- dungeon sites (#366) ---
+
+func set_sites(id: StringName, sites: Dictionary) -> void:
+	_sites[id] = sites.duplicate()
+	changed.emit(id)
+
+## Every recorded entrance in area `id`, cleared or not (data only, never drawn).
+func sites(id: StringName) -> Dictionary:
+	return _sites.get(id, {})
+
+func is_site_cleared(dungeon_id: StringName) -> bool:
+	return cleared_rule.is_valid() and bool(cleared_rule.call(dungeon_id))
+
+## The entrances the map shows: cleared dungeons only.
+func cleared_sites(id: StringName) -> Dictionary:
+	var out := {}
+	var all: Dictionary = sites(id)
+	for d: StringName in all:
+		if is_site_cleared(d):
+			out[d] = all[d]
+	return out
+
+## Areas holding at least one cleared, marked dungeon.
+func areas_with_cleared_sites() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for id: StringName in _sites:
+		if not cleared_sites(id).is_empty():
+			out.append(id)
+	return out
+
+## Where to center a view of area `id`: the player's last spot there, else
+## the middle of its marked dungeons, else the origin.
+func view_center(id: StringName) -> Vector2:
+	if _last_pos.has(id):
+		return _last_pos[id]
+	var s := cleared_sites(id)
+	if s.is_empty():
+		return Vector2.ZERO
+	var sum := Vector2.ZERO
+	for d: StringName in s:
+		sum += s[d]
+	return sum / s.size()
 
 ## --- reveal ---
 

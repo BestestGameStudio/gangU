@@ -192,12 +192,15 @@ func _ready() -> void:
 	# (#347) Colin, 2026-11-08: terrain appears as you explore - wire the
 	# production explore rule (vision circle, matches TerrainFog).
 	world_map.reveal_rule = WorldMap.explore_rule
+	world_map.cleared_rule = is_cleared # #366: cleared dungeons are marked
 	add_child(world_map)
 	_world_map = world_map
 	var map_panel := MapPanel.new()
 	map_panel.name = "MapPanel"
 	map_panel.world_map_path = NodePath("../WorldMap")
+	map_panel.travel_rule = can_map_travel_to # #366
 	add_child(map_panel)
+	map_panel.travel_requested.connect(_request_map_travel)
 	_mount_fast_travel() # #349: separate mount after map setup
 	_load_hub()
 
@@ -291,6 +294,9 @@ func _swap(area: Node) -> void:
 	if p:
 		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
 	if _world_map:
+		var sites := _dungeon_sites(current_area)
+		if not sites.is_empty():
+			_world_map.set_sites(current_area.name, sites) # #366
 		_world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
 	_mount_area_spawns(current_area)
 	_mount_entrance_guards(current_area)
@@ -574,6 +580,11 @@ func _commit_fast_travel(dungeon_id: StringName) -> void:
 	var player := get_node_or_null("Player") as Player
 	if path == "" or player == null or player.hp <= 0:
 		return
+	_enter_dungeon(dungeon_id, path)
+
+## Shared by the #349 Hub shortcut and #366 map travel: mount `path` with the
+## run's gate offering / authored boss semantics for `dungeon_id`.
+func _enter_dungeon(dungeon_id: StringName, path: String) -> void:
 	var target := load(path) as PackedScene
 	if target == null:
 		return
@@ -596,3 +607,49 @@ func _commit_fast_return() -> void:
 	if player == null or player.hp <= 0 or not can_fast_return() or _is_hub_area():
 		return
 	_load_hub()
+
+## #366 map travel. The map marks every dungeon cleared this run at its
+## entrance (sites read from the area's gates); selecting one there offers
+## fast travel to it.
+##
+## PROVISIONAL rules (the issue leaves these open, so they are the
+## implementer's defaults and await a human decision; they are not an
+## extension of the #349 Hub-only rule):
+##   - Destination: dungeons cleared this run only (uncleared are unmarked).
+##   - Origin: anywhere EXCEPT inside a dungeon whose objective is not
+##     cleared this run, so map travel never skips a clear-or-die lock or an
+##     unfinished objective. Not to the dungeon you are already in.
+##   - Discovery: a marked dungeon shows even under map fog (clearing it
+##     means you found it).
+##   - Persistence: run-scoped, same as cleared_dungeons / WorldMap.
+func _dungeon_sites(area: Node) -> Dictionary:
+	var sites := {}
+	for g: Gate in get_tree().get_nodes_in_group("gates"):
+		if not area.is_ancestor_of(g):
+			continue
+		var scene := g.target_scene()
+		if scene == null:
+			continue
+		var id := FastTravelRoutes.id_for_scene(scene.resource_path)
+		if id != &"":
+			sites[id] = g.global_position
+	return sites
+
+func can_map_travel_to(dungeon_id: StringName) -> bool:
+	if current_area == null or not is_cleared(dungeon_id) or not FastTravelRoutes.DUNGEONS.has(dungeon_id):
+		return false
+	var player := get_node_or_null("Player") as Player
+	if player == null or player.hp <= 0:
+		return false
+	if current_area.scene_file_path == FastTravelRoutes.DUNGEONS[dungeon_id]["scene"]:
+		return false
+	var objective := current_area.get_node_or_null("DungeonObjective") as DungeonObjective
+	return objective == null or is_cleared(objective.dungeon_id)
+
+func _request_map_travel(dungeon_id: StringName) -> void:
+	_commit_map_travel.call_deferred(dungeon_id)
+
+func _commit_map_travel(dungeon_id: StringName) -> void:
+	if not can_map_travel_to(dungeon_id): # recheck at commit, never trust the UI
+		return
+	_enter_dungeon(dungeon_id, FastTravelRoutes.DUNGEONS[dungeon_id]["scene"])
