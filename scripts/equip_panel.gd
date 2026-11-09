@@ -43,7 +43,7 @@ var _selected: Spell = null
 var _upgrade_box: VBoxContainer
 
 var _unlocked_box: VBoxContainer
-var _stats_box: VBoxContainer
+var _stats_box: StatGrid
 var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
@@ -139,6 +139,21 @@ func _ready() -> void:
 		_caster.slot_assigned.connect(func(_i, _s): _refresh())
 	if _caster.has_signal(&"slot_cleared"):
 		_caster.slot_cleared.connect(func(_i): _refresh())
+	# #376: keep the stat grid live while open (HP, buffs, hammer crit/combo).
+	_player.stats.changed.connect(_on_live_stat_change)
+	_player.health_changed.connect(func(_hp, _max): _on_live_stat_change())
+	if _caster.hammer_state != null:
+		_caster.hammer_state.crit_changed.connect(_on_live_stat_change)
+		_caster.hammer_state.combo_changed.connect(_on_live_stat_change)
+	_hook_relics()
+
+## Relics hooked to a spell's tags change its crit/amp totals, so a relic
+## gained while the menu is open refreshes the grid too. OwnedRelics is
+## mounted on Main after this panel, so this is retried in show_panel.
+func _hook_relics() -> void:
+	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	if relics != null and not relics.changed.is_connected(_on_live_stat_change):
+		relics.changed.connect(_on_live_stat_change)
 
 func _build_ui() -> void:
 	var dim := ColorRect.new()
@@ -182,20 +197,19 @@ func _build_ui() -> void:
 		slots_box.add_child(b)
 		_slot_buttons.append(b)
 		_slot_icons.append(_pin_icon(b, SLOT_ICON_LEFT))
+	# #269 stats block, restyled by #376 (Daniel, 2026-11-09): a TFT-style
+	# grid of icon + value cells (details on hover) on the RIGHT side of the
+	# Tab menu, as the third column after Unlocked and Slots, so the #94
+	# white-boxed indices (cols 0/1, vbox title 0, cols 1, upgrades 2, status
+	# last) stay intact. Shows the player's stats; while a spell is selected
+	# it shows that spell's stats instead (StatSheet builds both, read-only).
+	var divider := VSeparator.new()
+	cols.add_child(divider)
+	_stats_box = StatGrid.new()
+	cols.add_child(_stats_box)
 	_upgrade_box = VBoxContainer.new()
 	_upgrade_box.add_theme_constant_override("separation", 4)
 	vbox.add_child(_upgrade_box)
-	# #269: player stats block (Daniel, 2026-11-08: "Display player stats in
-	# the tab menu"). Reads ONLY the public Player stat accessors
-	# (move_speed/damage_amp/armor/cooldown_reduction + hp/max_hp); all stat
-	# math stays in PlayerStats. Filled on every _refresh, i.e. every open.
-	# Placed between the upgrade box and the status line so the #94
-	# white-boxed child indices (title 0, cols 1, upgrades 2, status last)
-	# stay intact.
-	_stats_box = VBoxContainer.new()
-	_stats_box.name = "StatsBox"
-	_stats_box.add_theme_constant_override("separation", 2)
-	vbox.add_child(_stats_box)
 	_status = Label.new()
 	_status.add_theme_font_size_override("font_size", 18)
 	vbox.add_child(_status)
@@ -213,6 +227,7 @@ func _input(event: InputEvent) -> void:
 
 func show_panel() -> void:
 	_selected = null
+	_hook_relics()
 	_refresh()
 	visible = true
 	add_to_group("modal_ui") # caster cast-guard hook (coordinated with B)
@@ -221,29 +236,22 @@ func hide_panel() -> void:
 	visible = false
 	remove_from_group("modal_ui")
 
-## #269: rebuild the stats block from the live Player accessors. Fractions
-## render as signed percents; an empty modifier set shows the defined bases
-## (0% amp/armor/CDR), which PlayerStats guarantees are grounded values.
+## #269/#376: fill the right-side stat grid. No selection = player stats;
+## a selected spell = that spell's stats (Daniel: "Clicking a spell will
+## replace player stats with the spell stats and details there"). Values
+## come from the live accessors via StatSheet; no stat math lives here.
 func _refresh_stats() -> void:
-	for c in _stats_box.get_children():
-		c.queue_free()
 	if _player == null:
 		return
-	var header := Label.new()
-	header.text = "Stats"
-	header.add_theme_font_size_override("font_size", 22)
-	_stats_box.add_child(header)
-	var rows: Array[String] = [
-		"HP: %d / %d" % [_player.hp, _player.max_hp],
-		"Damage amp: %+d%%" % roundi(_player.damage_amp() * 100.0),
-		"Armor: %+d%%" % roundi(_player.armor() * 100.0),
-		"Move speed: %d" % roundi(_player.move_speed()),
-		"Cooldown reduction: %+d%%" % roundi(_player.cooldown_reduction() * 100.0),
-	]
-	for r in rows:
-		var l := Label.new()
-		l.text = r
-		_stats_box.add_child(l)
+	if _selected != null:
+		_stats_box.set_entries(_selected.spell_name, StatSheet.spell_entries(_selected, _player, _caster))
+	else:
+		_stats_box.set_entries("Stats", StatSheet.player_entries(_player))
+
+## Live updates while the panel is open (combat keeps running under Tab).
+func _on_live_stat_change(_a = null) -> void:
+	if visible:
+		_refresh_stats()
 
 func _refresh() -> void:
 	if _caster == null:

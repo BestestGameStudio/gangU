@@ -492,7 +492,7 @@ func _check_one_route() -> void:
 	holder.queue_free()
 	await physics_frame
 
-## The Water Ball correction must not change duplicate-copy rules elsewhere.
+## The Water Ball correction must not change route-lock rules elsewhere. (#383: base re-grant after upgrade is refused everywhere.)
 func _check_other_routes() -> void:
 	for ids in [
 		["fire_ball", "fireball_split", "fireball_beam"],
@@ -516,15 +516,11 @@ func _check_other_routes() -> void:
 		for i in 10:
 			caster.spell_cast.emit(base)
 		_check(progress.apply_upgrade(base, StringName(ids[1])), "other route: %s first branch applies" % ids[0])
-		caster.add_spell(base)
+		var held_before := caster.get_unlocked().size()
+		# #383: a second base copy after upgrading is refused for every spell
+		# (it used to reopen the other branch); Water Ball route lock unchanged.
+		_check(not caster.add_spell(base), "other route: %s base re-grant after upgrade refused (#383)" % ids[0])
+		_check(caster.get_unlocked().size() == held_before, "other route: %s refused re-grant leaves inventory unchanged" % ids[0])
 		_check(not progress.route_taken(base), "other route: %s is not Water Ball route-locked" % ids[0])
-		_check(progress.get_upgrade_paths(base).size() == 2, "other route: %s duplicate still offers both paths" % ids[0])
-		_check(progress.can_upgrade(base), "other route: %s duplicate can upgrade" % ids[0])
-		if ids[1] == ids[2]:
-			# Spirit Punch has one T1, not a fork. Its existing duplicate-result
-			# refusal must remain separate from Water Ball's route policy.
-			_check(not progress.apply_upgrade(base, StringName(ids[2])), "other route: Spirit Punch still refuses an already-owned result")
-		else:
-			_check(progress.apply_upgrade(base, StringName(ids[2])), "other route: %s duplicate takes other branch" % ids[0])
 		holder.queue_free()
 		await physics_frame

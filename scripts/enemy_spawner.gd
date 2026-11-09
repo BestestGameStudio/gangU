@@ -15,7 +15,8 @@ extends Node
 ##
 ## Entry format is the AreaSpawnData one ("position", "enemy",
 ## "reward_table"); an optional "definition" (EnemyDefinition, #346) is
-## assigned before tree entry; other unknown keys are tolerated and ignored.
+## assigned before tree entry; an optional "route" (#373) is handed to the
+## behavior after tree entry; other unknown keys are tolerated and ignored.
 
 signal spawned(enemy: Enemy, entry: Dictionary)
 signal spawn_died(enemy: Enemy, entry: Dictionary)
@@ -71,8 +72,22 @@ func request_spawn(entry: Dictionary) -> Enemy:
 	(_alive[idx] as Array).append(e)
 	e.died.connect(_on_enemy_died.bind(e, entry, idx))
 	parent_area.add_child(e)
+	_apply_route(e, entry)
 	spawned.emit(e, entry)
 	return e
+
+## #373: an optional "route" (Array/PackedVector2Array of points in the
+## area's local space) is handed to the behavior AFTER tree entry (the
+## behavior is created in Enemy._ready), converted to global space. Behaviors
+## without configure_route ignore it.
+func _apply_route(e: Enemy, entry: Dictionary) -> void:
+	if not entry.has("route") or e._behavior == null or not e._behavior.has_method("configure_route"):
+		return
+	var pts := PackedVector2Array()
+	var area_2d := parent_area as Node2D
+	for p in entry["route"]:
+		pts.append(area_2d.to_global(p) if area_2d != null else p)
+	e._behavior.configure_route(pts)
 
 ## Index of this exact entry Dictionary (identity, not content), so two
 ## entries with identical content keep separate bookkeeping. -1 = an entry

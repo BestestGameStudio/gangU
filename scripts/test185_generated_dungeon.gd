@@ -116,8 +116,8 @@ func _main_flow_legs() -> void:
 
 	portal.entered.emit(portal)
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "exit portal returns to the hub")
-	_check(p.terrain == null, "back in hub: Player.terrain reset to null")
+	_check(main.current_area.name == "Overworld", "exit portal returns to the overworld entrance (#378)")
+	_check(p.terrain == null, "back in the overworld: Player.terrain reset to null")
 
 	await _enter(main, "GateNormal")
 	area = main.current_area

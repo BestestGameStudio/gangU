@@ -165,7 +165,7 @@ func _relic_provider() -> OwnedRelics:
 
 func can_grant(good: Resource) -> bool:
 	if good is Spell:
-		return _caster != null and not _caster.get_unlocked().has(good)
+		return _caster != null and not _caster.has_logical_spell(good)
 	if good is Consumable:
 		# #156: consumables are count-based and RE-PURCHASABLE; Daniel's
 		# never-sell-owned rule names spells, so no ownership exclusion here.

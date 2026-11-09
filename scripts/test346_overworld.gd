@@ -30,12 +30,18 @@ func _enter(main: Node, gate_name: String) -> void:
 	gate._on_body_entered(main.get_node("Player"))
 	await _frames(3)
 
+## Entrance enemies (gate guards + #373 patrols). #373 migrants belong to
+## no entrance and are covered by test373_overworld_roles.
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	for n in main.current_area.get_children():
-		if n is Enemy:
+		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate):
 			out.append(n)
 	return out
+
+## #373: only the stationary gate-guard role holds a post.
+func _is_post_guard(e: Enemy) -> bool:
+	return e._behavior != null and e._behavior.get_script() == EnemyBehaviorGuard
 
 func _near(enemies: Array[Enemy], at: Vector2, r: float) -> int:
 	var n := 0
@@ -135,15 +141,15 @@ func _flow_legs() -> void:
 	await _frames(60)
 	var still := true
 	for e in guards:
-		if e.global_position.distance_to(posts[e]) > 2.0:
+		if _is_post_guard(e) and e.global_position.distance_to(posts[e]) > 2.0:
 			still = false
-	_check(still, "(C) guards hold their posts while the player stands at the arrival point")
+	_check(still, "(C) gate guards hold their posts while the player stands at the arrival point")
 	_check(p.hp == p.max_hp, "(C) no damage taken at the arrival point (hp %d)" % p.hp)
 
 	# (D) guard behavior
 	var g0: Enemy = null
 	for e in guards:
-		if e.global_position.distance_to(ow.get_node("GateRed").global_position) < 160.0:
+		if _is_post_guard(e) and e.global_position.distance_to(ow.get_node("GateRed").global_position) < 160.0:
 			g0 = e
 			break
 	p.global_position = g0.global_position + Vector2(0, -150) # north: the gate is south
@@ -157,7 +163,7 @@ func _flow_legs() -> void:
 	_check(g0.global_position.distance_to(posts[g0]) <= EnemyBehaviorGuard.HOME_EPSILON + 1.0, "(D) and walks back to its post (%.1f px off)" % g0.global_position.distance_to(posts[g0]))
 	var g1: Enemy = null
 	for e in guards:
-		if e.global_position.distance_to(ow.get_node("GateBoss").global_position) < 180.0:
+		if _is_post_guard(e) and e.global_position.distance_to(ow.get_node("GateBoss").global_position) < 180.0:
 			g1 = e
 			break
 	# 350 px: outside AGGRO_RADIUS, inside LEASH_RADIUS (a ranged snipe).
@@ -180,8 +186,8 @@ func _flow_legs() -> void:
 	var portal: ExitPortal = main.current_area.get_node("ExitPortal")
 	portal._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "(E) the exit portal returns to the hub")
-	await _enter(main, "GateOverworld")
+	# #378: the exit portal now lands at DungeonA's overworld entrance.
+	_check(main.current_area.name == "Overworld", "(E) the exit portal returns to the overworld")
 	ow = main.current_area
 	guards = _guards(main)
 	_check(guards.size() == 13, "(E) 13 guards after clearing DungeonA (got %d)" % guards.size())

@@ -245,7 +245,7 @@ func _initialize() -> void:
 		move_target = portal.global_position + Vector2(0, 60)
 		await _wait(1.6)
 		move_target = portal.global_position
-		await _wait_until(func(): return scene.current_area.name == "Hub", 3.0)
+		await _wait_until(func(): return scene.current_area.name == "Overworld", 3.0) # #378: exit lands at the entrance
 	move_target = null
 	cam.zoom = Vector2(1, 1)
 	await _wait(1.2)

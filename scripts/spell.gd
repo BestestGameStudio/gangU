@@ -133,3 +133,42 @@ class_name Spell
 ## waits this spell's own `cooldown` before a new shield can be cast.
 @export var shield_shot: Spell = null
 @export var shield_shrink: float = 0.0
+
+## ---- #370 Stone Hammer tree. Every field defaults to OFF, so every existing
+## spell casts exactly as before. Provisional placeholder numbers live on the
+## stone_hammer*.tres resources only - balance is an open human choice.
+## Base: when > 0 the cast is an overhead hammer swing (StoneHammer) that
+## crashes down on the aim point (clamped to `range`) after hammer_windup
+## seconds and deals `damage` to every enemy within this radius.
+@export var hammer_radius: float = 0.0
+@export var hammer_windup: float = 0.3
+## Crush route, Specialization: crit chance the hammer gains for the rest of
+## the run per enemy it kills (0.1 = +10%). Kept on the caster, so it carries
+## over into the route's later tiers.
+@export var hammer_kill_crit: float = 0.0
+## Crush route, Mastery: strike radius (and drawn hammer) scale by
+## 1 + crit_chance * hammer_crit_scale, capped at hammer_max_scale.
+@export var hammer_crit_scale: float = 0.0
+@export var hammer_max_scale: float = 3.0
+## Crush route, Signature: holding the key opens a HammerVortex of this
+## radius at the strike point that pulls enemies in at up to
+## hammer_vortex_pull px/s; releasing the key swings.
+@export var hammer_vortex_radius: float = 0.0
+@export var hammer_vortex_pull: float = 0.0
+## Rhythm route, Specialization: each consecutive hit takes this many seconds
+## off the next cooldown (down to hammer_min_cooldown). A miss, or
+## hammer_combo_idle_reset seconds without a swing, resets the combo.
+@export var hammer_combo_cdr: float = 0.0
+@export var hammer_min_cooldown: float = 0.5
+@export var hammer_combo_idle_reset: float = 30.0
+## Rhythm route, Mastery: the player jumps (invulnerable during the wind-up)
+## and the impact sends out a shockwave that deals hammer_shockwave_damage
+## to enemies within hammer_shockwave_radius the hammer itself missed.
+## Shockwave damage never counts as a hit.
+@export var hammer_jump: bool = false
+@export var hammer_shockwave_radius: float = 0.0
+@export var hammer_shockwave_damage: float = 0.0
+## Rhythm route, Signature: every hammer_dice_every consecutive hits roll a
+## die above the player; face N rolls hammer_dice_tables[N - 1].
+@export var hammer_dice_every: int = 0
+@export var hammer_dice_tables: Array[RewardTable] = []

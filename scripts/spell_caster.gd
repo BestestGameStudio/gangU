@@ -50,6 +50,14 @@ var _cooldown_totals: Dictionary = {} ## #268: Spell -> last started cooldown le
 var unlocked: Array[Spell] = []
 var _slots: Array[Spell] = [null, null, null, null, null, null]
 
+## #370 Stone Hammer run state (Crush crit bonus, Rhythm combo). One per
+## caster so it survives upgrades; the run reload resets it with the scene.
+var hammer_state := StoneHammerState.new()
+## #370 Crush Signature: Spell -> live HammerVortex while its key is held,
+## and Spell -> the input action that opened it (only that key releases it).
+var _vortexes: Dictionary = {}
+var _vortex_actions: Dictionary = {}
+
 const SLOT_COUNT := 6
 
 var equipped_spell: Spell:
@@ -91,25 +99,58 @@ func _register_slot_actions() -> void:
 static func slot_key_label(index: int) -> String:
 	return SLOT_KEY_LABELS[index] if index >= 0 and index < SLOT_COUNT else "?"
 
-func add_spell(spell: Spell) -> void:
-	unlock_spell(spell)
+func add_spell(spell: Spell) -> bool:
+	if not unlock_spell(spell):
+		return false
 	spells.append(spell)
 	spell_added.emit(spell)
 	if spells.size() == 1:
 		current_index = 0
 		spell_equipped.emit(spell)
+	return true
+
+## #383: true when the player already holds this logical spell this run: the
+## exact resource, or any upgraded form descended from it (so a base copy
+## cannot be re-acquired after Base -> upgrade). Only the spell's OWN descendants
+## count; unrelated spells and other upgrade branches are unaffected.
+func has_logical_spell(spell: Spell) -> bool:
+	if spell == null:
+		return false
+	if unlocked.has(spell) or spells.has(spell):
+		return true
+	var progress := get_tree().get_first_node_in_group("spell_progress") if is_inside_tree() else null
+	if progress == null or not ("upgrades" in progress):
+		return false
+	var parent_of: Dictionary = {}
+	for u in progress.upgrades:
+		if u != null and u.result_spell != null and u.source_spell != null:
+			parent_of[u.result_spell] = u.source_spell
+	for held in unlocked:
+		var cur: Spell = held
+		for _i in 16: # bounded walk; guards bad cyclic data
+			if not parent_of.has(cur):
+				break
+			cur = parent_of[cur]
+			if cur == spell:
+				return true
+	return false
 
 ## #10 slots: grant to the unlock inventory. Duplicate-grant policy is an OPEN
-## human choice - no guard is added here by design.
+## human choice - #383 now refuses a second copy of a held logical spell.
 ## #262: every newly granted spell also auto-binds to the FIRST EMPTY slot in
 ## 1-6 order. Existing bindings are never replaced: when all six slots are
 ## occupied the grant stays unlock-only for manual equip in the Tab panel.
 ## One funnel covers every grant path - walk-over pickups (add_spell), enemy
 ## reward-drop spells, and shop purchases.
-func unlock_spell(spell: Spell) -> void:
+## #383: refuses (returns false) when the logical spell is already held, with
+## no inventory/slot change and no signal.
+func unlock_spell(spell: Spell) -> bool:
+	if spell == null or has_logical_spell(spell):
+		return false
 	unlocked.append(spell)
 	spell_unlocked.emit(spell)
 	bind_first_free(spell)
+	return true
 
 ## #262: bind `spell` to the first empty slot in 1-6 order. Returns the slot
 ## index the spell ends in (its existing binding when already slotted), or
@@ -251,13 +292,21 @@ func can_cast() -> bool:
 func _process(delta: float) -> void:
 	for s in _cooldowns.keys():
 		_cooldowns[s] = maxf(_cooldowns[s] - delta, 0.0)
+	_tick_hammer(delta)
+	if not _vortexes.is_empty():
+		_prune_charges()
 	if _input_casts_suppressed():
 		return
+	# #370: a held Vortex Hammer key charges instead of casting; the release
+	# swings. Handled before the pressed checks so the release is seen.
+	var cast_held := Input.is_action_pressed(&"cast")
+	if _charge_input(equipped_spell, &"cast", cast_held):
+		pass
 	# #246: a HELD cast button auto-refires the moment the cooldown completes
 	# (pressed, not just_pressed). can_cast() gates the cooldown frames, so a
 	# held Space/LMB fires once per press, then refires on completion with no
 	# re-click; releasing the button stops it.
-	if Input.is_action_pressed(&"cast") and not _redirect_gate(equipped_spell, Input.is_action_just_pressed(&"cast")) and can_cast():
+	elif cast_held and not _redirect_gate(equipped_spell, Input.is_action_just_pressed(&"cast")) and can_cast():
 		cast()
 	# #10: switching is caster-owned (player.gd untouched). The action has no
 	# key bound until the human key choice lands; harness drives next_spell().
@@ -269,6 +318,8 @@ func _process(delta: float) -> void:
 	# and never spams cast_slot's refusal warnings while it runs.
 	for i in SLOT_COUNT:
 		var action := StringName("spell_slot_%d" % (i + 1))
+		if _charge_input(_slots[i], action, Input.is_action_pressed(action)):
+			continue
 		if not Input.is_action_pressed(action):
 			continue
 		# #331: a steer Water Ball with shots in flight re-aims them on a
@@ -390,6 +441,109 @@ func _cast_splash(spell: Spell) -> void:
 			target += Vector2(cos(a), sin(a)) * spell.splash_scatter * randf_range(0.7, 1.0)
 		WaterSplash.spawn(get_tree().current_scene, spell, get_parent(), global_position, target, 70.0 + 15.0 * i)
 
+## ---- #370 Stone Hammer ------------------------------------------------------
+
+## Starts one swing. Returns the base cooldown this cast costs.
+func _cast_hammer(spell: Spell) -> float:
+	var base := hammer_state.cooldown_for(spell)
+	hammer_state.on_cast()
+	StoneHammer.spawn(get_tree().current_scene, spell, get_parent() as Node2D, self, hammer_target(spell))
+	return base
+
+## Where the hammer lands: the aim point, clamped to the spell's range.
+func hammer_target(spell: Spell) -> Vector2:
+	return _lob_target(spell)
+
+## Rhythm combo clock: the combo resets once the held hammer is off cooldown
+## and unused for its idle limit.
+func _tick_hammer(delta: float) -> void:
+	if hammer_state.combo_hits <= 0:
+		return
+	var hammer: Spell = null
+	for s in _slots:
+		if s != null and s.hammer_combo_cdr > 0.0:
+			hammer = s
+			break
+	if hammer == null:
+		for s in unlocked:
+			if s != null and s.hammer_combo_cdr > 0.0:
+				hammer = s
+				break
+	var limit := hammer.hammer_combo_idle_reset if hammer != null else 30.0
+	var cooling := hammer != null and cooldown_remaining(hammer) > 0.0
+	hammer_state.tick(delta, cooling, limit)
+
+## Crush Signature: open the vortex for `spell` (key pressed). Refused while
+## on cooldown, already charging, or for spells without a vortex.
+func begin_charge(spell: Spell, action: StringName = &"") -> bool:
+	if spell == null or spell.hammer_vortex_radius <= 0.0 or is_charging(spell):
+		return false
+	if cooldown_remaining(spell) > 0.0:
+		return false
+	var owner_node := get_parent()
+	if not _owner_alive():
+		return false
+	var radius := spell.hammer_vortex_radius * hammer_state.size_scale(spell, owner_node)
+	_vortexes[spell] = HammerVortex.spawn(get_tree().current_scene, spell, hammer_target.bind(spell), radius)
+	_vortex_actions[spell] = action
+	return true
+
+func _owner_alive() -> bool:
+	var owner_node := get_parent()
+	if owner_node == null:
+		return true
+	var hp: Variant = owner_node.get(&"hp")
+	return hp == null or int(hp) > 0
+
+## Drops vortexes whose spell left every cast key (unequipped, upgraded) or
+## whose caster died, so none is left pulling with no key to release it.
+func _prune_charges() -> void:
+	for s in _vortexes.keys():
+		if not is_charging(s) or not _owner_alive() or not (_slots.has(s) or equipped_spell == s):
+			cancel_charge(s)
+
+func is_charging(spell: Spell) -> bool:
+	var v: Variant = _vortexes.get(spell)
+	return v != null and is_instance_valid(v)
+
+func active_vortex(spell: Spell) -> HammerVortex:
+	return _vortexes.get(spell) if is_charging(spell) else null
+
+## Crush Signature: key released - close the vortex and swing. Returns
+## false when nothing was charging.
+func release_charge(spell: Spell) -> bool:
+	if not is_charging(spell):
+		_vortexes.erase(spell)
+		_vortex_actions.erase(spell)
+		return false
+	cancel_charge(spell)
+	_cast_spell(spell)
+	return true
+
+## Closes the vortex without swinging.
+func cancel_charge(spell: Spell) -> void:
+	var v: Variant = _vortexes.get(spell)
+	if v != null and is_instance_valid(v):
+		(v as Node).queue_free()
+	_vortexes.erase(spell)
+	_vortex_actions.erase(spell)
+
+## Input routing for vortex spells. Returns true when the input belongs to a
+## vortex spell (so the normal cast paths skip it): press opens the vortex,
+## release swings. Another key holding the same spell's vortex is ignored.
+func _charge_input(spell: Spell, action: StringName, pressed: bool) -> bool:
+	if spell == null or spell.hammer_vortex_radius <= 0.0:
+		return false
+	if is_charging(spell):
+		if _vortex_actions.get(spell, &"") != action:
+			return true
+		if not pressed:
+			release_charge(spell)
+		return true
+	if pressed:
+		begin_charge(spell, action)
+	return true
+
 ## #10 slots input routing (joint pin with the equip/upgrade panel F): while a
 ## node in the "modal_ui" group exists (F joins it ONLY while visible), the
 ## panel owns mouse/keys, so INPUT-DRIVEN casts (legacy Space/LMB + slot keys)
@@ -447,7 +601,11 @@ func _cast_spell(spell: Spell) -> void:
 	# flat fan-out; each still costs ONE cooldown/signal pair below (the Big
 	# Ball's shot cast costs its Water Ball's cooldown instead).
 	var cooldown_base := spell.cooldown
-	if spell.shield_radius > 0.0:
+	# #370 Stone Hammer: an overhead swing at the aim point (clamped to
+	# range). Its cooldown is the Rhythm combo's reduced one when it applies.
+	if spell.hammer_radius > 0.0:
+		cooldown_base = _cast_hammer(spell)
+	elif spell.shield_radius > 0.0:
 		cooldown_base = _cast_shield(spell, dir)
 	elif spell.rain_duration > 0.0:
 		WaterRain.spawn(get_tree().current_scene, spell, get_parent(), _lob_target(spell))

@@ -73,6 +73,14 @@ func _process(delta: float) -> bool:
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
+				# #378: the exit lands at the DungeonA entrance in the overworld;
+				# the hub is reached through the overworld's GateHub passage.
+				_check("exit: lands in the overworld", scene.current_area.name == "Overworld")
+				_check("exit: no HubFloor in the overworld", _floors().size() == 0)
+				(scene.current_area.get_node("GateHub") as Gate)._on_body_entered(p)
+				phase = 3; t = 0
+		3:
+			if t > 0.4:
 				_check_hub_floor("return")
 				var a := HubFloor.new()
 				var b := HubFloor.new()

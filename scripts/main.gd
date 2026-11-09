@@ -14,7 +14,7 @@ extends Node2D
 ## that area (the hub stays empty; DungeonB's carrier holds zero entries).
 ## No area-name checks and no hardcoded positions/tables remain in code.
 ## #346: boot -> hub -> (TRAVEL gate) -> overworld -> (entrance) -> dungeon;
-## exit portals return to the hub. Overworld entrance guards mount from
+## exit portals return to that dungeon's overworld entrance (#378). Overworld entrance guards mount from
 ## "EntranceGuards" carriers only while their dungeon is uncleared this run.
 
 func _ready() -> void:
@@ -174,6 +174,16 @@ func _ready() -> void:
 		preload("res://resources/upgrades/water_bubble.tres"),
 		preload("res://resources/upgrades/water_surging_bubble.tres"),
 		preload("res://resources/upgrades/water_big_ball.tres"),
+		## Stone Hammer tree (#370): two routes from the base, tiers 1/2/3
+		## each - Crush (reaper -> titan -> vortex) and Rhythm (rhythm ->
+		## leap -> dice roll). One route per run, like Water Ball.
+		## Thresholds 10/15/20 mirror #305/#331 and are provisional.
+		preload("res://resources/upgrades/hammer_reaper.tres"),
+		preload("res://resources/upgrades/hammer_titan.tres"),
+		preload("res://resources/upgrades/hammer_vortex.tres"),
+		preload("res://resources/upgrades/hammer_rhythm.tres"),
+		preload("res://resources/upgrades/hammer_leap.tres"),
+		preload("res://resources/upgrades/hammer_gambler.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
@@ -192,12 +202,15 @@ func _ready() -> void:
 	# (#347) Colin, 2026-11-08: terrain appears as you explore - wire the
 	# production explore rule (vision circle, matches TerrainFog).
 	world_map.reveal_rule = WorldMap.explore_rule
+	world_map.cleared_rule = is_cleared # #366: cleared dungeons are marked
 	add_child(world_map)
 	_world_map = world_map
 	var map_panel := MapPanel.new()
 	map_panel.name = "MapPanel"
 	map_panel.world_map_path = NodePath("../WorldMap")
+	map_panel.travel_rule = can_map_travel_to # #366
 	add_child(map_panel)
+	map_panel.travel_requested.connect(_request_map_travel)
 	_mount_fast_travel() # #349: separate mount after map setup
 	_load_hub()
 
@@ -219,7 +232,8 @@ var _entry_gate_type: int = -1
 ## #346 core loop (Colin, 2026-11-08): the hub sits OUTSIDE the overworld and
 ## keeps its services; one TRAVEL gate in the hub leads to the overworld,
 ## whose entrances lead into the dungeons. Leaving a dungeon by its exit
-## portal still returns to the hub (shop refresh, bestiary, directory).
+## portal returns to its overworld entrance (#378); the hub is one TRAVEL
+## gate away, and #349 fast return still goes straight to the hub.
 const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
 
 ## #346: dungeon_ids cleared this run. Per-run for free: a death restart
@@ -291,6 +305,9 @@ func _swap(area: Node) -> void:
 	if p:
 		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
 	if _world_map:
+		var sites := _dungeon_sites(current_area)
+		if not sites.is_empty():
+			_world_map.set_sites(current_area.name, sites) # #366
 		_world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
 	_mount_area_spawns(current_area)
 	_mount_entrance_guards(current_area)
@@ -330,7 +347,9 @@ func _mount_area_spawns(area: Node) -> void:
 
 ## #346: overworld entrance guards. Every EntranceGuards node under the
 ## area's "EntranceGuards" container whose dungeon is still uncleared this
-## run contributes its entries; all of them go through ONE EnemySpawner
+## run contributes its entries (#373: a mix of stationary gate guards and
+## patrols), plus the area's "Roamers" migrants (AreaSpawnData, always
+## mounted); all of them go through ONE EnemySpawner
 ## (#220 seam), parented to the area so leaving the overworld frees them.
 func _mount_entrance_guards(area: Node) -> void:
 	var holder := area.get_node_or_null("EntranceGuards")
@@ -346,6 +365,12 @@ func _mount_entrance_guards(area: Node) -> void:
 			continue
 		entries.append_array(guards.entries)
 		player_path = guards.player_path
+	# #373: overworld-wide migrants belong to no entrance, so a cleared
+	# dungeon (#348) never suppresses them; they mount through the same spawner.
+	var roamers := area.get_node_or_null("Roamers") as AreaSpawnData
+	if roamers != null:
+		entries.append_array(roamers.entries)
+		player_path = roamers.player_path
 	if entries.is_empty():
 		return
 	var spawner := EnemySpawner.new()
@@ -467,7 +492,8 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 		boss_music.fade_out() # #359: boss down, theme fades
 
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
-## anytime, objective not required). Returns to the hub in the SAME run via a
+## anytime, objective not required). Returns (#378: to the dungeon's overworld
+## entrance; formerly the hub) in the SAME run via a
 ## deferred swap - the shared Player is repositioned, never recreated, so
 ## spells and current HP are retained. Red-gate DungeonB (#177 / O1, human
 ## decision 2026-11-08) now has an ELIMINATION objective, so it mounts the
@@ -499,7 +525,41 @@ func _mount_exit_portal(area: Node) -> void:
 	area.add_child(portal)
 
 func _on_exit_portal_entered(_portal: ExitPortal) -> void:
-	_load_hub.call_deferred()
+	_exit_dungeon.call_deferred(current_area.scene_file_path if current_area else "")
+
+## #378: leaving a dungeon by its exit portal returns the player to that
+## dungeon's entrance in the overworld, standing just in front of (below) the
+## entrance gate so they do not walk straight back in. A dungeon without an
+## overworld entrance (test fixtures, direct swaps) falls back to the hub.
+## The #349 fast-return shortcut is a separate path and still goes to the hub.
+const ENTRANCE_EXIT_OFFSET := Vector2(0, 80)
+
+func _exit_dungeon(dungeon_scene: String) -> void:
+	var overworld := (load(OVERWORLD_SCENE) as PackedScene).instantiate()
+	var entrance := _entrance_gate_for(overworld, dungeon_scene)
+	if entrance == null:
+		overworld.free()
+		_load_hub()
+		return
+	_entry_gate_type = -1
+	_swap(overworld)
+	var p := get_node_or_null("Player") as Player
+	if p:
+		p.global_position = entrance.global_position + ENTRANCE_EXIT_OFFSET
+
+## #378: the overworld gate whose target is `dungeon_scene` (scene path), or null.
+## Walks the not-yet-mounted overworld so no swap happens when there is none.
+func _entrance_gate_for(area: Node, dungeon_scene: String) -> Gate:
+	if dungeon_scene == "":
+		return null
+	for n in area.find_children("*", "", true, false):
+		var g := n as Gate
+		if g == null:
+			continue
+		var scene := g.target_scene()
+		if scene != null and scene.resource_path == dungeon_scene:
+			return g
+	return null
 
 ## #54: ONE revive item (green cross) per run, spawned in DungeonA only, away
 ## from the entrance spawn (576,560), the demo enemies (y<=280) and the exit
@@ -556,7 +616,7 @@ func _is_proven_safe_area() -> bool:
 	if not _is_hub_area():
 		return false
 	var enemies := not get_tree().get_nodes_in_group("enemies").is_empty()
-	var spawn_capable := current_area.get_node_or_null("SpawnData") != null or current_area.get_node_or_null("EntranceGuards") != null or current_area.get_node_or_null("DungeonObjective") != null
+	var spawn_capable := current_area.get_node_or_null("SpawnData") != null or current_area.get_node_or_null("EntranceGuards") != null or current_area.get_node_or_null("Roamers") != null or current_area.get_node_or_null("DungeonObjective") != null
 	return FastTravelRoutes.is_safe_area(enemies, spawn_capable)
 
 func can_fast_return() -> bool:
@@ -578,6 +638,11 @@ func _commit_fast_travel(dungeon_id: StringName) -> void:
 	var player := get_node_or_null("Player") as Player
 	if path == "" or player == null or player.hp <= 0:
 		return
+	_enter_dungeon(dungeon_id, path)
+
+## Shared by the #349 Hub shortcut and #366 map travel: mount `path` with the
+## run's gate offering / authored boss semantics for `dungeon_id`.
+func _enter_dungeon(dungeon_id: StringName, path: String) -> void:
 	var target := load(path) as PackedScene
 	if target == null:
 		return
@@ -600,3 +665,48 @@ func _commit_fast_return() -> void:
 	if player == null or player.hp <= 0 or not can_fast_return() or _is_hub_area():
 		return
 	_load_hub()
+
+## #366 map travel. The map marks every dungeon cleared this run at its
+## entrance (sites read from the area's gates); selecting one there offers
+## fast travel to it.
+##
+## Route policy is the #349 Hub-spoke policy, unchanged: map travel is a
+## second way to pick the same Hub -> cleared-dungeon trip, so the trip is
+## only committed from the Hub (FastTravelRoutes.scene_from_hub). No new
+## origins: no escape from a guarded/spawn-capable overworld and no direct
+## dungeon -> dungeon hop. The way back stays the existing #349 return-to-Hub
+## path (FastTravelPanel / can_fast_return), untouched here.
+## Implementer defaults (issue left open): marks show even under map fog
+## (clearing implies discovery); run-scoped like cleared_dungeons/WorldMap.
+func _dungeon_sites(area: Node) -> Dictionary:
+	var sites := {}
+	for g: Gate in get_tree().get_nodes_in_group("gates"):
+		if not area.is_ancestor_of(g):
+			continue
+		var scene := g.target_scene()
+		if scene == null:
+			continue
+		var id := FastTravelRoutes.id_for_scene(scene.resource_path)
+		if id != &"":
+			sites[id] = g.global_position
+	return sites
+
+## Asked by the map at click time and rechecked at commit. Same policy as the
+## #349 Hub panel: origin must be the Hub, target must be cleared this run.
+func can_map_travel_to(dungeon_id: StringName) -> bool:
+	if current_area == null:
+		return false
+	var player := get_node_or_null("Player") as Player
+	if player == null or player.hp <= 0:
+		return false
+	return FastTravelRoutes.scene_from_hub(_is_hub_area(), dungeon_id, cleared_ids()) != ""
+
+func _request_map_travel(dungeon_id: StringName) -> void:
+	_commit_map_travel.call_deferred(dungeon_id)
+
+## Commits through the #349 Hub commit (it rechecks scene_from_hub against the
+## live clear record), so both entry points share one route policy.
+func _commit_map_travel(dungeon_id: StringName) -> void:
+	if not can_map_travel_to(dungeon_id): # recheck at commit, never trust the UI
+		return
+	_commit_fast_travel(dungeon_id)
