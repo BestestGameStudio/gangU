@@ -56,6 +56,10 @@ enum ObjectiveType { CLEAR_ALL_ENEMIES, DEFEAT_BOSS, ELIMINATION, DEFENSE }
 ## Mixed behaviour (Daniel): this share of every wave goes for the core (and
 ## turns on the player only when they come close); the rest hunt the player.
 @export_range(0.0, 1.0) var core_attacker_share: float = 0.5
+## #369/#368: 1-based wave indexes that are boss waves. The HUD wave bar
+## (#369) renders these with skull icons. Empty until boss waves (#368)
+## land; marking a wave here has no effect on composition or spawning.
+@export var boss_waves: Array[int] = []
 @export var wave_enemy_scene: PackedScene
 @export var wave_reward_table: RewardTable
 ## Area-local spawn positions; enemies of a wave are spread over them.
@@ -152,6 +156,23 @@ func is_failed() -> bool:
 
 func waves_spawned() -> int:
 	return _waves_spawned
+
+## #369: total waves in this defense (the progress target).
+func total_waves() -> int:
+	return _target
+
+## #369: 1-based wave n is marked as a boss wave (skull on the HUD bar).
+func is_boss_wave(n: int) -> bool:
+	return n in boss_waves
+
+## #369: seconds until the next wave spawns, or -1 when no wave is pending
+## (all waves spawned, the objective completed or failed, or not DEFENSE).
+func next_wave_remaining() -> float:
+	if objective_type != ObjectiveType.DEFENSE or _is_completed or _failed:
+		return -1.0
+	if _waves_spawned >= _target:
+		return -1.0
+	return maxf(_next_wave_t, 0.0)
 
 func core() -> DefenseCore:
 	return defense_core
