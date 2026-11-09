@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+[ext_resource type="Resource" path="res://resources/spells/water_ball.tres" id="2_shot"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Big Ball"
+icon_upgraded = true
+cooldown = 6.0
+damage = 10.0
+radius = 9.0
+tags = Array[StringName]([&"aoe", &"water"])
+range = 560.0
+projectile_speed = 480.0
+projectile_color = Color(0.3, 0.65, 1, 1)
+visual_scale = 2.0
+glow = true
+trail_length = 6
+glow_tint = Color(0.35, 0.7, 1, 1)
+shield_radius = 84.0
+shield_duration = 8.0
+shield_charges = 6
+shield_tick = 0.5
+shield_push_radius = 240.0
+shield_push_force = 800.0
+shield_shot = ExtResource("2_shot")
+shield_shrink = 0.1
