@@ -101,6 +101,10 @@ const STALL_TIME: float = 1.0 ## wedged this long on an unreachable hold point: 
 enum State { SEEK, DASH, HOLD, CHARGE, ENGAGED }
 
 var _state: int = State.SEEK
+## DEBUG/RECORDING aid: when true (showcase drivers set it), cover scans log
+## candidate rejection tallies. Logging only - no decision is altered.
+var debug_trace := false
+var _dbg_last := ""
 var _has_cover: bool = false
 var _cover_cell: Vector2i = Vector2i.ZERO ## terrain cover, when _cover_node is null
 var _cover_node: Node2D = null ## solid-body cover, when set
@@ -239,6 +243,14 @@ func _pick_cover(enemy: Enemy, player: Player, advance_only: bool) -> bool:
 			best_dist = d
 			best = c
 	_repick_timer = REPICK_INTERVAL
+	if debug_trace:
+		var dbg: Dictionary = {"want": true}
+		_cover_candidates(enemy, player, dbg)
+		dbg.erase("want")
+		var sig := str(dbg) + str(best.get("pos", Vector2.INF))
+		if sig != _dbg_last:
+			_dbg_last = sig
+			print("[coverdbg] %s candidates=%d picked=%s rejects=%s" % [enemy.name, dbg.get("found", 0), ("none" if best.is_empty() else str(best["pos"])), str(dbg)])
 	if best.is_empty():
 		return false
 	_has_cover = true
@@ -284,7 +296,9 @@ func _cover_still_valid(enemy: Enemy) -> bool:
 ## provides real shelter: {pos, hold, cell?|node?}. `hold` sits just behind
 ## the cover on the side away from the player, on ground this mover can
 ## enter, and is occluded from the player by blocking material.
-func _cover_candidates(enemy: Enemy, player: Player) -> Array[Dictionary]:
+func _cover_candidates(enemy: Enemy, player: Player, dbg: Dictionary = {}) -> Array[Dictionary]:
+	var want: bool = dbg.get("want", false)
+	var rej := {"blocking_scan": 0, "not_blocking_or_swim": 0, "too_close_or_beyond": 0, "outside_cone": 0, "hold_unwalkable": 0, "not_occluded": 0, "solid_reject": 0}
 	var out: Array[Dictionary] = []
 	var to_player: Vector2 = player.global_position - enemy.global_position
 	var dist_p: float = to_player.length()
@@ -292,6 +306,8 @@ func _cover_candidates(enemy: Enemy, player: Player) -> Array[Dictionary]:
 		return out
 	var dir_p: Vector2 = to_player / dist_p
 	var map: TerrainMap = enemy.terrain
+	if map == null and want:
+		rej["no_terrain"] = 1
 	if map != null:
 		var cs: float = float(map.cell_size)
 		var lo := map.world_to_cell(enemy.global_position - Vector2(COVER_SEARCH_RADIUS, COVER_SEARCH_RADIUS))
@@ -300,21 +316,30 @@ func _cover_candidates(enemy: Enemy, player: Player) -> Array[Dictionary]:
 			for cy in range(lo.y, hi.y + 1):
 				var cell := Vector2i(cx, cy)
 				var props := map.type_properties(map.tile_type_at_cell(cell))
+				rej["blocking_scan"] += 1
 				if props.get("movement", TerrainTypes.Movement.WALKABLE) != TerrainTypes.Movement.BLOCKING or props.get("swimmable", false):
+					rej["not_blocking_or_swim"] += 1
 					continue
 				var cpos := map.cell_to_world(cell)
 				var d: Vector2 = cpos - enemy.global_position
 				var dist := d.length()
 				if dist < cs * 0.75 or dist >= dist_p:
+					rej["too_close_or_beyond"] += 1
 					continue
 				if d.normalized().dot(dir_p) < COVER_CONE_COS:
+					rej["outside_cone"] += 1
 					continue
 				var hold: Vector2 = cpos + (cpos - player.global_position).normalized() * (cs * 0.5 + STANDOFF)
 				if not _hold_walkable(map, hold, enemy.can_swim):
+					rej["hold_unwalkable"] += 1
 					continue
 				if not _occluded(map, hold, player.global_position):
+					rej["not_occluded"] += 1
 					continue
 				out.append({"pos": cpos, "hold": hold, "cell": cell})
+	if want:
+		rej["found"] = out.size()
+		for k in rej: dbg[k] = rej[k]
 	# Solids: any Node2D that opted into the "cover" group (containers,
 	# future objects) - Daniel: "any cover", not hardcoded to trees. The
 	# hold point sits behind the body, so the body itself occludes it.
