@@ -40,6 +40,9 @@ const STONE_DARK := Color(0.22, 0.24, 0.27)
 const TREE := Color(0.1, 0.2, 0.12)
 const TREE_LIGHT := Color(0.15, 0.28, 0.16)
 const SHADOW := Color(0.04, 0.06, 0.05)
+## #418: absolute z of the tree crowns - above characters (0), below
+## damage numbers (5).
+const CANOPY_Z := 3
 
 var outline: PackedVector2Array
 var spawn := Vector2(576, 480)
@@ -50,14 +53,43 @@ var patches: Array[PackedVector2Array] = []
 var patch_colors := PackedColorArray()
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
 var decor: Array[Dictionary] = []
+var _canopy: Node2D
 
 func _init() -> void:
 	z_index = -80
 	outline = _blob(0.0)
+	_canopy = _make_canopy()
 
 func _ready() -> void:
 	build_from(get_parent())
 	queue_redraw()
+	_canopy.queue_redraw()
+
+## #418: tree canopies draw on their own child at an absolute z above every
+## character (player, enemies, summons all sit at z 0), so anyone standing
+## close to a tree is visually covered by its crown instead of being drawn
+## on top of it. Damage numbers (z 5) and the HUD (CanvasLayer) stay above.
+func _make_canopy() -> Node2D:
+	var c := Node2D.new()
+	c.name = "Canopy"
+	c.z_as_relative = false
+	c.z_index = CANOPY_Z
+	c.draw.connect(_draw_canopy.bind(c))
+	add_child(c)
+	return c
+
+func _draw_canopy(c: Node2D) -> void:
+	for d in decor:
+		if d["kind"] != "tree":
+			continue
+		var at: Vector2 = d["at"]
+		var r: float = d["r"]
+		c.draw_circle(at, r, TREE)
+		c.draw_circle(at + Vector2(-r * 0.25, -r * 0.3), r * 0.55, TREE_LIGHT)
+
+## Harness introspection: the node that draws the tree crowns.
+func canopy() -> Node2D:
+	return _canopy
 
 ## Reads the arrival marker and every Gate sibling, then lays out roads and
 ## decor. Public so harnesses can rebuild from a scene without a tree.
@@ -225,9 +257,9 @@ func _draw() -> void:
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
 		if d["kind"] == "tree":
+			# #418: only the ground shadow stays on the floor layer; the
+			# canopy itself is drawn by the Canopy child, above characters.
 			draw_circle(at + Vector2(4, r * 0.55), r * 0.9, Color(SHADOW, 0.45))
-			draw_circle(at, r, TREE)
-			draw_circle(at + Vector2(-r * 0.25, -r * 0.3), r * 0.55, TREE_LIGHT)
 		else:
 			var rock := PackedVector2Array()
 			for i in 6:
