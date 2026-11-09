@@ -13,7 +13,7 @@ const BAR_WIDTH := 360.0
 const BAR_HEIGHT := 24.0
 const COUNTDOWN_TOP := 28.0
 const ICON_R := 7.0
-const TRACK_BG := Color(0.06, 0.05, 0.09, 0.85)
+const TRACK_BG := Color(0.06, 0.05, 0.09, 1.0)
 const TRACK_BORDER := Color(0.9, 0.85, 0.7, 0.9)
 ## Amber fill matches the HUD palette (#244).
 const TRACK_FILL := Color(0.95, 0.75, 0.25, 0.9)
@@ -90,15 +90,20 @@ func _draw() -> void:
 		else:
 			_draw_enemy(c, ICON_LIT if wave <= cleared else ICON_DIM)
 
-## Regular wave: a little horned imp head.
+## Regular wave: a little invader-style monster - square body, antennae,
+## legs. Deliberately not skull-shaped: the skull means boss wave.
 func _draw_enemy(c: Vector2, color: Color) -> void:
-	draw_colored_polygon(PackedVector2Array([
-		c + Vector2(-ICON_R + 1, -4), c + Vector2(-ICON_R - 4, -ICON_R - 3), c + Vector2(-2, -ICON_R)]), color)
-	draw_colored_polygon(PackedVector2Array([
-		c + Vector2(ICON_R - 1, -4), c + Vector2(ICON_R + 4, -ICON_R - 3), c + Vector2(2, -ICON_R)]), color)
-	draw_circle(c, ICON_R, color)
-	draw_circle(c + Vector2(-2.5, -1), 1.4, Color.BLACK)
-	draw_circle(c + Vector2(2.5, -1), 1.4, Color.BLACK)
+	# antennae
+	draw_line(c + Vector2(-3, -4), c + Vector2(-5, -ICON_R - 3), color, 1.5)
+	draw_line(c + Vector2(3, -4), c + Vector2(5, -ICON_R - 3), color, 1.5)
+	# body
+	draw_rect(Rect2(c + Vector2(-ICON_R, -5), Vector2(ICON_R * 2, 11)), color)
+	# legs
+	draw_rect(Rect2(c + Vector2(-ICON_R + 1, 6), Vector2(3, 3)), color)
+	draw_rect(Rect2(c + Vector2(ICON_R - 4, 6), Vector2(3, 3)), color)
+	# eyes
+	draw_circle(c + Vector2(-3, -1), 1.6, Color.BLACK)
+	draw_circle(c + Vector2(3, -1), 1.6, Color.BLACK)
 
 ## Boss wave (#368): a skull.
 func _draw_skull(c: Vector2, color: Color) -> void:
