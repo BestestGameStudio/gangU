@@ -45,10 +45,24 @@ var kills := 0
 var _t := 0.0
 var _landed := false
 var _impact_t := 0.0
-var _jump_nodes: Array[CanvasItem] = []
-var _jump_base: Array[Vector2] = []
 var _jumping := false
+## Current hop height of this swing (px), read by the shared jump offset.
+var _lift := 0.0
+## Instance id of the jumping Player, so the registry entry can be released
+## even after the player itself has been freed.
+var _jump_key := 0
 var _drop_parent: Node = null
+
+## Leap jumps can overlap: with a short Rhythm cooldown and the player's
+## cooldown reduction, a held key starts the next swing before the previous
+## one lands. Jump state is therefore shared per player, keyed by instance id:
+##   { "hammers": Array[StoneHammer], "nodes": Array[CanvasItem],
+##     "base": Array[Vector2] }
+## The FIRST jump captures the visual nodes' resting positions and opens the
+## invulnerability window; every jump drives the offset from the highest
+## active lift; only the LAST jump to end restores the positions and closes
+## the window.
+static var _jumps: Dictionary = {}
 
 static func spawn(parent: Node, p_spell: Spell, p_source: Node2D, p_caster: SpellCaster, p_target: Vector2) -> StoneHammer:
 	var h := StoneHammer.new()
@@ -81,31 +95,79 @@ func shockwave_radius() -> float:
 
 ## Rhythm Mastery: the caster hops (visual offset only - the body stays where
 ## it is, so movement and collisions are untouched) and is invulnerable
-## until the hammer lands.
+## until the hammer lands. Overlapping jumps share one window (see _jumps).
 func _start_jump(player: Player) -> void:
 	_jumping = true
+	_lift = 0.0
+	_jump_key = player.get_instance_id()
+	var entry: Dictionary = _jumps.get(_jump_key, {})
+	if entry.is_empty():
+		var nodes: Array[CanvasItem] = []
+		if player.sprite != null:
+			nodes.append(player.sprite)
+		else:
+			for n in [player.body, player.nose_edge]:
+				if n != null:
+					nodes.append(n)
+		var base: Array[Vector2] = []
+		for n in nodes:
+			base.append(n.position)
+		entry = {"hammers": [], "nodes": nodes, "base": base}
+		_jumps[_jump_key] = entry
+	(entry["hammers"] as Array).append(self)
 	player.set_invulnerable(true)
-	if player.sprite != null:
-		_jump_nodes.append(player.sprite)
-	else:
-		for n in [player.body, player.nose_edge]:
-			if n != null:
-				_jump_nodes.append(n)
-	for n in _jump_nodes:
-		_jump_base.append(n.position)
 
+## Ends this swing's jump (landing, caster death, or the hammer leaving the
+## tree). The window stays open while any other jump on the same player is
+## still in the air.
 func _end_jump() -> void:
 	if not _jumping:
 		return
 	_jumping = false
-	if is_instance_valid(source) and source is Player:
-		(source as Player).set_invulnerable(false)
-	for i in _jump_nodes.size():
-		if is_instance_valid(_jump_nodes[i]):
-			_jump_nodes[i].position = _jump_base[i]
+	_lift = 0.0
+	var entry: Dictionary = _jumps.get(_jump_key, {})
+	if entry.is_empty():
+		return
+	var hammers: Array = entry["hammers"]
+	hammers.erase(self)
+	# Drop swings that vanished without ending (defensive; _exit_tree covers it).
+	for h in hammers.duplicate():
+		if not is_instance_valid(h) or not (h as StoneHammer)._jumping:
+			hammers.erase(h)
+	var player := instance_from_id(_jump_key) as Player
+	if hammers.is_empty():
+		_jumps.erase(_jump_key)
+		if player != null:
+			player.set_invulnerable(false)
+		_apply_offset(entry, Vector2.ZERO)
+	elif player != null:
+		_apply_offset(entry, _shared_up(entry, player))
+
+## Highest lift among the player's active jumps, as a screen-up offset.
+static func _shared_up(entry: Dictionary, player: Node2D) -> Vector2:
+	var lift := 0.0
+	for h in entry["hammers"]:
+		if is_instance_valid(h):
+			lift = maxf(lift, (h as StoneHammer)._lift)
+	# The player node turns toward the cursor; hop straight up on screen.
+	return Vector2(0.0, -lift).rotated(-player.global_rotation)
+
+static func _apply_offset(entry: Dictionary, up: Vector2) -> void:
+	var nodes: Array = entry["nodes"]
+	var base: Array = entry["base"]
+	for i in nodes.size():
+		if is_instance_valid(nodes[i]):
+			(nodes[i] as CanvasItem).position = base[i] + up
 
 func is_jumping() -> bool:
 	return _jumping
+
+## Number of Leap jumps currently in the air for `player` (all swings).
+static func active_jumps(player: Node) -> int:
+	if player == null:
+		return 0
+	var entry: Dictionary = _jumps.get(player.get_instance_id(), {})
+	return 0 if entry.is_empty() else (entry["hammers"] as Array).size()
 
 func _physics_process(delta: float) -> void:
 	if _landed:
@@ -123,12 +185,10 @@ func _physics_process(delta: float) -> void:
 	if _jumping:
 		var k := clampf(_t / maxf(spell.hammer_windup, 0.01), 0.0, 1.0)
 		# Up fast, hang, slam down with the hammer.
-		var lift := JUMP_HEIGHT * sin(PI * minf(k * 1.15, 1.0))
-		# The player node turns toward the cursor; hop straight up on screen.
-		var up := Vector2(0.0, -lift).rotated(-source.global_rotation)
-		for i in _jump_nodes.size():
-			if is_instance_valid(_jump_nodes[i]):
-				_jump_nodes[i].position = _jump_base[i] + up
+		_lift = JUMP_HEIGHT * sin(PI * minf(k * 1.15, 1.0))
+		var entry: Dictionary = _jumps.get(_jump_key, {})
+		if not entry.is_empty():
+			_apply_offset(entry, _shared_up(entry, source))
 	if _t >= spell.hammer_windup:
 		_land()
 	queue_redraw()

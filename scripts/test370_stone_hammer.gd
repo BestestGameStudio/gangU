@@ -328,6 +328,96 @@ func _check_leap() -> void:
 	await _swing(leap, Vector2(500, 210))
 	_check(hit.hp < 1000 - int(leap.damage) and _caster.hammer_state.combo_hits == 0, "leap: shockwave-only damage counts as a miss")
 	await _clear_area()
+	await _check_leap_overlap("stone_hammer_leap")
+	await _check_leap_overlap("stone_hammer_gambler")
+
+## Review on #374: at max Rhythm combo (0.5s) and the legal 60% cooldown
+## reduction the cooldown is 0.2s, shorter than the 0.35s wind-up, so a HELD
+## cast starts the next jump before the previous one lands. The first landing
+## must not close the window while another jump is in the air, and the
+## visual hop must return to rest only after the last jump.
+func _check_leap_overlap(spell_name: String) -> void:
+	var spell := _spell(spell_name)
+	var tag := "overlap(%s)" % spell_name
+	var st := _caster.hammer_state
+	_enemy(Vector2(500, 300), 1000000)
+	var rest_body := _player.body.position
+	var rest_nose := _player.nose_edge.position
+	var cdr := StatModifier.flat(PlayerStats.COOLDOWN_REDUCTION, PlayerStats.COOLDOWN_REDUCTION_MAX, 0.0, &"test370_overlap")
+	_player.stats.add(cdr)
+	_caster.unlocked.clear()
+	for i in SpellCaster.SLOT_COUNT:
+		_caster.clear_slot(i)
+	_caster.spells.clear()
+	_caster.add_spell(spell)
+	_caster._cooldowns.clear()
+	_caster.aim_override = Vector2(500, 300)
+	st.combo_hits = StoneHammerState.max_steps(spell)
+	await physics_frame
+	var hp := _player.hp
+	var casts := [0]
+	var on_cast := func(_s: Spell) -> void: casts[0] += 1
+	_caster.spell_cast.connect(on_cast)
+	Input.action_press(&"cast")
+	var max_active := 0
+	var jump_frames := 0
+	var leaks := 0
+	var window_wrong := 0
+	var first_cd := -1.0
+	# Hold for ~1.5s, then release and keep sampling until every jump lands.
+	for f in 150:
+		if f == 90:
+			Input.action_release(&"cast")
+		await physics_frame
+		if first_cd < 0.0 and casts[0] > 0:
+			first_cd = _caster._cooldown_totals.get(spell, -1.0)
+		var active := StoneHammer.active_jumps(_player)
+		max_active = maxi(max_active, active)
+		if active > 0:
+			jump_frames += 1
+			_player.apply_damage(5)
+			if _player.hp != hp:
+				leaks += 1
+				hp = _player.hp
+			if not _player.is_invulnerable():
+				window_wrong += 1
+		elif _player.is_invulnerable():
+			window_wrong += 1
+		if f > 90 and active == 0 and _hammers().all(func(h): return not h.is_jumping()):
+			break
+	_caster.spell_cast.disconnect(on_cast)
+	_check(is_equal_approx(first_cd, 0.2) and first_cd < spell.hammer_windup, "%s: max combo + 60%% CDR gives a 0.2s cooldown (got %.3f) < %.2fs wind-up" % [tag, first_cd, spell.hammer_windup])
+	_check(casts[0] >= 4, "%s: held cast refires (%d casts)" % [tag, casts[0]])
+	_check(max_active >= 2, "%s: jumps really overlap (max %d at once)" % [tag, max_active])
+	_check(jump_frames > 0 and leaks == 0, "%s: damage ignored on all %d jump frames (%d leaked)" % [tag, jump_frames, leaks])
+	_check(window_wrong == 0, "%s: invulnerable exactly while any jump is active (%d wrong frames)" % [tag, window_wrong])
+	_check(StoneHammer.active_jumps(_player) == 0 and not _player.is_invulnerable(), "%s: vulnerable again after the last jump lands" % tag)
+	_check(_player.body.position == rest_body and _player.nose_edge.position == rest_nose, "%s: hop offset restored to rest (body %s, nose %s)" % [tag, _player.body.position, _player.nose_edge.position])
+	var hp_before := _player.hp
+	_player.apply_damage(5)
+	_check(_player.hp == hp_before - 5, "%s: damage lands once grounded" % tag)
+	# Cancellation: overlapping jumps freed mid-air (e.g. scene change) close
+	# the window and restore the hop too.
+	_caster._cooldowns.clear()
+	_caster._cast_spell(spell)
+	for i in 12:
+		await physics_frame
+	_caster._cooldowns.clear()
+	_caster._cast_spell(spell)
+	await physics_frame
+	_check(StoneHammer.active_jumps(_player) == 2 and _player.is_invulnerable(), "%s: two jumps in the air before cancelling" % tag)
+	_hammers().filter(func(h): return h.is_jumping())[0].queue_free()
+	await physics_frame
+	_check(StoneHammer.active_jumps(_player) == 1 and _player.is_invulnerable(), "%s: cancelling one jump keeps the other's window" % tag)
+	_hammers().filter(func(h): return h.is_jumping())[0].queue_free()
+	await physics_frame
+	_check(StoneHammer.active_jumps(_player) == 0 and not _player.is_invulnerable(), "%s: cancelling the last jump closes the window" % tag)
+	_check(_player.body.position == rest_body and _player.nose_edge.position == rest_nose, "%s: cancelled hop restored to rest" % tag)
+	_player.stats.remove(cdr)
+	_caster.aim_override = null
+	_caster.spells.clear()
+	_player.heal(_player.max_hp)
+	await _clear_area()
 
 func _check_gambler() -> void:
 	var gambler := _spell("stone_hammer_gambler")
