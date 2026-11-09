@@ -15,6 +15,7 @@ extends SceneTree
 
 const AREAS := {
 	"res://scenes/hub.tscn": "HUB",
+	"res://scenes/overworld.tscn": "OVERWORLD", # #346
 	"res://scenes/dungeon_a.tscn": "DUNGEON A",
 	"res://scenes/dungeon_b.tscn": "DUNGEON B (RED gate)",
 }

@@ -72,9 +72,10 @@ func _process(delta: float) -> bool:
 			if scene.get_node_or_null("Player") != null and t > 0.4:
 				p = scene.get_node("Player")
 				_check("hub boot", scene.current_area.name == "Hub")
+				scene.enter_overworld() # #346: dungeon entrances live in the overworld
 				var normal: Node = scene.current_area.get_node_or_null("GateNormal")
 				var red: Node = scene.current_area.get_node_or_null("GateRed")
-				_check("hub: both gates present", normal != null and red != null)
+				_check("overworld: both gates present", normal != null and red != null)
 				_gate_structure(normal, "GateNormal")
 				_gate_structure(red, "GateRed")
 				_check("families: NORMAL tint blue (script-driven)",

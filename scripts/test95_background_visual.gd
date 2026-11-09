@@ -88,8 +88,11 @@ func _initialize() -> void:
 		_check_receded(hbg, "hub")
 	# boundary: existing hub nodes untouched
 	_check(hub.get_node("PlayerSpawn").position == Vector2(576, 480), "hub PlayerSpawn untouched")
-	_check(hub.get_node("GateNormal").position == Vector2(300, 380), "hub GateNormal untouched")
-	_check(hub.get_node("GateRed").position == Vector2(852, 380), "hub GateRed untouched")
+	# #346: the dungeon gates moved to the overworld at the same coordinates.
+	var ow: Node2D = load("res://scenes/overworld.tscn").instantiate()
+	_check(ow.get_node("GateNormal").position == Vector2(300, 380), "overworld GateNormal at the old hub spot")
+	_check(ow.get_node("GateRed").position == Vector2(852, 380), "overworld GateRed at the old hub spot")
+	ow.free()
 
 	# ---- DUNGEONS ----
 	var frames := {"Top": Rect2(150, 84, 852, 4), "Bottom": Rect2(150, 652, 852, 4), "Left": Rect2(150, 84, 4, 572), "Right": Rect2(998, 84, 4, 572)}

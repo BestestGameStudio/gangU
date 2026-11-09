@@ -191,6 +191,7 @@ func _initialize() -> void:
 	caster.assign_slot(4, seeded_now[1])
 	var player_loadout: Array = caster.get_slots()
 	var objective := hud.get_node("Root/ObjectiveLabel") as Label
+	main.enter_overworld() # #346: dungeon entrances live in the overworld
 	main.current_area.get_node("GateNormal")._on_body_entered(player)
 	var waited := 0
 	while not objective.visible and waited < 1200:

@@ -4,10 +4,15 @@ extends Area2D
 ## visuals (tint + label). Entering a gate transports the player to its dungeon.
 ## Red-gate lock-in rules themselves are #9 scope; this is transport + typing only.
 
-enum GateType { NORMAL, RED, BOSS }
+## #346: TRAVEL is the hub <-> overworld passage (not a dungeon entrance).
+enum GateType { NORMAL, RED, BOSS, TRAVEL }
 
 @export var gate_type: GateType = GateType.NORMAL
 @export var target_dungeon: PackedScene
+## #346: target scene by PATH, loaded on entry. The hub and the overworld point
+## at each other, and two scenes holding each other as PackedScene ext_resources
+## is a cyclic load, so travel gates name their target by path instead.
+@export_file("*.tscn") var target_path: String = ""
 ## Replaces the type name on the gate's label when set.
 @export var label_text: String = ""
 
@@ -17,6 +22,8 @@ const NORMAL_TINT := Color(0.15, 0.6, 0.9)
 const RED_TINT := Color(0.85, 0.15, 0.15)
 ## #173: violet boss gate (DungeonC, the Head boss arena).
 const BOSS_TINT := Color(0.62, 0.28, 0.95)
+## #346: warm gold travel passage, distinct from every dungeon gate colour.
+const TRAVEL_TINT := Color(0.82, 0.56, 0.14)
 const PORTAL_RX := 24.0
 const PORTAL_RY := 34.0
 const PORTAL_POINTS := 48
@@ -34,6 +41,9 @@ func _ready() -> void:
 	if gate_type == GateType.BOSS:
 		tint = BOSS_TINT
 		label.text = "BOSS"
+	elif gate_type == GateType.TRAVEL:
+		tint = TRAVEL_TINT
+		label.text = "TRAVEL"
 	if label_text != "":
 		label.text = label_text
 	# The hidden ColorRect is the gate's footprint and tint record: label
@@ -117,6 +127,14 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		entered.emit(self)
+
+## #346: the scene this gate leads to (target_dungeon wins over target_path).
+func target_scene() -> PackedScene:
+	if target_dungeon != null:
+		return target_dungeon
+	if target_path != "":
+		return load(target_path) as PackedScene
+	return null
 
 ## #106: the label stays ATTACHED to its own gate. The earlier #50/#84/#87
 ## contract kept the label clear of the HUD and inside the viewport at
