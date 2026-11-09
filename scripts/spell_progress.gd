@@ -46,10 +46,11 @@ func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
 			out.append(u)
 	return out
 
-## #331 (Mitra): each branch of a tree is ONE progression route. Once the
+## #331: Water Ball alone uses ONE progression route. Once the
 ## player holds any upgrade descended from `spell` (e.g. Guided Water Ball
 ## from Water Ball), that spell's other branches stay closed, even if a
-## second copy of the base is looted later. False without a caster.
+## second copy of the base is looted later. Other spell trees keep their
+## existing duplicate-copy behavior. False without a caster.
 func route_taken(spell: Spell) -> bool:
 	if _caster == null or not _caster.has_method("get_unlocked"):
 		return false
@@ -57,6 +58,18 @@ func route_taken(spell: Spell) -> bool:
 	for u in upgrades:
 		if u != null and u.result_spell != null and u.source_spell != null:
 			parent_of[u.result_spell] = u.source_spell
+	# Scope the owner-requested rule to the actual Water Ball resource and
+	# its descendants, not spell names or unrelated upgrade trees.
+	var water_base: Spell = load("res://resources/spells/water_ball.tres")
+	var ancestor := spell
+	var water_tree := ancestor == water_base
+	for _i in 16:
+		if water_tree or not parent_of.has(ancestor):
+			break
+		ancestor = parent_of[ancestor]
+		water_tree = ancestor == water_base
+	if not water_tree:
+		return false
 	for held in _caster.get_unlocked():
 		if held == spell:
 			continue
