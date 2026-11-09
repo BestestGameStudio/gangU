@@ -84,7 +84,19 @@ var _spawn_claim_pending := true
 ## #305: Signature freeze contract. Claims are reference-counted so
 ## overlapping bubbles freeze and release independently.
 func set_frozen(frozen: bool) -> void:
+	var was := _freeze_count
 	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+	if _sprite != null:
+		if _freeze_count > 0 and was == 0:
+			# The AnimatedSprite2D advances on its own internal processing
+			# (start animation re-plays into the loop via animation_finished),
+			# independent of the gated _physics_process: pause() alone does
+			# not hold. Stop its processing too.
+			_sprite.pause()
+			_sprite.process_mode = Node.PROCESS_MODE_DISABLED
+		elif _freeze_count == 0 and was > 0:
+			_sprite.process_mode = Node.PROCESS_MODE_INHERIT
+			_sprite.play()
 
 ## #263: glow halo + fading trail (opt-in per spell, visuals only).
 const GLOW_RADIUS_MULT: float = 2.2 ## halo radius vs. the sprite's visual radius

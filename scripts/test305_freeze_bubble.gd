@@ -27,6 +27,8 @@ var _real_bubble: Area2D
 var _real_bubble2: Area2D
 var _real_proj: Projectile
 var _real_spawn_pos := Vector2.ZERO
+var _real_proj_frame0 := 0
+var _real_proj_progress0 := 0.0
 var _frame := 0
 var _phase := 0
 var _ended_emitted := false
@@ -155,6 +157,10 @@ func _physics_process(_delta: float) -> bool:
 			if _frame >= 12:
 				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "REAL projectile spawned inside (production order) never moves (first-step claim, not scan)")
 				_check(_real_proj._freeze_count == 1, "real projectile claimed exactly once (count=1)")
+				if _real_proj._sprite != null:
+					_check(not _real_proj._sprite.is_playing(), "frozen projectile sprite animation PAUSED")
+					_real_proj_frame0 = _real_proj._sprite.frame
+					_real_proj_progress0 = _real_proj._sprite.frame_progress
 				_real_bubble2 = FreezeBubbleScript.spawn(_root_node, Vector2(430, 300), 200.0, 60.0)
 				_phase = 6
 				_frame = 0
@@ -168,6 +174,8 @@ func _physics_process(_delta: float) -> bool:
 			if _frame >= 25:
 				_check(_real_proj._freeze_count == 1, "first release leaves the second claim (count=1)")
 				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "still frozen while any bubble holds it")
+				if _real_proj._sprite != null:
+					_check(_real_proj._sprite.frame == _real_proj_frame0 and is_equal_approx(_real_proj._sprite.frame_progress, _real_proj_progress0), "projectile sprite frame held across the whole freeze")
 				_real_bubble2._begin_release()
 				_phase = 8
 				_frame = 0
@@ -183,6 +191,8 @@ func _physics_process(_delta: float) -> bool:
 				elif _real_proj.global_position.distance_to(_real_spawn_pos) > 10.0:
 					_check(_real_proj._freeze_count == 0, "claims balanced after both bubbles end (count=0)")
 					_check(true, "projectile resumes moving after final release")
+					if _real_proj._sprite != null:
+						_check(_real_proj._sprite.is_playing(), "released projectile sprite animation RESUMED")
 					_spawn_real_enemy_phase()
 			if _frame >= 120:
 				_check(false, "projectile resumed moving within 120 frames of final release")
