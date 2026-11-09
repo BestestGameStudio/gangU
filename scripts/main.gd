@@ -612,16 +612,14 @@ func _commit_fast_return() -> void:
 ## entrance (sites read from the area's gates); selecting one there offers
 ## fast travel to it.
 ##
-## PROVISIONAL rules (the issue leaves these open, so they are the
-## implementer's defaults and await a human decision; they are not an
-## extension of the #349 Hub-only rule):
-##   - Destination: dungeons cleared this run only (uncleared are unmarked).
-##   - Origin: anywhere EXCEPT inside a dungeon whose objective is not
-##     cleared this run, so map travel never skips a clear-or-die lock or an
-##     unfinished objective. Not to the dungeon you are already in.
-##   - Discovery: a marked dungeon shows even under map fog (clearing it
-##     means you found it).
-##   - Persistence: run-scoped, same as cleared_dungeons / WorldMap.
+## Route policy is the #349 Hub-spoke policy, unchanged: map travel is a
+## second way to pick the same Hub -> cleared-dungeon trip, so the trip is
+## only committed from the Hub (FastTravelRoutes.scene_from_hub). No new
+## origins: no escape from a guarded/spawn-capable overworld and no direct
+## dungeon -> dungeon hop. The way back stays the existing #349 return-to-Hub
+## path (FastTravelPanel / can_fast_return), untouched here.
+## Implementer defaults (issue left open): marks show even under map fog
+## (clearing implies discovery); run-scoped like cleared_dungeons/WorldMap.
 func _dungeon_sites(area: Node) -> Dictionary:
 	var sites := {}
 	for g: Gate in get_tree().get_nodes_in_group("gates"):
@@ -635,21 +633,22 @@ func _dungeon_sites(area: Node) -> Dictionary:
 			sites[id] = g.global_position
 	return sites
 
+## Asked by the map at click time and rechecked at commit. Same policy as the
+## #349 Hub panel: origin must be the Hub, target must be cleared this run.
 func can_map_travel_to(dungeon_id: StringName) -> bool:
-	if current_area == null or not is_cleared(dungeon_id) or not FastTravelRoutes.DUNGEONS.has(dungeon_id):
+	if current_area == null:
 		return false
 	var player := get_node_or_null("Player") as Player
 	if player == null or player.hp <= 0:
 		return false
-	if current_area.scene_file_path == FastTravelRoutes.DUNGEONS[dungeon_id]["scene"]:
-		return false
-	var objective := current_area.get_node_or_null("DungeonObjective") as DungeonObjective
-	return objective == null or is_cleared(objective.dungeon_id)
+	return FastTravelRoutes.scene_from_hub(_is_hub_area(), dungeon_id, cleared_ids()) != ""
 
 func _request_map_travel(dungeon_id: StringName) -> void:
 	_commit_map_travel.call_deferred(dungeon_id)
 
+## Commits through the #349 Hub commit (it rechecks scene_from_hub against the
+## live clear record), so both entry points share one route policy.
 func _commit_map_travel(dungeon_id: StringName) -> void:
 	if not can_map_travel_to(dungeon_id): # recheck at commit, never trust the UI
 		return
-	_enter_dungeon(dungeon_id, FastTravelRoutes.DUNGEONS[dungeon_id]["scene"])
+	_commit_fast_travel(dungeon_id)

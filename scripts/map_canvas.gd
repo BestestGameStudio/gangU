@@ -28,7 +28,7 @@ const SITE_RADIUS := 11.0
 const SITE_PICK_PX := 18.0
 
 const FOG_COLOR := Color(0.03, 0.03, 0.05, 1.0)
-const FALLBACK_GROUND := Color(0.16, 0.24, 0.18, 1.0)
+const FALLBACK_GROUND := WorldMap.FALLBACK_GROUND
 const GRID_COLOR := Color(1.0, 1.0, 1.0, 0.05)
 const PLAYER_COLOR := Color(0.4, 0.85, 1.0, 1.0)
 const INK_COLOR := Color(0.98, 0.86, 0.4, 1.0)
@@ -183,7 +183,7 @@ func _draw() -> void:
 				continue
 			var tl := world_to_screen(Vector2(cell) * WorldMap.CELL_SIZE)
 			var r := Rect2(tl, Vector2(cell_px, cell_px))
-			draw_rect(r, _terrain_color(cell))
+			draw_rect(r, world_map.cell_color(id, cell)) # viewed area's own terrain (#366 review)
 			draw_rect(r, GRID_COLOR, false, 1.0)
 	for s: PackedVector2Array in world_map.strokes(id):
 		var pts := PackedVector2Array()
@@ -222,14 +222,6 @@ func _draw_site(p: Vector2, dungeon_id: StringName, selected: bool) -> void:
 	var pos := p + Vector2(-w * 0.5, SITE_RADIUS + 16.0)
 	draw_string_outline(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color.BLACK)
 	draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
-
-func _terrain_color(cell: Vector2i) -> Color:
-	var t := world_map.terrain
-	if t == null or not is_instance_valid(t):
-		return FALLBACK_GROUND
-	var type := t.tile_type_at(WorldMap.cell_center(cell))
-	var tile: TerrainTile = t.palette.tile(type) if t.palette != null else null
-	return tile.color if tile != null else TerrainSeason.color(t.season, type)
 
 ## Shared by the canvas and the tool buttons' icons.
 static func draw_symbol(ci: CanvasItem, p: Vector2, sym: int, s: float, col: Color) -> void:

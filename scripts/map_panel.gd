@@ -20,7 +20,8 @@ extends CanvasLayer
 ##   - Click a marked dungeon to select it, then press Travel. The panel only
 ##     asks: it emits `travel_requested`, and main.gd rechecks eligibility
 ##     when the trip is committed. `travel_rule` (func(dungeon_id) -> bool,
-##     supplied by main.gd) only greys out the button.
+##     supplied by main.gd = the #349 Hub-spoke policy) greys out the button
+##     and is asked again on the click itself.
 
 signal travel_requested(dungeon_id: StringName)
 
@@ -211,7 +212,7 @@ func _refresh() -> void:
 		_selection.text = "Click a cleared dungeon (gold ✓) to travel" if n > 0 else ""
 	else:
 		var label := FastTravelRoutes.label_for(sel)
-		_selection.text = ("Cleared: %s" % label) if can_travel_selected() else ("Cleared: %s (can't travel from here)" % label)
+		_selection.text = ("Cleared: %s" % label) if can_travel_selected() else ("Cleared: %s (map travel leaves from the Hub)" % label)
 	_travel_button.visible = sel != &""
 	_travel_button.disabled = not can_travel_selected()
 	UiStyle.style_button(_travel_button, UiStyle.B_ACCENT if not _travel_button.disabled else UiStyle.B_DIM, 6.0)

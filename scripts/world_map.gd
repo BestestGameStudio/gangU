@@ -73,10 +73,44 @@ var _sites: Dictionary = {}
 ## when viewing an area the player is not in).
 var _last_pos: Dictionary = {}
 
+## Map colour of a flat (no TerrainMap) area: plain GROUND.
+const FALLBACK_GROUND := Color(0.16, 0.24, 0.18, 1.0)
+
 func set_area(id: StringName, area_terrain: TerrainMap) -> void:
+	# (#366 review) Snapshot the area being left from its OWN terrain while
+	# that node is still valid, so the World view never reads another area's
+	# terrain and never keeps a freed area node alive.
+	if area_id != &"" and area_id != id:
+		_snapshot_colors(area_id, terrain)
 	area_id = id
 	terrain = area_terrain
 	changed.emit(id)
+
+## (#366 review) Map colour of an explored cell in area `id`. The current
+## area reads its live terrain; any other area reads the colours recorded
+## from its own terrain (flat areas record nothing -> FALLBACK_GROUND).
+func cell_color(id: StringName, cell: Vector2i) -> Color:
+	if id == area_id:
+		return terrain_color(terrain, cell)
+	if not _areas.has(id):
+		return FALLBACK_GROUND
+	return _areas[id]["colors"].get(cell, FALLBACK_GROUND)
+
+static func terrain_color(t: TerrainMap, cell: Vector2i) -> Color:
+	if t == null or not is_instance_valid(t):
+		return FALLBACK_GROUND
+	var type := t.tile_type_at(cell_center(cell))
+	var tile: TerrainTile = t.palette.tile(type) if t.palette != null else null
+	return tile.color if tile != null else TerrainSeason.color(t.season, type)
+
+func _snapshot_colors(id: StringName, t: TerrainMap) -> void:
+	if not _areas.has(id):
+		return
+	var colors: Dictionary = {}
+	if t != null and is_instance_valid(t):
+		for cell: Vector2i in _areas[id]["explored"]:
+			colors[cell] = terrain_color(t, cell)
+	_areas[id]["colors"] = colors
 
 func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(player) or area_id == &"":
@@ -242,5 +276,5 @@ func _stroke_near(s: PackedVector2Array, p: Vector2, radius: float) -> bool:
 
 func _area(id: StringName) -> Dictionary:
 	if not _areas.has(id):
-		_areas[id] = {"explored": {}, "markers": [], "strokes": []}
+		_areas[id] = {"explored": {}, "markers": [], "strokes": [], "colors": {}}
 	return _areas[id]
