@@ -257,7 +257,7 @@ func _process(delta: float) -> void:
 	# (pressed, not just_pressed). can_cast() gates the cooldown frames, so a
 	# held Space/LMB fires once per press, then refires on completion with no
 	# re-click; releasing the button stops it.
-	if Input.is_action_pressed(&"cast") and can_cast():
+	if Input.is_action_pressed(&"cast") and not _redirect_gate(equipped_spell, Input.is_action_just_pressed(&"cast")) and can_cast():
 		cast()
 	# #10: switching is caster-owned (player.gd untouched). The action has no
 	# key bound until the human key choice lands; harness drives next_spell().
@@ -268,11 +268,118 @@ func _process(delta: float) -> void:
 	# cooling slots up front, so a held key refires on cooldown completion
 	# and never spams cast_slot's refusal warnings while it runs.
 	for i in SLOT_COUNT:
-		if Input.is_action_pressed(StringName("spell_slot_%d" % (i + 1))) and can_cast_slot(i):
+		var action := StringName("spell_slot_%d" % (i + 1))
+		if not Input.is_action_pressed(action):
+			continue
+		# #331: a steer Water Ball with shots in flight re-aims them on a
+		# fresh press instead of casting (held keys never recast it).
+		if _redirect_gate(_slots[i], Input.is_action_just_pressed(action)):
+			continue
+		if can_cast_slot(i):
 			cast_slot(i)
 
 func cast() -> void:
 	_cast_spell(equipped_spell)
+
+## #331: world point casts aim at. aim_override (a Vector2) replaces the
+## mouse for scripted drivers and harnesses; null = the real cursor.
+var aim_override: Variant = null
+
+func aim_point() -> Vector2:
+	if aim_override is Vector2:
+		return aim_override
+	return get_global_mouse_position()
+
+## #331 Water Ball steer branch: this caster's shots of `spell` still flying.
+func live_shots(spell: Spell) -> Array[Projectile]:
+	var out: Array[Projectile] = []
+	if spell == null:
+		return out
+	for p in get_tree().get_nodes_in_group(&"projectiles"):
+		if p is Projectile and p.spell == spell and p.source == get_parent() and not p.is_queued_for_deletion():
+			out.append(p)
+	return out
+
+## #331: re-aim every live shot of `spell` at the aim point. Returns how many
+## turned. Not a cast: no cooldown, no signals.
+func redirect_shots(spell: Spell) -> int:
+	var shots := live_shots(spell)
+	var target := aim_point()
+	for p in shots:
+		p.redirect(target)
+	return shots.size()
+
+## #331: true when the press belongs to a recast_redirect spell with shots
+## in flight - a fresh press redirects them, a held one does nothing; either
+## way the input must not cast.
+func _redirect_gate(spell: Spell, just_pressed: bool) -> bool:
+	if spell == null or not spell.recast_redirect:
+		return false
+	if live_shots(spell).is_empty():
+		return false
+	if just_pressed:
+		redirect_shots(spell)
+	return true
+
+## #331 Water Ball bubble branch: the owner's live shield, if any.
+func active_shield() -> WaterShield:
+	var owner_node := get_parent()
+	if owner_node == null:
+		return null
+	for c in owner_node.get_children():
+		if c is WaterShield and c.is_active() and not c.is_queued_for_deletion():
+			return c
+	return null
+
+## Spawns (or refreshes) the shield, or - Big Ball with a shield up - fires
+## its Water Ball and shrinks the ball. Returns the cooldown this cast costs.
+func _cast_shield(spell: Spell, dir: Vector2) -> float:
+	var current := active_shield()
+	if current != null and spell.shield_shot != null:
+		_spawn_fanout(spell.shield_shot, dir)
+		current.shrink()
+		return spell.shield_shot.cooldown
+	if current != null:
+		current.remove_from_group(&"water_shields")
+		current.queue_free() # refresh: a recast replaces it, no end burst
+	var owner_node := get_parent() as Node2D
+	if owner_node == null:
+		return spell.cooldown
+	var shield := WaterShield.spawn(owner_node, spell)
+	if spell.shield_shot != null:
+		# Big Ball: shoot right away; the real cooldown starts when it ends.
+		shield.ended.connect(_on_big_ball_ended.bind(spell), CONNECT_ONE_SHOT)
+		return spell.shield_shot.cooldown
+	return spell.cooldown
+
+func _on_big_ball_ended(_popped: bool, spell: Spell) -> void:
+	_start_cooldown(spell, spell.cooldown)
+
+func _start_cooldown(spell: Spell, base: float) -> void:
+	var duration := _effective_cooldown(base)
+	_cooldowns[spell] = duration
+	_cooldown_totals[spell] = duration
+	cooldown_started.emit(spell, duration)
+
+## #331 splash branch: the landing point under the aim, clamped to range.
+func _lob_target(spell: Spell) -> Vector2:
+	var off := aim_point() - global_position
+	if off.length() > spell.range:
+		off = off.normalized() * spell.range
+	return global_position + off
+
+## #331: one lob per projectile_count; extra lobs ring the aim point within
+## splash_scatter px (Mastery), the first always lands on it.
+func _cast_splash(spell: Spell) -> void:
+	var center := _lob_target(spell)
+	var n := maxi(spell.projectile_count, 1)
+	var phase := randf() * TAU
+	for i in n:
+		var target := center
+		if i > 0 and spell.splash_scatter > 0.0:
+			var a := phase + TAU * float(i - 1) / float(n - 1)
+			target += Vector2(cos(a), sin(a)) * spell.splash_scatter * randf_range(0.7, 1.0)
+		WaterSplash.spawn(get_tree().current_scene, spell, get_parent(), global_position, target, 70.0 + 15.0 * i)
 
 ## #10 slots input routing (joint pin with the equip/upgrade panel F): while a
 ## node in the "modal_ui" group exists (F joins it ONLY while visible), the
@@ -297,7 +404,7 @@ func _cast_spell(spell: Spell) -> void:
 	# any launch can move the player (Daniel: the bubble stays "where you
 	# cast"). For a launch spell this is the pre-launch position.
 	var cast_pos := global_position
-	var dir := global_position.direction_to(get_global_mouse_position())
+	var dir := global_position.direction_to(aim_point())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
 	# #216: terrain-block spells place their tile BEFORE anything else; a
@@ -327,7 +434,17 @@ func _cast_spell(spell: Spell) -> void:
 	# the bubble alone.
 	if spell.freeze_radius > 0.0:
 		FreezeBubble.spawn(get_tree().current_scene, cast_pos, spell.freeze_radius, spell.freeze_duration)
-	if spell.projectile_count > 0 and spell.launch_speed <= 0.0:
+	# #331 Water Ball tree: bubble, heavy rain and splash casts replace the
+	# flat fan-out; each still costs ONE cooldown/signal pair below (the Big
+	# Ball's shot cast costs its Water Ball's cooldown instead).
+	var cooldown_base := spell.cooldown
+	if spell.shield_radius > 0.0:
+		cooldown_base = _cast_shield(spell, dir)
+	elif spell.rain_duration > 0.0:
+		WaterRain.spawn(get_tree().current_scene, spell, get_parent(), _lob_target(spell))
+	elif spell.splash_radius > 0.0:
+		_cast_splash(spell)
+	elif spell.projectile_count > 0 and spell.launch_speed <= 0.0:
 		_spawn_fanout(spell, dir)
 		# #305: a burst re-fires the fan-out burst_count times, one immediately
 		# (above) and the rest at burst_interval spacing, re-aimed at the cursor
@@ -338,10 +455,7 @@ func _cast_spell(spell: Spell) -> void:
 			_run_burst(spell, spell.burst_count - 1)
 	# #268: the owning Player's cooldown reduction shortens the cooldown this
 	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
-	var duration := _effective_cooldown(spell.cooldown)
-	_cooldowns[spell] = duration
-	_cooldown_totals[spell] = duration
-	cooldown_started.emit(spell, duration)
+	_start_cooldown(spell, cooldown_base)
 	spell_cast.emit(spell)
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
@@ -353,6 +467,7 @@ func _spawn_fanout(spell: Spell, dir: Vector2) -> void:
 	for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
 		var p: Projectile = projectile_scene.instantiate()
 		p.setup(spell, d, get_parent())
+		p.cursor_provider = aim_point # #331: steer Water Balls chase the aim point
 		get_tree().current_scene.add_child(p)
 		p.global_position = global_position
 
@@ -365,7 +480,7 @@ func _run_burst(spell: Spell, remaining: int) -> void:
 		await get_tree().create_timer(spell.burst_interval).timeout
 		if not is_instance_valid(self):
 			return
-		var dir := global_position.direction_to(get_global_mouse_position())
+		var dir := global_position.direction_to(aim_point())
 		if dir.length_squared() == 0.0:
 			dir = Vector2.RIGHT.rotated(get_parent().rotation)
 		_spawn_fanout(spell, dir)
@@ -396,7 +511,7 @@ func _on_launch_ended(spell: Spell, player: Player) -> void:
 	_pending_launch_player = null
 	# Re-aimed at the live cursor like a repeated manual cast (#246), but
 	# from the settled post-launch position.
-	var dir := global_position.direction_to(get_global_mouse_position())
+	var dir := global_position.direction_to(aim_point())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
 	if spell.projectile_count > 0:
@@ -423,7 +538,7 @@ func _place_terrain_block(spell: Spell) -> Variant:
 	if map == null:
 		return null
 	var blockers := TerrainBlock.blockers_in(get_tree(), owner_node)
-	var cell: Variant = TerrainBlock.place(map, global_position, get_global_mouse_position(), spell.range, spell.terrain_block, blockers)
+	var cell: Variant = TerrainBlock.place(map, global_position, aim_point(), spell.range, spell.terrain_block, blockers)
 	if cell != null:
 		terrain_block_placed.emit(spell, cell)
 	return cell

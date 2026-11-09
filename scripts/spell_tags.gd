@@ -16,8 +16,10 @@ const HOMING: StringName = &"homing"
 ## #167: element tag read by the TerrainInteractions registry (cold + water
 ## tile -> ice). Behavior lives in the rule data, not in this file.
 const COLD: StringName = &"cold"
+## #331: element tag for the Water Ball tree. Metadata only today.
+const WATER: StringName = &"water"
 
-const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD]
+const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD, WATER]
 
 static func is_valid(tag: StringName) -> bool:
 	return ALL.has(tag)

@@ -11,7 +11,8 @@ extends Area2D
 ## unlocked - no objective exists to open a locked one, so a locked mount
 ## would soft-lock the run. (DungeonB gained an ELIMINATION objective in
 ## #177 / O1, 2026-11-08, and now mounts it locked. The boss-gate arena
-## DungeonC (#173 / O6) mounts it locked until the Head boss dies.)
+## DungeonC (#173 / O6) mounts it locked until the Head boss dies, and the
+## Beast's den DungeonD (#326 / O7) mounts it locked until the Beast dies.)
 ## #204: opt-in portal look (red_portal_look). The RED dungeon's locked gate
 ## and exit gate are this same portal in its two states, so both get the
 ## #195 gate portal look - desaturated gray while locked, red tint once

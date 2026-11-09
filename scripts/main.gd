@@ -151,6 +151,20 @@ func _ready() -> void:
 		preload("res://resources/upgrades/spirit_punch_burst.tres"),
 		preload("res://resources/upgrades/spirit_punch_launch.tres"),
 		preload("res://resources/upgrades/spirit_punch_bubble.tres"),
+		## Water Ball tree (#331): three branches from the base, tiers
+		## 1/2/3 each - Steer (guided -> seeking -> tidal seeker), Splash
+		## (splash -> barrage -> heavy rain), Bubble (water bubble ->
+		## surging -> big ball). Thresholds 10/15/20 mirror #305 and are
+		## provisional, not approved final balance.
+		preload("res://resources/upgrades/water_guided.tres"),
+		preload("res://resources/upgrades/water_seeking.tres"),
+		preload("res://resources/upgrades/water_tidal.tres"),
+		preload("res://resources/upgrades/water_splash.tres"),
+		preload("res://resources/upgrades/water_barrage.tres"),
+		preload("res://resources/upgrades/water_heavy_rain.tres"),
+		preload("res://resources/upgrades/water_bubble.tres"),
+		preload("res://resources/upgrades/water_surging_bubble.tres"),
+		preload("res://resources/upgrades/water_big_ball.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
@@ -182,6 +196,16 @@ func _on_gate_entered(gate: Gate) -> void:
 
 ## (#350) RED semantics for the mounted area: the entered gate's type when there
 ## is one; otherwise the authored default (DungeonB is the RED dungeon).
+## #350: each gate's 50/50 offering type is rolled ONCE per run and stays
+## fixed until death (Colin, 2026-11-08). Per-run reset comes free from the
+## full scene reload on death restart, same as the other per-run records.
+var _offering_rolls: Dictionary = {}
+
+func offering_type_for(gate_name: StringName, authored: Gate.GateType, offering: GateOffering, rng: RandomNumberGenerator = null) -> Gate.GateType:
+	if not _offering_rolls.has(gate_name):
+		_offering_rolls[gate_name] = offering.roll(authored, rng)
+	return _offering_rolls[gate_name]
+
 func _area_is_red(area: Node) -> bool:
 	if _entry_gate_type >= 0:
 		return _entry_gate_type == Gate.GateType.RED
@@ -250,6 +274,11 @@ const DUNGEON_B_BOSS_SPAWN: Vector2 = Vector2(576, 240)
 ## ELIMINATION with zero mobs, so the Head boss spawns on entry.
 const HEAD_BOSS_SCENE: PackedScene = preload("res://scenes/head_boss.tscn")
 const DUNGEON_C_BOSS_SPAWN: Vector2 = Vector2(576, 300)
+## #326 (human request by Mitravasu, 2026-11-09: "create a new dungeon for
+## it"): DungeonD is the Beast boss's den - a boss arena only like DungeonC,
+## ELIMINATION with zero mobs, so the Beast (#174) spawns on entry.
+const BEAST_BOSS_SCENE: PackedScene = preload("res://scenes/beast_boss.tscn")
+const DUNGEON_D_BOSS_SPAWN: Vector2 = Vector2(576, 280)
 
 func _mount_objective(area: Node) -> void:
 	var obj := DungeonObjective.new()
@@ -267,6 +296,12 @@ func _mount_objective(area: Node) -> void:
 		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
 		obj.boss_scene = HEAD_BOSS_SCENE
 		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_C_BOSS_SPAWN) if area is Node2D else DUNGEON_C_BOSS_SPAWN
+		obj.boss_spawned.connect(_on_boss_spawned)
+	elif area.name == "DungeonD":
+		obj.dungeon_id = &"dungeon_d"
+		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
+		obj.boss_scene = BEAST_BOSS_SCENE
+		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_D_BOSS_SPAWN) if area is Node2D else DUNGEON_D_BOSS_SPAWN
 		obj.boss_spawned.connect(_on_boss_spawned)
 	else:
 		obj.free()
@@ -297,7 +332,7 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## An area with an "ExitPoint" marker gets an unlocked portal at that marker.
 func _mount_exit_portal(area: Node) -> void:
 	var exit_point := area.get_node_or_null("ExitPoint") as Node2D
-	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC"]:
+	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC", &"DungeonD"]:
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
@@ -308,10 +343,11 @@ func _mount_exit_portal(area: Node) -> void:
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var completable := obj != null and (obj.objective_type != DungeonObjective.ObjectiveType.ELIMINATION or obj.boss_scene != null)
 	# #173: boss-gate DungeonC is clear-or-die too (locked until the Head dies).
-	# #350: RED is whatever the entered gate rolled, so a RED-rolled DungeonA
-	# locks and a NORMAL-rolled DungeonB allows retreat.
+	# #326: the Beast's den DungeonD is clear-or-die too (locked until the
+	# Beast dies). #350: RED is whatever the entered gate rolled, so a
+	# RED-rolled DungeonA locks and a NORMAL-rolled DungeonB allows retreat.
 	var red := _area_is_red(area)
-	if (red or area.name == &"DungeonC") and completable:
+	if (red or area.name == &"DungeonC" or area.name == &"DungeonD") and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
 	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
