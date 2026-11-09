@@ -1,6 +1,7 @@
-[gd_scene load_steps=19 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=20 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
+[ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
 [ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="346_gate"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="346_dna"]
@@ -24,6 +25,11 @@
 
 [node name="Ground" type="Node2D" parent="."]
 script = ExtResource("346_ground")
+
+[node name="Terrain" type="Node2D" parent="."]
+visible = false
+script = ExtResource("391_terrain")
+cell_size = 32
 
 [node name="TitleLayer" type="CanvasLayer" parent="."]
 layer = 2
