@@ -304,7 +304,7 @@ func _refresh() -> void:
 			var result: Spell = path.get("result_spell")
 			var description := SpellDescription.for_spell(result)
 			if result != null and result.projectile_count > 0:
-				description += "\nRange: %s px. Speed: %s px/s." % [result.range, result.projectile_speed]
+				description += "\n%s px range | %s px/s" % [int(result.range), int(result.projectile_speed)]
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
 			b.setup(path.display_name + _tier_suffix(path), description, needs_token)
