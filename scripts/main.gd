@@ -172,12 +172,28 @@ func _ready() -> void:
 	panel.player_path = NodePath("../Player")
 	panel.upgrader_path = NodePath("../SpellProgress")
 	add_child(panel)
+	## (#347) Player map: ONE persistent WorldMap record + its M panel (Shop
+	## idiom; per-run reset comes free from the reload). Explored terrain is
+	## shown automatically, details only as player-placed marks (Colin,
+	## 2026-11-08). reveal_rule is deliberately LEFT UNSET: reveal timing is
+	## Colin's open call (ARCHITECTURE.md O7), so nothing auto-reveals yet.
+	var world_map := WorldMap.new()
+	world_map.name = "WorldMap"
+	world_map.player = $Player
+	add_child(world_map)
+	_world_map = world_map
+	var map_panel := MapPanel.new()
+	map_panel.name = "MapPanel"
+	map_panel.world_map_path = NodePath("../WorldMap")
+	add_child(map_panel)
 	_load_hub()
 
 var current_area: Node = null
 ## (#132) The mounted hub shop, kept so a dungeon victory can trigger its
 ## FREE stock refresh + paid-price reset from _on_objective_completed.
 var _shop: Shop = null
+## (#347) The run's map record; told about every area swap.
+var _world_map: WorldMap = null
 
 func _load_hub() -> void:
 	_swap(preload("res://scenes/hub.tscn").instantiate())
@@ -201,6 +217,8 @@ func _swap(area: Node) -> void:
 		p.global_position = spawn.global_position
 	if p:
 		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
+	if _world_map:
+		_world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
 	_mount_area_spawns(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
