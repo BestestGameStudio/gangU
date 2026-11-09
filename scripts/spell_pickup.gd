@@ -28,7 +28,7 @@ func _on_body_entered(body: Node2D) -> void:
 	var caster := body.get_node_or_null("SpellCaster") as SpellCaster
 	if caster == null or spell == null:
 		return
-	if caster.spells.has(spell):
+	if caster.has_logical_spell(spell):
 		# PROVISIONAL HARNESS DEFAULT (reversible, not settled production
 		# behavior): duplicate pickups are ignored. Final duplicate/content
 		# behavior is an open human choice.
