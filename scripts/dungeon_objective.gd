@@ -253,6 +253,11 @@ func spawn_next_wave() -> void:
 			e.objective_target = defense_core
 		_wave_alive[wave - 1] += 1
 		e.died.connect(_on_wave_enemy_died.bind(wave))
+		# #392: a splitting wave enemy's descendants stay in its wave.
+		# children_spawned fires before the parent's died, so the wave count
+		# rises before it falls and a wave never reads cleared early.
+		if e.has_signal("children_spawned"):
+			e.children_spawned.connect(_on_wave_children_spawned.bind(wave))
 	wave_started.emit(wave, _target)
 	objective_progress_changed.emit(_current, _target)
 
@@ -271,6 +276,19 @@ func _on_wave_enemy_died(wave: int) -> void:
 	if _current >= _target:
 		_is_completed = true
 		objective_completed.emit(dungeon_id)
+
+## #392: death-spawned descendants (EnemySlime) belong to the same wave; wire
+## their deaths and any further splits into the wave's alive count.
+func _on_wave_children_spawned(kids: Array, wave: int) -> void:
+	if wave < 1 or wave > _wave_alive.size():
+		return
+	for k in kids:
+		if not (k is Enemy):
+			continue
+		_wave_alive[wave - 1] += 1
+		k.died.connect(_on_wave_enemy_died.bind(wave))
+		if k.has_signal("children_spawned"):
+			k.children_spawned.connect(_on_wave_children_spawned.bind(wave))
 
 func _on_core_destroyed() -> void:
 	if _is_completed or _failed:

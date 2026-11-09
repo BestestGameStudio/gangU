@@ -4,6 +4,12 @@ extends SceneTree
 
 var failures := 0
 
+## Spawn policy that refuses descendants at/below 20 max HP (policy test).
+class SpawnerCap extends EnemySpawner:
+	func should_spawn(entry: Dictionary) -> bool:
+		var d: Variant = entry.get("definition")
+		return d == null or (d as EnemyDefinition).max_hp > 20
+
 func _check(cond: bool, name: String) -> void:
 	if cond:
 		print("[392] ", name, " -> PASS")
@@ -15,6 +21,14 @@ func _slimes(area: Node) -> Array:
 	var out: Array = []
 	for c in area.get_children():
 		if c is EnemySlime:
+			out.append(c)
+	return out
+
+## Live (not dying) slimes under area; hp > 0 filters by max_hp generation.
+func _live(area: Node, hp: int = 0) -> Array:
+	var out: Array = []
+	for c in area.get_children():
+		if c is EnemySlime and is_instance_valid(c) and not c.is_queued_for_deletion() and (hp == 0 or c.max_hp == hp):
 			out.append(c)
 	return out
 
@@ -153,5 +167,150 @@ func _initialize() -> void:
 		rest = _slimes(a3).filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
 		guard += 1
 	_check(obj.is_cleared(), "cleared only after every descendant is dead")
+
+	# --- stove-jebs #394 review regressions --------------------------------
+	# CLEAR_ALL in production mount order (spawner first, objective after),
+	# reviewer kill order: 80 root, then one full branch (first 40 + both 20s),
+	# then the last 40. The last 40's death must NOT complete the objective
+	# while its two 20 HP children are pending, and the spawner must count
+	# every generation.
+	var a5 := Node2D.new()
+	root.add_child(a5)
+	var sp := EnemySpawner.new()
+	a5.add_child(sp)
+	sp.setup([{"position": Vector2.ZERO, "enemy": scene, "reward_table": null}], NodePath(""), null, a5)
+	sp.spawn_initial()
+	var obj2 := DungeonObjective.new()
+	obj2.objective_type = DungeonObjective.ObjectiveType.CLEAR_ALL_ENEMIES
+	a5.add_child(obj2)
+	await process_frame
+	await process_frame
+	_check(obj2.progress() == Vector2i(0, 1) and sp.total_alive() == 1, "review order: mounted 0/1 with one alive")
+	_live(a5)[0].apply_damage(80)
+	await process_frame
+	await process_frame
+	_check(obj2.progress() == Vector2i(1, 3) and sp.total_alive() == 2, "review order: 80 root -> 1/3, both 40s counted")
+	_live(a5, 40)[0].apply_damage(40)
+	await process_frame
+	await process_frame
+	_check(obj2.progress() == Vector2i(2, 5) and sp.total_alive() == 3, "review order: first 40 -> 2/5, grandchildren counted")
+	for n in _live(a5, 20):
+		n.apply_damage(20)
+		await process_frame
+		await process_frame
+	_check(obj2.progress() == Vector2i(4, 5) and sp.total_alive() == 1, "review order: branch cleared -> 4/5, one 40 left")
+	_live(a5, 40)[0].apply_damage(40)
+	await process_frame
+	await process_frame
+	_check(not obj2.is_cleared(), "REVIEW BLOCKER 1: last 40's death must not complete CLEAR_ALL while its children live")
+	_check(obj2.progress() == Vector2i(5, 7), "review order: last 40 -> 5/7")
+	_check(sp.total_alive() == 2, "REVIEW BLOCKER 2: spawner counts the two pending 20 HP descendants")
+	for n in _live(a5, 20):
+		n.apply_damage(20)
+		await process_frame
+		await process_frame
+	_check(obj2.is_cleared() and obj2.progress() == Vector2i(7, 7) and sp.total_alive() == 0, "cleared at 7/7 only when every descendant is dead")
+	a5.free()
+	await process_frame
+	# ELIMINATION: the boss phase must not start while split descendants
+	# remain (same order bug, second symptom).
+	var a6 := Node2D.new()
+	root.add_child(a6)
+	var sp2 := EnemySpawner.new()
+	a6.add_child(sp2)
+	sp2.setup([{"position": Vector2.ZERO, "enemy": scene, "reward_table": null}], NodePath(""), null, a6)
+	sp2.spawn_initial()
+	var obj3 := DungeonObjective.new()
+	obj3.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
+	obj3.boss_scene = load("res://scenes/enemy.tscn")
+	a6.add_child(obj3)
+	await process_frame
+	await process_frame
+	var boss_ref: Array = [null]
+	obj3.boss_spawned.connect(func(b): boss_ref[0] = b)
+	_check(obj3.progress() == Vector2i(0, 2), "elimination: 0/2 (one mob + boss)")
+	_live(a6)[0].apply_damage(80)
+	await process_frame
+	await process_frame
+	_live(a6, 40)[0].apply_damage(40)
+	await process_frame
+	await process_frame
+	for n in _live(a6, 20):
+		n.apply_damage(20)
+		await process_frame
+		await process_frame
+	_check(boss_ref[0] == null and obj3.progress() == Vector2i(4, 6), "elimination: one branch cleared -> 4/6, no boss")
+	_live(a6, 40)[0].apply_damage(40)
+	await process_frame
+	await process_frame
+	_check(boss_ref[0] == null, "REVIEW BLOCKER 1: last 40's death must not start the boss phase while its children live")
+	_check(obj3.progress() == Vector2i(5, 8) and not obj3.is_cleared(), "elimination: last 40 -> 5/8")
+	for n in _live(a6, 20):
+		n.apply_damage(20)
+		await process_frame
+		await process_frame
+	_check(boss_ref[0] != null and _live(a6).is_empty(), "elimination: boss spawns only once every mob descendant is dead")
+	if boss_ref[0] != null:
+		var boss: Enemy = boss_ref[0]
+		await process_frame
+		await process_frame
+		boss.apply_damage(boss.hp)
+		await process_frame
+		await process_frame
+		_check(obj3.is_cleared() and obj3.progress() == Vector2i(8, 8), "elimination completes on the boss kill")
+	a6.free()
+	await process_frame
+	# DEFENSE: a slime wave is not cleared until its descendants are dead.
+	var a7 := Node2D.new()
+	root.add_child(a7)
+	var core := DefenseCore.new()
+	core.name = "DefenseCore"
+	a7.add_child(core)
+	var obj4 := DungeonObjective.new()
+	obj4.objective_type = DungeonObjective.ObjectiveType.DEFENSE
+	obj4.wave_count = 1
+	obj4.wave_base_size = 1
+	obj4.wave_size_growth = 0
+	obj4.wave_enemy_scene = scene
+	obj4.wave_spawn_points = [Vector2.ZERO]
+	a7.add_child(obj4)
+	await process_frame
+	await process_frame
+	obj4.spawn_next_wave()
+	await process_frame
+	await process_frame
+	_check(_live(a7).size() == 1 and obj4.progress() == Vector2i(0, 1), "defense: one-slime wave spawned")
+	var guard2 := 0
+	var gen := _live(a7)
+	while not gen.is_empty() and guard2 < 10:
+		gen[0].apply_damage(gen[0].hp)
+		await process_frame
+		await process_frame
+		gen = _live(a7)
+		if not gen.is_empty():
+			_check(not obj4.is_cleared(), "defense: wave not cleared while descendants live")
+		guard2 += 1
+	_check(obj4.is_cleared() and obj4.progress() == Vector2i(1, 1), "defense: wave cleared only when every descendant is dead")
+	a7.free()
+	await process_frame
+	# Spawn policy governs descendants routed through the spawner seam.
+	var a8 := Node2D.new()
+	root.add_child(a8)
+	var sp3 := SpawnerCap.new()
+	a8.add_child(sp3)
+	sp3.setup([{"position": Vector2.ZERO, "enemy": scene, "reward_table": null}], NodePath(""), null, a8)
+	sp3.spawn_initial()
+	await process_frame
+	await process_frame
+	_live(a8)[0].apply_damage(80)
+	await process_frame
+	await process_frame
+	_check(_live(a8).size() == 2 and sp3.total_alive() == 2, "policy allows the two 40 HP children")
+	_live(a8, 40)[0].apply_damage(40)
+	await process_frame
+	await process_frame
+	_check(_live(a8, 20).is_empty(), "policy refuses 20 HP grandchildren (should_spawn governs splits)")
+	_check(sp3.total_alive() == 1, "refused children never enter spawner bookkeeping")
+	a8.free()
 	print("[392] DONE failures=", failures)
 	quit(failures)
