@@ -175,7 +175,6 @@ func _ready() -> void:
 	panel.player_path = NodePath("../Player")
 	panel.upgrader_path = NodePath("../SpellProgress")
 	add_child(panel)
-	_mount_fast_travel() # #349: isolated mount, before first area
 	## (#347) Player map: ONE persistent WorldMap record + its M panel (Shop
 	## idiom; per-run reset comes free from the reload). Explored terrain is
 	## shown automatically, details only as player-placed marks (Colin,
@@ -193,6 +192,7 @@ func _ready() -> void:
 	map_panel.name = "MapPanel"
 	map_panel.world_map_path = NodePath("../WorldMap")
 	add_child(map_panel)
+	_mount_fast_travel() # #349: separate mount after map setup
 	_load_hub()
 
 var current_area: Node = null
