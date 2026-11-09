@@ -68,6 +68,11 @@ var _attacker_modifiers: DamageModifiers
 var _attacker_rng: RandomNumberGenerator
 var _traveled: float = 0.0
 var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projectile
+## #331 steer Signature (Daniel 2026-11-09): pierce_hits shots count TOTAL
+## hits (re-hits of one body included) and re-arm a body after rehit_delay.
+var _hit_count: int = 0
+var _hit_times: Dictionary = {} ## body -> _life_t at its last hit (pierce_hits shots)
+var _life_t: float = 0.0
 ## #216: the source's TerrainMap (Player/Enemy `terrain`), read at setup.
 ## Null (hub, hand-built areas, harness fixtures) skips terrain hits entirely.
 var _terrain: TerrainMap = null
@@ -97,6 +102,9 @@ var _spawn_claim_pending := true
 ## _chase_t counts seconds since spawn or the last redirect.
 var cursor_provider: Callable
 var _chase_t := 0.0
+## (Daniel 2026-11-09) redirects this shot has used; spell.redirect_limit
+## caps them (0 = unlimited). Guided tier 1 turns once, then casts normally.
+var _redirect_count := 0
 
 ## #305: Signature freeze contract. Claims are reference-counted so
 ## overlapping bubbles freeze and release independently.
@@ -165,13 +173,21 @@ func cursor_point() -> Vector2:
 	return get_global_mouse_position()
 
 ## #331 steer Specialization: turn the shot straight at `target` and restart
-## its cursor-chase window. Range already travelled is kept.
-func redirect(target: Vector2) -> void:
+## its cursor-chase window. Range already travelled is kept. Returns false
+## (and turns nothing) once this shot reached spell.redirect_limit.
+func can_redirect() -> bool:
+	return spell.redirect_limit <= 0 or _redirect_count < spell.redirect_limit
+
+func redirect(target: Vector2) -> bool:
+	if not can_redirect():
+		return false
+	_redirect_count += 1
 	var d := target - global_position
 	if d.length_squared() > 0.0:
 		direction = d.normalized()
 		rotation = direction.angle()
 	_chase_t = 0.0
+	return true
 
 func _chasing_cursor() -> bool:
 	if spell.cursor_chase_time < 0.0:
@@ -308,6 +324,7 @@ func _physics_process(delta: float) -> void:
 	if _chasing_cursor():
 		_turn_toward(cursor_point(), spell.cursor_turn_rate * delta)
 	_chase_t += delta
+	_life_t += delta
 	var step: float = spell.projectile_speed * delta
 	# #109: swept hit detection - move first, then sweep the circle along the
 	# whole path so a frame step larger than the hit envelope (low/janky fps
@@ -317,9 +334,12 @@ func _physics_process(delta: float) -> void:
 	# The step is clamped to the remaining range: the swept path never reaches
 	# past the projectile's own expiry point, so the maximum hit envelope stays
 	# range + shape radius instead of range + one frame step + shape radius.
-	var remaining: float = spell.range - _traveled
-	if step > remaining:
-		step = remaining
+	# (Daniel 2026-11-09) a pierce_hits Signature shot has no travel budget:
+	# it stays until its hits land, so its step is never clamped to range.
+	if spell.pierce_hits == 0:
+		var remaining: float = spell.range - _traveled
+		if step > remaining:
+			step = remaining
 	var from: Vector2 = global_position
 	position += direction * step
 	# #216 review: bodies and destroyable terrain crossed in this one segment
@@ -329,7 +349,7 @@ func _physics_process(delta: float) -> void:
 	if is_queued_for_deletion():
 		return
 	_traveled += step
-	if _traveled >= spell.range:
+	if spell.pierce_hits == 0 and _traveled >= spell.range:
 		queue_free()
 		return
 	# #109: code-drawn cast feel - the diamond spins and pulses while flying.
@@ -383,12 +403,21 @@ func _turn_toward(target: Vector2, max_turn: float) -> void:
 	direction = direction.rotated(clampf(diff, -max_turn, max_turn))
 	rotation = direction.angle()
 
+## (Daniel 2026-11-09 boss fix) true when this shot may damage `body` now.
+## Legacy/#37 shots: one hit per body ever. pierce_hits Signature shots: one
+## hit per body per rehit_delay window, so a looped-back pass on the same
+## boss lands again instead of orbiting harmlessly after the first hit.
+func _can_hit(body: Node2D) -> bool:
+	if spell.pierce_hits > 0:
+		return not _hit_times.has(body) or _life_t - _hit_times[body] >= spell.rehit_delay
+	return not _hit_bodies.has(body)
+
 func _on_body_entered(body: Node2D) -> void:
 	if is_queued_for_deletion():
 		return # #216 review: a shot already spent (e.g. on a block) hits nothing more
 	if body == source:
 		return
-	if _hit_bodies.has(body):
+	if not _can_hit(body):
 		return # #37: piercing re-contact never double-hits the same body
 	# #282: player-side spells IGNORE friendly summons - they neither damage
 	# nor block the shot. Same side rule as #256's apply_damage_from gate:
@@ -419,6 +448,8 @@ func _on_body_entered(body: Node2D) -> void:
 		else:
 			body.apply_damage(result.amount)
 		_hit_bodies.append(body)
+		_hit_times[body] = _life_t
+		_hit_count += 1
 		hit.emit(body)
 		hit_resolved.emit(body, result)
 		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
@@ -426,9 +457,10 @@ func _on_body_entered(body: Node2D) -> void:
 		# is unchanged for both.
 		if spell.tags.has(SpellTags.PIERCING):
 			return
-		# #331 steer Signature: a shot with pierce_hits keeps flying until it
-		# has hit that many bodies (one hit per body, as for PIERCING).
-		if spell.pierce_hits > 0 and _hit_bodies.size() < spell.pierce_hits:
+		# #331 steer Signature (Daniel 2026-11-09): a shot with pierce_hits
+		# keeps flying until it has LANDED that many hits - re-hits of one
+		# body count, so a lone boss can absorb the whole signature.
+		if spell.pierce_hits > 0 and _hit_count < spell.pierce_hits:
 			return
 	queue_free()
 
@@ -502,7 +534,7 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 		params.motion = motion
 	for idx in hits.size():
 		var b: Node2D = hits[idx].get("collider")
-		if b == null or b == source or _hit_bodies.has(b):
+		if b == null or b == source or not _can_hit(b):
 			continue
 		if overlapping.has(rids[idx]):
 			events.append({"t": 0.0, "body": b})
@@ -536,7 +568,7 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 	for e in events:
 		if e.has("body"):
 			var b: Node2D = e.body
-			if not is_instance_valid(b) or _hit_bodies.has(b):
+			if not is_instance_valid(b) or not _can_hit(b):
 				continue
 			_on_body_entered(b)
 		elif e.interact:
