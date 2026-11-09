@@ -12,6 +12,7 @@ const DUNGEONS := {
 	&"dungeon_c": {"label": "Dungeon C", "scene": "res://scenes/dungeon_c.tscn"},
 	&"dungeon_d": {"label": "Beast's Den", "scene": "res://scenes/dungeon_d.tscn"},
 	&"dungeon_e": {"label": "Defense", "scene": "res://scenes/dungeon_e.tscn"},
+	&"dungeon_maze": {"label": "Maze Defense", "scene": "res://scenes/dungeon_maze.tscn"},
 }
 
 ## Stable catalog order, no duplicates or unknown destinations. The

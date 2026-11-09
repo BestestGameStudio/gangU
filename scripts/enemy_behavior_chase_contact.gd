@@ -30,7 +30,12 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 	var pad: float = 0.0
 	if player is DefenseCore:
 		pad = player.contact_radius
-	var chase: Vector2 = to_player.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
+	# #367: an enemy with a FlowNav (maze defense) steers along the grid path
+	# instead of straight at the target; range checks still use the target.
+	var heading: Vector2 = to_player
+	if enemy.nav != null:
+		heading = enemy.nav.waypoint(enemy.global_position, player.global_position) - enemy.global_position
+	var chase: Vector2 = heading.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
 	enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
 	enemy.move_and_slide()
 	_contact_timer = maxf(0.0, _contact_timer - delta)

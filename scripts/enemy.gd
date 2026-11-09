@@ -45,6 +45,10 @@ var _player: Player
 ## part of each wave. See _resolve_target.
 var objective_target: DefenseCore = null
 var objective_aggro_range: float = 150.0
+## #367: grid pathfinding (maze defense waves). Null - every other enemy -
+## keeps the straight-line chase. The chase/contact behavior steers through
+## it toward whatever _resolve_target picked (core or player).
+var nav: FlowNav = null
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.
 var _behavior: RefCounted
