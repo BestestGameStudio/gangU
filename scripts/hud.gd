@@ -99,8 +99,10 @@ func _update_slot_icons() -> void:
 		var spell: Spell = slots[i] if i < slots.size() else null
 		icon.show_spell(spell)
 		var remaining := 0.0
-		if spell != null and spell.cooldown > 0.0:
-			remaining = clampf(_caster.cooldown_remaining(spell) / spell.cooldown, 0.0, 1.0)
+		# #268: divide by the started cooldown length (after cooldown reduction).
+		var total := _caster.cooldown_duration(spell)
+		if spell != null and total > 0.0:
+			remaining = clampf(_caster.cooldown_remaining(spell) / total, 0.0, 1.0)
 		icon.set_cooldown_fraction(remaining)
 		icon.set_upgrade_available(_can_upgrade(spell))
 
