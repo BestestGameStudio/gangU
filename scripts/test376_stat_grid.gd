@@ -20,12 +20,6 @@ func _frames(n: int) -> void:
 	for i in n:
 		await process_frame
 
-func _unlocked_button(panel: EquipPanel, spell_name: String) -> Button:
-	for c in panel._unlocked_box.get_children():
-		if c is Button and not c.is_queued_for_deletion() and c.text == spell_name:
-			return c
-	return null
-
 func _initialize() -> void:
 	# Headless root is 64x64, so the menu lives in a 1920x1080 SubViewport;
 	# that lets real mouse motion reach the cells and open Godot's own tooltip.
@@ -67,11 +61,12 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	# Right side: third column after Unlocked and Slots (index 0, 1, divider 2).
+	# Right side: the column after the slots (#375: slots are the only spell
+	# column left; index 0 = slots, divider, then the grid last).
 	var cols := grid.get_parent()
-	_check(cols is HBoxContainer and cols.get_child(0) == panel._unlocked_box and grid.get_index() == cols.get_child_count() - 1,
+	_check(cols is HBoxContainer and cols.get_child(0) == panel._slots_box and grid.get_index() == cols.get_child_count() - 1,
 		"grid is the right-most column of the Tab menu")
-	_check(grid.get_global_rect().position.x > panel._unlocked_box.get_global_rect().end.x, "grid sits right of the spell list")
+	_check(grid.get_global_rect().position.x > panel._slots_box.get_global_rect().end.x, "grid sits right of the slots")
 
 	# Grid of icon + value cells only.
 	var g := grid.get_node("Grid") as GridContainer
@@ -106,10 +101,12 @@ func _initialize() -> void:
 	_check(grid.value_of(&"cooldown_reduction") == "+20%", "CDR updates live while open")
 	_check(grid.cell(&"armor") == armor_cell, "live update reuses the hovered cell")
 
-	# Clicking a spell swaps the grid to that spell's stats.
-	var btn := _unlocked_button(panel, reaper.spell_name)
-	_check(btn != null, "Reaper Hammer row present")
-	btn.pressed.emit()
+	# Clicking a slot's spell swaps the grid to that spell's stats (#375:
+	# selection comes from the slots; the unlock auto-binds a free slot).
+	var ri := caster.get_slots().find(reaper)
+	_check(ri != -1, "Reaper Hammer auto-bound to a slot on unlock")
+	if ri != -1:
+		panel._slot_buttons[ri].pressed.emit()
 	await _frames(1)
 	_check(grid.title() == reaper.spell_name, "header shows the selected spell")
 	_check(grid.cell_ids().has(&"damage") and grid.cell_ids().has(&"cooldown") and grid.cell_ids().has(&"crit") and grid.cell_ids().has(&"area"),
@@ -164,8 +161,14 @@ func _initialize() -> void:
 	vp.push_input(away)
 	await _frames(2)
 
-	# Assigning the spell to a slot clears the selection -> player stats back.
-	panel._on_slot_pressed(0)
+	# Rearranging the selected spell into an empty slot clears the
+	# selection -> player stats back.
+	var free_slot := -1
+	for i in caster.get_slots().size():
+		if caster.get_slots()[i] == null:
+			free_slot = i
+			break
+	panel._on_slot_pressed(free_slot)
 	await _frames(1)
 	_check(grid.title() == "Stats" and grid.cell(&"hp") != null, "after assigning, grid returns to player stats")
 	_check(grid.value_of(&"crit") == "25%", "player crit excludes the hammer-only bonus")

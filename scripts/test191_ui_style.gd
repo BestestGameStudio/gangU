@@ -7,6 +7,7 @@ extends SceneTree
 const PANEL_BORDER := Color(0.55, 0.6, 0.72, 0.85)
 const PANEL_BG := Color(0.05, 0.05, 0.07, 0.92)
 const B_DIM := Color(0.45, 0.48, 0.55, 0.6)
+const B_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
 const B_SELECTED := Color(0.85, 0.9, 1.0, 0.9)
 const B_ACCENT := Color(0.95, 0.75, 0.25, 0.9)
 
@@ -61,22 +62,17 @@ func _initialize() -> void:
 	var eplate := center.get_child(0) as PanelContainer
 	_check_panel(eplate.get_theme_stylebox("panel"), PANEL_BG, "Equip panel")
 	var cols := eplate.get_child(0).get_child(1) as HBoxContainer
-	var unlocked_box := cols.get_child(0) as VBoxContainer
-	var slots_box := cols.get_child(1) as VBoxContainer
-	var first_row: Button = unlocked_box.get_child(1)
-	var row_text := first_row.text
-	_check_row(first_row.get_theme_stylebox("normal"), B_DIM, 1, "Equip unlocked row at rest")
-	var hover := first_row.get_theme_stylebox("hover") as StyleBoxFlat
-	var normal := first_row.get_theme_stylebox("normal") as StyleBoxFlat
-	_check(hover.bg_color != normal.bg_color, "Equip row hover lightens the fill")
+	# #375: the slots box is the ONLY spell column (header at 0, slots 1-6).
+	var slots_box := cols.get_child(0) as VBoxContainer
+	var first_slot: Button = slots_box.get_child(1)
+	_check_row(first_slot.get_theme_stylebox("normal"), B_ASSIGNED, 1, "Equip occupied slot at rest")
+	var hover := first_slot.get_theme_stylebox("hover") as StyleBoxFlat
+	var normal := first_slot.get_theme_stylebox("normal") as StyleBoxFlat
+	_check(hover.bg_color != normal.bg_color, "Equip slot hover lightens the fill")
 	_check_row(slots_box.get_child(3).get_theme_stylebox("normal"), B_DIM, 1, "Equip empty slot")
-	first_row.pressed.emit()
+	first_slot.pressed.emit()
 	await process_frame
-	var selected: Button = null
-	for c in unlocked_box.get_children():
-		if c is Button and c.text == row_text:
-			selected = c
-	_check_row(selected.get_theme_stylebox("normal"), B_SELECTED, 2, "Equip selected row highlighted")
+	_check_row(slots_box.get_child(1).get_theme_stylebox("normal"), B_SELECTED, 2, "Equip selected slot highlighted")
 	equip.hide_panel()
 
 	var shop: ShopPanel = main.get_node("ShopPanel")
