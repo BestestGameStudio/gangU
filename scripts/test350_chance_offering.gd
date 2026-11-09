@@ -2,10 +2,12 @@ extends SceneTree
 ## #350 headless driver: a dungeon offering's NORMAL/RED type is decided by
 ## chance (no rank system), and the existing semantics follow the rolled type:
 ## NORMAL allows retreat, RED locks the player in until the objective clears.
-## The chance distribution is Colin's call and stays UNSET in production, so
-## the production hub must behave exactly as before. Legs:
+## The production distribution is 50/50 (Colin, 2026-11-08), rolled once per
+## run per gate and fixed until death. Legs:
 ##   roll   - GateOffering unit rolls (unset / 0 / 1 / seeded mix / BOSS)
-##   prod   - production offering is unset; hub gates keep authored types
+##   prod   - production offering is 50/50; hub gates roll a valid type
+##   fixed  - a gate's rolled type survives a hub reload within the run, and
+##            a death restart (fresh Main) starts an empty roll record
 ##   red    - every offering forced RED (test-only value): GateNormal rolls
 ##            RED, DungeonA mounts its portal LOCKED with the red look and
 ##            opens once its objective clears
@@ -47,8 +49,9 @@ func _run() -> void:
 	if offering == null:
 		_finish()
 		return
-	_check("prod: chance distribution left UNSET (Colin's call)", not offering.is_set() and offering.red_chance == GateOffering.UNSET)
+	_check("prod: 50/50 distribution set (Colin, 2026-11-08)", offering.is_set() and is_equal_approx(offering.red_chance, 0.5))
 	await _prod_leg(offering)
+	await _fixed_leg()
 	offering.red_chance = 1.0
 	await _red_leg()
 	offering.red_chance = 0.0
@@ -90,12 +93,38 @@ func _prod_leg(offering: GateOffering) -> void:
 	var gn := hub.get_node_or_null("GateNormal") as Gate
 	var gr := hub.get_node_or_null("GateRed") as Gate
 	_check("prod: both hub dungeon gates carry the shared offering", gn != null and gr != null and gn.offering == offering and gr.offering == offering)
-	_check("prod: unset chance -> GateNormal stays NORMAL, GateRed stays RED",
-		gn != null and gr != null and gn.gate_type == Gate.GateType.NORMAL and gr.gate_type == Gate.GateType.RED)
+	var valid := [Gate.GateType.NORMAL, Gate.GateType.RED]
+	_check("prod: both gates rolled a valid NORMAL/RED type",
+		gn != null and gr != null and gn.gate_type in valid and gr.gate_type in valid)
+	_check("prod: rolls recorded per gate on Main", gn != null and gr != null
+		and main._offering_rolls.get(&"GateNormal") == gn.gate_type
+		and main._offering_rolls.get(&"GateRed") == gr.gate_type)
 	var gb := hub.get_node_or_null("GateBoss") as Gate
 	var gg := hub.get_node_or_null("GateGenerated") as Gate
 	_check("prod: boss and generated gates are not chance offerings", gb != null and gb.offering == null and gg != null and gg.offering == null)
 	await _shutdown(main)
+
+func _fixed_leg() -> void:
+	var main := await _boot()
+	var gn := main.current_area.get_node_or_null("GateNormal") as Gate
+	_check("fixed: GateNormal present", gn != null)
+	if gn == null:
+		await _shutdown(main)
+		return
+	var rolled: int = gn.gate_type
+	main._load_hub.call_deferred()
+	await _frames(8)
+	var gn2 := main.current_area.get_node_or_null("GateNormal") as Gate
+	_check("fixed: hub reload within the run keeps the rolled type", gn2 != null and gn2 != gn and gn2.gate_type == rolled)
+	await _shutdown(main)
+	# A death restart rebuilds Main from scratch, so the new run must boot
+	# with its own freshly rolled record, never the previous run's types.
+	var main2 := await _boot()
+	var gr2 := main2.current_area.get_node_or_null("GateRed") as Gate
+	_check("fixed: death restart (fresh Main) re-rolls into its own record",
+		gr2 != null and main2._offering_rolls.get(&"GateRed") == gr2.gate_type
+		and main2._offering_rolls.size() <= 2)
+	await _shutdown(main2)
 
 func _red_leg() -> void:
 	var main := await _boot()
