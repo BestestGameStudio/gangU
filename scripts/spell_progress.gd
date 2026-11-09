@@ -39,10 +39,48 @@ func cast_count(spell: Spell) -> int:
 ## shape; returns full SpellUpgrade resources, F reads id/display_name.
 func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
 	var out: Array[SpellUpgrade] = []
+	if spell == null or route_taken(spell):
+		return out
 	for u in upgrades:
 		if u != null and u.source_spell == spell:
 			out.append(u)
 	return out
+
+## #331: Water Ball alone uses ONE progression route. Once the
+## player holds any upgrade descended from `spell` (e.g. Guided Water Ball
+## from Water Ball), that spell's other branches stay closed, even if a
+## second copy of the base is looted later. Other spell trees keep their
+## existing duplicate-copy behavior. False without a caster.
+func route_taken(spell: Spell) -> bool:
+	if _caster == null or not _caster.has_method("get_unlocked"):
+		return false
+	var parent_of: Dictionary = {} # result Spell -> source Spell
+	for u in upgrades:
+		if u != null and u.result_spell != null and u.source_spell != null:
+			parent_of[u.result_spell] = u.source_spell
+	# Scope the owner-requested rule to the actual Water Ball resource and
+	# its descendants, not spell names or unrelated upgrade trees.
+	var water_base: Spell = load("res://resources/spells/water_ball.tres")
+	var ancestor := spell
+	var water_tree := ancestor == water_base
+	for _i in 16:
+		if water_tree or not parent_of.has(ancestor):
+			break
+		ancestor = parent_of[ancestor]
+		water_tree = ancestor == water_base
+	if not water_tree:
+		return false
+	for held in _caster.get_unlocked():
+		if held == spell:
+			continue
+		var cur: Spell = held
+		for _i in 16: # trees are 3 tiers deep; the cap only guards bad data
+			if not parent_of.has(cur):
+				break
+			cur = parent_of[cur]
+			if cur == spell:
+				return true
+	return false
 
 ## Tier of a held spell (#36): 1/2/3 = Specialization/Mastery/Signature,
 ## 0 = Base or never-upgraded. Written only by a successful apply_upgrade;
@@ -65,6 +103,9 @@ func can_upgrade(spell: Spell) -> bool:
 ## delegates: _caster.replace_spell(u.source_spell, u.result_spell), then
 ## upgrades_changed.emit(spell). No direct array mutation here ever.
 func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
+	if route_taken(spell):
+		push_warning("SpellProgress: a route from %s is already taken; refusing '%s'." % [spell, upgrade_id])
+		return false
 	for u in get_upgrade_paths(spell):
 		if u.id == upgrade_id:
 			if _caster == null or not _caster.has_method("replace_spell"):

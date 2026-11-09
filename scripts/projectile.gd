@@ -40,6 +40,17 @@ const SPELL_SPRITE_ANIMS: Dictionary = {
 	"Bolt Flurry": &"bolt_flurry",
 	"Heavy Bolt": &"bolt_heavy",
 	"Spirit Punch": &"spirit_punch",
+	## #331: the whole Water Ball tree flies the one code-drawn droplet row.
+	"Water Ball": &"water_ball",
+	"Guided Water Ball": &"water_ball",
+	"Seeking Water Ball": &"water_ball",
+	"Tidal Seeker": &"water_ball",
+	"Water Splash": &"water_ball",
+	"Water Barrage": &"water_ball",
+	"Heavy Rain": &"water_ball",
+	"Water Bubble": &"water_ball",
+	"Surging Bubble": &"water_ball",
+	"Big Ball": &"water_ball",
 }
 ## Cell art is 64 px wide at scale 1; radius / 10 draws each projectile a little
 ## larger than its hit circle so it reads clearly. Clamped (art only, never the
@@ -81,6 +92,12 @@ var _sprite_base: Vector2 = Vector2.ONE
 var _freeze_count := 0
 var _spawn_claim_pending := true
 
+## #331 Water Ball steer branch. cursor_provider returns the world point the
+## shot chases (the caster's aim point); unset falls back to the real mouse.
+## _chase_t counts seconds since spawn or the last redirect.
+var cursor_provider: Callable
+var _chase_t := 0.0
+
 ## #305: Signature freeze contract. Claims are reference-counted so
 ## overlapping bubbles freeze and release independently.
 func set_frozen(frozen: bool) -> void:
@@ -112,28 +129,59 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	source = p_source
 	if p_source != null:
 		_terrain = p_source.get(&"terrain") as TerrainMap
-		_attacker_modifiers = p_source.get(&"damage_modifiers") as DamageModifiers
 		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
-	# #131 (C4): owned relics contribute their tag-matched passive modifiers
-	# through a COMPOSED COPY - the source's own collection is never mutated,
-	# so repeated casts cannot accumulate relic entries. No owned_relics node,
-	# or no matching relic, leaves the attacker modifiers exactly as before.
+	_attacker_modifiers = attacker_modifiers_for(p_source, spell)
+	rotation = direction.angle()
+
+## #131 (C4): the attacker modifiers a hit from `p_source` casting `p_spell`
+## rolls with. Owned relics contribute their tag-matched passive modifiers
+## through a COMPOSED COPY - the source's own collection is never mutated,
+## so repeated casts cannot accumulate relic entries. No owned_relics node,
+## or no matching relic, returns the source's collection exactly as before.
+## #331: shared with the Water Ball splash / rain / shield damage path.
+static func attacker_modifiers_for(p_source: Node, p_spell: Spell) -> DamageModifiers:
+	if p_source == null or not is_instance_valid(p_source):
+		return null
+	var mods := p_source.get(&"damage_modifiers") as DamageModifiers
 	var relics: OwnedRelics = null
 	if p_source is Player and p_source.is_inside_tree():
 		relics = p_source.get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
 	if relics != null:
-		var relic_mods := relics.modifiers_for(spell)
+		var relic_mods := relics.modifiers_for(p_spell)
 		if not relic_mods.is_empty():
 			var merged := DamageModifiers.new()
-			if _attacker_modifiers != null:
-				for m in _attacker_modifiers.items():
+			if mods != null:
+				for m in mods.items():
 					merged.add(m)
 			for m in relic_mods:
 				merged.add(m)
-			_attacker_modifiers = merged
-	rotation = direction.angle()
+			mods = merged
+	return mods
+
+## #331: the world point a cursor-steered shot aims at.
+func cursor_point() -> Vector2:
+	if cursor_provider.is_valid():
+		return cursor_provider.call()
+	return get_global_mouse_position()
+
+## #331 steer Specialization: turn the shot straight at `target` and restart
+## its cursor-chase window. Range already travelled is kept.
+func redirect(target: Vector2) -> void:
+	var d := target - global_position
+	if d.length_squared() > 0.0:
+		direction = d.normalized()
+		rotation = direction.angle()
+	_chase_t = 0.0
+
+func _chasing_cursor() -> bool:
+	if spell.cursor_chase_time < 0.0:
+		return true
+	return spell.cursor_chase_time > 0.0 and _chase_t < spell.cursor_chase_time
 
 func _ready() -> void:
+	# #331: lets casters find their live shots (steer redirect) and lets the
+	# Water Bubble find hostile shots to absorb.
+	add_to_group(&"projectiles")
 	$CollisionShape2D.shape = $CollisionShape2D.shape.duplicate() # per-spell radius must not leak across instances (#4 gate)
 	$CollisionShape2D.shape.radius = spell.radius
 	$Visual.color = spell.projectile_color
@@ -256,6 +304,10 @@ func _physics_process(delta: float) -> void:
 	# range, damage and cooldown are untouched.
 	if spell.tags.has(SpellTags.HOMING):
 		_steer(delta)
+	# #331: Water Ball steer branch - turn toward the cursor while chasing.
+	if _chasing_cursor():
+		_turn_toward(cursor_point(), spell.cursor_turn_rate * delta)
+	_chase_t += delta
 	var step: float = spell.projectile_speed * delta
 	# #109: swept hit detection - move first, then sweep the circle along the
 	# whole path so a frame step larger than the hit envelope (low/janky fps
@@ -320,9 +372,14 @@ func _steer(delta: float) -> void:
 			best = e
 	if best == null:
 		return
-	var want: float = (best.global_position - global_position).angle()
+	_turn_toward(best.global_position, HOMING_TURN_RATE * delta)
+
+## Rotate the flight direction toward `target` by at most `max_turn` radians.
+func _turn_toward(target: Vector2, max_turn: float) -> void:
+	if global_position.distance_squared_to(target) < 1.0:
+		return
+	var want: float = (target - global_position).angle()
 	var diff: float = wrapf(want - direction.angle(), -PI, PI)
-	var max_turn: float = HOMING_TURN_RATE * delta
 	direction = direction.rotated(clampf(diff, -max_turn, max_turn))
 	rotation = direction.angle()
 
@@ -368,6 +425,10 @@ func _on_body_entered(body: Node2D) -> void:
 		# Untagged spells keep the original despawn-on-hit, and range expiry
 		# is unchanged for both.
 		if spell.tags.has(SpellTags.PIERCING):
+			return
+		# #331 steer Signature: a shot with pierce_hits keeps flying until it
+		# has hit that many bodies (one hit per body, as for PIERCING).
+		if spell.pierce_hits > 0 and _hit_bodies.size() < spell.pierce_hits:
 			return
 	queue_free()
 

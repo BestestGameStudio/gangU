@@ -75,3 +75,49 @@ class_name Spell
 ## occupied cell) is not a cast: no cooldown, no signals. Empty on every
 ## other spell, so their casting is unchanged.
 @export var terrain_block: StringName = &""
+
+## ---- #331 Water Ball tree. Every field defaults to OFF, so every existing
+## spell casts exactly as before. Provisional placeholder numbers live on
+## the water_ball*.tres resources only - balance is an open human choice.
+## Steer branch, Specialization: pressing the spell's key while its shots are
+## still flying re-aims them at the cursor instead of casting again.
+@export var recast_redirect: bool = false
+## Steer branch, Mastery: seconds each shot turns toward the cursor after it
+## spawns (or after a redirect). A negative value chases for the shot's whole
+## life (Signature). 0 = no cursor chase.
+@export var cursor_chase_time: float = 0.0
+## Max turn toward the cursor in rad/s while chasing.
+@export var cursor_turn_rate: float = 7.0
+## Steer branch, Signature: bodies one shot can hit before it disappears.
+## 0 = legacy (despawn on the first hit unless PIERCING-tagged).
+@export var pierce_hits: int = 0
+## Splash branch, Specialization: when > 0 the cast lobs a WaterSplash to the
+## cursor (clamped to `range`) instead of a flat projectile; it lands and deals
+## `damage` to every enemy within this radius. projectile_count lobs land
+## around the cursor, scattered within splash_scatter px (Mastery).
+@export var splash_radius: float = 0.0
+@export var splash_scatter: float = 0.0
+## Splash branch, Signature (heavy rain): when > 0 the cast opens a WaterRain
+## zone at the cursor that drops a splash every rain_interval seconds at a
+## random point within rain_radius, for rain_duration seconds.
+@export var rain_duration: float = 0.0
+@export var rain_interval: float = 0.2
+@export var rain_radius: float = 0.0
+## Bubble branch, Specialization: when > 0 the cast surrounds the player with
+## a WaterShield of this radius for shield_duration seconds. It deals `damage`
+## to touching enemies (once per shield_tick per enemy) and absorbs up to
+## shield_charges enemy projectiles before it pops.
+@export var shield_radius: float = 0.0
+@export var shield_duration: float = 0.0
+@export var shield_charges: int = 0
+@export var shield_tick: float = 0.5
+## Bubble branch, Mastery: when the shield ends it pushes every enemy within
+## shield_push_radius away from the player at shield_push_force px/s.
+@export var shield_push_radius: float = 0.0
+@export var shield_push_force: float = 0.0
+## Bubble branch, Signature: casting while the shield is up fires this spell
+## (a plain Water Ball) instead, costing shield_shot.cooldown, and shrinks
+## the ball by shield_shrink of its radius. Once the shield is gone the slot
+## waits this spell's own `cooldown` before a new shield can be cast.
+@export var shield_shot: Spell = null
+@export var shield_shrink: float = 0.0

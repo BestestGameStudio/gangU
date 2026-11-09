@@ -83,6 +83,15 @@ traced art, no stock files shipped.
   keep the #289 layout: `spirit_punch_start` (cols 0-2, emerge 50/75/100%,
   one-shot, 18 fps) then `spirit_punch` (cols 3, 4, 5, 4, steady full-size
   fist, loop, 12 fps). Sheet is now 6x17 cells.
+- #331 row 17 (water_ball): no external art. Drawn in code by
+  `tools/sprites/draw_water_ball_row.gd` (run it with
+  `godot --headless --path . -s tools/sprites/draw_water_ball_row.gd`, then
+  `godot --headless --path . --import`): a blue water droplet pointing +X with
+  a tapering tail, dark rim and white glint, ball centre 12 px right of the
+  cell centre to match `Projectile.SPRITE_HEAD_OFFSET`. Cols 0-2 emerge at
+  50/75/100% (`water_ball_start`, one-shot, 18 fps), cols 3-5 wobble
+  (`water_ball`, frames 3, 4, 5, 4, loop, 12 fps). Every Water Ball tree spell
+  flies this row. Sheet is now 6x18 cells.
 
 # mustache_warrior.png - Mustache Warrior (common enemy + Warlord boss)
 

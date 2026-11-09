@@ -151,6 +151,20 @@ func _ready() -> void:
 		preload("res://resources/upgrades/spirit_punch_burst.tres"),
 		preload("res://resources/upgrades/spirit_punch_launch.tres"),
 		preload("res://resources/upgrades/spirit_punch_bubble.tres"),
+		## Water Ball tree (#331): three branches from the base, tiers
+		## 1/2/3 each - Steer (guided -> seeking -> tidal seeker), Splash
+		## (splash -> barrage -> heavy rain), Bubble (water bubble ->
+		## surging -> big ball). Thresholds 10/15/20 mirror #305 and are
+		## provisional, not approved final balance.
+		preload("res://resources/upgrades/water_guided.tres"),
+		preload("res://resources/upgrades/water_seeking.tres"),
+		preload("res://resources/upgrades/water_tidal.tres"),
+		preload("res://resources/upgrades/water_splash.tres"),
+		preload("res://resources/upgrades/water_barrage.tres"),
+		preload("res://resources/upgrades/water_heavy_rain.tres"),
+		preload("res://resources/upgrades/water_bubble.tres"),
+		preload("res://resources/upgrades/water_surging_bubble.tres"),
+		preload("res://resources/upgrades/water_big_ball.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
