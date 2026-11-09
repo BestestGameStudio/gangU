@@ -2,9 +2,14 @@ extends SceneTree
 ## #331 harness: Water Ball spell + its three upgrade branches.
 ##  Base      - plain projectile on the water_ball sheet row, damages + despawns.
 ##  Steer     - Guided: a fresh press with shots in flight re-aims them and
-##              never casts; Seeking: chases the cursor for cursor_chase_time
-##              then flies straight; Tidal Seeker: chases the whole life and
-##              hits exactly pierce_hits bodies before disappearing.
+##              never casts, but only ONCE per shot (Daniel 2026-11-09) -
+##              a spent shot no longer holds the gate, so the next press
+##              casts a fresh ball. Seeking: chases the cursor for
+##              cursor_chase_time then flies straight. Tidal Seeker: chases
+##              the whole life with a tighter turn, STAYS until it has
+##              landed pierce_hits hits (no travel-range expiry), and may
+##              re-hit the same body after rehit_delay, so a lone boss can
+##              absorb the whole signature (Daniel 2026-11-09).
 ##  Splash    - Splash: lobbed, hits nothing in flight, AOE on landing;
 ##              Barrage: projectile_count lobs; Heavy Rain: rain zone drops
 ##              repeated splashes then ends.
@@ -99,7 +104,9 @@ func _initialize() -> void:
 
 func _check_defaults() -> void:
 	var s := Spell.new()
-	_check(not s.recast_redirect and s.cursor_chase_time == 0.0 and s.pierce_hits == 0, "steer fields default off")
+	_check(not s.recast_redirect and s.cursor_chase_time == 0.0 and s.pierce_hits == 0 and s.redirect_limit == 0, "steer fields default off")
+	_check(_spell("water_ball_guided").redirect_limit == 1, "guided: turns only once per shot (Daniel 2026-11-09)")
+	_check(_spell("water_ball_tidal").cursor_turn_rate > _spell("water_ball_seeking").cursor_turn_rate, "tidal: signature turn is tighter than the mastery's (Daniel 2026-11-09)")
 	_check(s.splash_radius == 0.0 and s.rain_duration == 0.0, "splash/rain fields default off")
 	_check(s.shield_radius == 0.0 and s.shield_shot == null and s.shield_push_force == 0.0, "bubble fields default off")
 	for n in ["water_ball", "water_ball_guided", "water_ball_seeking", "water_ball_tidal", "water_splash", "water_barrage", "heavy_rain", "water_bubble", "surging_bubble", "big_ball"]:
@@ -136,13 +143,31 @@ func _check_guided() -> void:
 		var p := shots[0]
 		_check(p.direction.dot(Vector2.RIGHT) > 0.99, "guided: flies at the first aim")
 		_caster.aim_override = p.global_position + Vector2(0, 300)
+		_check(_caster._redirect_gate(guided, false), "guided: held press blocks a recast but never redirects")
+		_check(p.direction.dot(Vector2.RIGHT) > 0.99, "guided: held press did not re-aim")
 		_check(_caster._redirect_gate(guided, true), "guided: fresh press with a shot in flight is consumed")
 		_check(p.direction.dot(Vector2.DOWN) > 0.99, "guided: shot re-aimed at the cursor")
-		_check(_caster._redirect_gate(guided, false), "guided: held press still blocks a recast")
 		_check(casts[0] == 1, "guided: redirect is not a cast")
 		var before := p.direction
 		await _wait(0.3)
 		_check(is_instance_valid(p) and p.direction.is_equal_approx(before), "guided: no chase after redirect (straight line)")
+		# Daniel 2026-11-09: the shot already turned once - a second fresh
+		# press is NOT consumed and must not re-aim it; it casts instead.
+		_caster.aim_override = p.global_position + Vector2(300, 0)
+		_check(not _caster._redirect_gate(guided, true), "guided: second press not consumed (redirect spent)")
+		_check(p.direction.is_equal_approx(before), "guided: spent shot never re-aims")
+		_cast(guided, Vector2(800, 300))
+		await physics_frame
+		_check(casts[0] == 2, "guided: press after the spent redirect casts a fresh ball")
+		var fresh: Projectile = null
+		for s2 in _shots(guided):
+			if s2 != p:
+				fresh = s2
+		if fresh != null:
+			_caster.aim_override = fresh.global_position + Vector2(0, -300)
+			_check(_caster._redirect_gate(guided, true), "guided: the fresh shot still holds the gate")
+			_check(fresh.direction.dot(Vector2.UP) > 0.99, "guided: fresh shot turns on its own first redirect")
+			_check(p.direction.is_equal_approx(before), "guided: spent shot still untouched")
 	for s in _shots(guided):
 		s.queue_free()
 	await physics_frame
@@ -187,6 +212,42 @@ func _check_tidal() -> void:
 			hit += 1
 	_check(hit == 5, "tidal: hit exactly pierce_hits=5 enemies (%d)" % hit)
 	_check(p == null or not is_instance_valid(p) or p.is_queued_for_deletion(), "tidal: disappears after its 5th hit")
+	await _clear_area()
+	# Daniel 2026-11-09 boss fix: one big body can absorb the whole
+	# signature - re-hits land after rehit_delay, never inside the window.
+	var boss := _enemy(Vector2(5000, 900)) # far from every flight path here
+	boss.max_hp = 100000
+	boss.hp = 100000
+	_cast(tidal, Vector2(1200, 300))
+	await physics_frame
+	var bshot: Projectile = _shots(tidal)[0]
+	var landed := 0
+	var last_hp: float = boss.hp
+	bshot._on_body_entered(boss)
+	if boss.hp < last_hp:
+		landed += 1
+	last_hp = boss.hp
+	bshot._on_body_entered(boss)
+	_check(boss.hp == last_hp, "boss: re-contact inside rehit_delay does not double-hit")
+	while landed < 5 and is_instance_valid(bshot) and not bshot.is_queued_for_deletion():
+		await _wait(tidal.rehit_delay + 0.05)
+		bshot._on_body_entered(boss)
+		if boss.hp < last_hp:
+			landed += 1
+		last_hp = boss.hp
+	_check(landed == 5, "boss: the same body absorbed all 5 signature hits (%d)" % landed)
+	_check(not is_instance_valid(bshot) or bshot.is_queued_for_deletion(), "boss: signature despawns on its 5th hit against one body")
+	await _clear_area()
+	# Daniel 2026-11-09: the signature STAYS until its hits land - there is
+	# no travel-range expiry. Old budget: 1500px / 400px/s = 3.75s.
+	_cast(tidal, Vector2(400, -2000))
+	await physics_frame
+	var lingering: Projectile = _shots(tidal)[0]
+	await _wait(4.2)
+	_check(is_instance_valid(lingering) and not lingering.is_queued_for_deletion(), "tidal: still flying past its old range with hits left")
+	_check(lingering._traveled > tidal.range, "tidal: travelled beyond the old range budget")
+	lingering.queue_free()
+	await physics_frame
 	await _clear_area()
 	# Whole-life chase: still turning toward the cursor long after spawn.
 	_cast(tidal, Vector2(900, 300))

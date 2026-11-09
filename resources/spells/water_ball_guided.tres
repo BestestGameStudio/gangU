@@ -18,3 +18,4 @@ glow = true
 trail_length = 8
 glow_tint = Color(0.35, 0.7, 1, 1)
 recast_redirect = true
+redirect_limit = 1
