@@ -49,6 +49,7 @@ The published contracts: `Player.health_changed/died`, `SpellCaster.spell_cast/c
 
 ### D10. Death means a full run restart; revive intercepts synchronously
 On `died()`, RunManager first offers the satchel a synchronous `try_revive()` **before** latching anything; a carried item cancels the restart entirely (scene survives, upgrades/state persist). Otherwise it disables every caster on the player (`PROCESS_MODE_DISABLED`, so a dead player can never cast during the pause) and reloads the whole scene after a short delay - HP, enemies, projectiles and pickups all rebuild from the scene definition. The satchel deliberately has **no** `died()` listener: interception ordering is owned by the run manager, never by signal order.
+**Reset scope (#351, Colin 2026-11-08):** death is a FULL reset - world (back to the hub, enemies/pickups respawn), dungeon cleared-state, spells, upgrades, coins and the map. No partial carryover. Run state that lives outside the reloaded scene (autoloads, root-parked nodes - e.g. overworld cleared-state #348, the map #347) must join the `run_state` group (`RunManager.RUN_STATE_GROUP`) and implement `reset_run_state()`; RunManager calls it right before the reload. Cross-run meta records (Bestiary #325) are not run state. `scripts/test351_full_reset.gd` pins this.
 *Where:* `scripts/run_manager.gd`, `scripts/revive_satchel.gd`.
 
 ### D11. Objectives are data-driven, one node per dungeon, mounted after enemies

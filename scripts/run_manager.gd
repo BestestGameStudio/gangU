@@ -15,10 +15,22 @@ class_name RunManager
 ## again on the next run.
 ##
 ## Consumes: Player.died (#5). Exposes: run_restarting() for the #11 HUD.
-## Later integration (#9/#10): if run state moves out of scene definitions,
-## reset it here explicitly instead of relying on the reload.
+##
+## #351 FULL-RESET SCOPE (Colin, 2026-11-08): death resets EVERYTHING run-
+## scoped - the world (current area -> hub, enemies, pickups), dungeon
+## cleared-state, spells, upgrades, coins and the map. No partial carryover.
+## Today all of that lives in nodes under the run scene, so the reload alone
+## wipes it. State that outlives the reload (an autoload, a node parked on
+## the tree root, e.g. future overworld cleared-state #348 or the map #347)
+## MUST join RUN_STATE_GROUP and implement reset_run_state(); _restart calls
+## it on every member right before the reload. Cross-run META records (the
+## Bestiary, #325) are not run state and stay out of this group.
 
 signal run_restarting()
+
+## #351: group for run state that survives reload_current_scene (autoloads,
+## root-parked nodes). Members implement reset_run_state() -> void.
+const RUN_STATE_GROUP := &"run_state"
 
 @export var restart_delay: float = 1.5
 ## Production wiring: main.gd passes the shared Player explicitly, because the
@@ -62,4 +74,13 @@ func _disable_casting() -> void:
 			c.process_mode = Node.PROCESS_MODE_DISABLED
 
 func _restart() -> void:
+	reset_persistent_run_state(get_tree())
 	get_tree().reload_current_scene()
+
+## #351: explicit reset for run state the scene reload cannot reach.
+static func reset_persistent_run_state(tree: SceneTree) -> void:
+	for n in tree.get_nodes_in_group(RUN_STATE_GROUP):
+		if n.has_method(&"reset_run_state"):
+			n.reset_run_state()
+		else:
+			push_error("RunManager: '%s' is in %s but has no reset_run_state()" % [n.get_path(), RUN_STATE_GROUP])
