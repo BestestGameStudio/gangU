@@ -36,7 +36,11 @@ func _ready() -> void:
 	add_to_group("gates")
 	body_entered.connect(_on_body_entered)
 	if offering != null and gate_type != GateType.BOSS:
-		gate_type = offering.roll(gate_type, offering_rng)
+		var host := _offering_host()
+		if host != null:
+			gate_type = host.offering_type_for(name, gate_type, offering, offering_rng)
+		else:
+			gate_type = offering.roll(gate_type, offering_rng)
 	var label: Label = $TypeLabel
 	var tint := RED_TINT if gate_type == GateType.RED else NORMAL_TINT
 	label.text = "RED" if gate_type == GateType.RED else "NORMAL"
@@ -49,6 +53,16 @@ func _ready() -> void:
 	# placement measures neighbor gates by it.
 	($ColorRect as ColorRect).color = tint
 	_build_portal(tint)
+
+## #350: the run's Main caches one roll per gate so an offering stays fixed
+## until death; a bare gate outside a Main (unit tests) rolls directly.
+func _offering_host() -> Node:
+	var n := get_parent()
+	while n != null:
+		if n.has_method("offering_type_for"):
+			return n
+		n = n.get_parent()
+	return null
 
 static func ellipse_points(rx: float, ry: float, count: int) -> PackedVector2Array:
 	var pts := PackedVector2Array()
