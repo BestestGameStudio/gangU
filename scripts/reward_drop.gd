@@ -48,6 +48,14 @@ func _on_body_entered(body: Node2D) -> void:
 		print("[rewards] ineligible floor copy consumed (fixture provisional)")
 		queue_free()
 		return
+	if entry.kind == RewardEntry.Kind.SPELL and entry.spell != null:
+		# #383: the player already holds this logical spell (any source, or
+		# an upgraded form): consume without grant, pool change or signal.
+		var holder := body.get_node_or_null("SpellCaster")
+		if holder != null and holder.has_method("has_logical_spell") and holder.has_logical_spell(entry.spell):
+			print("[rewards] duplicate spell floor copy consumed (#383)")
+			queue_free()
+			return
 	if pool != null:
 		pool.remove_on_grant(entry)
 	if entry.kind == RewardEntry.Kind.SPELL:
