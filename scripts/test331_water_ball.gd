@@ -381,6 +381,7 @@ func _check_tree() -> void:
 			cur = next[0].result_spell
 	progress.free()
 	await _check_one_route()
+	await _check_other_routes()
 	# Production wiring: main.gd registers every Water Ball upgrade.
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
 	for id in ["water_guided", "water_seeking", "water_tidal", "water_splash", "water_barrage", "water_heavy_rain", "water_bubble", "water_surging_bubble", "water_big_ball"]:
@@ -429,3 +430,40 @@ func _check_one_route() -> void:
 	_check(progress.get_upgrade_paths(base).is_empty(), "route: still locked at tier 2")
 	holder.queue_free()
 	await physics_frame
+
+## The Water Ball correction must not change duplicate-copy rules elsewhere.
+func _check_other_routes() -> void:
+	for ids in [
+		["fire_ball", "fireball_split", "fireball_beam"],
+		["mana_shot", "manashot_volley", "manashot_lance"],
+		["placeholder_bolt", "bolt_flurry", "bolt_heavy"],
+		["spirit_punch", "spirit_punch_burst", "spirit_punch_burst"]
+	]:
+		var holder := Node2D.new()
+		_area.add_child(holder)
+		var caster := SpellCaster.new()
+		caster.name = "OtherRouteCaster"
+		holder.add_child(caster)
+		var progress := SpellProgress.new()
+		progress.caster_path = NodePath("../OtherRouteCaster")
+		for id in [ids[1], ids[2]]:
+			progress.upgrades.append(load("res://resources/upgrades/%s.tres" % id))
+		holder.add_child(progress)
+		await physics_frame
+		var base := _spell(ids[0])
+		caster.add_spell(base)
+		for i in 10:
+			caster.spell_cast.emit(base)
+		_check(progress.apply_upgrade(base, StringName(ids[1])), "other route: %s first branch applies" % ids[0])
+		caster.add_spell(base)
+		_check(not progress.route_taken(base), "other route: %s is not Water Ball route-locked" % ids[0])
+		_check(progress.get_upgrade_paths(base).size() == 2, "other route: %s duplicate still offers both paths" % ids[0])
+		_check(progress.can_upgrade(base), "other route: %s duplicate can upgrade" % ids[0])
+		if ids[1] == ids[2]:
+			# Spirit Punch has one T1, not a fork. Its existing duplicate-result
+			# refusal must remain separate from Water Ball's route policy.
+			_check(not progress.apply_upgrade(base, StringName(ids[2])), "other route: Spirit Punch still refuses an already-owned result")
+		else:
+			_check(progress.apply_upgrade(base, StringName(ids[2])), "other route: %s duplicate takes other branch" % ids[0])
+		holder.queue_free()
+		await physics_frame
