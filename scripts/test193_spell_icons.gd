@@ -35,16 +35,10 @@ func _shows_placeholder(icon: SpellIcon) -> bool:
 func _shows_no_icon_sprite(icon: SpellIcon) -> bool:
 	return icon != null and icon.texture == SpellIcon.NO_ICON_TEXTURE and not icon.get_node("Placeholder").visible
 
-func _equip_row(spell_name: String) -> Button:
-	var cols := equip.find_children("*", "HBoxContainer", true, false)[0]
-	for c in cols.get_child(0).get_children():
-		if c is Button and c.text == spell_name and not c.is_queued_for_deletion():
-			return c
-	return null
-
 func _equip_slot(i: int) -> Button:
+	# #375: the slots box is the panel's ONLY spell column (header at 0).
 	var cols := equip.find_children("*", "HBoxContainer", true, false)[0]
-	return cols.get_child(1).get_child(i + 1) as Button
+	return cols.get_child(0).get_child(i + 1) as Button
 
 func _frames(n: int) -> void:
 	for i in n:
@@ -87,15 +81,16 @@ func _initialize() -> void:
 
 	caster.clear_slot(0)
 	caster.assign_slot(0, lit)
+	caster.clear_slot(1)
+	caster.assign_slot(1, plain)
 	equip.show_panel()
 	await _frames(2)
-	_check(_shows_texture(_icon_in(_equip_row("IconBolt"))), "Equip unlocked row shows the spell's icon")
-	_check(_shows_no_icon_sprite(_icon_in(_equip_row("PlainBolt"))), "Equip unlocked row without icon shows the placeholder sprite (#257)")
-	var eq_lit := _icon_in(_equip_row("IconBolt"))
-	var eq_plain := _icon_in(_equip_row("PlainBolt"))
-	_check(eq_lit.size == Vector2(22, 22) and eq_plain.size == Vector2(22, 22), "Equip row icon areas are 22x22 in both states")
+	# #375: the unlocked rows are gone; the slots are the whole Tab surface.
 	var slot_btn_icon := _icon_in(_equip_slot(0))
+	var eq_plain := _icon_in(_equip_slot(1))
 	_check(_shows_texture(slot_btn_icon), "Equip slot 1 shows the assigned spell's icon")
+	_check(_shows_no_icon_sprite(eq_plain), "Equip slot 2 without icon shows the placeholder sprite (#257)")
+	_check(slot_btn_icon.size == Vector2(22, 22) and eq_plain.size == Vector2(22, 22), "Equip slot icon areas are 22x22 in both states")
 	_check(_shows_placeholder(_icon_in(_equip_slot(2))), "Equip empty slot 3 shows the placeholder")
 	caster.clear_slot(0)
 	await _frames(1)

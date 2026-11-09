@@ -372,11 +372,17 @@ func _on_slot_pressed(index: int) -> void:
 		ok = _caster.assign_slot(source, target)
 	if not ok:
 		# Roll back toward the original layout (best effort, primitives
-		# only), then refresh from caster truth either way.
+		# only, re-reading caster truth after each step), then refresh
+		# from caster truth either way.
 		push_warning("EquipPanel: rearrange refused; restoring prior layout.")
-		if slots[source] == null:
+		var now: Array = _caster.get_slots()
+		if not now.has(_selected) and now[source] == null:
 			_caster.assign_slot(source, _selected)
-		if target != null and slots[index] == null and not _caster.get_slots().has(target):
-			_caster.assign_slot(index, target)
+			now = _caster.get_slots()
+		if target != null and not now.has(target):
+			if now[index] == null:
+				_caster.assign_slot(index, target)
+			elif now[source] == null:
+				_caster.assign_slot(source, target)
 	_selected = null
 	_refresh()

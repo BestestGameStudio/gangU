@@ -178,7 +178,7 @@ func _process(delta: float) -> bool:
 					_press_tab()
 					step = 1
 				1:
-					panel._on_spell_pressed(fireball)
+					panel._on_slot_pressed(0) # #375: select the equipped Fire Ball via its slot
 					var texts: Array = []
 					var buttons: Array = []
 					for c in panel._upgrade_box.get_children():
@@ -208,7 +208,7 @@ func _process(delta: float) -> bool:
 					_press_tab()
 					step = 3
 				3:
-					panel._on_spell_pressed(fireball)
+					panel._on_slot_pressed(0) # select Fire Ball via its slot
 					panel._slot_buttons[0].grab_focus()
 					if get_root().gui_get_focus_owner() != panel._slot_buttons[0]:
 						print("[E] FAIL slot focus not held"); ok = false
@@ -224,14 +224,12 @@ func _process(delta: float) -> bool:
 					step = 5
 				5:
 					# Keyboard controls retained: arrows move focus, Enter activates.
-					_p2_spell_btn = null
-					for sb in panel._unlocked_box.get_children():
-						if sb is Button:
-							_p2_spell_btn = sb
-							break
+					# #375: the unlocked rows are gone, so the SLOT buttons are the
+					# focusable spell surface.
+					_p2_spell_btn = panel._slot_buttons[0]
 					_p2_spell_btn.grab_focus()
 					if get_root().gui_get_focus_owner() != _p2_spell_btn:
-						print("[E] FAIL spell focus not held"); ok = false
+						print("[E] FAIL slot focus not held"); ok = false
 						return _done()
 					_press_key(KEY_DOWN)
 					step = 6
@@ -245,32 +243,28 @@ func _process(delta: float) -> bool:
 						print("[E] keyboard focus nav + Enter activation retained OK")
 					else:
 						print("[E] FAIL keyboard operability: nav=", _kb_nav_ok, " status=", panel._status.text); ok = false
-					_p2_spell_btn = null
-					for sb2 in panel._unlocked_box.get_children():
-						if sb2 is Button:
-							_p2_spell_btn = sb2
-							break
+					_p2_spell_btn = panel._slot_buttons[0]
 					_p2_spell_btn.grab_focus()
 					if get_root().gui_get_focus_owner() != _p2_spell_btn:
-						print("[E] FAIL spell refocus not held"); ok = false
+						print("[E] FAIL slot refocus not held"); ok = false
 						return _done()
 					_press_tab()
 					step = 8
 				8:
 					if panel.visible:
-						print("[E] FAIL focused spell button consumed Tab"); ok = false
+						print("[E] FAIL focused slot button consumed Tab (keyboard leg)"); ok = false
 						return _done()
-					print("[E] focused SPELL button: Tab still closes OK")
+					print("[E] focused slot button (keyboard leg): Tab still closes OK")
 					_press_tab()
 					step = 9
 				9:
-					panel._on_spell_pressed(fireball)
-					# Assign Fire Ball to slot 1 through the real slot button (this
-					# clears the panel selection), re-select, then a manual click on
-					# Split shot -> apply -> slot replacement. Buttons are rebuilt on
-					# refresh, so re-capture after re-selecting.
+					panel._on_slot_pressed(0) # select Fire Ball via its slot
+					# Click Fire Ball's own slot again (deselects under #375),
+					# re-select, then a manual click on Split shot -> apply -> slot
+					# replacement. Buttons are rebuilt on refresh, so re-capture
+					# after re-selecting.
 					panel._slot_buttons[0].pressed.emit()
-					panel._on_spell_pressed(fireball)
+					panel._on_slot_pressed(0)
 					var buttons2: Array = []
 					for c2 in panel._upgrade_box.get_children():
 						if c2 is Button:
@@ -299,21 +293,24 @@ func _process(delta: float) -> bool:
 					if progress.can_upgrade(split):
 						print("[E] FAIL split upgradable at 0 casts"); ok = false
 					# Stale-selection safety (Mitra repro): after the upgrade,
-					# EXPLICITLY re-select the removed base resource, then click the
-					# OCCUPIED slot: the refusal must not pre-clear the occupant.
-					panel._on_spell_pressed(fireball)
+					# EXPLICITLY hold the removed base resource as the selection,
+					# then click the OCCUPIED slot: the refusal must not pre-clear
+					# the occupant. (#375: the UI can no longer select an unslotted
+					# resource, so the harness sets the stale selection directly.)
+					panel._selected = fireball
 					panel._slot_buttons[0].pressed.emit()
 					if caster.get_slots()[0] == split:
 						print("[E] stale-selection click preserves occupied slot OK")
 					else:
 						print("[E] FAIL stale click cleared slot: ", caster.get_slots()[0]); ok = false
-					# Successful reselection + fresh assignment still works.
-					panel._on_spell_pressed(split)
+					# Successful reselection + rearrange still works: Split moves to
+					# slot 2, swapping with its occupant.
+					panel._on_slot_pressed(0)
 					panel._slot_buttons[1].pressed.emit()
 					if caster.get_slots()[1] == split:
-						print("[E] reselect + assign to slot 2 OK")
+						print("[E] reselect + rearrange to slot 2 OK")
 					else:
-						print("[E] FAIL reselect/assign: ", caster.get_slots()[1]); ok = false
+						print("[E] FAIL reselect/rearrange: ", caster.get_slots()[1]); ok = false
 					step = 10
 				10:
 					# Arrow clears on replacement: Fire Ball row is gone, the

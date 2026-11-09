@@ -1,12 +1,13 @@
 extends SceneTree
-## #94 equip-panel visual identity harness. Fixture: stub Player + stub
-## SpellCaster (typed subclasses so the panel's `as Player` / `as SpellCaster`
-## casts pass; _ready/_process overrides skip gameplay wiring) + stub upgrade
-## provider (duck-typed per the panel's upgrader contract). Asserts the #94
-## presentation layer: two-column structure + headers, state chips, per-state
-## border channels (selected / upgrade-available / occupied / empty /
-## move-source), upgrade section styling, equip flow end-to-end, and that all
-## labels are preserved. Decor legs FAIL on old main (no styling).
+## #94 equip-panel visual identity harness, re-pinned for the #375 Tab-side
+## layout (Daniel, 2026-11-09: the menu shows ONLY your slots). Fixture:
+## stub Player + stub SpellCaster (typed subclasses so the panel's
+## `as Player` / `as SpellCaster` casts pass; _ready/_process overrides skip
+## gameplay wiring) + stub upgrade provider (duck-typed per the panel's
+## upgrader contract). Asserts the presentation layer: single-column slots
+## structure + header, per-state border channels (selected / occupied /
+## empty / move-source), upgrade section styling, and the slot-driven
+## select/rearrange flow end-to-end. Decor legs FAIL on the pre-#94 panel.
 
 class StubPlayer extends Player:
 	func _ready() -> void:
@@ -75,27 +76,10 @@ func _border_of(b: Button) -> Color:
 	var sb := b.get_theme_stylebox("normal") as StyleBoxFlat
 	return sb.border_color if sb != null else Color(-1, -1, -1)
 
-func _row_button(box: VBoxContainer, text: String) -> Button:
-	for c in box.get_children():
-		if c is Button and c.text == text:
-			return c
-	return null
-
-func _row_chip(box: VBoxContainer, text: String) -> ColorRect:
-	var b := _row_button(box, text)
-	if b == null:
-		return null
-	for c in b.get_children():
-		if c is ColorRect:
-			return c
-	return null
-
 const C_SELECTED := Color(0.85, 0.9, 1.0, 0.9)
 const C_UPGRADE := Color(0.95, 0.75, 0.25, 0.9)
 const C_DIM := Color(0.45, 0.48, 0.55, 0.6)
 const C_ASSIGNED := Color(0.75, 0.8, 0.9, 0.8)
-const C_CHIP_ON := Color(0.5, 0.85, 0.55, 0.95)
-const C_CHIP_OFF := Color(1.0, 1.0, 1.0, 0.08)
 
 func _initialize() -> void:
 	var player := StubPlayer.new()
@@ -110,7 +94,7 @@ func _initialize() -> void:
 	var a := _spell("AlphaBolt")
 	var b := _spell("BetaBolt")
 	caster.fake_unlocked = [a, b]
-	caster.fake_slots = [a, null, null, null, null, null]
+	caster.fake_slots = [a, b, null, null, null, null]
 	upg.upgradeable = [b]
 	var panel: Node = load("res://scenes/equip_panel.tscn").instantiate()
 	panel.upgrader_path = NodePath("../UpgraderStub")
@@ -126,8 +110,8 @@ func _initialize() -> void:
 	_check(panel.visible == true, "(0) show_panel reveals")
 	_check(panel.is_in_group("modal_ui"), "(0) modal_ui group on show")
 
-	# (1) two-column structure + headers.
-	var panel_style_ok: bool = false
+	# (1) structure + header: title, then ONE slots column + divider + the
+	# #376 stat grid; no Unlocked column anywhere.
 	var center: CenterContainer = null
 	for c in panel.get_children():
 		if c is CenterContainer:
@@ -139,74 +123,69 @@ func _initialize() -> void:
 	_check(plate_sb != null, "(1) plate has flat StyleBoxFlat")
 	var vbox := plate.get_child(0) as VBoxContainer
 	var title := vbox.get_child(0) as Label
-	_check(title.text == "Equip Spells", "(1) title preserved (got '%s')" % title.text)
+	_check(title.text == "Spells", "(1) title names the spell menu (got '%s')" % title.text)
 	var cols := vbox.get_child(1) as HBoxContainer
-	# #376: the stat grid joins as the right-most column (after a divider);
-	# the two spell columns keep indices 0 and 1.
-	_check(cols != null and cols.get_child_count() == 4 and cols.get_child(3) is StatGrid, "(1) two spell columns + #376 stats column")
-	var unlocked_box := cols.get_child(0) as VBoxContainer
-	var slots_box := cols.get_child(1) as VBoxContainer
-	var uheader := unlocked_box.get_child(0) as Label
-	_check(uheader.text == "Unlocked", "(1) Unlocked header preserved")
+	_check(cols != null and cols.get_child_count() == 3 and cols.get_child(2) is StatGrid,
+		"(1) slots column + divider + #376 stats column (got %d children)" % (cols.get_child_count() if cols != null else -1))
+	var slots_box := cols.get_child(0) as VBoxContainer
+	_check(slots_box != null, "(1) first column is the slots box")
 	var sheader := slots_box.get_child(0) as Label
-	_check(sheader != null and sheader.text == "Slots", "(1) Slots header added")
+	_check(sheader != null and sheader.text == "Slots", "(1) Slots header preserved")
+	var no_unlocked := true
+	for n in panel.find_children("*", "Label", true, false):
+		if (n as Label).text == "Unlocked":
+			no_unlocked = false
+	_check(no_unlocked, "(1) no Unlocked column (#375: the menu shows only your slots)")
 
-	# (2) unlocked rows: [chip + button], texts preserved.
-	var rows: Array = unlocked_box.get_children().filter(func(c): return c is Button)
-	_check(rows.size() == 2, "(2) two unlocked rows (got %d)" % rows.size())
-	_check(_row_button(unlocked_box, "AlphaBolt") != null, "(2) AlphaBolt row preserved")
-	_check(_row_button(unlocked_box, "BetaBolt") != null, "(2) BetaBolt row preserved")
-	_check(_row_chip(unlocked_box, "AlphaBolt") != null, "(2) state chip present")
-
-	# (3) chip channel: equipped vs not.
-	_check(_row_chip(unlocked_box, "AlphaBolt") != null and _row_chip(unlocked_box, "AlphaBolt").color == C_CHIP_ON, "(3) equipped chip on AlphaBolt")
-	_check(_row_chip(unlocked_box, "BetaBolt") != null and _row_chip(unlocked_box, "BetaBolt").color == C_CHIP_OFF, "(3) unequipped chip on BetaBolt")
-
-	# (4) border channel at rest: dim / upgrade-available.
-	_check(_border_of(_row_button(unlocked_box, "AlphaBolt")) == C_DIM, "(4) AlphaBolt dim border")
-	_check(_border_of(_row_button(unlocked_box, "BetaBolt")) == C_UPGRADE, "(4) BetaBolt upgrade-available amber")
-
-	# (5) slots: occupied vs empty borders + preserved texts.
+	# (2) slots: occupied vs empty borders + preserved texts.
 	var slot_buttons: Array = []
 	for c in slots_box.get_children():
 		if c is Button:
 			slot_buttons.append(c)
-	_check(slot_buttons.size() == 6, "(5) six slot buttons")
-	_check(slot_buttons[0].text == "LMB: AlphaBolt", "(5) slot 1 text preserved (got '%s')" % slot_buttons[0].text)
-	_check(slot_buttons[1].text == "RMB: (empty)", "(5) slot 2 empty text (got '%s')" % slot_buttons[1].text)
-	_check(_border_of(slot_buttons[0]) == C_ASSIGNED, "(5) occupied slot border")
-	_check(_border_of(slot_buttons[1]) == C_DIM, "(5) empty slot border")
+	_check(slot_buttons.size() == 6, "(2) six slot buttons")
+	_check(slot_buttons[0].text == "LMB: AlphaBolt", "(2) slot 1 text preserved (got '%s')" % slot_buttons[0].text)
+	_check(slot_buttons[2].text == "Q: (empty)", "(2) slot 3 empty text (got '%s')" % slot_buttons[2].text)
+	_check(_border_of(slot_buttons[0]) == C_ASSIGNED, "(2) occupied slot border")
+	_check(_border_of(slot_buttons[2]) == C_DIM, "(2) empty slot border")
 
-	# (6) selection: bright border on row + move-source highlight on its slot.
-	panel._on_spell_pressed(a)
+	# (3) selection: clicking an occupied slot selects its spell - bright
+	# move-source border on that slot + status line.
+	panel._on_slot_pressed(0)
 	await process_frame
-	_check(_border_of(_row_button(unlocked_box, "AlphaBolt")) == C_SELECTED, "(6) selected border bright")
-	_check(_border_of(slot_buttons[0]) == C_SELECTED, "(6) move-source slot highlighted")
+	_check(_border_of(slot_buttons[0]) == C_SELECTED, "(3) selected slot highlighted")
 	var status := vbox.get_child(vbox.get_child_count() - 1) as Label
-	_check(status.text == "Selected: AlphaBolt", "(6) status text (got '%s')" % status.text)
+	_check(status.text == "Selected: AlphaBolt", "(3) status text (got '%s')" % status.text)
+	# Clicking the same slot again deselects.
+	panel._on_slot_pressed(0)
+	await process_frame
+	_check(status.text == "Selected: none" and _border_of(slot_buttons[0]) == C_ASSIGNED,
+		"(3) same-slot click deselects (status '%s')" % status.text)
 
-	# (7) upgrade section renders for upgradeable selection with amber style.
-	panel._on_spell_pressed(b)
+	# (4) upgrade section renders for an upgradeable equipped selection with
+	# amber style.
+	panel._on_slot_pressed(1) # BetaBolt is slotted + upgradeable
 	await process_frame
 	var upgrade_box := vbox.get_child(2) as VBoxContainer
 	var uh := upgrade_box.get_child(0) as Label
-	_check(uh != null and uh.text == "Upgrades", "(7) Upgrades header on selection")
+	_check(uh != null and uh.text == "Upgrades", "(4) Upgrades header on selection")
 	var ub := upgrade_box.get_child(1) as Button
-	_check(ub != null and ub.text == "Path One", "(7) upgrade path button (got '%s')" % ub.text)
-	_check(_border_of(ub) == C_UPGRADE, "(7) upgrade button amber")
+	_check(ub != null and ub.text == "Path One", "(4) upgrade path button (got '%s')" % (ub.text if ub != null else "null"))
+	_check(_border_of(ub) == C_UPGRADE, "(4) upgrade button amber")
 
-	# (8) equip flow end-to-end: select AlphaBolt, press slot 3 -> move.
-	panel._on_spell_pressed(a)
+	# (5) rearrange flow end-to-end: put BetaBolt back, select AlphaBolt,
+	# press slot 3 -> move.
+	panel._on_slot_pressed(1)
+	await process_frame
+	panel._on_slot_pressed(0)
 	await process_frame
 	panel._on_slot_pressed(2)
 	await process_frame
-	_check(caster.assigned.size() == 1 and caster.assigned[0][0] == 2 and caster.assigned[0][1] == a, "(8) assign_slot(2, AlphaBolt) recorded")
-	_check(caster.cleared.has(0), "(8) old slot cleared (move semantics)")
-	_check(slot_buttons[2].text == "Q: AlphaBolt", "(8) slot 3 shows spell (got '%s')" % slot_buttons[2].text)
-	_check(slot_buttons[0].text == "LMB: (empty)", "(8) slot 1 emptied (got '%s')" % slot_buttons[0].text)
-	_check(status.text == "Selected: none", "(8) selection cleared after assign")
-	_check(_border_of(slot_buttons[2]) == C_ASSIGNED, "(8) newly occupied slot border")
-	_check(_row_chip(unlocked_box, "AlphaBolt") != null and _row_chip(unlocked_box, "AlphaBolt").color == C_CHIP_ON, "(8) chip follows new slot")
+	_check(caster.assigned.size() == 1 and caster.assigned[0][0] == 2 and caster.assigned[0][1] == a, "(5) assign_slot(2, AlphaBolt) recorded")
+	_check(caster.cleared.has(0), "(5) old slot cleared (move semantics)")
+	_check(slot_buttons[2].text == "Q: AlphaBolt", "(5) slot 3 shows spell (got '%s')" % slot_buttons[2].text)
+	_check(slot_buttons[0].text == "LMB: (empty)", "(5) slot 1 emptied (got '%s')" % slot_buttons[0].text)
+	_check(status.text == "Selected: none", "(5) selection cleared after rearrange")
+	_check(_border_of(slot_buttons[2]) == C_ASSIGNED, "(5) newly occupied slot border")
 
 	print("[94] failures=%d" % failures)
 	if failures > 0:
