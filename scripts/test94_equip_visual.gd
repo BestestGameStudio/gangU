@@ -149,17 +149,16 @@ func _initialize() -> void:
 	_check(_border_of(slot_buttons[2]) == C_DIM, "(2) empty slot border")
 
 	# (3) selection: clicking an occupied slot selects its spell - bright
-	# move-source border on that slot + status line.
+	# move-source border on that slot (#417: no status line).
 	panel._on_slot_pressed(0)
 	await process_frame
 	_check(_border_of(slot_buttons[0]) == C_SELECTED, "(3) selected slot highlighted")
-	var status := vbox.get_child(vbox.get_child_count() - 1) as Label
-	_check(status.text == "Selected: AlphaBolt", "(3) status text (got '%s')" % status.text)
+	_check(panel._selected == a, "(3) slot click selects AlphaBolt")
 	# Clicking the same slot again deselects.
 	panel._on_slot_pressed(0)
 	await process_frame
-	_check(status.text == "Selected: none" and _border_of(slot_buttons[0]) == C_ASSIGNED,
-		"(3) same-slot click deselects (status '%s')" % status.text)
+	_check(panel._selected == null and _border_of(slot_buttons[0]) == C_ASSIGNED,
+		"(3) same-slot click deselects")
 
 	# (4) upgrade section renders for an upgradeable equipped selection with
 	# amber style.
@@ -184,7 +183,7 @@ func _initialize() -> void:
 	_check(caster.cleared.has(0), "(5) old slot cleared (move semantics)")
 	_check(slot_buttons[2].text == "Q: AlphaBolt", "(5) slot 3 shows spell (got '%s')" % slot_buttons[2].text)
 	_check(slot_buttons[0].text == "LMB: (empty)", "(5) slot 1 emptied (got '%s')" % slot_buttons[0].text)
-	_check(status.text == "Selected: none", "(5) selection cleared after rearrange")
+	_check(panel._selected == null, "(5) selection cleared after rearrange")
 	_check(_border_of(slot_buttons[2]) == C_ASSIGNED, "(5) newly occupied slot border")
 
 	print("[94] failures=%d" % failures)

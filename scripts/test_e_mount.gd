@@ -239,10 +239,10 @@ func _process(delta: float) -> bool:
 					_press_key(KEY_ENTER)
 					step = 7
 				7:
-					if _kb_nav_ok and panel._status.text != "Selected: none":
+					if _kb_nav_ok and panel._selected != null:
 						print("[E] keyboard focus nav + Enter activation retained OK")
 					else:
-						print("[E] FAIL keyboard operability: nav=", _kb_nav_ok, " status=", panel._status.text); ok = false
+						print("[E] FAIL keyboard operability: nav=", _kb_nav_ok, " selected=", panel._selected); ok = false
 					_p2_spell_btn = panel._slot_buttons[0]
 					_p2_spell_btn.grab_focus()
 					if get_root().gui_get_focus_owner() != _p2_spell_btn:

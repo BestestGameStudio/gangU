@@ -20,11 +20,18 @@ extends CanvasLayer
 
 const ROW_PAD := 6.0
 const OUT_OF_STOCK_TEXT := "OUT OF STOCK"
+## (#428) Relics section. Daniel 2026-11-09: "add a section for relics in
+## the shop UI". Display only: relic goods already in the shop's stock
+## render here instead of among the spell/consumable rows. Stock, prices
+## and the buy flow are unchanged, and the slot total stays stock_size.
+const RELICS_HEADER_TEXT := "RELICS"
+const NO_RELICS_TEXT := "No relics for sale"
 
 var _shop: Shop
 var _wallet: CurrencyWallet
 var _balance_label: Label
 var _rows: VBoxContainer
+var _relic_rows: VBoxContainer
 var _refresh_button: Button
 
 func _ready() -> void:
@@ -60,9 +67,9 @@ func _build_skeleton() -> void:
 	backdrop.anchor_right = 0.5
 	backdrop.anchor_bottom = 0.5
 	backdrop.offset_left = -230.0
-	backdrop.offset_top = -180.0
+	backdrop.offset_top = -215.0
 	backdrop.offset_right = 230.0
-	backdrop.offset_bottom = 180.0
+	backdrop.offset_bottom = 215.0
 	add_child(backdrop)
 	var margin := MarginContainer.new()
 	margin.name = "Margin"
@@ -90,6 +97,16 @@ func _build_skeleton() -> void:
 	_rows.name = "Rows"
 	_rows.add_theme_constant_override("separation", 6)
 	vbox.add_child(_rows)
+	var relic_header := Label.new()
+	relic_header.name = "RelicHeader"
+	relic_header.text = RELICS_HEADER_TEXT
+	relic_header.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	relic_header.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(relic_header)
+	_relic_rows = VBoxContainer.new()
+	_relic_rows.name = "RelicRows"
+	_relic_rows.add_theme_constant_override("separation", 6)
+	vbox.add_child(_relic_rows)
 	_refresh_button = Button.new()
 	_refresh_button.name = "RefreshButton"
 	UiStyle.style_button(_refresh_button, UiStyle.B_ACCENT, ROW_PAD)
@@ -108,17 +125,30 @@ func _build_skeleton() -> void:
 ## new good.
 func _render() -> void:
 	_update_balance_text()
-	for c in _rows.get_children():
-		_rows.remove_child(c)
-		c.queue_free()
+	for box in [_rows, _relic_rows]:
+		for c in box.get_children():
+			box.remove_child(c)
+			c.queue_free()
 	if _shop == null:
 		return
-	var stock := _shop.stock_entries()
-	for i in range(maxi(_shop.stock_size, 0)):
-		if i < stock.size():
-			_rows.add_child(_make_row(stock[i]))
+	# (#428) Relic goods go to the RELICS section; the general rows keep
+	# the remaining slots, so both sections together show stock_size slots.
+	var goods: Array[ShopEntry] = []
+	var relics: Array[ShopEntry] = []
+	for e in _shop.stock_entries():
+		if e.good is Relic:
+			relics.append(e)
+		else:
+			goods.append(e)
+	for i in range(maxi(_shop.stock_size - relics.size(), 0)):
+		if i < goods.size():
+			_rows.add_child(_make_row(goods[i]))
 		else:
 			_rows.add_child(_make_out_of_stock_row())
+	for e in relics:
+		_relic_rows.add_child(_make_row(e))
+	if relics.is_empty():
+		_relic_rows.add_child(_make_no_relics_row())
 	_refresh_button.text = "RE-ROLL STOCK (%dc)" % _shop.paid_refresh_price()
 	_refresh_button.disabled = not _shop.can_paid_refresh()
 
@@ -132,7 +162,7 @@ func _make_row(entry: ShopEntry) -> Control:
 	icon.show_spell(entry.good as Spell)
 	hbox.add_child(icon)
 	var name_label := Label.new()
-	name_label.text = entry.good.spell_name if entry.good is Spell else (entry.good.consumable_name if entry.good is Consumable else "Item")
+	name_label.text = _good_name(entry.good)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(name_label)
 	var price_label := Label.new()
@@ -160,6 +190,28 @@ func _make_out_of_stock_row() -> Control:
 	label.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.7))
 	row.add_child(label)
 	return row
+
+## (#428) Honest empty state for the RELICS section: dimmed, no buy button.
+func _make_no_relics_row() -> Control:
+	var row := PanelContainer.new()
+	row.name = "NoRelicsRow"
+	row.add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_DIM, ROW_PAD))
+	var label := Label.new()
+	label.name = "NoRelicsLabel"
+	label.text = NO_RELICS_TEXT
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.7))
+	row.add_child(label)
+	return row
+
+static func _good_name(good: Resource) -> String:
+	if good is Spell:
+		return (good as Spell).spell_name
+	if good is Consumable:
+		return (good as Consumable).consumable_name
+	if good is Relic and (good as Relic).display_name != "":
+		return (good as Relic).display_name
+	return "Item"
 
 func _update_balance_text() -> void:
 	_balance_label.text = "Wallet: %dc" % (_wallet.balance() if _wallet != null else 0)
