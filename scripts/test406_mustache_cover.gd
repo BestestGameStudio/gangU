@@ -28,7 +28,10 @@ extends SceneTree
 ##   (G) DASH: repositioning to cover after the player strafes happens at
 ##       FAST_MULT speed.
 ##   (H) cover destroyed mid-hold (breakable terrain): the enemy drops it
-##       and engages (reaches the player).
+##       and engages (reaches the player). Raw clear_cell path: the
+##       repick-cadence poll catches it (raw set/clear emit no signals).
+##   (M) destroy_cell path: the cell_destroyed signal drops the held
+##       cover immediately (no poll wait).
 ##   (I) solid cover: a DestroyableContainer (cover group) is used as
 ##       shelter with no blocking terrain at all ("any cover").
 ##   (J) two mobs are independent: the aimed-at one holds while the
@@ -71,6 +74,7 @@ func _initialize() -> void:
 	await _leg_e_charge_after_3s()
 	await _leg_f_timer_reset_on_aim()
 	await _leg_h_cover_destroyed()
+	await _leg_m_cover_destroy_signal()
 	await _leg_i_solid_container_cover()
 	await _leg_j_two_mobs_independent()
 	await _leg_k_player_death()
@@ -302,6 +306,29 @@ func _leg_h_cover_destroyed() -> void:
 	await _drive_real(e, 90, p, true)
 	_check(e.global_position.distance_to(p.global_position) < before.distance_to(p.global_position) - 40.0,
 		"H: with no cover left it engages (closes on the player)")
+	_teardown(stage)
+
+func _leg_m_cover_destroy_signal() -> void:
+	var s: Array = _mk_stage()
+	var stage: Node2D = s[0]
+	var map: TerrainMap = s[1]
+	var tree := Vector2i(20, 20)
+	map.set_cell(tree, TerrainTypes.TREE) # destroyable blocking type
+	var tree_pos: Vector2 = map.cell_to_world(tree)
+	var p: Player = _mk_player(stage, tree_pos + Vector2(260, 0))
+	var e: Enemy = _mk_enemy(stage, map, tree_pos + Vector2(-260, 0))
+	await process_frame
+	e.global_position = tree_pos + Vector2(-260, 0)
+	p.global_position = tree_pos + Vector2(260, 0)
+	await _drive_real(e, 240, p, true)
+	_check(_state(e) == EnemyBehaviorCover.State.HOLD, "M: holding cover before it breaks")
+	# destroy_cell emits cell_destroyed; the drop must be immediate, not
+	# on the 0.25s repick cadence (leg H covers the signal-less path).
+	map.destroy_cell(tree)
+	await process_frame
+	_check(_cover(e).get("_has_cover") == false, "M: cell_destroyed drops the held cover immediately")
+	await _drive_real(e, 3, p, true)
+	_check(_state(e) != EnemyBehaviorCover.State.HOLD, "M: no hold on a destroyed cell")
 	_teardown(stage)
 
 func _leg_i_solid_container_cover() -> void:

@@ -12,19 +12,24 @@ extends RefCounted
 ## Mustache Warlord boss keeps its #177 behavior. And: "it isn't hardcoded
 ## to trees. It should be any cover."
 ##
-## Architecture (peer findings, Colin's Instinct on e94c89e, applied): this
-## is NOT the enemy's _behavior slot value. EnemyBehaviorChaseContact owns
-## one instance of this helper and delegates to it only when the enemy
-## opts in (Enemy.cover_seek, set by scenes/enemy.tscn). The slot keeps
-## holding an EnemyBehaviorChaseContact, so Enemy._resolve_target's
+## Architecture: this is NOT the enemy's _behavior slot value.
+## EnemyBehaviorChaseContact owns one instance of this helper and
+## delegates to it only when the enemy opts in (Enemy.cover_seek, set by
+## scenes/enemy.tscn). The slot keeps holding an
+## EnemyBehaviorChaseContact, so Enemy._resolve_target's
 ## `_behavior is EnemyBehaviorChaseContact` test - summon taunts (#209)
 ## and defense-core targeting (#337) - keeps working untouched, and
 ## guard/patrol/migrate (#346/#373), which delegate their ENGAGED chase to
 ## the same base, seek cover too while chasing a player. Fallbacks call
-## the owner's unchanged _chase_step.
+## the owner's unchanged _chase_step. (Composition + seam preservation
+## follow technical recommendations from Colin's Instinct on e94c89e -
+## recommendations only: no eligibility rule or value below is
+## peer-approved.)
 ##
-## COVER = anything that blocks movement, discovered through two generic
-## providers, never by tree type (Daniel: "any cover"):
+## COVER ELIGIBILITY (author-proposed definition, human-open): a cover
+## candidate is any solid that can geometrically shield the enemy from
+## the player - never selected by tree type (Daniel: "any cover") -
+## discovered through two generic providers:
 ##   1. Terrain adapter: any BLOCKING, non-swimmable cell on the wired
 ##      TerrainMap, via the TerrainMap lookup seam only
 ##      (tile_type_at_cell/type_properties/cell_to_world - no raw registry
@@ -34,10 +39,10 @@ extends RefCounted
 ##      Water is not cover; pits (FALLING) are not cover.
 ##   2. Solid adapter: any Node2D in the "cover" group (DestroyableContainer
 ##      opts in on _ready). Any future solid object can opt in the same way.
-## A candidate must provide SHELTER, not just blockage: its hold point is
-## ground this mover can enter, on the side away from the player, and
-## geometrically occluded from the player by blocking material (segment
-## hold->player crosses a blocking cell, or the solid itself).
+## Blockage alone is not enough: a candidate must provide SHELTER -
+## a hold point on ground this mover can enter, placed on the side away
+## from the player so the candidate itself sits on the hold->player
+## segment (geometric shielding), verified by the occlusion check.
 ## #407 (trees block projectiles) is a separate concern and is NOT folded
 ## in: this behavior is positioning only.
 ##
@@ -57,10 +62,12 @@ extends RefCounted
 ##   ENGAGED - plain chase/contact (the owner's _chase_step, unchanged).
 ##           If the player disengages beyond RE_ENGAGE_DIST and cover
 ##           exists, back to SEEK.
-## A destroyed cover (breakable terrain, broken container) is dropped on
-## the repick cadence - TerrainMap set/clear_cell emit no signals, so
-## validity is polled. A mover wedged on an unreachable hold point
-## (STALL_TIME at zero velocity) drops the cover and engages.
+## A destroyed cover is dropped two ways: instantly via the TerrainMap
+## cell_destroyed/cell_interacted signals (the destroy_cell/interact_cell
+## paths emit them), and - because raw set_cell/clear_cell emit nothing -
+## via the repick-cadence validity poll that also catches freed solids.
+## A mover wedged on an unreachable hold point (STALL_TIME at zero
+## velocity) drops the cover and engages.
 ##
 ## Movement routes through a per-mover #391 TerrainPath helper and the
 ## parent's _slide (no raw-velocity bypass of terrain/water/crowd rules),
@@ -102,6 +109,10 @@ var _hold_pos: Vector2 = Vector2.ZERO
 var _away_timer: float = 0.0
 var _repick_timer: float = 0.0
 var _stall_timer: float = 0.0
+## The TerrainMap whose cell_destroyed/cell_interacted signals we listen
+## to for instant cover invalidation (raw set/clear_cell emit nothing, so
+## the repick poll below remains the catch-all).
+var _signal_map: TerrainMap = null
 ## Separate routing state from the owner's chase path - a half-walked
 ## chase path never mixes with a cover route (the #346 _walk_path idiom).
 var _terrain_path := TerrainPath.new()
@@ -117,6 +128,7 @@ func physics_step(owner: EnemyBehaviorChaseContact, enemy: Enemy, player, delta:
 		owner._chase_step(enemy, player, delta)
 		return
 	_repick_timer = maxf(0.0, _repick_timer - delta)
+	_hook_terrain_signals(enemy)
 	var pointing := _is_pointed_at(enemy, player)
 	if _state == State.SEEK or _state == State.DASH or _state == State.HOLD:
 		_away_timer = 0.0 if pointing else _away_timer + delta
@@ -239,6 +251,26 @@ func _pick_cover(enemy: Enemy, player: Player, advance_only: bool) -> bool:
 func _drop_cover() -> void:
 	_has_cover = false
 	_cover_node = null
+
+func _hook_terrain_signals(enemy: Enemy) -> void:
+	if enemy.terrain == _signal_map:
+		return
+	if _signal_map != null and is_instance_valid(_signal_map):
+		if _signal_map.cell_destroyed.is_connected(_on_terrain_cell_changed):
+			_signal_map.cell_destroyed.disconnect(_on_terrain_cell_changed)
+		if _signal_map.cell_interacted.is_connected(_on_terrain_cell_changed):
+			_signal_map.cell_interacted.disconnect(_on_terrain_cell_changed)
+	_signal_map = enemy.terrain
+	if _signal_map != null:
+		_signal_map.cell_destroyed.connect(_on_terrain_cell_changed)
+		_signal_map.cell_interacted.connect(_on_terrain_cell_changed)
+
+## TerrainMap destroy/interact paths emit these; a held terrain cover
+## whose cell just changed is dropped immediately (the poll stays for
+## raw set_cell/clear_cell edits, which emit nothing).
+func _on_terrain_cell_changed(cell: Vector2i, _old_type = null, _new_type = null, _rule_id = null) -> void:
+	if _has_cover and _cover_node == null and cell == _cover_cell:
+		_drop_cover()
 
 func _cover_still_valid(enemy: Enemy) -> bool:
 	if _cover_node != null:
