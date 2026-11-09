@@ -192,6 +192,7 @@ func _ready() -> void:
 	map_panel.name = "MapPanel"
 	map_panel.world_map_path = NodePath("../WorldMap")
 	add_child(map_panel)
+	_mount_fast_travel() # #349: separate mount after map setup
 	_load_hub()
 
 var current_area: Node = null
@@ -217,6 +218,18 @@ const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
 ## reloads Main. An overworld entrance only gets its guards while its
 ## dungeon is absent from here.
 var cleared_dungeons: Dictionary = {}
+
+## #349 / #353 canonical clear API. No second record or node.
+signal dungeon_cleared(dungeon_id: StringName)
+
+func is_cleared(dungeon_id: StringName) -> bool:
+	return cleared_dungeons.has(dungeon_id)
+
+func cleared_ids() -> Array[StringName]:
+	var ids: Array[StringName] = []
+	for id: StringName in cleared_dungeons:
+		ids.append(id)
+	return ids
 
 func _load_hub() -> void:
 	_entry_gate_type = -1
@@ -275,6 +288,7 @@ func _swap(area: Node) -> void:
 	_mount_exit_portal(current_area)
 	_mount_revive_item(current_area)
 	_mount_dungeon_modifiers(current_area)
+	_refresh_fast_travel()
 
 ## (#222) Dungeon modifiers: an area opts in with ONE "DungeonModifiers"
 ## child (DungeonModifierHost, SpawnData idiom). Bound LAST so the
@@ -415,7 +429,11 @@ func _on_boss_spawned(boss: Node) -> void:
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
+	var first_clear := not is_cleared(dungeon_id)
 	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
+	if first_clear:
+		dungeon_cleared.emit(dungeon_id)
+	_refresh_fast_travel.call_deferred()
 	## (#132) Confirmed dungeon VICTORY only: free stock refresh and the
 	## paid-refresh price resets (Daniel 2026-11-07). A plain return to hub
 	## (exit portal without a clear) never reaches this path.
@@ -479,3 +497,80 @@ func _mount_revive_item(area: Node) -> void:
 	item.name = "ReviveItem"
 	item.position = Vector2(900, 480)
 	area.add_child(item)
+
+
+## #349 travel wiring. Uses the ONE canonical dictionary above. Mount kept
+## separate from the map block so exploration-map work remains independent.
+var _fast_travel: FastTravelPanel
+
+func _mount_fast_travel() -> void:
+	_fast_travel = FastTravelPanel.new()
+	_fast_travel.name = "FastTravelPanel"
+	add_child(_fast_travel)
+	_fast_travel.destination_requested.connect(_request_fast_travel)
+	_fast_travel.hub_requested.connect(_request_fast_return)
+
+func _refresh_fast_travel() -> void:
+	if not is_instance_valid(_fast_travel) or current_area == null:
+		return
+	_fast_travel.close()
+	var choices: Array[StringName] = []
+	if _is_hub_area():
+		choices = cleared_ids()
+	_fast_travel.set_choices(choices, not _is_hub_area() and can_fast_return())
+
+func _is_hub_area() -> bool:
+	return current_area != null and current_area.scene_file_path == FastTravelRoutes.HUB_SCENE
+
+## Only the production Hub is currently proven incapable of enemy spawn.
+## Empty overworld/dungeon groups are NOT sufficient: their spawn carriers,
+## objectives and scripted generators remain capabilities after enemies die.
+## New safe-area types must establish their own no-spawn contract first.
+func _is_proven_safe_area() -> bool:
+	if not _is_hub_area():
+		return false
+	var enemies := not get_tree().get_nodes_in_group("enemies").is_empty()
+	var spawn_capable := current_area.get_node_or_null("SpawnData") != null or current_area.get_node_or_null("EntranceGuards") != null or current_area.get_node_or_null("DungeonObjective") != null
+	return FastTravelRoutes.is_safe_area(enemies, spawn_capable)
+
+func can_fast_return() -> bool:
+	if current_area == null:
+		return false
+	if _is_proven_safe_area():
+		return true
+	var objective := current_area.get_node_or_null("DungeonObjective") as DungeonObjective
+	## #349 owner choice: once cleared this run, re-entry may return to hub
+	## immediately, without completing the fresh interior objective again.
+	## Existing exit-portal locks are unchanged; this is the explicit shortcut.
+	return objective != null and is_cleared(objective.dungeon_id)
+
+func _request_fast_travel(dungeon_id: StringName) -> void:
+	_commit_fast_travel.call_deferred(dungeon_id)
+
+func _commit_fast_travel(dungeon_id: StringName) -> void:
+	var path := FastTravelRoutes.scene_from_hub(_is_hub_area(), dungeon_id, cleared_ids())
+	var player := get_node_or_null("Player") as Player
+	if path == "" or player == null or player.hp <= 0:
+		return
+	var target := load(path) as PackedScene
+	if target == null:
+		return
+	## Reuse the current run's gate offering and authored boss semantics.
+	var authored := Gate.GateType.RED if dungeon_id == &"dungeon_b" else Gate.GateType.NORMAL
+	var gate_name: StringName = &"GateRed" if dungeon_id == &"dungeon_b" else &"GateNormal"
+	if dungeon_id in [&"dungeon_a", &"dungeon_b"]:
+		_entry_gate_type = offering_type_for(gate_name, authored, preload("res://resources/gate_offering.tres"))
+	elif dungeon_id == &"dungeon_e":
+		_entry_gate_type = Gate.GateType.NORMAL # Preserve authored defense gate; no offering roll.
+	else:
+		_entry_gate_type = Gate.GateType.BOSS
+	_swap(target.instantiate())
+
+func _request_fast_return() -> void:
+	_commit_fast_return.call_deferred()
+
+func _commit_fast_return() -> void:
+	var player := get_node_or_null("Player") as Player
+	if player == null or player.hp <= 0 or not can_fast_return() or _is_hub_area():
+		return
+	_load_hub()

@@ -131,7 +131,7 @@ func _leg_hub() -> void:
 	for c in hub.get_children():
 		if c is Gate and (c as Gate).gate_type != Gate.GateType.TRAVEL:
 			gates.append(c)
-	_check(gates.size() == 5, "(C) overworld has five dungeon entrances (got %d; #326's Beast entrance integrated in the rebase)" % gates.size())
+	_check(gates.size() == 6, "(C) overworld has six dungeon entrances (got %d; Beast and Defense entrances integrated)" % gates.size())
 	_check(hub.get_node_or_null("GateGenerated") is Gate, "(C) GateGenerated present (#185)")
 	var g := hub.get_node_or_null("GateBoss") as Gate
 	_check(g != null and g.gate_type == Gate.GateType.BOSS, "(C) GateBoss is a BOSS gate")
