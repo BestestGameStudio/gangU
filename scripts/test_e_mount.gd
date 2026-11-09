@@ -181,9 +181,9 @@ func _process(delta: float) -> bool:
 					panel._on_slot_pressed(0) # #375: select the equipped Fire Ball via its slot
 					var texts: Array = []
 					var buttons: Array = []
-					for c in panel._upgrade_box.get_children():
-						if c is Button:
-							texts.append(c.text)
+					for c in panel._upgrade_box.find_children("*", "UpgradeCard", true, false):
+						if c is UpgradeCard and not c.get_parent().get_parent().is_queued_for_deletion():
+							texts.append(c.name_label.text)
 							buttons.append(c)
 					texts.sort()
 					if texts != ["Beam [S]", "Split shot [S]"] or buttons.size() != 2:
@@ -266,10 +266,10 @@ func _process(delta: float) -> bool:
 					panel._slot_buttons[0].pressed.emit()
 					panel._on_slot_pressed(0)
 					var buttons2: Array = []
-					for c2 in panel._upgrade_box.get_children():
-						if c2 is Button:
+					for c2 in panel._upgrade_box.find_children("*", "UpgradeCard", true, false):
+						if c2 is UpgradeCard and not c2.get_parent().get_parent().is_queued_for_deletion():
 							buttons2.append(c2)
-					var split_btn: Button = buttons2[0] if buttons2[0].text.begins_with("Split shot") else buttons2[1]
+					var split_btn: Button = buttons2[0] if buttons2[0].name_label.text.begins_with("Split shot") else buttons2[1]
 					split_btn.pressed.emit()
 					if sig_log.size() != 1 or sig_log[0] != fireball:
 						print("[E] FAIL upgrades_changed: ", sig_log.size(), " calls"); ok = false
