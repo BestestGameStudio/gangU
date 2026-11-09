@@ -13,8 +13,15 @@ signal objective_completed(dungeon_id: StringName)
 ## #146: emitted when the ELIMINATION boss phase starts. The boss enters the
 ## tree deferred (D14); the emitted node may not be inside the tree yet.
 signal boss_spawned(boss: Node)
+## #337 DEFENSE: a wave started (1-based index).
+signal wave_started(wave: int, total: int)
+## #337 DEFENSE: the defended core was destroyed. Waves stop; the objective can
+## no longer complete. Main unlocks the exit portal so the run never soft-locks.
+signal objective_failed(dungeon_id: StringName)
 
-enum ObjectiveType { CLEAR_ALL_ENEMIES, DEFEAT_BOSS, ELIMINATION }
+## #337: DEFENSE is additive like ELIMINATION (#146): defend the area's
+## DefenseCore through a fixed number of periodic waves.
+enum ObjectiveType { CLEAR_ALL_ENEMIES, DEFEAT_BOSS, ELIMINATION, DEFENSE }
 
 @export var objective_type: ObjectiveType = ObjectiveType.CLEAR_ALL_ENEMIES
 @export var dungeon_id: StringName = &"dungeon"
@@ -31,6 +38,31 @@ enum ObjectiveType { CLEAR_ALL_ENEMIES, DEFEAT_BOSS, ELIMINATION }
 ## ELIMINATION only: global position for the boss spawn.
 @export var boss_spawn_position: Vector2 = Vector2.ZERO
 
+@export_group("Defense (#337)")
+## The defended object; unset = the sibling node named "DefenseCore".
+## All numbers below are tunable implementer defaults, not approved balance.
+@export var defense_core: DefenseCore
+## Fixed wave count (Daniel: waves, not a survival timer). Progress target.
+@export var wave_count: int = 5
+## Wave n (1-based) spawns wave_base_size + (n - 1) * wave_size_growth enemies.
+@export var wave_base_size: int = 3
+@export var wave_size_growth: int = 1
+## Seconds before wave 1 spawns.
+@export var first_wave_delay: float = 3.0
+## Seconds between wave spawns (periodic). If the field is cleared earlier the
+## next wave comes after clear_break instead, so nobody waits around.
+@export var wave_interval: float = 15.0
+@export var clear_break: float = 3.0
+## Mixed behaviour (Daniel): this share of every wave goes for the core (and
+## turns on the player only when they come close); the rest hunt the player.
+@export_range(0.0, 1.0) var core_attacker_share: float = 0.5
+@export var wave_enemy_scene: PackedScene
+@export var wave_reward_table: RewardTable
+## Area-local spawn positions; enemies of a wave are spread over them.
+@export var wave_spawn_points: Array[Vector2] = []
+## Relative to a spawned enemy (child of the area): "../../Player" in Main.
+@export var wave_player_path: NodePath = NodePath("../../Player")
+
 var _current: int = 0
 var _target: int = 0
 var _is_completed: bool = false
@@ -44,6 +76,9 @@ func progress() -> Vector2i:
 	return Vector2i(_current, _target)
 
 func _ready() -> void:
+	if objective_type == ObjectiveType.DEFENSE:
+		_setup_defense()
+		return
 	if objective_type == ObjectiveType.DEFEAT_BOSS:
 		_target = 1
 		for boss in get_tree().get_nodes_in_group("boss"):
@@ -98,3 +133,108 @@ func _spawn_boss() -> void:
 		push_error("DungeonObjective: ELIMINATION boss_scene root lacks a `died` signal; the objective can never complete.")
 	get_parent().call_deferred("add_child", boss)
 	boss_spawned.emit(boss)
+
+# --- #337 DEFENSE ----------------------------------------------------------
+# Progress is (waves cleared, wave_count). A wave counts as cleared once it has
+# spawned and every enemy in it is dead, so overlapping waves stay monotonic.
+# Completion: every wave cleared while the core still stands. Core destroyed:
+# objective_failed, no more waves, never completes.
+
+var _failed: bool = false
+var _waves_spawned: int = 0
+var _next_wave_t: float = 0.0
+## alive count per wave (index = wave - 1)
+var _wave_alive: Array[int] = []
+var _spawner: EnemySpawner = null
+
+func is_failed() -> bool:
+	return _failed
+
+func waves_spawned() -> int:
+	return _waves_spawned
+
+func core() -> DefenseCore:
+	return defense_core
+
+## Enemies in wave n (1-based).
+func wave_size(n: int) -> int:
+	return maxi(1, wave_base_size + (n - 1) * wave_size_growth)
+
+func _setup_defense() -> void:
+	_target = maxi(wave_count, 1)
+	_next_wave_t = first_wave_delay
+	if defense_core == null and get_parent() != null:
+		defense_core = get_parent().get_node_or_null("DefenseCore") as DefenseCore
+	if defense_core == null:
+		push_error("DungeonObjective: DEFENSE needs a DefenseCore (export or sibling named DefenseCore); the objective can never complete.")
+	else:
+		defense_core.destroyed.connect(_on_core_destroyed)
+	if wave_enemy_scene == null:
+		push_error("DungeonObjective: DEFENSE needs wave_enemy_scene; no waves will spawn.")
+	if wave_spawn_points.is_empty():
+		wave_spawn_points = [Vector2.ZERO]
+	_spawner = EnemySpawner.new()
+	_spawner.name = "WaveSpawner"
+	add_child(_spawner)
+	var area := get_parent()
+	_spawner.setup([], wave_player_path, area.get_node_or_null("Terrain") as TerrainMap if area else null, area)
+
+func _physics_process(delta: float) -> void:
+	if objective_type != ObjectiveType.DEFENSE or _is_completed or _failed:
+		return
+	if defense_core == null or wave_enemy_scene == null or _waves_spawned >= _target:
+		return
+	if _waves_spawned > 0 and _alive_total() == 0:
+		_next_wave_t = minf(_next_wave_t, clear_break)
+	_next_wave_t -= delta
+	if _next_wave_t <= 0.0:
+		spawn_next_wave()
+
+## Spawns the next wave now (public so harnesses can skip the timer).
+## Called from _physics_process, never from a physics callback (D14).
+func spawn_next_wave() -> void:
+	if _failed or _is_completed or _waves_spawned >= _target or wave_enemy_scene == null:
+		return
+	_waves_spawned += 1
+	_next_wave_t = wave_interval
+	var wave := _waves_spawned
+	var n := wave_size(wave)
+	_wave_alive.append(0)
+	var pts := wave_spawn_points.size()
+	for i in n:
+		@warning_ignore("integer_division")
+		var ring := i / pts
+		var at: Vector2 = wave_spawn_points[(i + wave) % pts] + Vector2.from_angle(float(i) * 2.4) * (18.0 * ring)
+		var e := _spawner.request_spawn({"position": at, "enemy": wave_enemy_scene, "reward_table": wave_reward_table})
+		if e == null:
+			continue
+		# Spread core attackers evenly through the wave: i is one when the
+		# running share crosses an integer.
+		if floori((i + 1) * core_attacker_share) > floori(i * core_attacker_share):
+			e.objective_target = defense_core
+		_wave_alive[wave - 1] += 1
+		e.died.connect(_on_wave_enemy_died.bind(wave))
+	wave_started.emit(wave, _target)
+	objective_progress_changed.emit(_current, _target)
+
+func _alive_total() -> int:
+	var t := 0
+	for c in _wave_alive:
+		t += c
+	return t
+
+func _on_wave_enemy_died(wave: int) -> void:
+	_wave_alive[wave - 1] -= 1
+	if _is_completed or _failed or _wave_alive[wave - 1] > 0:
+		return
+	_current += 1
+	objective_progress_changed.emit(_current, _target)
+	if _current >= _target:
+		_is_completed = true
+		objective_completed.emit(dungeon_id)
+
+func _on_core_destroyed() -> void:
+	if _is_completed or _failed:
+		return
+	_failed = true
+	objective_failed.emit(dungeon_id)

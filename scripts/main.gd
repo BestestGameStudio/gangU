@@ -349,6 +349,9 @@ const DUNGEON_C_BOSS_SPAWN: Vector2 = Vector2(576, 300)
 ## ELIMINATION with zero mobs, so the Beast (#174) spawns on entry.
 const BEAST_BOSS_SCENE: PackedScene = preload("res://scenes/beast_boss.tscn")
 const DUNGEON_D_BOSS_SPAWN: Vector2 = Vector2(576, 280)
+## #337: DungeonE runs the DEFENSE objective with plain chase/contact mobs.
+const DEFENSE_WAVE_ENEMY: PackedScene = preload("res://scenes/enemy.tscn")
+const DEFENSE_WAVE_TABLE: RewardTable = preload("res://resources/rewards/demo_table.tres")
 
 func _mount_objective(area: Node) -> void:
 	var obj := DungeonObjective.new()
@@ -373,11 +376,37 @@ func _mount_objective(area: Node) -> void:
 		obj.boss_scene = BEAST_BOSS_SCENE
 		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_D_BOSS_SPAWN) if area is Node2D else DUNGEON_D_BOSS_SPAWN
 		obj.boss_spawned.connect(_on_boss_spawned)
+	elif area.name == "DungeonE":
+		# #337: DEFENSE - protect the area's DefenseCore through a fixed number
+		# of periodic waves spawned at its "WaveSpawns" markers. Wave/HP numbers
+		# are the objective's tunable defaults (implementer's choice).
+		obj.dungeon_id = &"dungeon_e"
+		obj.objective_type = DungeonObjective.ObjectiveType.DEFENSE
+		obj.wave_enemy_scene = DEFENSE_WAVE_ENEMY
+		obj.wave_reward_table = DEFENSE_WAVE_TABLE
+		var points: Array[Vector2] = []
+		var holder := area.get_node_or_null("WaveSpawns")
+		if holder != null:
+			for m in holder.get_children():
+				if m is Node2D:
+					points.append((m as Node2D).position + (holder as Node2D).position)
+		obj.wave_spawn_points = points
+		obj.objective_failed.connect(_on_objective_failed)
 	else:
 		obj.free()
 		return
 	obj.objective_completed.connect(_on_objective_completed)
 	area.add_child(obj)
+
+## #337: a failed DEFENSE (core destroyed) never clears the dungeon, so a
+## locked exit portal would soft-lock the run (#55 rule): open it to retreat.
+func _on_objective_failed(dungeon_id: StringName) -> void:
+	print("objective failed: ", dungeon_id)
+	if current_area == null:
+		return
+	var portal := current_area.get_node_or_null("ExitPortal") as ExitPortal
+	if portal != null:
+		portal.unlock()
 
 ## Boss -> Main/<Area>/<Boss>, so the Player is "../../Player" (AreaSpawnData idiom).
 func _on_boss_spawned(boss: Node) -> void:
@@ -403,7 +432,7 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## An area with an "ExitPoint" marker gets an unlocked portal at that marker.
 func _mount_exit_portal(area: Node) -> void:
 	var exit_point := area.get_node_or_null("ExitPoint") as Node2D
-	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC", &"DungeonD"]:
+	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC", &"DungeonD", &"DungeonE"]:
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
