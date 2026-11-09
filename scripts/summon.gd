@@ -94,7 +94,9 @@ func _physics_process(delta: float) -> void:
 func apply_damage(amount: int) -> void:
 	if hp <= 0:
 		return
+	var before := hp
 	hp = clampi(hp - amount, 0, max_hp)
+	OnHit.record(self, before, hp) # #390
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()

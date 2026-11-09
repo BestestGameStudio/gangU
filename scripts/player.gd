@@ -104,7 +104,9 @@ func apply_damage(amount: int) -> void:
 		return
 	if hp <= 0:
 		return
+	var before := hp
 	hp = clampi(hp - amount, 0, max_hp)
+	OnHit.record(self, before, hp) # #390: outcome captured before died()/revive
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()

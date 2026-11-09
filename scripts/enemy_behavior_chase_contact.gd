@@ -56,9 +56,10 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if to_player.length() <= enemy.contact_range + pad and _contact_timer <= 0.0:
 		var hit := DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng)
-		var was_alive := OnHit.is_alive(player)
+		var receipt := OnHit.begin(player)
 		player.apply_damage(hit.amount)
-		OnHit.report(enemy, null, player, hit, OnHit.DELIVERY_CONTACT, was_alive) # #390
+		OnHit.end(receipt, player)
+		OnHit.report(enemy, null, player, hit, OnHit.DELIVERY_CONTACT, receipt) # #390
 		_contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack") # #177: visual swing only
 

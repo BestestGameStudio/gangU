@@ -441,19 +441,24 @@ func _on_body_entered(body: Node2D) -> void:
 		# #208: the rolled crit tier rides along to receivers that show damage
 		# numbers (Enemy, gated receivers); legacy apply_damage(amount) shapes
 		# (Player, stubs) keep the one-argument call.
-		var was_alive := OnHit.is_alive(body)
+		# #390: the receipt captures THIS application's outcome at the receiver
+		# (accepted? killed? hp lost?) before hit/hit_resolved listeners run.
+		var receipt := OnHit.begin(body)
 		if body.has_method(&"apply_damage_from"):
 			body.apply_damage_from(result.amount, self, result.crit_tier)
 		elif body is Enemy:
 			body.apply_damage(result.amount, result.crit_tier)
 		else:
 			body.apply_damage(result.amount)
+		OnHit.end(receipt, body)
 		_hit_bodies.append(body)
 		_hit_times[body] = _life_t
 		_hit_count += 1
 		hit.emit(body)
 		hit_resolved.emit(body, result)
-		OnHit.report(source, spell, body, result, OnHit.DELIVERY_PROJECTILE, was_alive) # #390
+		# #390: `source` may have been freed while the shot flew; report() takes
+		# it untyped and normalizes it to null, so this never script-errors.
+		OnHit.report(source, spell, body, result, OnHit.DELIVERY_PROJECTILE, receipt)
 		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
 		# Untagged spells keep the original despawn-on-hit, and range expiry
 		# is unchanged for both.

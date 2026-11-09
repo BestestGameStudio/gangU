@@ -55,7 +55,9 @@ func apply_damage_from(amount: int, projectile: Node2D, crit_tier: int = 0) -> v
 	if not (projectile.get("source") is Player):
 		print("[214] container rejected damage: projectile source is not the Player")
 		return
+	var before := hp
 	hp = maxi(0, hp - maxi(amount, 0))
+	OnHit.record(self, before, hp) # #390: only the accepted (Player-source) path records
 	health_changed.emit(hp)
 	CombatEffects.damage_number(get_parent(), global_position, amount, crit_tier)
 	if hp == 0:
