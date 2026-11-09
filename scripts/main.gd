@@ -165,12 +165,27 @@ var current_area: Node = null
 ## FREE stock refresh + paid-price reset from _on_objective_completed.
 var _shop: Shop = null
 
+## (#350) Type of the gate the current dungeon was entered through, or -1 when
+## the area was not entered through a gate (hub, direct _swap fixtures). Since
+## a hub offering's NORMAL/RED type is rolled by chance, the RED lock-in follows
+## the gate actually entered, not the target area's name.
+var _entry_gate_type: int = -1
+
 func _load_hub() -> void:
+	_entry_gate_type = -1
 	_swap(preload("res://scenes/hub.tscn").instantiate())
 
 func _on_gate_entered(gate: Gate) -> void:
-	print("gate entered: ", "RED" if gate.gate_type == Gate.GateType.RED else "NORMAL")
+	print("gate entered: ", Gate.GateType.keys()[gate.gate_type])
+	_entry_gate_type = gate.gate_type
 	_swap.call_deferred(gate.target_dungeon.instantiate())
+
+## (#350) RED semantics for the mounted area: the entered gate's type when there
+## is one; otherwise the authored default (DungeonB is the RED dungeon).
+func _area_is_red(area: Node) -> bool:
+	if _entry_gate_type >= 0:
+		return _entry_gate_type == Gate.GateType.RED
+	return area.name == &"DungeonB"
 
 func _swap(area: Node) -> void:
 	if current_area:
@@ -293,10 +308,13 @@ func _mount_exit_portal(area: Node) -> void:
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var completable := obj != null and (obj.objective_type != DungeonObjective.ObjectiveType.ELIMINATION or obj.boss_scene != null)
 	# #173: boss-gate DungeonC is clear-or-die too (locked until the Head dies).
-	if area.name in [&"DungeonB", &"DungeonC"] and completable:
+	# #350: RED is whatever the entered gate rolled, so a RED-rolled DungeonA
+	# locks and a NORMAL-rolled DungeonB allows retreat.
+	var red := _area_is_red(area)
+	if (red or area.name == &"DungeonC") and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
-	portal.red_portal_look = area.name == &"DungeonB"  # #204: portal look only on the RED dungeon's exit portal (both its locked and unlocked states)
+	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 
