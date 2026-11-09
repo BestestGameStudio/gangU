@@ -285,6 +285,14 @@ func _refresh() -> void:
 			uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
 		uheader.add_theme_font_size_override("font_size", 22)
 		_upgrade_box.add_child(uheader)
+		var scroll := ScrollContainer.new()
+		scroll.name = "UpgradeScroll"
+		scroll.custom_minimum_size = Vector2(472, 210)
+		_upgrade_box.add_child(scroll)
+		var cards := HBoxContainer.new()
+		cards.name = "UpgradeCards"
+		cards.add_theme_constant_override("separation", 12)
+		scroll.add_child(cards)
 		var token_ready := _can_token_upgrade(_selected)
 		for path in _upgrader.get_upgrade_paths(_selected):
 			var needs_token := _path_needs_token(_selected, path)
@@ -292,16 +300,20 @@ func _refresh() -> void:
 			# not shown; with no token API this is the unchanged listing.
 			if needs_token and not token_ready:
 				continue
-			var b := Button.new()
-			b.add_theme_font_size_override("font_size", 22)
-			UiStyle.style_button(b, UiStyle.B_ACCENT)
-			b.text = path.display_name + _tier_suffix(path) + (" - use token" if needs_token else "")
+			var b := UpgradeCard.new()
+			var result: Spell = path.get("result_spell")
+			var description := SpellDescription.for_spell(result)
+			if result != null and result.projectile_count > 0:
+				description += "\nRange: %s px. Speed: %s px/s." % [result.range, result.projectile_speed]
+			if description.is_empty():
+				description = "Upgrade content is not available yet."
+			b.setup(path.display_name + _tier_suffix(path), description, needs_token)
 			var pid = path.id
 			if needs_token:
 				b.pressed.connect(func(): _on_token_upgrade_pressed(pid))
 			else:
 				b.pressed.connect(func(): _on_upgrade_pressed(pid))
-			_upgrade_box.add_child(b)
+			cards.add_child(b)
 	_status.text = "Selected: %s" % (_selected.spell_name if _selected != null else "none")
 
 func _on_upgrade_pressed(path_id) -> void:
