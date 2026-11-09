@@ -24,8 +24,12 @@ void fragment() {
 	vec4 s = texture(screen_tex, SCREEN_UV);
 	float g = dot(s.rgb, vec3(0.299, 0.587, 0.114));
 	float m = 1.0 - smoothstep(0.48, 0.5, d);
+	// Slight darkening inside + a pale rim at the boundary so the bubble
+	// edge stays readable on already-grey floors.
+	float rim = smoothstep(0.42, 0.485, d) * (1.0 - smoothstep(0.485, 0.5, d));
+	vec3 col = mix(vec3(g) * 0.7, vec3(0.95), rim * 0.85);
 	// Screen-texture alpha is unreliable (often 0); carry our own mask.
-	COLOR = vec4(vec3(g), m);
+	COLOR = vec4(col, m);
 }
 """
 
