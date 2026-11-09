@@ -86,10 +86,10 @@ func _process(delta: float) -> bool:
 				_check("DA carrier: SpawnData child present", sd != null)
 				if sd != null:
 					var entries: Array = sd.get("entries")
-					_check("DA carrier: exactly 3 entries", entries != null and entries.size() == 3)
+					_check("DA carrier: 3 original + 2 #392 slime entries", entries != null and entries.size() == 5)
 					_check("DA carrier: player_path header is ../../Player",
 						sd.get("player_path") == NodePath("../../Player"))
-					if entries != null and entries.size() == 3:
+					if entries != null and entries.size() == 5:
 						var positions_ok := true
 						var resources_ok := true
 						for i in 3:
@@ -105,13 +105,14 @@ func _process(delta: float) -> bool:
 						_check("DA carrier: exact positions (250,280)/(576,220)/(900,280)", positions_ok)
 						_check("DA carrier: every entry pairs enemy.tscn with demo_table.tres", resources_ok)
 				var enemies := _area_enemies()
-				_check("DA mount: exactly 3 enemies as area children", enemies.size() == 3)
-				var positions_ok: bool = mounted_positions.size() == 3
+				_check("DA mount: 5 enemies as area children (3 + 2 slimes, #392)", enemies.size() == 5)
+				var positions_ok: bool = mounted_positions.size() == 5
 				for expected in EXPECTED_POSITIONS:
 					if not (expected in mounted_positions):
 						positions_ok = false
 				var wiring_ok := true
-				for e in enemies:
+				var original_enemies := enemies.filter(func(n): return n.scene_file_path == "res://scenes/enemy.tscn")
+				for e in original_enemies:
 					if e.reward_table == null or e.reward_table.resource_path != "res://resources/rewards/demo_table.tres":
 						wiring_ok = false
 					if e._player != p:
@@ -120,14 +121,23 @@ func _process(delta: float) -> bool:
 				_check("DA wiring: reward_table is demo_table and player_path resolved to Main/Player", wiring_ok)
 				var obj: DungeonObjective = area.get_node_or_null("DungeonObjective")
 				_check("ordering: objective present and targets 3 (mounted after enemies)",
-					obj != null and obj.progress() == Vector2i(0, 3))
+					obj != null and obj.progress() == Vector2i(0, 5))
 				for e in enemies:
-					e.apply_damage(999) # three real kills through the damage path
+					e.apply_damage(999) # real kills through the damage path
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
 				var obj: DungeonObjective = scene.current_area.get_node("DungeonObjective")
-				_check("completion: progress 3/3 after three kills", obj.progress() == Vector2i(3, 3))
+				# #392: each slime (80 HP) leaves 2 + 4 descendants, so the area
+				# is cleared only after every one of them is killed.
+				var leftover := _area_enemies()
+				if not leftover.is_empty():
+					_check("completion: not cleared while slime descendants live", not obj.is_cleared())
+					for e in leftover:
+						e.apply_damage(999)
+					t = 0
+					return false
+				_check("completion: progress 17/17 (3 + 2 slimes x 7 descendants)", obj.progress() == Vector2i(17, 17))
 				_check("completion: dungeon_a cleared", obj.is_cleared())
 				_check("completion: killed enemies freed", _area_enemies().size() == 0)
 				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")

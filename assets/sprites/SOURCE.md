@@ -312,3 +312,13 @@ Row -> animation map (`resources/sprites/terrain_block_frames.tres`):
 Art faces no direction; nothing mirrored. The board's panel margins/labels
 were not extracted (there were none - bare frames). The wall frames slightly
 overhang their cell sideways so adjacent blocks read as one connected wall.
+
+# slime.png - original code-drawn Slime sheet (#392)
+
+Original art drawn by `tools/sprites/draw_slime.gd` (procedural pixel drawing,
+no external assets, no traced or generated images). `resources/sprites/slime_frames.tres`
+is built from it by `tools/sprites/build_slime_frames.gd`. Placeholder-quality
+style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
+
+- Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
+- Rows: idle x4 (5 fps loop), walk x6 (10 fps loop), hurt x2, attack x3, death x5 (one-shots).
