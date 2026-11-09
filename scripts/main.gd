@@ -30,6 +30,10 @@ func _ready() -> void:
 	var hud: HUD = preload("res://scenes/hud.tscn").instantiate()
 	hud.player_path = NodePath("../Player") # explicit, read in HUD._ready on tree entry
 	add_child(hud)
+	## #359: one persistent boss-music player; started by _on_boss_spawned in RED dungeons.
+	boss_music = BossMusic.new()
+	boss_music.name = "BossMusic"
+	add_child(boss_music)
 	## (#238) starting_spells fill the slots in order at boot, so the HUD grid
 	## and the Tab panel start from the same seeded loadout. _ready runs once
 	## per run (a death restart reloads this scene); hub returns never reseed.
@@ -178,6 +182,8 @@ func _ready() -> void:
 	_load_hub()
 
 var current_area: Node = null
+## #359: boss theme player (RED dungeon bosses only).
+var boss_music: BossMusic = null
 ## (#132) The mounted hub shop, kept so a dungeon victory can trigger its
 ## FREE stock refresh + paid-price reset from _on_objective_completed.
 var _shop: Shop = null
@@ -237,6 +243,8 @@ func _swap(area: Node) -> void:
 	if current_area:
 		remove_child(current_area)
 		current_area.queue_free()
+	if boss_music:
+		boss_music.stop_music() # #359: the boss theme never outlives its dungeon
 	current_area = area
 	add_child(current_area)
 	for g: Gate in get_tree().get_nodes_in_group("gates"):
@@ -362,9 +370,14 @@ func _mount_objective(area: Node) -> void:
 func _on_boss_spawned(boss: Node) -> void:
 	if boss is Enemy:
 		boss.player_path = NodePath("../../Player")
+	# #359: RED dungeon bosses get a boss theme (random of the two tracks).
+	if boss_music and current_area and _area_is_red(current_area):
+		boss_music.start()
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
+	if boss_music:
+		boss_music.fade_out() # #359: boss down, theme fades
 	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
 	## (#132) Confirmed dungeon VICTORY only: free stock refresh and the
 	## paid-refresh price resets (Daniel 2026-11-07). A plain return to hub
