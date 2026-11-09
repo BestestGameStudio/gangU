@@ -36,9 +36,12 @@ func _check_hub_floor(when: String) -> void:
 		grid.z_index < floor.z_index and floor.z_index < bg.z_index)
 	var points := {
 		"spawn": (hub.get_node("PlayerSpawn") as Node2D).global_position,
-		"GateNormal": (hub.get_node("GateNormal") as Node2D).global_position,
-		"GateRed": (hub.get_node("GateRed") as Node2D).global_position,
+		# #346: the dungeon gates moved to the overworld; the hub keeps its
+		# services and the passage to the overworld.
+		"GateOverworld": (hub.get_node("GateOverworld") as Node2D).global_position,
 		"ShopVendor": (hub.get_node("ShopVendor") as Node2D).global_position,
+		"SpellDirectory": (hub.get_node("SpellDirectory") as Node2D).global_position,
+		"BestiaryStation": (hub.get_node("BestiaryStation") as Node2D).global_position,
 	}
 	for key: String in points:
 		var at: Vector2 = points[key]
@@ -54,6 +57,8 @@ func _process(delta: float) -> bool:
 			if scene.get_node_or_null("Player") != null and t > 0.3:
 				p = scene.get_node("Player")
 				_check_hub_floor("boot")
+				scene.enter_overworld() # #346: dungeon entrances live in the overworld
+				_check("overworld: no HubFloor under Main", _floors().size() == 0)
 				var g: Gate = scene.current_area.get_node("GateNormal")
 				g._on_body_entered(p)
 				phase = 1; t = 0
