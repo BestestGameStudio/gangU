@@ -330,7 +330,9 @@ func _mount_area_spawns(area: Node) -> void:
 
 ## #346: overworld entrance guards. Every EntranceGuards node under the
 ## area's "EntranceGuards" container whose dungeon is still uncleared this
-## run contributes its entries; all of them go through ONE EnemySpawner
+## run contributes its entries (#373: a mix of stationary gate guards and
+## patrols), plus the area's "Roamers" migrants (AreaSpawnData, always
+## mounted); all of them go through ONE EnemySpawner
 ## (#220 seam), parented to the area so leaving the overworld frees them.
 func _mount_entrance_guards(area: Node) -> void:
 	var holder := area.get_node_or_null("EntranceGuards")
@@ -346,6 +348,12 @@ func _mount_entrance_guards(area: Node) -> void:
 			continue
 		entries.append_array(guards.entries)
 		player_path = guards.player_path
+	# #373: overworld-wide migrants belong to no entrance, so a cleared
+	# dungeon (#348) never suppresses them; they mount through the same spawner.
+	var roamers := area.get_node_or_null("Roamers") as AreaSpawnData
+	if roamers != null:
+		entries.append_array(roamers.entries)
+		player_path = roamers.player_path
 	if entries.is_empty():
 		return
 	var spawner := EnemySpawner.new()
@@ -552,7 +560,7 @@ func _is_proven_safe_area() -> bool:
 	if not _is_hub_area():
 		return false
 	var enemies := not get_tree().get_nodes_in_group("enemies").is_empty()
-	var spawn_capable := current_area.get_node_or_null("SpawnData") != null or current_area.get_node_or_null("EntranceGuards") != null or current_area.get_node_or_null("DungeonObjective") != null
+	var spawn_capable := current_area.get_node_or_null("SpawnData") != null or current_area.get_node_or_null("EntranceGuards") != null or current_area.get_node_or_null("Roamers") != null or current_area.get_node_or_null("DungeonObjective") != null
 	return FastTravelRoutes.is_safe_area(enemies, spawn_capable)
 
 func can_fast_return() -> bool:

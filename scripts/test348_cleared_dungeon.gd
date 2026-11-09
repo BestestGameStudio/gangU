@@ -30,7 +30,7 @@ func _enter(main: Node, gate_name: String) -> void:
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	for n in main.current_area.get_children():
-		if n is Enemy:
+		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate): # #373: migrants belong to no entrance
 			out.append(n)
 	return out
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=17 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
@@ -13,6 +13,9 @@
 [ext_resource type="Resource" uid="uid://bgangurdemotable" path="res://resources/rewards/demo_table.tres" id="346_table"]
 [ext_resource type="Resource" path="res://resources/gate_offering.tres" id="350_offer"]
 [ext_resource type="Resource" path="res://resources/enemies/overworld_guard.tres" id="346_guard_def"]
+[ext_resource type="Resource" path="res://resources/enemies/overworld_patrol.tres" id="373_patrol_def"]
+[ext_resource type="Resource" path="res://resources/enemies/overworld_migrant.tres" id="373_migrant_def"]
+[ext_resource type="Script" path="res://scripts/area_spawn_data.gd" id="373_spawn_data"]
 
 [node name="Overworld" type="Node2D"]
 
@@ -81,28 +84,33 @@ label_text = "DEFENSE"
 [node name="GuardsNormal" type="Node" parent="EntranceGuards"]
 script = ExtResource("346_guards")
 dungeon_id = &"dungeon_a"
-entries = [{ "position": Vector2(210, 300), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(330, 270), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+entries = [{ "position": Vector2(210, 300), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(330, 270), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(330, 270), Vector2(400, 250), Vector2(390, 170), Vector2(290, 180)] }]
 player_path = NodePath("../../Player")
 
 [node name="GuardsRed" type="Node" parent="EntranceGuards"]
 script = ExtResource("346_guards")
 dungeon_id = &"dungeon_b"
-entries = [{ "position": Vector2(822, 270), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(942, 300), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+entries = [{ "position": Vector2(822, 270), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(942, 300), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(942, 300), Vector2(1020, 260), Vector2(1000, 170), Vector2(900, 180)] }]
 player_path = NodePath("../../Player")
 
 [node name="GuardsGenerated" type="Node" parent="EntranceGuards"]
 script = ExtResource("346_guards")
-entries = [{ "position": Vector2(60, -600), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(240, -610), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(150, -680), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+entries = [{ "position": Vector2(60, -600), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(240, -610), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(240, -610), Vector2(320, -560), Vector2(310, -460), Vector2(230, -430)] }, { "position": Vector2(150, -680), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(150, -680), Vector2(40, -700), Vector2(10, -780), Vector2(160, -790), Vector2(260, -720)] }]
 player_path = NodePath("../../Player")
 
 [node name="GuardsBeast" type="Node" parent="EntranceGuards"]
 script = ExtResource("346_guards")
 dungeon_id = &"dungeon_d"
-entries = [{ "position": Vector2(210, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(390, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(200, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(400, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+entries = [{ "position": Vector2(210, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(390, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(390, -760), Vector2(470, -800), Vector2(480, -880)] }, { "position": Vector2(200, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(200, -960), Vector2(120, -900), Vector2(110, -1000), Vector2(220, -1040)] }, { "position": Vector2(400, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(400, -960), Vector2(330, -1040), Vector2(470, -1040)] }]
 player_path = NodePath("../../Player")
 
 [node name="GuardsBoss" type="Node" parent="EntranceGuards"]
 script = ExtResource("346_guards")
 dungeon_id = &"dungeon_c"
-entries = [{ "position": Vector2(960, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(1140, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(950, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(1150, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+entries = [{ "position": Vector2(960, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(1140, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(1140, -760), Vector2(1220, -800), Vector2(1230, -880)] }, { "position": Vector2(950, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(950, -960), Vector2(870, -900), Vector2(860, -1000), Vector2(970, -1040)] }, { "position": Vector2(1150, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_patrol_def"), "route": [Vector2(1150, -960), Vector2(1080, -1040), Vector2(1180, -990)] }]
+player_path = NodePath("../../Player")
+
+[node name="Roamers" type="Node" parent="."]
+script = ExtResource("373_spawn_data")
+entries = [{ "position": Vector2(-250, -200), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(-250, -200), Vector2(150, -250), Vector2(576, -180), Vector2(1000, -250), Vector2(1400, -200)] }, { "position": Vector2(-210, -160), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(-210, -160), Vector2(190, -210), Vector2(616, -140), Vector2(1040, -210), Vector2(1440, -160)] }, { "position": Vector2(-300, 250), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(-300, 250), Vector2(-330, -300), Vector2(-150, -820)] }, { "position": Vector2(1450, 250), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(1450, 250), Vector2(1500, -300), Vector2(1350, -800)] }]
 player_path = NodePath("../../Player")
