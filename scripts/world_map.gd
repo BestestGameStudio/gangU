@@ -10,6 +10,9 @@ extends Node
 ##   - Details (dungeons, points of interest) are NEVER shown automatically;
 ##     nothing here records gates, portals or enemies. Players mark those
 ##     themselves with markers and freehand strokes.
+##     EXCEPTION (#366): dungeons the player has CLEARED this run are marked
+##     at their entrance, and selecting one on the map offers fast travel
+##     (see "dungeon sites" below). Uncleared dungeons stay unmarked.
 ##
 ##   - Run-scoped (#351 death = full reset): kept across area trips within a
 ##     run, wiped on death by RunManager's reload.
@@ -57,15 +60,108 @@ var terrain: TerrainMap = null
 ## "strokes": Array[PackedVector2Array] }
 var _areas: Dictionary = {}
 
+## (#366) Cleared dungeons are marked on the map. This is a request on top of
+## the #347 settlement: only CLEARED dungeons show automatically. Uncleared
+## entrances are never shown. main.gd records each area's dungeon entrance
+## positions here ({dungeon_id: world_pos}); `cleared_rule`
+## (func(dungeon_id) -> bool, main.gd's canonical is_cleared) filters them.
+## Unset rule = nothing counts as cleared.
+var cleared_rule: Callable = Callable()
+## area_id -> {dungeon_id: Vector2}
+var _sites: Dictionary = {}
+## area_id -> last world position of the player there (#366: centers the map
+## when viewing an area the player is not in).
+var _last_pos: Dictionary = {}
+
+## Map colour of a flat (no TerrainMap) area: plain GROUND.
+const FALLBACK_GROUND := Color(0.16, 0.24, 0.18, 1.0)
+
 func set_area(id: StringName, area_terrain: TerrainMap) -> void:
+	# (#366 review) Snapshot the area being left from its OWN terrain while
+	# that node is still valid, so the World view never reads another area's
+	# terrain and never keeps a freed area node alive.
+	if area_id != &"" and area_id != id:
+		_snapshot_colors(area_id, terrain)
 	area_id = id
 	terrain = area_terrain
 	changed.emit(id)
 
+## (#366 review) Map colour of an explored cell in area `id`. The current
+## area reads its live terrain; any other area reads the colours recorded
+## from its own terrain (flat areas record nothing -> FALLBACK_GROUND).
+func cell_color(id: StringName, cell: Vector2i) -> Color:
+	if id == area_id:
+		return terrain_color(terrain, cell)
+	if not _areas.has(id):
+		return FALLBACK_GROUND
+	return _areas[id]["colors"].get(cell, FALLBACK_GROUND)
+
+static func terrain_color(t: TerrainMap, cell: Vector2i) -> Color:
+	if t == null or not is_instance_valid(t):
+		return FALLBACK_GROUND
+	var type := t.tile_type_at(cell_center(cell))
+	var tile: TerrainTile = t.palette.tile(type) if t.palette != null else null
+	return tile.color if tile != null else TerrainSeason.color(t.season, type)
+
+func _snapshot_colors(id: StringName, t: TerrainMap) -> void:
+	if not _areas.has(id):
+		return
+	var colors: Dictionary = {}
+	if t != null and is_instance_valid(t):
+		for cell: Vector2i in _areas[id]["explored"]:
+			colors[cell] = terrain_color(t, cell)
+	_areas[id]["colors"] = colors
+
 func _physics_process(_delta: float) -> void:
-	if not reveal_rule.is_valid() or not is_instance_valid(player) or area_id == &"":
+	if not is_instance_valid(player) or area_id == &"":
+		return
+	_last_pos[area_id] = player.global_position
+	if not reveal_rule.is_valid():
 		return
 	reveal_cells(area_id, reveal_rule.call(player.global_position, CELL_SIZE))
+
+## --- dungeon sites (#366) ---
+
+func set_sites(id: StringName, sites: Dictionary) -> void:
+	_sites[id] = sites.duplicate()
+	changed.emit(id)
+
+## Every recorded entrance in area `id`, cleared or not (data only, never drawn).
+func sites(id: StringName) -> Dictionary:
+	return _sites.get(id, {})
+
+func is_site_cleared(dungeon_id: StringName) -> bool:
+	return cleared_rule.is_valid() and bool(cleared_rule.call(dungeon_id))
+
+## The entrances the map shows: cleared dungeons only.
+func cleared_sites(id: StringName) -> Dictionary:
+	var out := {}
+	var all: Dictionary = sites(id)
+	for d: StringName in all:
+		if is_site_cleared(d):
+			out[d] = all[d]
+	return out
+
+## Areas holding at least one cleared, marked dungeon.
+func areas_with_cleared_sites() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for id: StringName in _sites:
+		if not cleared_sites(id).is_empty():
+			out.append(id)
+	return out
+
+## Where to center a view of area `id`: the player's last spot there, else
+## the middle of its marked dungeons, else the origin.
+func view_center(id: StringName) -> Vector2:
+	if _last_pos.has(id):
+		return _last_pos[id]
+	var s := cleared_sites(id)
+	if s.is_empty():
+		return Vector2.ZERO
+	var sum := Vector2.ZERO
+	for d: StringName in s:
+		sum += s[d]
+	return sum / s.size()
 
 ## --- reveal ---
 
@@ -180,5 +276,5 @@ func _stroke_near(s: PackedVector2Array, p: Vector2, radius: float) -> bool:
 
 func _area(id: StringName) -> Dictionary:
 	if not _areas.has(id):
-		_areas[id] = {"explored": {}, "markers": [], "strokes": []}
+		_areas[id] = {"explored": {}, "markers": [], "strokes": [], "colors": {}}
 	return _areas[id]

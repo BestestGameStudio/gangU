@@ -30,6 +30,13 @@ static func scene_from_hub(origin_is_hub: bool, target: StringName, cleared_ids:
 		return ""
 	return DUNGEONS[target]["scene"]
 
+## #366: the dungeon id a scene path leads to, or &"" (hub, generated...).
+static func id_for_scene(path: String) -> StringName:
+	for id: StringName in DUNGEONS:
+		if DUNGEONS[id]["scene"] == path:
+			return id
+	return &""
+
 static func label_for(target: StringName) -> String:
 	return DUNGEONS[target]["label"] if DUNGEONS.has(target) else ""
 
