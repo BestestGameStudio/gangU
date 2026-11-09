@@ -75,6 +75,26 @@ func _ready() -> void:
 		_player = get_tree().get_first_node_in_group("player")
 	if _player == null:
 		push_warning("Enemy: no player target (no player_path and no 'player' group member); standing idle.")
+	# #290: never physically block or push players (deferred so a Player added
+	# in the same frame has registered its group first).
+	_ignore_player_bodies.call_deferred()
+
+## #290: collision exceptions with every Player (plus the resolved target).
+## #279: also every Summon - enemies spawn continuously, so the late side
+## pairs itself here (summon.gd covers the cast-time direction).
+func _ignore_player_bodies() -> void:
+	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group(self, &"summons")
+	if _player != null and is_instance_valid(_player):
+		ActorCollision.ignore_pair(self, _player)
+
+## #301: unpair on exit - a freed body otherwise leaves a stale entry in
+## peers' collision exception lists, and the engine logs
+## "Parameter \"body\" is null" the next time a peer reads its list.
+func _exit_tree() -> void:
+	for e in get_collision_exceptions():
+		if is_instance_valid(e):
+			e.remove_collision_exception_with(self)
 
 ## #109: hit feedback - brief over-bright flash so a registered hit is
 ## visible even when the enemy survives (25 dmg vs 30 hp). Additive only.

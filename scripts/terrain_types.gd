@@ -39,9 +39,13 @@ const ICE: StringName = &"ice"
 const MUD: StringName = &"mud"
 const WATER: StringName = &"water"
 const MOUNTAIN: StringName = &"mountain"
+## #216: the spell-created terrain block. Never emitted by the generator;
+## only the terrain-block spell places it. Destroyable into GROUND
+## (PLACEHOLDER: the block does not remember the tile it was placed on).
+const BLOCK: StringName = &"block"
 
 ## Placeable type vocabulary.
-const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE, MUD, WATER, MOUNTAIN]
+const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE, MUD, WATER, MOUNTAIN, BLOCK]
 
 ## type -> properties. Data only; no behavior lives here.
 const DEFS: Dictionary = {
@@ -124,6 +128,15 @@ const DEFS: Dictionary = {
 		"swimmable": false,
 		"destroyable": false,
 		"destroyed_into": &"",
+		"element_tags": [],
+	},
+	BLOCK: {
+		"walkable": false,
+		"speed_multiplier": 0.0,
+		"friction": 1.0,
+		"swimmable": false,
+		"destroyable": true,
+		"destroyed_into": GROUND,
 		"element_tags": [],
 	},
 }

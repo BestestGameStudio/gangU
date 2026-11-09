@@ -24,6 +24,21 @@ class_name Spell
 @export var range: float = 600.0 ## Max projectile travel distance in pixels.
 @export var projectile_speed: float = 500.0
 @export var projectile_color: Color = Color(0.4, 0.8, 1.0)
+## (#263) Visual-only projectile feel. None of these touch hit radius,
+## movement, damage or despawn. Defaults keep every other spell unchanged.
+## Multiplier on the halo and trail size (spell.radius * visual_scale). The
+## sprite's size comes from Projectile's clamped radius sizing instead (#289).
+@export var visual_scale: float = 1.0
+## Draws a soft additive halo behind the projectile (colour: see glow_tint).
+@export var glow: bool = false
+## Number of past positions in the fading trail; 0 = no trail.
+@export var trail_length: int = 0
+## (#289) Halo and trail colour when its alpha is above 0, so they can match the
+## sprite art. Alpha 0 uses projectile_color. Only the glow and trail read this.
+@export var glow_tint: Color = Color(0, 0, 0, 0)
+## (#289) Fraction of the trail, measured from the head, that fades out so no
+## solid end shows behind the sprite. 0 keeps the full-strength head end.
+@export var trail_head_fade: float = 0.0
 ## (Progression placeholder mechanics, #33/#36) How many projectiles one cast
 ## fans out, and the total fan width. 1/0.0 = today's single-projectile
 ## behavior, so every existing spell is unchanged. Provisional placeholder
@@ -35,3 +50,9 @@ class_name Spell
 ## spell, so casting behavior is unchanged. The first concrete summon spell
 ## is #212.
 @export var summon: SummonDefinition = null
+## (#216) Terrain-block hook: when set to a destroyable TerrainTypes id,
+## casting places that tile at the aimed cell (within `range` pixels) through
+## TerrainBlock. A refused placement (no terrain in the area, unwalkable or
+## occupied cell) is not a cast: no cooldown, no signals. Empty on every
+## other spell, so their casting is unchanged.
+@export var terrain_block: StringName = &""

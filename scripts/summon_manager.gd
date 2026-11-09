@@ -21,6 +21,8 @@ signal summoned(summon: Summon)
 ## not a constant.
 @export var base_cap: int = 10
 
+const CombatEffects = preload("res://scripts/combat_effects.gd")
+
 var _caster: SpellCaster
 
 func _ready() -> void:
@@ -60,6 +62,11 @@ func request_spawn(definition: SummonDefinition, position: Vector2) -> Summon:
 	# the caster's parent is the production Player. Null in harnesses.
 	if _caster != null:
 		summon.player = _caster.get_parent() as Node2D
+	# #281: wire the area's terrain grid BEFORE tree entry (same idiom as
+	# the player wiring above and main.gd's player.terrain lookup), so the
+	# behavior can pathfind around unwalkable cells from its first physics
+	# step. Null where the area has no Terrain node.
+	summon.terrain = _spawn_parent().get_node_or_null("Terrain") as TerrainMap
 	_spawn_parent().add_child(summon)
 	summon.global_position = position
 	summoned.emit(summon)
@@ -71,7 +78,10 @@ func _on_spell_cast(spell: Spell) -> void:
 	var origin := Vector2.ZERO
 	if _caster != null:
 		origin = _caster.global_position
-	request_spawn(spell.summon, origin)
+	var spawned := request_spawn(spell.summon, origin)
+	# #289: cast art for the summon, visual only; refused casts show nothing.
+	if spawned != null:
+		CombatEffects.summon_circle(spawned.get_parent(), origin)
 
 ## Current area first (production Main), then the scene root (harnesses).
 func _spawn_parent() -> Node:

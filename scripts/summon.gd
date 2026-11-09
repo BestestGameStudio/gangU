@@ -20,6 +20,10 @@ var definition: SummonDefinition
 ## #212: the player this summon guards. Wired by SummonManager BEFORE
 ## add_child (player_path idiom); null in harnesses - behaviors tolerate it.
 var player: Node2D = null
+## #281: the area's terrain grid for pathfinding, wired by SummonManager
+## BEFORE add_child (main.gd's player.terrain lookup idiom); null in
+## harnesses without a Terrain node - behaviors then move exactly as #280.
+var terrain: TerrainMap = null
 ## #212: per-entity damage rolls for behavior attacks, same idiom as Enemy.
 var damage_rng := RandomNumberGenerator.new()
 
@@ -33,11 +37,34 @@ func setup(def: SummonDefinition) -> void:
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("summons")
+	# #279: summons never physically block or push players or enemies, and
+	# vice versa (ignore_pair excepts BOTH directions of the solver).
+	# Deferred so same-frame actors have registered their groups; covers the
+	# production spawn orders (persistent main.tscn $Player first, enemies
+	# on either side of casts - enemy.gd pairs late spawns). A Player
+	# entering the tree AFTER a summon exists is NOT covered; there is no
+	# such production route (revive heals in place). Contact damage is
+	# distance-based and projectiles are Area sweeps: both untouched.
+	# Immediate pass for actors already in the tree (a deferred-only wiring
+	# leaves one physics tick of solver push when a cast lands ON a body:
+	# measured 22.7px on the player); deferred pass for same-frame spawns.
+	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group(self, ActorCollision.ENEMY_GROUP)
+	ActorCollision.ignore_group.call_deferred(self, ActorCollision.PLAYER_GROUP)
+	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
 	damage_rng.randomize()
 	# #212: each Summon instantiates its OWN behavior instance, so per-summon
 	# state (contact cooldown) is never shared across summons.
 	if definition != null and definition.behavior != null:
 		_behavior = definition.behavior.new()
+
+## #301: unpair on exit - a freed body otherwise leaves a stale entry in
+## peers' collision exception lists, and the engine logs
+## "Parameter \"body\" is null" the next time a peer reads its list.
+func _exit_tree() -> void:
+	for e in get_collision_exceptions():
+		if is_instance_valid(e):
+			e.remove_collision_exception_with(self)
 
 func _physics_process(delta: float) -> void:
 	if _behavior != null and hp > 0:

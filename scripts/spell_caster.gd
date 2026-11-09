@@ -29,6 +29,8 @@ signal slot_assigned(index: int, spell: Spell)
 signal slot_cleared(index: int)
 ## Post-B follow-up: replace_spell swapped a granted spell for a new one.
 signal spell_replaced(old_spell: Spell, new_spell: Spell)
+## #216: a terrain-block spell placed its tile at `cell`.
+signal terrain_block_placed(spell: Spell, cell: Vector2i)
 
 @export var projectile_scene: PackedScene
 
@@ -39,6 +41,7 @@ const CombatEffects = preload("res://scripts/combat_effects.gd")
 var spells: Array[Spell] = []
 var current_index: int = 0
 var _cooldowns: Dictionary = {} ## Spell -> remaining seconds
+var _cooldown_totals: Dictionary = {} ## #268: Spell -> last started cooldown length
 
 ## #10 slots: unlock inventory (grants land here only, never auto-equip) and
 ## the six nullable equip slots. Read via get_unlocked()/get_slots() (copies).
@@ -174,6 +177,9 @@ func replace_spell(old_spell: Spell, new_spell: Spell) -> bool:
 	# Cooldown transfer: new inherits old's remaining time, old entry removed.
 	_cooldowns[new_spell] = maxf(_cooldowns.get(old_spell, 0.0), 0.0)
 	_cooldowns.erase(old_spell)
+	if _cooldown_totals.has(old_spell):
+		_cooldown_totals[new_spell] = _cooldown_totals[old_spell]
+		_cooldown_totals.erase(old_spell)
 	if sidx != -1:
 		slot_assigned.emit(sidx, new_spell)
 	spell_replaced.emit(old_spell, new_spell)
@@ -208,6 +214,19 @@ func next_spell() -> void:
 
 func cooldown_remaining(spell: Spell) -> float:
 	return _cooldowns.get(spell, 0.0)
+
+## #268: full length of the spell's last started cooldown (after cooldown
+## reduction), for HUD fill ratios. spell.cooldown before the first cast.
+func cooldown_duration(spell: Spell) -> float:
+	if spell == null:
+		return 0.0
+	return _cooldown_totals.get(spell, spell.cooldown)
+
+func _effective_cooldown(base: float) -> float:
+	var owner_node := get_parent()
+	if owner_node is Player:
+		return (owner_node as Player).effective_cooldown(base)
+	return base
 
 func can_cast() -> bool:
 	return equipped_spell != null and cooldown_remaining(equipped_spell) <= 0.0
@@ -260,6 +279,11 @@ func _cast_spell(spell: Spell) -> void:
 	var dir := global_position.direction_to(get_global_mouse_position())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
+	# #216: terrain-block spells place their tile BEFORE anything else; a
+	# refused placement returns here, so it costs no cooldown and emits nothing.
+	if spell.terrain_block != &"":
+		if _place_terrain_block(spell) == null:
+			return
 	# #212: summon-only spells carry projectile_count 0 - skip the projectile
 	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
 	# signals below stay unconditional; positive counts are byte-identical.
@@ -269,9 +293,28 @@ func _cast_spell(spell: Spell) -> void:
 			p.setup(spell, d, get_parent())
 			get_tree().current_scene.add_child(p)
 			p.global_position = global_position
-	_cooldowns[spell] = spell.cooldown
-	cooldown_started.emit(spell, spell.cooldown)
+	# #268: the owning Player's cooldown reduction shortens the cooldown this
+	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
+	var duration := _effective_cooldown(spell.cooldown)
+	_cooldowns[spell] = duration
+	_cooldown_totals[spell] = duration
+	cooldown_started.emit(spell, duration)
 	spell_cast.emit(spell)
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
 	CombatEffects.muzzle(get_tree().current_scene, global_position, dir.angle(), spell.projectile_color)
+
+## #216: the caster's owner carries the area's TerrainMap (main.gd _swap
+## sets Player.terrain). Areas without one (hub, DungeonA-C) refuse the cast.
+func _place_terrain_block(spell: Spell) -> Variant:
+	var owner_node := get_parent() as Node2D
+	var map: TerrainMap = null
+	if owner_node != null:
+		map = owner_node.get(&"terrain") as TerrainMap
+	if map == null:
+		return null
+	var blockers := TerrainBlock.blockers_in(get_tree(), owner_node)
+	var cell: Variant = TerrainBlock.place(map, global_position, get_global_mouse_position(), spell.range, spell.terrain_block, blockers)
+	if cell != null:
+		terrain_block_placed.emit(spell, cell)
+	return cell

@@ -1,0 +1,24 @@
+{
+ "_comment": "#302 bolt upgrade sprites -> append rows 14-15 to assets/sprites/spell_upgrades.png (+ resources/sprites/spell_upgrades_frames.tres). Strip: image attached to issue #302 by Mitravasu (1774x887 RGBA, 2 rows x 4 gold lightning frames, real transparency). Run: python3 -I tools/sprites/append_sheet_rows.py pack tools/sprites/specs/spell_upgrades_bolt_rows.json <issue-302-strip.png> assets/sprites/spell_upgrades.png --tres resources/sprites/spell_upgrades_frames.tres",
+ "scale": 6,
+ "cell_w": 64,
+ "cell_h": 72,
+ "alpha_floor": 32,
+ "columns": 6,
+ "start_row": 14,
+ "texture_path": "res://assets/sprites/spell_upgrades.png",
+ "rows": [
+  {
+   "name": "bolt_flurry",
+   "_art": "upper strip row: thin zigzag bolt -> fast multi-shot Bolt Flurry",
+   "windows": [[110, 52], [508, 49], [902, 48], [1309, 58]],
+   "cell_fill": [0, 1, 2, 3, 2, 1]
+  },
+  {
+   "name": "bolt_heavy",
+   "_art": "lower strip row: broader arrowhead bolt -> piercing Heavy Bolt",
+   "windows": [[90, 389], [492, 391], [894, 395], [1297, 394]],
+   "cell_fill": [0, 1, 2, 3, 2, 1]
+  }
+ ]
+}

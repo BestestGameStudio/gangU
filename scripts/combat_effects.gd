@@ -4,6 +4,7 @@ extends Node2D
 ## entity/state colors dominant. One node per effect, spawned into the AREA
 ## or scene root so it survives a dying enemy; every effect owns its own
 ## lifetime and frees itself - no remnant, no gameplay state.
+## (#289: summon_circle is the one exception, playing supplied sprite art.)
 
 enum Kind { DEATH_BURST, HIT_SPARK, MUZZLE }
 
@@ -20,6 +21,9 @@ const MUZZLE_SPIKES: int = 3
 const MUZZLE_LIFETIME: float = 0.15
 const MUZZLE_START_R: float = 3.0
 const MUZZLE_END_R: float = 16.0
+const SUMMON_FRAMES: SpriteFrames = preload("res://resources/sprites/spell_upgrades_frames.tres")
+const SUMMON_ANIM: StringName = &"summon_ally"
+const SUMMON_CIRCLE_OFFSET: Vector2 = Vector2(0.0, -13.0) ## The circle sits below the cell centre.
 
 var _kind: int = Kind.DEATH_BURST
 var _color: Color = Color.WHITE
@@ -53,6 +57,20 @@ static func muzzle(parent: Node, pos: Vector2, angle: float, color: Color) -> vo
 	fx.position = pos
 	fx.rotation = angle
 	parent.call_deferred("add_child", fx)
+
+## #289: one-shot summoning circle from the supplied spell sheet, drawn at
+## scale 1 with the circle centred on `pos`. Frees itself when it finishes.
+static func summon_circle(parent: Node, pos: Vector2) -> void:
+	var fx := AnimatedSprite2D.new()
+	fx.sprite_frames = SUMMON_FRAMES
+	fx.animation = SUMMON_ANIM
+	fx.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	fx.offset = SUMMON_CIRCLE_OFFSET
+	fx.position = pos
+	fx.add_to_group(&"combat_fx")
+	fx.animation_finished.connect(fx.queue_free)
+	parent.call_deferred("add_child", fx)
+	fx.play()
 
 static func _make(kind: int, color: Color, life: float) -> Node2D:
 	var fx: Node2D = new()

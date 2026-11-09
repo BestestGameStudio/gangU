@@ -30,7 +30,8 @@ const ROW_RADIUS := 4
 const BAR_RADIUS := 3
 const ICON_SIZE := 22.0
 const ICON_PLACEHOLDER_BG := Color(1.0, 1.0, 1.0, 0.04)
-const COOLDOWN_WIPE := Color(0.18, 0.2, 0.26, 1.0)
+## #278: translucent so the spell icon stays visible beneath the wipe.
+const COOLDOWN_WIPE := Color(0.08, 0.09, 0.13, 0.6)
 
 ## Outer plate of a panel: thick border, rounded corners, soft drop shadow.
 static func panel(bg: Color = PANEL_BG) -> StyleBoxFlat:

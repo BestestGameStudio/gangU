@@ -1,6 +1,7 @@
 extends SceneTree
-## #210 harness: supplied sprite art (spell_projectiles_frames.tres) flies on
-## the Fire Ball / Mana Shot / Placeholder Bolt projectiles. Visuals only:
+## #210 harness: supplied sprite art flies on the Fire Ball / Mana Shot /
+## Placeholder Bolt projectiles (#289 moved them to spell_upgrades_frames.tres;
+## see test289 for that sheet's contract). Visuals only:
 ## radius, movement, hits and despawn must stay exactly as before, unmapped
 ## spells keep the code-drawn visuals, and the #177 visual_override hook
 ## still wins. Run headless:
@@ -47,9 +48,9 @@ func _initialize() -> void:
 
 	# --- mapped spells fly the sprite ---------------------------------------
 	var cases := {
-		"res://resources/spells/fire_ball.tres": &"flame",
-		"res://resources/spells/mana_shot.tres": &"mana",
-		"res://resources/spells/placeholder_bolt.tres": &"bolt",
+		"res://resources/spells/fire_ball.tres": &"fire_ball_start",
+		"res://resources/spells/mana_shot.tres": &"mana_shot_start",
+		"res://resources/spells/placeholder_bolt.tres": &"placeholder_bolt_start",
 	}
 	for spell_path in cases:
 		var p := _spawn(spell_path)

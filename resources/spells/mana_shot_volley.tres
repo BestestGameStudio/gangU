@@ -18,3 +18,7 @@ projectile_speed = 1000.0
 projectile_color = Color(0.75, 0.6, 1, 1)
 projectile_count = 3
 spread_degrees = 14.0
+visual_scale = 1.7
+glow = true
+trail_length = 4
+glow_tint = Color(0.25, 0.7, 1, 1)
