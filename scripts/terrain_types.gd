@@ -131,7 +131,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	BLOCK: {
-		"walkable": false,
+		"movement": Movement.BLOCKING,
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
