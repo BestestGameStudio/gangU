@@ -139,6 +139,12 @@ func _ready() -> void:
 		## approved Fire Ball / Mana Shot tier-1 precedent.
 		preload("res://resources/upgrades/bolt_flurry.tres"),
 		preload("res://resources/upgrades/bolt_heavy.tres"),
+		## Spirit Punch route (#305): base -> burst -> launch -> bubble,
+		## tiers 1/2/3. Cast thresholds 10/15/20 are provisional
+		## implementation discretion, not approved final balance.
+		preload("res://resources/upgrades/spirit_punch_burst.tres"),
+		preload("res://resources/upgrades/spirit_punch_launch.tres"),
+		preload("res://resources/upgrades/spirit_punch_bubble.tres"),
 	]
 	add_child(progress)
 	var panel: EquipPanel = preload("res://scenes/equip_panel.tscn").instantiate()
