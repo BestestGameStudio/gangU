@@ -21,6 +21,9 @@ extends Node2D
 ## movement, navigation and generation all see the palette's categories.
 
 signal cell_destroyed(cell: Vector2i, old_type: StringName, new_type: StringName)
+## #167: a spell element interaction (TerrainInteractions rule `rule_id`)
+## changed `cell` from old_type to new_type.
+signal cell_interacted(cell: Vector2i, old_type: StringName, new_type: StringName, rule_id: StringName)
 
 ## Grid cell size in pixels (matches BackgroundGrid's 64 spacing).
 @export var cell_size: int = 64
@@ -50,6 +53,10 @@ var _atlas_source: TileSetAtlasSource = null
 ## store is left as is.
 @export var palette: TerrainPalette = null:
 	set = _set_palette
+
+## #167: spell -> terrain element rules this map answers to. Empty means the
+## shared TerrainInteractions registry; an area may set its own list.
+@export var interaction_rules: Array[TerrainInteraction] = []
 
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
 var _ground_layer: TileMapLayer = null
@@ -108,6 +115,32 @@ func destroy_cell(cell: Vector2i) -> bool:
 
 func destroy_at(world_pos: Vector2) -> bool:
 	return destroy_cell(world_to_cell(world_pos))
+
+## #167 (Terrain B1): the rule that fires when a spell with `spell_tags`
+## hits `cell`, or null. Matched by element tag only, through the
+## palette-aware properties (TerrainInteractions owns the rule list).
+func interaction_for_cell(cell: Vector2i, spell_tags: Array) -> TerrainInteraction:
+	var tile_tags: Array = type_properties(tile_type_at_cell(cell))["element_tags"]
+	var rule := TerrainInteractions.find(spell_tags, tile_tags, interaction_rules)
+	if rule == null or not is_valid_type(rule.result_type):
+		return null
+	return rule
+
+## #167: the single entry point for spell -> terrain element interactions.
+## Applies the matching rule's result type and emits cell_interacted.
+## Returns the rule that fired, or null when nothing changed.
+func interact_cell(cell: Vector2i, spell_tags: Array) -> TerrainInteraction:
+	var rule := interaction_for_cell(cell, spell_tags)
+	if rule == null:
+		return null
+	var old_type := tile_type_at_cell(cell)
+	if not set_cell(cell, rule.result_type):
+		return null
+	cell_interacted.emit(cell, old_type, rule.result_type, rule.id)
+	return rule
+
+func interact_at(world_pos: Vector2, spell_tags: Array) -> TerrainInteraction:
+	return interact_cell(world_to_cell(world_pos), spell_tags)
 
 ## --- THE lookup seam (downstream consumes only from here) ---
 

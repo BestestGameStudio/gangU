@@ -388,9 +388,12 @@ func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 		if seen.has(cell):
 			continue
 		seen[cell] = true
-		if not TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+		# #167: an element interaction (e.g. cold + water -> ice) takes
+		# priority over destruction for the same cell.
+		var interacts := _terrain.interaction_for_cell(cell, spell.tags) != null
+		if not interacts and not TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
 			continue
-		events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell})
+		events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell, "interact": interacts})
 	return events
 
 ## Fraction of the segment at which the centre line enters `cell` (0 if it
@@ -459,7 +462,9 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 ## bookkeeping, pierce); destroyable cells through TerrainMap.destroy_cell, the
 ## single terrain-damage entry point (owner rule from #169: any hit destroys a
 ## destroyable tile). Either kind consumes a non-piercing shot; ties go to the
-## body. Non-destroyable tiles never produce an event (pass-through as before).
+## body. Non-destroyable tiles never produce an event (pass-through as before),
+## unless a #167 element interaction matches: that cell goes through
+## TerrainMap.interact_cell instead and only stops the shot if the rule says so.
 func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 	var events: Array[Dictionary] = _body_events(from, motion)
 	events.append_array(_terrain_events(from, motion))
@@ -473,6 +478,12 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 			if not is_instance_valid(b) or _hit_bodies.has(b):
 				continue
 			_on_body_entered(b)
+		elif e.interact:
+			# #167: the rule decides whether the shot stops (consumes_projectile);
+			# PIERCING always keeps flying, as for blocks.
+			var rule := _terrain.interact_cell(e.cell, spell.tags)
+			if rule != null and rule.consumes_projectile and not spell.tags.has(SpellTags.PIERCING):
+				queue_free()
 		elif _terrain.destroy_cell(e.cell):
 			if not spell.tags.has(SpellTags.PIERCING):
 				queue_free()

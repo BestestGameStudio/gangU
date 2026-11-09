@@ -3,7 +3,9 @@ class_name TerrainTypes
 ## their pure data properties. GROUND and OBSTACLE are the flat-map
 ## foundation; GRASS/TREE (grass/forest biome) and SNOW/ICE (snow/ice biome)
 ## are the generated biome types. Element tags are classification metadata
-## (the SpellTags #66 idiom): they describe, nothing executes them yet.
+## (the SpellTags #66 idiom); #167 TerrainInteractions rules match on them
+## (e.g. a cold spell turns a "water" tile into ICE). The tags themselves
+## carry no behavior here.
 ## MUD/WATER/MOUNTAIN are placeable movement types the generator does not
 ## emit yet. friction 1.0 is full grip; swimmable lets a swim-capable mover
 ## enter a non-walkable cell, where speed_multiplier is its swim speed.

@@ -13,8 +13,11 @@ const BURN: StringName = &"burn"
 const MANA: StringName = &"mana"
 const PIERCING: StringName = &"piercing"
 const HOMING: StringName = &"homing"
+## #167: element tag read by the TerrainInteractions registry (cold + water
+## tile -> ice). Behavior lives in the rule data, not in this file.
+const COLD: StringName = &"cold"
 
-const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING]
+const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD]
 
 static func is_valid(tag: StringName) -> bool:
 	return ALL.has(tag)
