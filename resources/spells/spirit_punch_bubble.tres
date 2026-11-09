@@ -20,3 +20,6 @@ launch_speed = 700.0
 launch_duration = 0.12
 freeze_radius = 220.0
 freeze_duration = 5.0
+glow = true
+trail_length = 4
+glow_tint = Color(0.8, 0.88, 1, 1)

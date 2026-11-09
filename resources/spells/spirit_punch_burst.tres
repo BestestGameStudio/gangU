@@ -16,3 +16,6 @@ projectile_color = Color(1, 1, 1, 1)
 visual_scale = 2.0
 burst_count = 3
 burst_interval = 0.15
+glow = true
+trail_length = 4
+glow_tint = Color(0.8, 0.88, 1, 1)
