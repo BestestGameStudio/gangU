@@ -39,6 +39,7 @@ const SPELL_SPRITE_ANIMS: Dictionary = {
 	"Placeholder Bolt": &"placeholder_bolt",
 	"Bolt Flurry": &"bolt_flurry",
 	"Heavy Bolt": &"bolt_heavy",
+	"Spirit Punch": &"spirit_punch",
 }
 ## Cell art is 64 px wide at scale 1; radius / 10 draws each projectile a little
 ## larger than its hit circle so it reads clearly. Clamped (art only, never the
