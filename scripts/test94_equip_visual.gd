@@ -168,8 +168,8 @@ func _initialize() -> void:
 	var upgrade_box := vbox.get_child(2) as VBoxContainer
 	var uh := upgrade_box.get_child(0) as Label
 	_check(uh != null and uh.text == "Upgrades", "(4) Upgrades header on selection")
-	var ub := upgrade_box.get_child(1) as Button
-	_check(ub != null and ub.text == "Path One", "(4) upgrade path button (got '%s')" % (ub.text if ub != null else "null"))
+	var ub := upgrade_box.find_children("*", "UpgradeCard", true, false)[0] as UpgradeCard
+	_check(ub != null and ub.name_label.text == "Path One", "(4) upgrade path button (got '%s')" % (ub.name_label.text if ub != null else "null"))
 	_check(_border_of(ub) == C_UPGRADE, "(4) upgrade button amber")
 
 	# (5) rearrange flow end-to-end: put BetaBolt back, select AlphaBolt,

@@ -216,8 +216,8 @@ func _initialize() -> void:
 	var upgrade_box := vbox.get_child(2) as VBoxContainer
 	var uh := upgrade_box.get_child(0) as Label
 	_check(uh != null and uh.text == "Upgrades", "(7) Upgrades header on selection")
-	var ub := upgrade_box.get_child(1) as Button
-	_check(ub != null and ub.text == "Path One", "(7) upgrade path button (got '%s')" % (ub.text if ub != null else "null"))
+	var ub := upgrade_box.find_child("UpgradeCards", true, false).get_child(0) as UpgradeCard
+	_check(ub != null and ub.name_label.text == "Path One" and ub.action_label.text == "Choose upgrade", "(7) upgrade path button (got '%s')" % (ub.name_label.text if ub != null else "null"))
 	if ub != null:
 		ub.pressed.emit()
 		await process_frame

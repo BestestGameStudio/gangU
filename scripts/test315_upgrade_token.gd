@@ -78,8 +78,8 @@ func _has_token(table: RewardTable) -> bool:
 
 func _token_buttons() -> Array:
 	var out: Array = []
-	for c in panel._upgrade_box.get_children():
-		if c is Button and not c.is_queued_for_deletion():
+	for c in panel._upgrade_box.find_children("*", "UpgradeCard", true, false):
+		if c is UpgradeCard and not c.is_queued_for_deletion() and not c.get_parent().get_parent().is_queued_for_deletion():
 			out.append(c)
 	return out
 
@@ -148,8 +148,8 @@ func _process(delta: float) -> bool:
 			panel._on_slot_pressed(2) # #375: select the equipped base via its slot
 			var bs := _token_buttons()
 			_check(_header() == "Upgrades (Upgrade Tokens: 1)", "panel header shows token count")
-			_check(bs.size() == 1 and bs[0].text == "Burst [S] - use token" if bs.size() == 1 else false,
-				"panel offers ONLY the next tier (Burst) via token: %s" % [bs.map(func(b): return b.text)])
+			_check(bs.size() == 1 and bs[0].name_label.text == "Burst [S]" and bs[0].action_label.text == "Choose - use upgrade token" if bs.size() == 1 else false,
+				"panel offers ONLY the next tier (Burst) via token: %s" % [bs.map(func(b): return b.name_label.text + " - " + b.action_label.text)])
 			phase = 5; t = 0
 		5:
 			if t < 0.3:
@@ -178,7 +178,7 @@ func _process(delta: float) -> bool:
 			_check(prog.can_upgrade(burst) and not prog.can_token_upgrade(burst), "threshold met -> token not offered")
 			panel._refresh()
 			var bs := _token_buttons()
-			_check(bs.size() == 1 and bs[0].text == "Launch [M]" if bs.size() == 1 else false, "cast-ready path shows the normal button")
+			_check(bs.size() == 1 and bs[0].name_label.text == "Launch [M]" and bs[0].action_label.text == "Choose upgrade" if bs.size() == 1 else false, "cast-ready path shows the normal button")
 			if bs.size() == 1:
 				bs[0].pressed.emit()
 			_check(caster.get_slots()[2] == launch and prog.upgrade_tokens() == 1, "cast route applied, token kept")

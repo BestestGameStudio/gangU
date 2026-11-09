@@ -148,13 +148,13 @@ func _initialize() -> void:
 		await process_frame
 	panel._on_slot_pressed(1) # base sits in slot 2; clicking it selects its spell
 	var buttons: Array = []
-	for c in panel._upgrade_box.get_children():
-		if c is Button:
+	for c in panel._upgrade_box.find_children("*", "UpgradeCard", true, false):
+		if c is UpgradeCard:
 			buttons.append(c)
 	_check(buttons.size() == 2, "(e) two upgrade-channel buttons (got %d)" % buttons.size())
 	if buttons.size() == 2:
-		_check(buttons[0].text == "Split shot [S]", "(e) upgrade button carries [S] (got '%s')" % buttons[0].text)
-		_check(buttons[1].text == "Beam [M]", "(e) upgrade button carries [M] (got '%s')" % buttons[1].text)
+		_check(buttons[0].name_label.text == "Split shot [S]", "(e) upgrade button carries [S] (got '%s')" % buttons[0].name_label.text)
+		_check(buttons[1].name_label.text == "Beam [M]", "(e) upgrade button carries [M] (got '%s')" % buttons[1].name_label.text)
 	# Slot buttons stay plain: the suffix is upgrade-channel-only (#375
 	# removed the unlocked rows, so the slots are the whole spell list).
 	var slots_plain := true

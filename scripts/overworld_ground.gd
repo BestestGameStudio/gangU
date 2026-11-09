@@ -11,6 +11,9 @@ class_name OverworldGround
 ## circle marks blocking cells on the area's Terrain grid, so walking,
 ## dashing, knockback and blinks all stop at trees and grid-wired movers
 ## (enemies, summons) path around them. Rocks stay walkable decor.
+## #407 (Daniel, 2026-11-09: "trees should block projectiles"): each tree's
+## drawn circle is also registered on the Terrain grid as an indestructible
+## projectile blocker - player, summon and enemy shots all stop at it.
 
 const CENTER := Vector2(576, -150)
 const RADII := Vector2(1200, 1050)
@@ -142,11 +145,14 @@ func _plant_tree_collision(area: Node) -> void:
 	if map == null:
 		return
 	var cells := {}
+	var blockers: Array[Vector3] = []
 	for d in decor:
 		if d["kind"] != "tree":
 			continue
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
+		# #407: the drawn canopy circle also stops every projectile.
+		blockers.append(Vector3(at.x, at.y, r))
 		var lo := map.world_to_cell(at - Vector2(r, r))
 		var hi := map.world_to_cell(at + Vector2(r, r))
 		for cx in range(lo.x, hi.x + 1):
@@ -159,6 +165,7 @@ func _plant_tree_collision(area: Node) -> void:
 		# walkable at its own position.
 		cells[map.world_to_cell(at)] = TerrainTypes.OBSTACLE
 	map.set_cells(cells)
+	map.set_projectile_blockers(blockers)
 
 func _clear_spot(p: Vector2) -> bool:
 	if p.distance_to(spawn) < GATE_CLEAR:

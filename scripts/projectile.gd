@@ -11,6 +11,9 @@ signal hit_resolved(body: Node2D, result: DamageResult)
 ## e.g. the Warlord orb's impact pop). Hit logic is unchanged.
 signal hit(body: Node2D)
 
+## #407: emitted when solid cover (an overworld tree) stops this shot.
+signal blocked
+
 var spell: Spell
 ## #177: optional per-instance visual override (e.g. the Warlord orb art).
 ## Assign before add_child: it replaces the code-drawn Dart/Visual for THIS
@@ -441,17 +444,24 @@ func _on_body_entered(body: Node2D) -> void:
 		# #208: the rolled crit tier rides along to receivers that show damage
 		# numbers (Enemy, gated receivers); legacy apply_damage(amount) shapes
 		# (Player, stubs) keep the one-argument call.
+		# #390: the receipt captures THIS application's outcome at the receiver
+		# (accepted? killed? hp lost?) before hit/hit_resolved listeners run.
+		var receipt := OnHit.begin(body)
 		if body.has_method(&"apply_damage_from"):
 			body.apply_damage_from(result.amount, self, result.crit_tier)
 		elif body is Enemy:
 			body.apply_damage(result.amount, result.crit_tier)
 		else:
 			body.apply_damage(result.amount)
+		OnHit.end(receipt, body)
 		_hit_bodies.append(body)
 		_hit_times[body] = _life_t
 		_hit_count += 1
 		hit.emit(body)
 		hit_resolved.emit(body, result)
+		# #390: `source` may have been freed while the shot flew; report() takes
+		# it untyped and normalizes it to null, so this never script-errors.
+		OnHit.report(source, spell, body, result, OnHit.DELIVERY_PROJECTILE, receipt)
 		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
 		# Untagged spells keep the original despawn-on-hit, and range expiry
 		# is unchanged for both.
@@ -561,6 +571,13 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 	var events: Array[Dictionary] = _body_events(from, motion)
 	events.append_array(_terrain_events(from, motion))
+	# #407: solid cover (overworld trees). Stops EVERY shot - piercing and
+	# pierce_hits included - and is never damaged. A body reached first (or
+	# at the same t) still takes its hit.
+	if _terrain != null and is_instance_valid(_terrain):
+		var bt := _terrain.projectile_block_t(from, motion)
+		if bt >= 0.0:
+			events.append({"t": bt, "blocker": true})
 	events.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
 		if x.t != y.t:
 			return x.t < y.t
@@ -571,6 +588,11 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 			if not is_instance_valid(b) or not _can_hit(b):
 				continue
 			_on_body_entered(b)
+		elif e.has("blocker"):
+			# #407: stop at the canopy edge, not past it.
+			global_position = from + motion * float(e.t)
+			blocked.emit()
+			queue_free()
 		elif e.interact:
 			# #167: the rule decides whether the shot stops (consumes_projectile);
 			# PIERCING always keeps flying, as for blocks.

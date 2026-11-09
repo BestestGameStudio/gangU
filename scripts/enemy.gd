@@ -118,7 +118,9 @@ const CombatEffects = preload("res://scripts/combat_effects.gd")
 func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	if hp <= 0:
 		return
+	var before := hp
 	hp = clampi(hp - amount, 0, max_hp)
+	OnHit.record(self, before, hp) # #390: outcome captured before any emit
 	_flash_t = FLASH_TIME
 	modulate = Color(2.4, 2.4, 2.4)
 	health_changed.emit(hp, max_hp)

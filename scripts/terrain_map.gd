@@ -59,6 +59,10 @@ var _atlas_source: TileSetAtlasSource = null
 @export var interaction_rules: Array[TerrainInteraction] = []
 
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
+## #407: solid circles that stop projectiles (overworld trees). World-space
+## Vector3(x, y, radius). Kept apart from the cell store: OBSTACLE cells
+## (dungeon borders, maze walls) keep letting shots through as before.
+var _shot_blockers: Array[Vector3] = []
 var _ground_layer: TileMapLayer = null
 var _obstacle_layer: TileMapLayer = null
 
@@ -141,6 +145,31 @@ func interact_cell(cell: Vector2i, spell_tags: Array) -> TerrainInteraction:
 
 func interact_at(world_pos: Vector2, spell_tags: Array) -> TerrainInteraction:
 	return interact_cell(world_to_cell(world_pos), spell_tags)
+
+## #407: replaces the projectile-blocking circles (Vector3(x, y, radius),
+## world space). Indestructible: hits never remove them.
+func set_projectile_blockers(circles: Array[Vector3]) -> void:
+	_shot_blockers = circles.duplicate()
+
+func projectile_blockers() -> Array[Vector3]:
+	return _shot_blockers.duplicate()
+
+## #407: the fraction (0..1) of the segment `from` -> `from + motion` at
+## which its centre line first ENTERS a blocking circle, or -1.0 for none.
+## A segment that starts inside a circle ignores that circle, so a shot
+## fired while standing against a canopy edge flies out instead of dying
+## on its own first frame.
+func projectile_block_t(from: Vector2, motion: Vector2) -> float:
+	var best := -1.0
+	var to := from + motion
+	for c in _shot_blockers:
+		var at := Vector2(c.x, c.y)
+		if from.distance_squared_to(at) <= c.z * c.z:
+			continue
+		var t := Geometry2D.segment_intersects_circle(from, to, at, c.z)
+		if t >= 0.0 and (best < 0.0 or t < best):
+			best = t
+	return best
 
 ## --- THE lookup seam (downstream consumes only from here) ---
 

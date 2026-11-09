@@ -57,6 +57,21 @@ var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
 var _status: Label
+var _upgrade_scroll: ScrollContainer
+
+func _process(_delta: float) -> void:
+	if not visible or not is_instance_valid(_upgrade_scroll):
+		return
+	# Allocate only the space left after the live source stats, slots, header
+	# and status. Long upgrade content scrolls inside this bounded region.
+	var body := _upgrade_box.get_parent() as VBoxContainer
+	var plate := body.get_parent() as PanelContainer
+	var style := plate.get_theme_stylebox("panel")
+	var other := body.get_combined_minimum_size().y - _upgrade_scroll.custom_minimum_size.y + style.get_minimum_size().y
+	var available := get_viewport().get_visible_rect().size.y - 16.0 - other
+	var height := minf(210.0, maxf(32.0, available))
+	if not is_equal_approx(_upgrade_scroll.custom_minimum_size.y, height):
+		_upgrade_scroll.custom_minimum_size.y = height
 
 ## Slot button state channels: occupied vs empty border, and a bright
 ## selected / move-source highlight on the slot whose spell is selected.
@@ -285,6 +300,15 @@ func _refresh() -> void:
 			uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
 		uheader.add_theme_font_size_override("font_size", 22)
 		_upgrade_box.add_child(uheader)
+		var scroll := ScrollContainer.new()
+		scroll.name = "UpgradeScroll"
+		_upgrade_scroll = scroll
+		scroll.custom_minimum_size = Vector2(472, 210)
+		_upgrade_box.add_child(scroll)
+		var cards := HBoxContainer.new()
+		cards.name = "UpgradeCards"
+		cards.add_theme_constant_override("separation", 12)
+		scroll.add_child(cards)
 		var token_ready := _can_token_upgrade(_selected)
 		for path in _upgrader.get_upgrade_paths(_selected):
 			var needs_token := _path_needs_token(_selected, path)
@@ -292,16 +316,20 @@ func _refresh() -> void:
 			# not shown; with no token API this is the unchanged listing.
 			if needs_token and not token_ready:
 				continue
-			var b := Button.new()
-			b.add_theme_font_size_override("font_size", 22)
-			UiStyle.style_button(b, UiStyle.B_ACCENT)
-			b.text = path.display_name + _tier_suffix(path) + (" - use token" if needs_token else "")
+			var b := UpgradeCard.new()
+			var result: Spell = path.get("result_spell")
+			var description := SpellDescription.for_spell(result)
+			if result != null and result.projectile_count > 0:
+				description += "\n%s px range | %s px/s" % [int(result.range), int(result.projectile_speed)]
+			if description.is_empty():
+				description = "Upgrade content is not available yet."
+			b.setup(path.display_name + _tier_suffix(path), description, needs_token)
 			var pid = path.id
 			if needs_token:
 				b.pressed.connect(func(): _on_token_upgrade_pressed(pid))
 			else:
 				b.pressed.connect(func(): _on_upgrade_pressed(pid))
-			_upgrade_box.add_child(b)
+			cards.add_child(b)
 	_status.text = "Selected: %s" % (_selected.spell_name if _selected != null else "none")
 
 func _on_upgrade_pressed(path_id) -> void:
