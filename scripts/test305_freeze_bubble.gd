@@ -141,14 +141,17 @@ func _physics_process(_delta: float) -> bool:
 				var pscene: PackedScene = load("res://scenes/projectile.tscn")
 				_real_proj = pscene.instantiate()
 				_real_proj.setup(load("res://resources/spells/spirit_punch.tres"), Vector2.RIGHT, null)
+				# PRODUCTION ORDER (caster fan-out / SummonManager): add_child
+				# FIRST, position AFTER. The claim must land on the first physics
+				# step against the FINAL position.
+				_root_node.add_child(_real_proj)
 				_real_proj.global_position = Vector2(420, 300)
 				_real_spawn_pos = _real_proj.global_position
-				_root_node.add_child(_real_proj)  # _ready spawn hook fires here
 				_phase = 5
 				_frame = 0
 		5:  # frozen before its first physics step: zero movement
 			if _frame >= 12:
-				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "REAL projectile spawned inside an active bubble never moves (spawn hook, not scan)")
+				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "REAL projectile spawned inside (production order) never moves (first-step claim, not scan)")
 				_check(_real_proj._freeze_count == 1, "real projectile claimed exactly once (count=1)")
 				_real_bubble2 = FreezeBubbleScript.spawn(_root_node, Vector2(430, 300), 200.0, 60.0)
 				_phase = 6
@@ -174,15 +177,48 @@ func _physics_process(_delta: float) -> bool:
 				if not is_instance_valid(_real_proj):
 					_check(true, "claims balanced after both bubbles end (resumed projectile despawned at max range)")
 					_check(true, "projectile resumes moving after final release")
-					print("---\n%d checks, %d failures" % [_checks, _failures])
-					quit(1 if _failures > 0 else 0)
+					_spawn_real_enemy_phase()
 				elif _real_proj.global_position.distance_to(_real_spawn_pos) > 10.0:
 					_check(_real_proj._freeze_count == 0, "claims balanced after both bubbles end (count=0)")
 					_check(true, "projectile resumes moving after final release")
-					print("---\n%d checks, %d failures" % [_checks, _failures])
-					quit(1 if _failures > 0 else 0)
+					_spawn_real_enemy_phase()
 			if _frame >= 120:
 				_check(false, "projectile resumed moving within 120 frames of final release")
 				print("---\n%d checks, %d failures" % [_checks, _failures])
 				quit(1)
+		11: # REAL enemy, production spawn order, inside a fresh bubble: claimed
+			# on its first physics step, zero motion, walk animation PAUSED.
+			if _frame >= 15:
+				_check(_real_enemy._freeze_count == 1, "real enemy claimed on its first physics step (count=1)")
+				_check(_real_enemy.global_position.distance_to(_real_enemy_spawn) < 0.01, "real enemy spawned inside (production order) never moves")
+				if _real_enemy.sprite != null and _real_enemy_sprite_played:
+					_check(not _real_enemy.sprite.is_playing(), "frozen enemy sprite animation PAUSED")
+				_real_bubble3._begin_release()
+				_phase = 12
+				_frame = 0
+		12: # released: behavior and animation resume
+			if _frame >= 10:
+				_check(_real_enemy._freeze_count == 0, "enemy released (count=0)")
+				if _real_enemy.sprite != null and _real_enemy_sprite_played:
+					_check(_real_enemy.sprite.is_playing(), "released enemy sprite animation RESUMED")
+				print("---\n%d checks, %d failures" % [_checks, _failures])
+				quit(1 if _failures > 0 else 0)
 	return false
+
+
+var _real_bubble3: Node = null
+var _real_enemy: Enemy = null
+var _real_enemy_spawn := Vector2.ZERO
+var _real_enemy_sprite_played := false
+
+func _spawn_real_enemy_phase() -> void:
+	_real_bubble3 = FreezeBubbleScript.spawn(_root_node, Vector2(700, 300), 200.0, 60.0)
+	var escene: PackedScene = load("res://scenes/enemy.tscn")
+	_real_enemy = escene.instantiate()
+	# PRODUCTION ORDER: add_child first, position after.
+	_root_node.add_child(_real_enemy)
+	_real_enemy.global_position = Vector2(720, 300)
+	_real_enemy_spawn = _real_enemy.global_position
+	_real_enemy_sprite_played = _real_enemy.sprite != null and _real_enemy.sprite.is_playing()
+	_phase = 11
+	_frame = 0

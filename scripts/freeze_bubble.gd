@@ -69,6 +69,9 @@ func _ready() -> void:
 	# VIEWPORT mode: rect-mode copies sample uninitialised (black) outside
 	# their rect under the Compatibility renderer.
 	_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	# Above every actor (default z 0): entities spawned AFTER the bubble
+	# must also draw under the veil, or they stay in color inside the rim.
+	_back_buffer.z_index = 100
 	add_child(_back_buffer)
 
 	var mat := ShaderMaterial.new()
@@ -82,6 +85,7 @@ func _ready() -> void:
 	_visual.scale = Vector2.ZERO
 	_visual.pivot_offset = Vector2(radius, radius)
 	_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_visual.z_index = 100
 	add_child(_visual)
 
 	body_entered.connect(_on_node_entered)

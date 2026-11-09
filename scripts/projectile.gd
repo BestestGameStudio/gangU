@@ -79,6 +79,7 @@ var _sprite_base: Vector2 = Vector2.ONE
 ## positive, _physics_process skips movement/steer/sweep AND the
 ## distance-based lifetime, so a frozen punch simply waits.
 var _freeze_count := 0
+var _spawn_claim_pending := true
 
 ## #305: Signature freeze contract. Claims are reference-counted so
 ## overlapping bubbles freeze and release independently.
@@ -121,11 +122,6 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	rotation = direction.angle()
 
 func _ready() -> void:
-	# #305: spawn hook - if I spawn inside an active freeze bubble, it claims
-	# me before my first physics step (Area2D overlap registration lags a
-	# frame, so the bubble's scan alone can miss a mid-frame spawn).
-	for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
-		bubble.claim(self)
 	$CollisionShape2D.shape = $CollisionShape2D.shape.duplicate() # per-spell radius must not leak across instances (#4 gate)
 	$CollisionShape2D.shape.radius = spell.radius
 	$Visual.color = spell.projectile_color
@@ -230,6 +226,16 @@ func _wire_sprite() -> void:
 	$Visual.visible = false
 
 func _physics_process(delta: float) -> void:
+	if _spawn_claim_pending:
+		# #305: spawn claim on the FIRST physics step, not _ready: production
+		# spawns set global_position AFTER add_child (caster fan-out, summon
+		# manager), so a _ready hook would claim against a stale position.
+		# Here the position is final and movement has not started, so an
+		# inside-spawn is claimed with zero motion (Area2D registration lags
+		# a frame, so the bubble's scan alone can miss a mid-frame spawn).
+		_spawn_claim_pending = false
+		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+			bubble.claim(self)
 	if _freeze_count > 0:
 		return
 	# #37: a HOMING-tagged spell steers BEFORE moving - toward the nearest
