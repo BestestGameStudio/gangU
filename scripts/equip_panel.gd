@@ -58,20 +58,30 @@ var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
 var _status: Label
 var _upgrade_scroll: ScrollContainer
+var _plate: PanelContainer
+var _detail_box: VBoxContainer
+
+## #416 (Daniel, 2026-11-09): the menu must not change size when switching
+## between player stats and spell stats, and the upgrades sit UNDER the
+## spell stats in a column wide enough for three upgrade cards. The detail
+## column has a fixed width and the plate a fixed height (capped by the
+## viewport); the upgrade scroll fills whatever height is left, so content
+## changes never resize the panel.
+const UPGRADE_CARD_GAP := 12
+const DETAIL_WIDTH := UpgradeCard.CARD_WIDTH * 3 + UPGRADE_CARD_GAP * 2 + 12.0 # + scrollbar
+const PANEL_HEIGHT := 620.0
+const SCREEN_MARGIN := 16.0
 
 func _process(_delta: float) -> void:
-	if not visible or not is_instance_valid(_upgrade_scroll):
+	if visible:
+		_fit_plate()
+
+func _fit_plate() -> void:
+	if not is_instance_valid(_plate) or not is_inside_tree():
 		return
-	# Allocate only the space left after the live source stats, slots, header
-	# and status. Long upgrade content scrolls inside this bounded region.
-	var body := _upgrade_box.get_parent() as VBoxContainer
-	var plate := body.get_parent() as PanelContainer
-	var style := plate.get_theme_stylebox("panel")
-	var other := body.get_combined_minimum_size().y - _upgrade_scroll.custom_minimum_size.y + style.get_minimum_size().y
-	var available := get_viewport().get_visible_rect().size.y - 16.0 - other
-	var height := minf(210.0, maxf(32.0, available))
-	if not is_equal_approx(_upgrade_scroll.custom_minimum_size.y, height):
-		_upgrade_scroll.custom_minimum_size.y = height
+	var height := minf(PANEL_HEIGHT, get_viewport().get_visible_rect().size.y - SCREEN_MARGIN)
+	if not is_equal_approx(_plate.custom_minimum_size.y, height):
+		_plate.custom_minimum_size.y = height
 
 ## Slot button state channels: occupied vs empty border, and a bright
 ## selected / move-source highlight on the slot whose spell is selected.
@@ -188,6 +198,7 @@ func _build_ui() -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiStyle.panel())
 	center.add_child(panel)
+	_plate = panel
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 10)
 	panel.add_child(vbox)
@@ -197,6 +208,7 @@ func _build_ui() -> void:
 	vbox.add_child(title)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 20)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(cols)
 	# #375: the ONLY spell column is the six slots. Buttons stay DIRECT
 	# children of _slots_box (harnesses white-box that structure for
@@ -224,11 +236,20 @@ func _build_ui() -> void:
 	# instead (StatSheet builds both, read-only).
 	var divider := VSeparator.new()
 	cols.add_child(divider)
+	# #416: one fixed-width detail column holds the stats and, under them,
+	# the selected spell's upgrades.
+	_detail_box = VBoxContainer.new()
+	_detail_box.name = "DetailColumn"
+	_detail_box.custom_minimum_size = Vector2(DETAIL_WIDTH, 0)
+	_detail_box.add_theme_constant_override("separation", 10)
+	cols.add_child(_detail_box)
 	_stats_box = StatGrid.new()
-	cols.add_child(_stats_box)
+	_detail_box.add_child(_stats_box)
 	_upgrade_box = VBoxContainer.new()
+	_upgrade_box.name = "UpgradeBox"
 	_upgrade_box.add_theme_constant_override("separation", 4)
-	vbox.add_child(_upgrade_box)
+	_upgrade_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_detail_box.add_child(_upgrade_box)
 	_status = Label.new()
 	_status.add_theme_font_size_override("font_size", 18)
 	vbox.add_child(_status)
@@ -247,6 +268,7 @@ func _input(event: InputEvent) -> void:
 func show_panel() -> void:
 	_selected = null
 	_hook_relics()
+	_fit_plate()
 	_refresh()
 	visible = true
 	add_to_group("modal_ui") # caster cast-guard hook (coordinated with B)
@@ -303,11 +325,12 @@ func _refresh() -> void:
 		var scroll := ScrollContainer.new()
 		scroll.name = "UpgradeScroll"
 		_upgrade_scroll = scroll
-		scroll.custom_minimum_size = Vector2(472, 210)
+		# Fills the height left under the stats; tall cards scroll inside it.
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_upgrade_box.add_child(scroll)
 		var cards := HBoxContainer.new()
 		cards.name = "UpgradeCards"
-		cards.add_theme_constant_override("separation", 12)
+		cards.add_theme_constant_override("separation", UPGRADE_CARD_GAP)
 		scroll.add_child(cards)
 		var token_ready := _can_token_upgrade(_selected)
 		for path in _upgrader.get_upgrade_paths(_selected):

@@ -122,7 +122,7 @@ func _initialize() -> void:
 	_check(cols != null and cols.get_child_count() == 3, "(0) three columns: slots + divider + stats (got %d)" % (cols.get_child_count() if cols != null else -1))
 	_check(cols.get_child(0) == panel._slots_box, "(0) first column is the slots box")
 	_check(cols.get_child(1) is VSeparator, "(0) divider second")
-	_check(cols.get_child(2) is StatGrid, "(0) stat grid right-most")
+	_check(cols.get_child(2).get_child(0) is StatGrid, "(0) stat grid right-most (#416: top of the detail column)")
 	var unlocked_header := false
 	var gamma_button := false
 	for n in panel.find_children("*", "Label", true, false):
@@ -213,7 +213,7 @@ func _initialize() -> void:
 	panel._on_slot_pressed(0) # select BetaBolt
 	await process_frame
 	_check(panel._selected == b, "(7) equipped spell selected")
-	var upgrade_box := vbox.get_child(2) as VBoxContainer
+	var upgrade_box := panel._upgrade_box # #416: under the stats in the detail column
 	var uh := upgrade_box.get_child(0) as Label
 	_check(uh != null and uh.text == "Upgrades", "(7) Upgrades header on selection")
 	var ub := upgrade_box.find_child("UpgradeCards", true, false).get_child(0) as UpgradeCard

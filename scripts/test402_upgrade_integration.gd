@@ -83,7 +83,7 @@ func run() -> void:
 	if offered.size() == 1:
 		var card: UpgradeCard = offered[0]
 		scroller = panel._upgrade_box.get_node("UpgradeScroll")
-		var plate := panel._upgrade_box.get_parent().get_parent() as PanelContainer
+		var plate := panel._plate
 		ck(plate.get_global_rect().position.y >= 0 and plate.get_global_rect().end.y <= 648, "Leaping Hammer full panel bounded by viewport")
 		ck(panel._status.get_global_rect().end.y <= 648, "long-content selected status stays on screen")
 		ck(panel._stats_box.description() == SpellDescription.for_spell(leap), "long source description preserved")

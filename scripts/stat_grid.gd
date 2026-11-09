@@ -12,7 +12,9 @@ extends VBoxContainer
 ## Cells are reused when the id list is unchanged, so live updates while the
 ## Tab menu is open never tear down a cell the mouse is hovering.
 
-const COLUMNS := 2
+## #416: the grid sits above the upgrade cards in a column sized for three
+## cards, so it uses that width (5 cells, with slack for long values).
+const COLUMNS := 5
 const CELL_WIDTH := 112.0
 const ICON_SIZE := 26.0
 const VALUE_FONT := 20

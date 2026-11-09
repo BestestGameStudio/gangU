@@ -63,8 +63,10 @@ func _initialize() -> void:
 
 	# Right side: the column after the slots (#375: slots are the only spell
 	# column left; index 0 = slots, divider, then the grid last).
-	var cols := grid.get_parent()
-	_check(cols is HBoxContainer and cols.get_child(0) == panel._slots_box and grid.get_index() == cols.get_child_count() - 1,
+	# #416: the grid tops the right-most detail column (upgrades sit under it).
+	var detail := grid.get_parent()
+	var cols := detail.get_parent()
+	_check(cols is HBoxContainer and cols.get_child(0) == panel._slots_box and detail.get_index() == cols.get_child_count() - 1 and grid.get_index() == 0,
 		"grid is the right-most column of the Tab menu")
 	_check(grid.get_global_rect().position.x > panel._slots_box.get_global_rect().end.x, "grid sits right of the slots")
 
