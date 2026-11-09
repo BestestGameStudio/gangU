@@ -115,7 +115,8 @@ func _run_legs() -> void:
 	## 5. Walk-away closes; a later unlock does not resurrect it.
 	directory._on_body_exited(p)
 	_check(not panel.visible and not panel.is_in_group("modal_ui"), "walk-away closes panel")
-	caster.unlock_spell(preload("res://resources/spells/fire_ball_split.tres"))
+	# #383: a second copy of the held upgrade is refused, so use a distinct spell.
+	caster.unlock_spell(preload("res://resources/spells/frost_shard.tres"))
 	_check(not panel.visible, "unlock while closed stays closed")
 
 	## 6. Non-player bodies do not open it.
