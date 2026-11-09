@@ -51,6 +51,12 @@ class_name Spell
 ## Provisional placeholder numbers only - balance is an open human choice.
 @export var burst_count: int = 1
 @export var burst_interval: float = 0.1
+## (#305) Launch (Mastery: the player is launched forward BEFORE attacking):
+## launch speed in px/s and duration in seconds. launch_speed 0.0 = no
+## launch, so every existing spell is unchanged. Provisional placeholder
+## numbers only - balance is an open human choice.
+@export var launch_speed: float = 0.0
+@export var launch_duration: float = 0.12
 ## (#209) Summon hook: when set, casting this spell asks the SummonManager to
 ## spawn this definition (the shared cap applies). Null on every existing
 ## spell, so casting behavior is unchanged. The first concrete summon spell
