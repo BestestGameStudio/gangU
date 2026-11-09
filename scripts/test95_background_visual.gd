@@ -95,7 +95,8 @@ func _initialize() -> void:
 	ow.free()
 
 	# ---- DUNGEONS ----
-	var frames := {"Top": Rect2(150, 84, 852, 4), "Bottom": Rect2(150, 652, 852, 4), "Left": Rect2(150, 84, 4, 572), "Right": Rect2(998, 84, 4, 572)}
+	# #396: the frame traces the inner edge of the terrain walls (64 px grid).
+	var frames := {"Top": Rect2(188, 60, 776, 4), "Bottom": Rect2(188, 640, 776, 4), "Left": Rect2(188, 60, 4, 584), "Right": Rect2(960, 60, 4, 584)}
 	var dungeons := [
 		{"scene": "res://scenes/dungeon_a.tscn", "root_name": "DungeonA", "accent": DUNGEONA_SLATE, "tag": "dungeonA"},
 		{"scene": "res://scenes/dungeon_b.tscn", "root_name": "DungeonB", "accent": DUNGEONB_SLATE, "tag": "dungeonB"},

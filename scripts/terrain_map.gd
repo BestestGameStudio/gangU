@@ -58,6 +58,11 @@ var _atlas_source: TileSetAtlasSource = null
 ## shared TerrainInteractions registry; an area may set its own list.
 @export var interaction_rules: Array[TerrainInteraction] = []
 
+## #396: a hand-designed map written into the store once, in _ready (before
+## the first presentation build). Null = cells come from code (TerrainGen,
+## MazeGen, harnesses) or the map stays flat.
+@export var fixed_layout: TerrainFixedLayout = null
+
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
 ## #407: solid circles that stop projectiles (overworld trees). World-space
 ## Vector3(x, y, radius). Kept apart from the cell store: OBSTACLE cells
@@ -67,6 +72,8 @@ var _ground_layer: TileMapLayer = null
 var _obstacle_layer: TileMapLayer = null
 
 func _ready() -> void:
+	if fixed_layout != null and not fixed_layout.apply(self):
+		push_warning("TerrainFixedLayout '%s' names a tile type this map does not know" % fixed_layout.resource_path)
 	_build_layers()
 	_rebuild_presentation()
 

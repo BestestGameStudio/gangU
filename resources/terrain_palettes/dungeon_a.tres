@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="TerrainPalette" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/terrain_palette.gd" id="1_palette"]
+[ext_resource type="Script" path="res://scripts/terrain_tile.gd" id="2_tile"]
+
+[sub_resource type="Resource" id="wall"]
+script = ExtResource("2_tile")
+id = &"obstacle"
+movement = 1
+color = Color(0.17, 0.2, 0.26, 1)
+
+[resource]
+script = ExtResource("1_palette")
+tiles = Array[ExtResource("2_tile")]([SubResource("wall")])
