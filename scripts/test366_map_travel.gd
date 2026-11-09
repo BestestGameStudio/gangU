@@ -113,6 +113,7 @@ func _run() -> void:
 	var defense := main.current_area.get_node("DungeonObjective") as DungeonObjective
 	while defense.waves_spawned() < defense.wave_count:
 		defense.spawn_next_wave()
+	await _frames(int(defense.wave_boss_delay * 60.0) + 4) # #368: final-wave boss arrives
 	await _kill_all()
 	_check(main.is_cleared(&"dungeon_e"), "DungeonE cleared")
 	_check(wm.cleared_sites(ow).size() == 2, "both cleared dungeons marked")

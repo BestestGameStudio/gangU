@@ -55,6 +55,14 @@ const CATALOG: Array[Dictionary] = [
 		"frames": "res://resources/sprites/beast_boss_frames.tres",
 		"boss": true,
 	},
+	{
+		# #368: defense-mission boss wave enemy.
+		"id": &"siege_brute",
+		"name": "Siege Brute",
+		"scene": "res://scenes/defense_wave_boss.tscn",
+		"frames": "res://resources/sprites/mustache_warrior_frames.tres",
+		"boss": true,
+	},
 ]
 
 ## Where the record is persisted. Tests point this at their own file.

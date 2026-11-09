@@ -74,6 +74,7 @@ func _run() -> void:
 	_check(not main.can_fast_return(), "fresh defense before wave spawn is not a safe area")
 	while defense.waves_spawned() < defense.wave_count:
 		defense.spawn_next_wave()
+	await _frames(int(defense.wave_boss_delay * 60.0) + 4) # #368: final-wave boss arrives
 	for enemy in get_nodes_in_group("enemies"):
 		enemy.apply_damage(99999)
 	await _frames()

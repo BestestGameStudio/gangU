@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://resources/rewards/boss_token_table.tres" id="2_token"]
+
+[resource]
+script = ExtResource("1_def")
+max_hp = 240
+speed = 70.0
+contact_damage = 30
+contact_cooldown = 1.0
+contact_range = 46.0
+reward_table = ExtResource("2_token")
