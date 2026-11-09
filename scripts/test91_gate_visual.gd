@@ -9,8 +9,10 @@ extends SceneTree
 ##   decor      - gate: oval portal (Rim Line2D + Body Polygon2D, full
 ##                look proven by test189); portal: ExitArrow flat Polygon2D
 ##                (light lavender, UP = exit) - exact points
-##   families   - hub boot: NORMAL gate tint blue, RED gate tint red
-##                (script-driven, intact over the neutral decor)
+##   families   - hub boot: rolled NORMAL gate tint blue on both gates
+##                (#350 fixture: offering chance forced to 0.0 for this
+##                driver so the roll is deterministic; the 50/50 roll and
+##                per-run pinning are covered by test350)
 ##   portal     - real normal-gate entry into DungeonA: ExitPortal decor
 ##                present, unlocked purple tint, EXIT label text
 ## The decor legs FAIL on the old base (no decor nodes) - meaningful
@@ -25,8 +27,17 @@ var p: CharacterBody2D
 var phase := 0
 var t := 0.0
 var fails := 0
+var _offering_orig := 0.0
 
 func _initialize() -> void:
+	# #350 fixture: force the shared offering to 0.0 so both gates
+	# deterministically roll NORMAL through the production roll. Held for the
+	# driver's whole lifetime: the hub's gates roll on their first in-tree
+	# frame, which can land after _initialize returns. Restored on quit is
+	# unnecessary - this process only runs this driver.
+	var offering := load("res://resources/gate_offering.tres") as GateOffering
+	_offering_orig = offering.red_chance
+	offering.red_chance = 0.0
 	scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
@@ -77,10 +88,10 @@ func _process(delta: float) -> bool:
 				_check("hub: both gates present", normal != null and red != null)
 				_gate_structure(normal, "GateNormal")
 				_gate_structure(red, "GateRed")
-				_check("families: NORMAL tint blue (script-driven)",
+				_check("families: GateNormal rolled NORMAL tint blue (script-driven)",
 					_color_eq(normal.get_node("ColorRect").color, Color(0.15, 0.6, 0.9)))
-				_check("families: RED tint red (script-driven)",
-					_color_eq(red.get_node("ColorRect").color, Color(0.85, 0.15, 0.15)))
+				_check("families: GateRed rolled NORMAL tint blue (forced-0.0 fixture)",
+					_color_eq(red.get_node("ColorRect").color, Color(0.15, 0.6, 0.9)))
 				var g: Gate = normal
 				g._on_body_entered(p)
 				phase = 1; t = 0
