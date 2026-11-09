@@ -247,6 +247,7 @@ func hide_panel() -> void:
 func _refresh_stats() -> void:
 	if _player == null:
 		return
+	_stats_box.set_description(SpellDescription.for_spell(_selected))
 	if _selected != null:
 		_stats_box.set_entries(_selected.spell_name, StatSheet.spell_entries(_selected, _player, _caster))
 	else:
