@@ -66,7 +66,28 @@ func _exit_tree() -> void:
 		if is_instance_valid(e):
 			e.remove_collision_exception_with(self)
 
+## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
+## positive, the behavior physics_step (which accumulates ALL behavior
+## clocks from delta) never runs, so the whole summon freezes.
+var _freeze_count := 0
+var _spawn_claim_pending := true
+
+## #305: Signature freeze contract. Claims are reference-counted so
+## overlapping bubbles freeze and release independently.
+func set_frozen(frozen: bool) -> void:
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+
 func _physics_process(delta: float) -> void:
+	if _spawn_claim_pending:
+		# #305: spawn claim on the FIRST physics step, not _ready:
+		# SummonManager sets global_position AFTER add_child, so a _ready
+		# hook would claim against a stale position. Here the position is
+		# final and movement has not started - zero-motion inside-spawns.
+		_spawn_claim_pending = false
+		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+			bubble.claim(self)
+	if _freeze_count > 0:
+		return
 	if _behavior != null and hp > 0:
 		_behavior.physics_step(self, player, delta)
 
@@ -110,6 +131,9 @@ func _glow_strength() -> float:
 	return 0.88 + 0.12 * sin(_glow_time * TAU / GLOW_PERIOD)
 
 func _process(delta: float) -> void:
+	# #305: the glow clock freezes with the summon (Signature freeze).
+	if _freeze_count > 0:
+		return
 	_glow_time = fmod(_glow_time + delta, GLOW_PERIOD)
 	# Also redraw after ownership is lost, so no stale halo survives a freed owner.
 	queue_redraw()

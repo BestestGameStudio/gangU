@@ -183,7 +183,41 @@ func _resolve_target() -> CharacterBody2D:
 			return best
 	return _player
 
+## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
+## positive, the behavior physics_step (which accumulates ALL behavior
+## clocks from delta) never runs, so the whole enemy freezes.
+var _freeze_count := 0
+var _spawn_claim_pending := true
+
+## #305: Signature freeze contract. Claims are reference-counted so
+## overlapping bubbles freeze and release independently. The animated
+## sprite pauses while held - a frozen enemy must LOOK frozen.
+func set_frozen(frozen: bool) -> void:
+	var was := _freeze_count
+	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
+	if sprite != null:
+		if _freeze_count > 0 and was == 0:
+			# pause() alone does not hold: the sprite driver's _process
+			# replays locomotion every frame. Stop its processing too.
+			sprite.pause()
+			sprite.process_mode = Node.PROCESS_MODE_DISABLED
+		elif _freeze_count == 0 and was > 0:
+			sprite.process_mode = Node.PROCESS_MODE_INHERIT
+			sprite.play()
+
 func _physics_process(delta: float) -> void:
+	if _spawn_claim_pending:
+		# #305: spawn claim on the FIRST physics step, not _ready: production
+		# spawns can set global_position after add_child, so a _ready hook
+		# would claim against a stale position. Here the position is final
+		# and movement has not started - an inside-spawn freezes with zero
+		# motion (Area2D registration lags a frame, so the bubble's scan
+		# alone can miss a mid-frame spawn).
+		_spawn_claim_pending = false
+		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+			bubble.claim(self)
+	if _freeze_count > 0:
+		return
 	if _behavior != null:
 		_behavior.physics_step(self, _resolve_target(), delta)
 
