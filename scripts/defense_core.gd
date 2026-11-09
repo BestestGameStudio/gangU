@@ -41,7 +41,9 @@ func is_destroyed() -> bool:
 func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	if hp <= 0:
 		return
+	var before := hp
 	hp = clampi(hp - amount, 0, max_hp)
+	OnHit.record(self, before, hp) # #390
 	_flash_t = 0.12
 	health_changed.emit(hp, max_hp)
 	if get_parent() != null:

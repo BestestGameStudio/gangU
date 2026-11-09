@@ -89,7 +89,7 @@ func _damage_contacts(delta: float) -> void:
 			continue
 		if (e as Node2D).global_position.distance_to(global_position) <= reach:
 			_hit_clock[e] = spell.shield_tick
-			WaterSplash.deal_damage(e, spell, owner_body)
+			WaterSplash.deal_damage(e, spell, owner_body, OnHit.DELIVERY_CONTACT)
 
 func _absorb_projectiles() -> void:
 	for p in get_tree().get_nodes_in_group(&"projectiles"):
