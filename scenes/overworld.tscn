@@ -1,0 +1,102 @@
+[gd_scene load_steps=13 format=3 uid="uid://bgangu346ovw"]
+
+[ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
+[ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
+[ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="346_gate"]
+[ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="346_dna"]
+[ext_resource type="PackedScene" uid="uid://bgangu7dnb" path="res://scenes/dungeon_b.tscn" id="346_dnb"]
+[ext_resource type="PackedScene" path="res://scenes/dungeon_generated.tscn" id="346_dng"]
+[ext_resource type="PackedScene" path="res://scenes/dungeon_c.tscn" id="346_dnc"]
+[ext_resource type="PackedScene" path="res://scenes/dungeon_d.tscn" id="346_dnd"]
+[ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://scenes/enemy.tscn" id="346_enemy"]
+[ext_resource type="Resource" uid="uid://bgangurdemotable" path="res://resources/rewards/demo_table.tres" id="346_table"]
+[ext_resource type="Resource" path="res://resources/gate_offering.tres" id="350_offer"]
+[ext_resource type="Resource" path="res://resources/enemies/overworld_guard.tres" id="346_guard_def"]
+
+[node name="Overworld" type="Node2D"]
+
+[node name="Ground" type="Node2D" parent="."]
+script = ExtResource("346_ground")
+
+[node name="TitleLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Title" type="Label" parent="TitleLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -700.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 28
+text = "OVERWORLD"
+horizontal_alignment = 2
+
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(576, 480)
+
+[node name="GateHub" parent="." instance=ExtResource("346_gate")]
+position = Vector2(576, 640)
+gate_type = 3
+target_path = "res://scenes/hub.tscn"
+label_text = "HUB"
+
+[node name="GateNormal" parent="." instance=ExtResource("346_gate")]
+position = Vector2(300, 380)
+target_dungeon = ExtResource("346_dna")
+offering = ExtResource("350_offer")
+
+[node name="GateRed" parent="." instance=ExtResource("346_gate")]
+position = Vector2(852, 380)
+gate_type = 1
+target_dungeon = ExtResource("346_dnb")
+offering = ExtResource("350_offer")
+
+[node name="GateGenerated" parent="." instance=ExtResource("346_gate")]
+position = Vector2(150, -520)
+target_dungeon = ExtResource("346_dng")
+label_text = "GENERATED"
+
+[node name="GateBoss" parent="." instance=ExtResource("346_gate")]
+position = Vector2(1050, -860)
+gate_type = 2
+target_dungeon = ExtResource("346_dnc")
+
+[node name="GateBeast" parent="." instance=ExtResource("346_gate")]
+position = Vector2(300, -860)
+gate_type = 2
+target_dungeon = ExtResource("346_dnd")
+label_text = "BEAST"
+
+[node name="EntranceGuards" type="Node" parent="."]
+
+[node name="GuardsNormal" type="Node" parent="EntranceGuards"]
+script = ExtResource("346_guards")
+dungeon_id = &"dungeon_a"
+entries = [{ "position": Vector2(210, 300), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(330, 270), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+player_path = NodePath("../../Player")
+
+[node name="GuardsRed" type="Node" parent="EntranceGuards"]
+script = ExtResource("346_guards")
+dungeon_id = &"dungeon_b"
+entries = [{ "position": Vector2(822, 270), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(942, 300), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+player_path = NodePath("../../Player")
+
+[node name="GuardsGenerated" type="Node" parent="EntranceGuards"]
+script = ExtResource("346_guards")
+entries = [{ "position": Vector2(60, -600), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(240, -610), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(150, -680), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+player_path = NodePath("../../Player")
+
+[node name="GuardsBeast" type="Node" parent="EntranceGuards"]
+script = ExtResource("346_guards")
+dungeon_id = &"dungeon_d"
+entries = [{ "position": Vector2(210, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(390, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(200, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(400, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+player_path = NodePath("../../Player")
+
+[node name="GuardsBoss" type="Node" parent="EntranceGuards"]
+script = ExtResource("346_guards")
+dungeon_id = &"dungeon_c"
+entries = [{ "position": Vector2(960, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(1140, -760), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(950, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }, { "position": Vector2(1150, -960), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("346_guard_def") }]
+player_path = NodePath("../../Player")
