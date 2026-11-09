@@ -41,6 +41,10 @@ var damage_modifiers := DamageModifiers.new()
 var damage_rng := RandomNumberGenerator.new()
 var terrain: TerrainMap = null
 var _player: Player
+## #337: DEFENSE objective target (a DefenseCore), set by DungeonObjective on
+## part of each wave. See _resolve_target.
+var objective_target: DefenseCore = null
+var objective_aggro_range: float = 150.0
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.
 var _behavior: RefCounted
@@ -163,7 +167,12 @@ func _process(delta: float) -> void:
 ## their Player-typed physics_step and stay player-only, so a summon is
 ## never passed to them. With no summons in the tree this returns _player
 ## exactly as before.
-func _resolve_target() -> CharacterBody2D:
+## #337: a DEFENSE wave enemy may carry an objective_target (the DefenseCore).
+## It attacks the core, but turns on the player whenever the player comes
+## within objective_aggro_range, and goes back to the core once they leave.
+## Summon taunts still win (same priority as for any chase/contact enemy).
+## Unset (every non-defense enemy): no change.
+func _resolve_target() -> Node2D:
 	if _behavior is EnemyBehaviorChaseContact:
 		var best: Summon = null
 		var best_d := INF
@@ -183,6 +192,10 @@ func _resolve_target() -> CharacterBody2D:
 				best = summon
 		if best != null:
 			return best
+		if objective_target != null and is_instance_valid(objective_target) and objective_target.hp > 0:
+			var player_alive := _player != null and is_instance_valid(_player) and _player.hp > 0
+			if not (player_alive and global_position.distance_to(_player.global_position) <= objective_aggro_range):
+				return objective_target
 	return _player
 
 ## #305: Signature freeze. Reference-counted by FreezeBubble claims; while

@@ -25,11 +25,16 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		enemy.move_and_slide()
 		return
 	var to_player: Vector2 = player.global_position - enemy.global_position
-	var chase: Vector2 = to_player.normalized() * enemy.speed if to_player.length() > 8.0 else Vector2.ZERO
+	# #337: a target with a contact_radius (DefenseCore) is hit at its rim.
+	# Player/Summon have none, so pad stays 0 and nothing changes for them.
+	var pad: float = 0.0
+	if player is DefenseCore:
+		pad = player.contact_radius
+	var chase: Vector2 = to_player.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
 	enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
 	enemy.move_and_slide()
 	_contact_timer = maxf(0.0, _contact_timer - delta)
-	if to_player.length() <= enemy.contact_range and _contact_timer <= 0.0:
+	if to_player.length() <= enemy.contact_range + pad and _contact_timer <= 0.0:
 		player.apply_damage(DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng).amount)
 		_contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack") # #177: visual swing only

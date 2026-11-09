@@ -175,11 +175,23 @@ func _update_objective(delta: float) -> void:
 	_objective = found
 	_objective.objective_progress_changed.connect(_on_objective_progress)
 	_objective.objective_completed.connect(_on_objective_completed)
+	_objective.objective_failed.connect(_on_objective_failed)
 	var p := _objective.progress()
 	_show_objective(p.x, p.y)
+	if _objective.is_failed():
+		_on_objective_failed(_objective.dungeon_id)
 
 func _show_objective(current: int, target: int) -> void:
-	_objective_label.text = "Objective: CLEAR ALL %d/%d" % [current, target]
+	if _objective != null and _objective.objective_type == DungeonObjective.ObjectiveType.DEFENSE:
+		# #337: waves cleared / total, plus the wave currently in play.
+		_objective_label.text = "Objective: DEFEND %d/%d waves (wave %d)" % [current, target, _objective.waves_spawned()]
+	else:
+		_objective_label.text = "Objective: CLEAR ALL %d/%d" % [current, target]
+	_objective_label.visible = true
+
+## #337: the defended core fell.
+func _on_objective_failed(_dungeon_id: StringName) -> void:
+	_objective_label.text = "Objective: FAILED - core destroyed"
 	_objective_label.visible = true
 
 func _on_objective_progress(current: int, target: int) -> void:
