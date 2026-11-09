@@ -63,6 +63,7 @@ func _initialize() -> void:
 	var p: Player = main.get_node("Player")
 	_check(main.get_node_or_null("DungeonClearRecord") == null, "no second store: Main.cleared_dungeons is the only clear state")
 	_check(main.cleared_dungeons.is_empty(), "run starts with nothing cleared")
+	main.gate_reentry_cooldown_seconds = 0.2 # #400: shortened so re-entry legs wait moments, not a real minute
 
 	# uncleared baseline
 	await _enter(main, "GateOverworld")
@@ -87,7 +88,11 @@ func _initialize() -> void:
 	_check(_near(after, ow.get_node("GateRed").global_position, 160.0) == 2, "(B) uncleared DungeonB entrance keeps its guards")
 	_check(after.size() == 13, "(B) 13 guards total (got %d)" % after.size())
 
-	# (C) re-entry of the cleared dungeon is a full fresh run
+	# (C) re-entry of the cleared dungeon is a full fresh run.
+	# #400: the entrance gate is closed for the post-clear cooldown; wait it
+	# out (shortened above) before the re-entry this leg pins.
+	await create_timer(0.4).timeout
+	await _frames(3)
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _enter(main, "GateNormal")
 	var area: Node = main.current_area
