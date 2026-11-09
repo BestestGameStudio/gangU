@@ -95,7 +95,7 @@ func _ready() -> void:
 		_mob_target = target_count if target_count > 0 else mobs.size()
 		_target = _mob_target + 1
 		for m in mobs:
-			m.died.connect(_on_target_died)
+			_watch(m)
 		if boss_scene == null:
 			push_error("DungeonObjective: ELIMINATION requires boss_scene; the objective can never complete.")
 		elif _mob_target == 0:
@@ -104,7 +104,25 @@ func _ready() -> void:
 		var enemies := get_tree().get_nodes_in_group("enemies")
 		_target = target_count if target_count > 0 else enemies.size()
 		for e in enemies:
-			e.died.connect(_on_target_died)
+			_watch(e)
+
+## #392: count a mob's death and, for enemies that spawn children on death
+## (EnemySlime.children_spawned, emitted before this objective sees the death),
+## also count each child. Scoped to enemies this objective already watches.
+func _watch(e: Node) -> void:
+	e.died.connect(_on_target_died)
+	if e.has_signal("children_spawned"):
+		e.children_spawned.connect(_on_children_spawned)
+
+func _on_children_spawned(kids: Array) -> void:
+	if _is_completed:
+		return
+	for k in kids:
+		_target += 1
+		if objective_type == ObjectiveType.ELIMINATION:
+			_mob_target += 1
+		_watch(k)
+	objective_progress_changed.emit(_current, _target)
 
 func _on_target_died() -> void:
 	if _is_completed:
@@ -239,6 +257,11 @@ func spawn_next_wave() -> void:
 			e.objective_target = defense_core
 		_wave_alive[wave - 1] += 1
 		e.died.connect(_on_wave_enemy_died.bind(wave))
+		# #392: a splitting wave enemy's descendants stay in its wave.
+		# children_spawned fires before the parent's died, so the wave count
+		# rises before it falls and a wave never reads cleared early.
+		if e.has_signal("children_spawned"):
+			e.children_spawned.connect(_on_wave_children_spawned.bind(wave))
 	wave_started.emit(wave, _target)
 	objective_progress_changed.emit(_current, _target)
 
@@ -257,6 +280,19 @@ func _on_wave_enemy_died(wave: int) -> void:
 	if _current >= _target:
 		_is_completed = true
 		objective_completed.emit(dungeon_id)
+
+## #392: death-spawned descendants (EnemySlime) belong to the same wave; wire
+## their deaths and any further splits into the wave's alive count.
+func _on_wave_children_spawned(kids: Array, wave: int) -> void:
+	if wave < 1 or wave > _wave_alive.size():
+		return
+	for k in kids:
+		if not (k is Enemy):
+			continue
+		_wave_alive[wave - 1] += 1
+		k.died.connect(_on_wave_enemy_died.bind(wave))
+		if k.has_signal("children_spawned"):
+			k.children_spawned.connect(_on_wave_children_spawned.bind(wave))
 
 func _on_core_destroyed() -> void:
 	if _is_completed or _failed:

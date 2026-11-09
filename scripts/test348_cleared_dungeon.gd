@@ -50,9 +50,13 @@ func _drops(area: Node) -> int:
 
 func _clear_dungeon_a(main: Node) -> void:
 	await _enter(main, "GateNormal")
-	for e in get_nodes_in_group("enemies"):
-		e.apply_damage(9999)
-	await _frames(3)
+	for _round in 8: # #392: slimes split, keep killing until none remain
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for e in alive:
+			e.apply_damage(9999)
+		await _frames(3)
 
 func _initialize() -> void:
 	Bestiary.save_path = "user://test348_bestiary.cfg" # keep the player's real record untouched
@@ -69,8 +73,8 @@ func _initialize() -> void:
 	await _enter(main, "GateOverworld")
 	var ow: Node = main.current_area
 	var before := _guards(main)
-	_check(before.size() == 15, "uncleared: 15 guards around the 5 entrances (got %d)" % before.size())
-	_check(_near(before, ow.get_node("GateNormal").global_position, 200.0) == 2, "uncleared: 2 guards at the DungeonA entrance")
+	_check(before.size() == 16, "uncleared: 16 guards around the 5 entrances, incl. #392 slime (got %d)" % before.size())
+	_check(_near(before, ow.get_node("GateNormal").global_position, 200.0) == 3, "uncleared: 3 guards at the DungeonA entrance (guard, patrol, #392 slime)")
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _clear_dungeon_a(main)
 	_check(main.current_area.name == "DungeonA", "overworld GateNormal -> DungeonA")
@@ -99,11 +103,15 @@ func _initialize() -> void:
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var enemies := get_nodes_in_group("enemies").size()
 	_check(area.name == "DungeonA", "(C) re-entry lands in DungeonA")
-	_check(enemies == 3, "(C) re-entry DungeonA has its 3 enemies (got %d)" % enemies)
-	_check(obj != null and obj.progress() == Vector2i(0, 3) and not obj.is_cleared(), "(C) re-entry objective is fresh 0/3")
-	for e in get_nodes_in_group("enemies"):
-		e.apply_damage(9999)
-	await _frames(3)
+	_check(enemies == 5, "(C) re-entry DungeonA has its 5 enemies (3 + 2 slimes, #392) (got %d)" % enemies)
+	_check(obj != null and obj.progress() == Vector2i(0, 5) and not obj.is_cleared(), "(C) re-entry objective is fresh 0/5")
+	for _round in 8: # #392: slimes split, keep killing until none remain
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for e in alive:
+			e.apply_damage(9999)
+		await _frames(3)
 	_check(_drops(area) > 0, "(C) re-entry kills drop rewards (%d)" % _drops(area))
 	_check(obj.is_cleared(), "(C) re-entry objective clears again")
 	# (D)
@@ -124,7 +132,7 @@ func _initialize() -> void:
 	_check(fresh.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
 	fresh.enter_overworld()
 	await _frames(3)
-	_check(_guards(fresh).size() == 15, "(E) every entrance is guarded again (got %d)" % _guards(fresh).size())
+	_check(_guards(fresh).size() == 16, "(E) every entrance is guarded again (got %d)" % _guards(fresh).size())
 	print("[348] DONE failures=", failures)
 	if failures == 0:
 		print("RESULT: ALL PASS")

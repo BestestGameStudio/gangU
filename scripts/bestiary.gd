@@ -28,6 +28,13 @@ const CATALOG: Array[Dictionary] = [
 		"boss": false,
 	},
 	{
+		"id": &"slime",
+		"name": "Slime",
+		"scene": "res://scenes/enemy_slime.tscn",
+		"frames": "res://resources/sprites/slime_frames.tres",
+		"boss": false,
+	},
+	{
 		"id": &"mustache_warlord",
 		"name": "Mustache Warlord",
 		"scene": "res://scenes/mustache_warlord.tscn",

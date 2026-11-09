@@ -159,8 +159,13 @@ func _red_leg() -> void:
 	portal._on_body_entered(p)
 	await _frames(4)
 	_check("red: retreat blocked while locked", not left[0] and main.current_area == area)
-	for e in get_nodes_in_group("enemies"):
-		e.apply_damage(999999)
+	for _round in 8: # #392: slimes split, keep killing until none remain
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for e in alive:
+			e.apply_damage(999999)
+		await _frames(3)
 	await _frames(10)
 	_check("red: objective clear unlocks the portal", not portal.locked)
 	portal._on_body_entered(p)

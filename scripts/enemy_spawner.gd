@@ -54,6 +54,30 @@ func spawn_initial() -> Array[Enemy]:
 ## terrain comes from the area, and the enemy is parented to the area so a
 ## gate swap frees it.
 func request_spawn(entry: Dictionary) -> Enemy:
+	var e := _prepare_spawn(entry)
+	if e == null:
+		return null
+	parent_area.add_child(e)
+	_apply_route(e, entry)
+	spawned.emit(e, entry)
+	return e
+
+## #392: deferred tree-entry variant of request_spawn for spawns requested
+## from inside a death (EnemySlime split), where a synchronous add_child is
+## unsafe (D14). Same policy, wiring, bookkeeping and signals as
+## request_spawn; only the tree entry, route hand-off and `spawned` emission
+## move to the idle frame. Descendants of splitting enemies go through here,
+## so should_spawn governs them and the counters/signals never miss them.
+func request_spawn_deferred(entry: Dictionary) -> Enemy:
+	var e := _prepare_spawn(entry)
+	if e == null:
+		return null
+	call_deferred("_finish_spawn", e, entry)
+	return e
+
+## Shared policy + instantiate + wiring + bookkeeping for both spawn paths.
+## No tree mutation here, so it is safe inside a physics/death callback.
+func _prepare_spawn(entry: Dictionary) -> Enemy:
 	if not should_spawn(entry):
 		return null
 	var enemy_scene := entry["enemy"] as PackedScene
@@ -71,10 +95,18 @@ func request_spawn(entry: Dictionary) -> Enemy:
 		_alive[idx] = []
 	(_alive[idx] as Array).append(e)
 	e.died.connect(_on_enemy_died.bind(e, entry, idx))
+	# #392: splitting enemies (EnemySlime) route their death-spawned
+	# descendants back through this spawner's policy/bookkeeping seam.
+	if "spawner" in e:
+		e.set("spawner", self)
+	return e
+
+func _finish_spawn(e: Enemy, entry: Dictionary) -> void:
+	if not is_instance_valid(e) or parent_area == null:
+		return
 	parent_area.add_child(e)
 	_apply_route(e, entry)
 	spawned.emit(e, entry)
-	return e
 
 ## #373: an optional "route" (Array/PackedVector2Array of points in the
 ## area's local space) is handed to the behavior AFTER tree entry (the

@@ -1,6 +1,16 @@
 extends SceneTree
 ## Production Main/areas. Enemy kills synthetic; travel uses real dispatch.
 var failures := 0
+## #392: DungeonA slimes split into children, so kill until none remain.
+func _kill_rounds() -> void:
+	for _round in 8:
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for enemy in alive:
+			enemy.apply_damage(99999)
+		await _frames()
+
 func _check(ok: bool, label: String) -> void:
 	print("[349 flow] ", label, " -> ", "PASS" if ok else "FAIL")
 	if not ok:
@@ -31,13 +41,9 @@ func _run() -> void:
 	_check(not main.can_fast_return(), "uncleared current dungeon cannot fast return")
 	var clears: Array[StringName] = []
 	main.dungeon_cleared.connect(func(id: StringName): clears.append(id))
-	for enemy in get_nodes_in_group("enemies"):
-		enemy.apply_damage(99999)
-	await _frames()
+	await _kill_rounds()
 	# A may roll RED and spawn Warlord after mob kills.
-	for enemy in get_nodes_in_group("enemies"):
-		enemy.apply_damage(99999)
-	await _frames()
+	await _kill_rounds()
 	_check(main.is_cleared(&"dungeon_a") and clears == [&"dungeon_a"], "objective writes sole clear store and emits once")
 	_check(main.can_fast_return(), "completed current visit can return")
 	var hp := player.hp
