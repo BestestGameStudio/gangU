@@ -125,8 +125,18 @@ func _process(_d: float) -> bool:
 			var plate_rect: Rect2 = hud.reserved_rect()
 			_check(plate_rect.size.x > 388.0, "plate rebuilt wider after long content (was 388 base)")
 			hud.get_node("Root/HPBar/HPLabel").text = "HP 100/100"
+			_stage = 25
+		25: # #346: the dungeon gates live in the overworld, laid out exactly as
+			# they were in the hub around the same spawn. Its entrance guards are
+			# removed: this harness measures labels, not combat.
+			main.enter_overworld()
+			for e in get_nodes_in_group("enemies"):
+				e.free()
+			_cam_stable = 0
+			_cam_last = Vector2.INF
 			_stage = 3
-		3: # hub spawn at real viewport, camera settled
+			return false
+		3: # overworld spawn at real viewport, camera settled
 			if not _cam_settled() or frame < 20:
 				return false
 			var hub = main.current_area
