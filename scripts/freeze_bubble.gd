@@ -33,6 +33,8 @@ void fragment() {
 }
 """
 
+const VEIL_Z := 100
+
 @export var radius := 220.0
 ## Freeze duration in seconds. Owner decision: 5s.
 @export var duration := 5.0
@@ -46,6 +48,7 @@ var _collision: CollisionShape2D
 var _visual: ColorRect
 var _back_buffer: BackBufferCopy
 var _releasing := false
+var _player: CanvasItem = null
 
 
 static func spawn(parent: Node, anchor: Vector2, p_radius: float, p_duration: float) -> FreezeBubble:
@@ -71,7 +74,7 @@ func _ready() -> void:
 	_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
 	# Above every actor (default z 0): entities spawned AFTER the bubble
 	# must also draw under the veil, or they stay in color inside the rim.
-	_back_buffer.z_index = 100
+	_back_buffer.z_index = VEIL_Z
 	add_child(_back_buffer)
 
 	var mat := ShaderMaterial.new()
@@ -85,8 +88,20 @@ func _ready() -> void:
 	_visual.scale = Vector2.ZERO
 	_visual.pivot_offset = Vector2(radius, radius)
 	_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_visual.z_index = 100
+	_visual.z_index = VEIL_Z
 	add_child(_visual)
+
+	# The only-player exemption is visual too: the veil is a screen copy
+	# drawn above every actor, so it would grey the moving player inside
+	# the rim as well. Raise the player above the veil while any bubble is
+	# active; restored when the last bubble releases (meta guards
+	# overlapping bubbles).
+	var player := get_tree().get_first_node_in_group(ActorCollision.PLAYER_GROUP) as CanvasItem
+	if player != null:
+		if not player.has_meta(&"freeze_bubble_z"):
+			player.set_meta(&"freeze_bubble_z", player.z_index)
+		player.z_index = VEIL_Z + 1
+		_player = player
 
 	body_entered.connect(_on_node_entered)
 	area_entered.connect(_on_node_entered)
@@ -130,7 +145,24 @@ func _begin_release() -> void:
 	tween.tween_callback(_finish)
 
 
+func _restore_player_z() -> void:
+	if _player == null or not is_instance_valid(_player):
+		return
+	# This bubble is still in the group here, so >1 means another active one.
+	if get_tree().get_nodes_in_group(&"freeze_bubbles").size() > 1:
+		return
+	if _player.has_meta(&"freeze_bubble_z"):
+		_player.z_index = _player.get_meta(&"freeze_bubble_z")
+		_player.remove_meta(&"freeze_bubble_z")
+
+
+func _exit_tree() -> void:
+	if is_inside_tree():
+		_restore_player_z()
+
+
 func _finish() -> void:
+	_restore_player_z()
 	ended.emit()
 	queue_free()
 

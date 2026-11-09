@@ -100,6 +100,7 @@ func _physics_process(_delta: float) -> bool:
 				_check(_bubble.is_frozen_actor(_enemy), "enemy inside at spawn is frozen")
 				_check(_bubble.is_frozen_actor(_projectile), "projectile inside at spawn is frozen")
 				_check(not _bubble.is_frozen_actor(_player), "player inside bubble is NOT frozen")
+				_check(_player.z_index > 100, "player raised above the veil while a bubble is active (stays colored inside)")
 				# deferred spawn: new projectile appears inside mid-life
 				_late_projectile = MockFreezableArea.new()
 				_late_projectile.add_child(_circle(4.0))
@@ -127,6 +128,7 @@ func _physics_process(_delta: float) -> bool:
 				_phase = 3
 		3:
 			_check(_ended_emitted, "bubble emitted ended before freeing")
+			_check(_player.z_index == 0 and not _player.has_meta(&"freeze_bubble_z"), "player z restored after last bubble releases")
 			_check(_enemy.freeze_calls == [true, false], "enemy released with set_frozen(false) at end")
 			_check(_projectile.freeze_calls == [true, false], "projectile released with set_frozen(false) at end")
 			_check(_late_projectile.freeze_calls == [true, false], "late projectile released with set_frozen(false) at end")
