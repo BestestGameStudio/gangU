@@ -39,6 +39,30 @@ const SWIRL_STEPS := 24
 
 var _anim_t := 0.0
 
+## #400: post-clear re-entry cooldown state. Main closes this gate for a
+## short while after its dungeon is cleared so the player does not walk
+## straight back in by accident. While closed the portal dims, its
+## particles stop and bodies are ignored; the gate re-arms itself when the
+## cooldown ends (counted down in _process).
+var _disabled_remaining := 0.0
+
+## #400: true while the post-clear cooldown keeps this gate closed.
+func is_disabled() -> bool:
+	return _disabled_remaining > 0.0
+
+## #400: close the gate for `seconds` (a later, longer close wins).
+func disable_for(seconds: float) -> void:
+	_disabled_remaining = maxf(_disabled_remaining, seconds)
+	set_deferred("monitoring", false)
+	($Particles as CPUParticles2D).emitting = false
+	modulate = Color(1, 1, 1, 0.3)
+
+func _re_enable() -> void:
+	_disabled_remaining = 0.0
+	set_deferred("monitoring", true)
+	modulate = Color.WHITE
+	($Particles as CPUParticles2D).emitting = true
+
 func _ready() -> void:
 	add_to_group("gates")
 	body_entered.connect(_on_body_entered)
@@ -141,6 +165,10 @@ func _build_portal(tint: Color) -> void:
 
 func _process(delta: float) -> void:
 	_anim_t += delta
+	if _disabled_remaining > 0.0:
+		_disabled_remaining -= delta
+		if _disabled_remaining <= 0.0:
+			_re_enable()
 	var pulse := sin(_anim_t * 2.4)
 	($SwirlPivot/Swirl as Line2D).rotation = _anim_t * 1.6
 	($Rim as Line2D).width = 2.5 + 0.8 * pulse
@@ -148,6 +176,8 @@ func _process(delta: float) -> void:
 	_update_label_placement()
 
 func _on_body_entered(body: Node2D) -> void:
+	if _disabled_remaining > 0.0:
+		return # #400: closed by the post-clear cooldown
 	if body is Player:
 		entered.emit(self)
 

@@ -241,6 +241,15 @@ const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
 ## dungeon is absent from here.
 var cleared_dungeons: Dictionary = {}
 
+## #400 (Daniel, 2026-11-09): after a clear, that dungeon's entrance gates
+## stay closed for a short cooldown so the player does not re-enter by
+## accident - #378 already drops them right in front of the gate. Run-scoped
+## like cleared_dungeons (the death restart reloads Main). Only walking
+## through the physical gate pauses; deliberate travel (#349 hub panel,
+## #366 map) is unaffected.
+var gate_reentry_cooldown_seconds := 60.0
+var _gate_cooldown_until: Dictionary = {} # dungeon_id -> Time.get_ticks_msec() expiry
+
 ## #349 / #353 canonical clear API. No second record or node.
 signal dungeon_cleared(dungeon_id: StringName)
 
@@ -270,6 +279,24 @@ func _on_gate_entered(gate: Gate) -> void:
 		return
 	_swap.call_deferred(target.instantiate())
 
+## #400: close the just-mounted area's gates to dungeons still inside their
+## post-clear cooldown. Keyed by the gate's target scene like _dungeon_sites,
+## so TRAVEL passages and unmapped targets are never touched.
+func _apply_gate_cooldowns() -> void:
+	var now := Time.get_ticks_msec()
+	for g: Gate in get_tree().get_nodes_in_group("gates"):
+		if not current_area.is_ancestor_of(g):
+			continue
+		var scene := g.target_scene()
+		if scene == null:
+			continue
+		var id := FastTravelRoutes.id_for_scene(scene.resource_path)
+		if id == &"":
+			continue
+		var until: int = _gate_cooldown_until.get(id, 0)
+		if until > now:
+			g.disable_for((until - now) / 1000.0)
+
 ## (#350) RED semantics for the mounted area: the entered gate's type when there
 ## is one; otherwise the authored default (DungeonB is the RED dungeon).
 ## #350: each gate's 50/50 offering type is rolled ONCE per run and stays
@@ -298,6 +325,7 @@ func _swap(area: Node) -> void:
 	for g: Gate in get_tree().get_nodes_in_group("gates"):
 		if not g.entered.is_connected(_on_gate_entered):
 			g.entered.connect(_on_gate_entered)
+	_apply_gate_cooldowns()
 	var p := get_node_or_null("Player") as Player
 	var spawn := current_area.get_node_or_null("PlayerSpawn")
 	if p and spawn:
@@ -480,6 +508,7 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
 	var first_clear := not is_cleared(dungeon_id)
 	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
+	_gate_cooldown_until[dungeon_id] = Time.get_ticks_msec() + int(gate_reentry_cooldown_seconds * 1000.0) # #400
 	if first_clear:
 		dungeon_cleared.emit(dungeon_id)
 	_refresh_fast_travel.call_deferred()
