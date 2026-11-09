@@ -14,7 +14,8 @@ class_name EquipPanel
 ## clear of the caster's spell_slot_1..6 bindings.
 ##
 ## STILL BOUNDED:
-##   - Not mounted in production (E window decision); harness-driven only.
+##   - Mounted in production by main.gd (ONE persistent child); harness
+##     mounts (test_e_mount et al.) keep working the same way.
 ##   - Style is provisional (pending the open human style choice).
 ##   - NO duplicate-grant policy: the panel renders get_unlocked() verbatim,
 ##     duplicates included (unsettled human choice, no silent dedupe).
@@ -42,6 +43,8 @@ var _selected: Spell = null
 var _upgrade_box: VBoxContainer
 
 var _unlocked_box: VBoxContainer
+var _stats_box: VBoxContainer
+var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
 var _status: Label
@@ -106,6 +109,7 @@ func _ready() -> void:
 	if player == null:
 		push_warning("EquipPanel: no player found; panel inert.")
 		return
+	_player = player
 	if upgrader_path != NodePath(""):
 		_upgrader = get_node_or_null(upgrader_path)
 		if _upgrader != null and _upgrader.has_signal(&"upgrades_changed"):
@@ -165,6 +169,17 @@ func _build_ui() -> void:
 	_upgrade_box = VBoxContainer.new()
 	_upgrade_box.add_theme_constant_override("separation", 4)
 	vbox.add_child(_upgrade_box)
+	# #269: player stats block (Daniel, 2026-11-08: "Display player stats in
+	# the tab menu"). Reads ONLY the public Player stat accessors
+	# (move_speed/damage_amp/armor/cooldown_reduction + hp/max_hp); all stat
+	# math stays in PlayerStats. Filled on every _refresh, i.e. every open.
+	# Placed between the upgrade box and the status line so the #94
+	# white-boxed child indices (title 0, cols 1, upgrades 2, status last)
+	# stay intact.
+	_stats_box = VBoxContainer.new()
+	_stats_box.name = "StatsBox"
+	_stats_box.add_theme_constant_override("separation", 2)
+	vbox.add_child(_stats_box)
 	_status = Label.new()
 	_status.add_theme_font_size_override("font_size", 18)
 	vbox.add_child(_status)
@@ -190,9 +205,34 @@ func hide_panel() -> void:
 	visible = false
 	remove_from_group("modal_ui")
 
+## #269: rebuild the stats block from the live Player accessors. Fractions
+## render as signed percents; an empty modifier set shows the defined bases
+## (0% amp/armor/CDR), which PlayerStats guarantees are grounded values.
+func _refresh_stats() -> void:
+	for c in _stats_box.get_children():
+		c.queue_free()
+	if _player == null:
+		return
+	var header := Label.new()
+	header.text = "Stats"
+	header.add_theme_font_size_override("font_size", 22)
+	_stats_box.add_child(header)
+	var rows: Array[String] = [
+		"HP: %d / %d" % [_player.hp, _player.max_hp],
+		"Damage amp: %+d%%" % roundi(_player.damage_amp() * 100.0),
+		"Armor: %+d%%" % roundi(_player.armor() * 100.0),
+		"Move speed: %d" % roundi(_player.move_speed()),
+		"Cooldown reduction: %+d%%" % roundi(_player.cooldown_reduction() * 100.0),
+	]
+	for r in rows:
+		var l := Label.new()
+		l.text = r
+		_stats_box.add_child(l)
+
 func _refresh() -> void:
 	if _caster == null:
 		return
+	_refresh_stats()
 	for c in _unlocked_box.get_children():
 		c.queue_free()
 	var header := Label.new()
