@@ -100,15 +100,17 @@ func _initialize() -> void:
 	for i in range(120):
 		await process_frame
 	_check(_labels_without_suffix(hud), "(b) #238 recorded tiers add no HUD label suffix")
-	# (c) #238 + #369/#381: HUD labels are exactly the HP and objective
-	# labels plus the #369 defense countdown (created hidden, shown only
-	# while a DEFENSE objective is mounted). Exact named set, so a stray
-	# fourth label still fails here.
+	# (c) #238 + #369/#381 + #388: HUD labels are exactly the HP and
+	# objective labels, the #369 defense countdown (created hidden, shown
+	# only while a DEFENSE objective is mounted) and the #388 shield value
+	# label (hidden with its bar at 0 shield). Exact named set, so a stray
+	# tier label still fails here.
 	var label_paths: Array[String] = []
 	for l: Label in hud.find_children("*", "Label", true, false):
 		label_paths.append(str(hud.get_path_to(l)))
 	label_paths.sort()
-	_check(label_paths == ["DefenseWaveBar/Countdown", "Root/HPBar/HPLabel", "Root/ObjectiveLabel"], "(c) #238+#369 HUD labels are only HP, objective, and the defense countdown (got %s)" % [label_paths])
+	_check(label_paths == ["DefenseWaveBar/Countdown", "Root/HPBar/HPLabel", "Root/ObjectiveLabel", "Root/ShieldBar/ShieldLabel"], "(c) #238+#369+#388 HUD labels are only HP, objective, defense countdown and shield value (got %s)" % [label_paths])
+	_check(not (hud.get_node("Root/ShieldBar") as Control).visible, "(c) #388 shield bar/label stay hidden with no shield")
 	_check(not (hud.get_node("DefenseWaveBar") as Control).visible, "(c) defense wave bar stays hidden outside defense missions (#369)")
 
 	# (d) slot icon identity survives the upgrade swap.
