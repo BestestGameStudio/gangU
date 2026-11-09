@@ -205,14 +205,19 @@ func _initialize() -> void:
 		await physics_frame
 	_check(events.size() == 2 and map.is_walkable_at_cell(gap) and map.is_walkable_at_cell(Vector2i(22, 3)), "a PIERCING projectile breaks both blocks in its path")
 
-	# non-destroyable tiles are untouched and still pass-through
+	# non-destroyable tiles are untouched; #433 made them solid cover
 	events.clear()
 	var wall := map.cell_to_world(Vector2i(20, 1))
 	var p3 := _fire(stage, bolt, wall + Vector2(-150, 0), Vector2.RIGHT, shooter)
+	var blocked_at := Vector2(-1, -1)
+	p3.blocked.connect(func(): blocked_at = p3.global_position)
 	for i in 25:
 		await physics_frame
 	_check(events.is_empty() and map.tile_type_at_cell(Vector2i(20, 1)) == TerrainTypes.OBSTACLE, "an OBSTACLE wall is not destroyed")
-	_check(is_instance_valid(p3) and not p3.is_queued_for_deletion() and p3.global_position.x > wall.x, "projectiles still pass through non-destroyable tiles")
+	# #433: the pass-through carve-out is superseded - a non-destroyable
+	# wall cell is solid cover now and stops the shot at its face (the
+	# cell's left edge here: 20 * 64 = 1280).
+	_check(blocked_at.x > 0.0 and absf(blocked_at.x - (wall.x - 32.0)) < 1.0, "a non-destroyable wall now blocks the shot at its face (#433)")
 
 	# a source with no terrain never touches the map
 	map.set_cell(gap, TerrainTypes.BLOCK)

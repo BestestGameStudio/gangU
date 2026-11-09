@@ -19,6 +19,13 @@ class_name TerrainTypes
 ## kept separate so a later issue can give it its own outcome. "walkable"
 ## in properties() is derived: movement == WALKABLE.
 ##
+## #433: "blocks_projectiles" is derived too: movement == BLOCKING and not
+## swimmable. Solid terrain (OBSTACLE walls, MOUNTAIN, palette wall tiles,
+## unknown types - fail closed) stops shots; swimmable WATER and FALLING
+## pits stay fly-over so shots (and #167 element interactions with them)
+## still work. Destroyable BLOCKING types (TREE, BLOCK) also derive true,
+## but projectiles resolve them through the destroy path first.
+##
 ## Authority split: TerrainMap owns cell -> type assignments; this registry
 ## owns type -> properties. Downstream issues (A2/A4/B1/B3/C1/C2) consume
 ## ONLY the TerrainMap lookup seam built on this registry, never TileMap
@@ -171,6 +178,10 @@ static func properties(type: StringName) -> Dictionary:
 		"destroyable": src["destroyable"],
 		"destroyed_into": src["destroyed_into"],
 		"element_tags": (src["element_tags"] as Array).duplicate(),
+		# #433: solid = movement-blocked and not a swim tile (water). A
+		# FALLING pit is not swimmable but is also not BLOCKING, so it
+		# stays fly-over.
+		"blocks_projectiles": src["movement"] == Movement.BLOCKING and not src["swimmable"],
 	}
 
 static func is_walkable(type: StringName) -> bool:
@@ -182,6 +193,9 @@ static func movement(type: StringName) -> Movement:
 ## Applies a movement category to a property set in place, keeping the
 ## derived fields consistent: "walkable" follows the category, a FALLING
 ## tile is never swimmable, and a WALKABLE tile never has zero speed.
+## #433: "blocks_projectiles" is re-derived here too so palette tiles get
+## it from their category (a palette water tile is never swimmable through
+## this path, so a BLOCKING palette tile always blocks shots).
 static func apply_movement(props: Dictionary, category: Movement) -> void:
 	props["movement"] = category
 	props["walkable"] = category == Movement.WALKABLE
@@ -189,6 +203,7 @@ static func apply_movement(props: Dictionary, category: Movement) -> void:
 		props["swimmable"] = false
 	if category == Movement.WALKABLE and float(props["speed_multiplier"]) <= 0.0:
 		props["speed_multiplier"] = 1.0
+	props["blocks_projectiles"] = category == Movement.BLOCKING and not props.get("swimmable", false)
 
 static func speed_multiplier(type: StringName) -> float:
 	return properties(type)["speed_multiplier"]

@@ -11,7 +11,8 @@ signal hit_resolved(body: Node2D, result: DamageResult)
 ## e.g. the Warlord orb's impact pop). Hit logic is unchanged.
 signal hit(body: Node2D)
 
-## #407: emitted when solid cover (an overworld tree) stops this shot.
+## #407/#433: emitted when solid cover (an overworld tree, or a solid
+## terrain cell such as a dungeon wall) stops this shot.
 signal blocked
 
 var spell: Spell
@@ -475,8 +476,10 @@ func _on_body_entered(body: Node2D) -> void:
 	queue_free()
 
 ## #216 (wires #169): the flight path is sampled at most half a cell apart (no
-## tunnelling through a cell on a big frame step). Returns [{t, cell}] for each destroyable cell the centre line enters, with
-## t = the fraction of the segment at which it enters that cell.
+## tunnelling through a cell on a big frame step). Returns one event per cell the
+## centre line enters: {t, cell, interact} for destroyable / #167-interacting
+## cells, {t, cell, blocker} for #433 solid cells (BLOCKING + non-swimmable),
+## with t = the fraction of the segment at which it enters that cell.
 func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	if _terrain == null or not is_instance_valid(_terrain):
@@ -484,6 +487,7 @@ func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 	var length := motion.length()
 	var spacing := _terrain.cell_size * 0.5
 	var samples := maxi(1, ceili(length / spacing))
+	var start_cell := _terrain.world_to_cell(from)
 	var seen: Dictionary = {}
 	for i in range(1, samples + 1):
 		var pt := from + motion * (float(i) / float(samples))
@@ -494,9 +498,17 @@ func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 		# #167: an element interaction (e.g. cold + water -> ice) takes
 		# priority over destruction for the same cell.
 		var interacts := _terrain.interaction_for_cell(cell, spell.tags) != null
-		if not interacts and not TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+		if interacts or TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+			events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell, "interact": interacts})
 			continue
-		events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell, "interact": interacts})
+		# #433: solid terrain (a BLOCKING, non-swimmable cell - dungeon walls,
+		# mountains, palette wall tiles) stops the shot, the same solid-cover
+		# rule as #407's trees. Swimmable water and pits stay fly-over, and a
+		# shot that starts inside the cell ignores it, so a caster hugging a
+		# wall never kills its own shot on its first frame.
+		if cell == start_cell or not _terrain.type_properties(_terrain.tile_type_at_cell(cell))["blocks_projectiles"]:
+			continue
+		events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell, "blocker": true})
 	return events
 
 ## Fraction of the segment at which the centre line enters `cell` (0 if it
@@ -565,15 +577,17 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 ## bookkeeping, pierce); destroyable cells through TerrainMap.destroy_cell, the
 ## single terrain-damage entry point (owner rule from #169: any hit destroys a
 ## destroyable tile). Either kind consumes a non-piercing shot; ties go to the
-## body. Non-destroyable tiles never produce an event (pass-through as before),
-## unless a #167 element interaction matches: that cell goes through
+## body. Walkable and swimmable tiles never produce an event (pass-through as
+## before), unless a #167 element interaction matches: that cell goes through
 ## TerrainMap.interact_cell instead and only stops the shot if the rule says so.
+## #433: solid non-destroyable cells (walls) produce a blocker event and stop
+## every shot, piercing included, at the cell face.
 func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 	var events: Array[Dictionary] = _body_events(from, motion)
 	events.append_array(_terrain_events(from, motion))
-	# #407: solid cover (overworld trees). Stops EVERY shot - piercing and
-	# pierce_hits included - and is never damaged. A body reached first (or
-	# at the same t) still takes its hit.
+	# #407/#433: solid cover (overworld trees, solid terrain cells). Stops
+	# EVERY shot - piercing and pierce_hits included - and is never damaged.
+	# A body reached first (or at the same t) still takes its hit.
 	if _terrain != null and is_instance_valid(_terrain):
 		var bt := _terrain.projectile_block_t(from, motion)
 		if bt >= 0.0:
@@ -589,7 +603,7 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 				continue
 			_on_body_entered(b)
 		elif e.has("blocker"):
-			# #407: stop at the canopy edge, not past it.
+			# #407/#433: stop at the cover edge (tree canopy, wall face), not past it.
 			global_position = from + motion * float(e.t)
 			blocked.emit()
 			queue_free()
