@@ -4,7 +4,7 @@ extends Resource
 ## system and no progression gating (Colin, 2026-11-08); ranks stay out of
 ## scope until Colin decides otherwise.
 ##
-## A hub gate that carries an offering rolls its gate_type from this resource
+## A dungeon gate that carries an offering rolls its gate_type from this resource
 ## ONCE per run; Main caches the roll per gate, so the type stays fixed until
 ## death (the death restart reloads Main and clears the record). The type
 ## carries the existing semantics: NORMAL allows retreat, RED locks the player
