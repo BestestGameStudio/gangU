@@ -15,6 +15,10 @@ extends TextureRect
 ##     upgrade_overlay = true (HUD and Tab panel). Those icons stay on the
 ##     "<prefix>_base" art; other surfaces keep the baked "<prefix>_upgraded"
 ##     frame for upgrade-result spells.
+## #255: set_rank_tier draws a SpellRankBorder (above every overlay) around
+## the icon in the owned spell's tier color/shape; NONE (default) hides it.
+## Only the HUD grid and the Tab panel drive it; shop and directory list
+## unowned spells and stay unranked.
 
 ## #257: a real spell with no art shows this sprite; a null spell (empty slot)
 ## keeps the empty UiStyle box.
@@ -27,6 +31,7 @@ const CHEVRON_RISE_SECONDS := 0.9
 var _placeholder: Panel
 var _wipe: ColorRect
 var _chevron: TextureRect
+var _rank: SpellRankBorder
 var _upgrade_overlay: bool
 var _chevron_time := 0.0
 
@@ -63,10 +68,20 @@ func _init(side: float = UiStyle.ICON_SIZE, upgrade_overlay: bool = false) -> vo
 	_chevron.position.x = (side - chevron_side) * 0.5
 	_chevron.visible = false
 	add_child(_chevron)
+	_rank = SpellRankBorder.new()
+	add_child(_rank)
 
 func show_spell(spell: Spell) -> void:
 	texture = _base_texture(spell)
 	_placeholder.visible = texture == null
+
+## tier: 0..3 = Base/Specialization/Mastery/Signature; SpellRankBorder.NONE
+## (-1) hides the border.
+func set_rank_tier(tier: int) -> void:
+	_rank.set_tier(tier)
+
+func rank_tier() -> int:
+	return _rank.tier
 
 ## frac = remaining cooldown / total cooldown in [0, 1]: the wipe covers the
 ## bottom frac of the icon, so 1 is full coverage and 0 is gone.
