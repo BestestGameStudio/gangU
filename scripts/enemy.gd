@@ -245,8 +245,10 @@ func _physics_process(delta: float) -> void:
 		var before := global_position
 		move_and_collide(_knockback * delta)
 		# #367: maze walls are terrain, not colliders; keep a nav enemy out
-		# of them (same clamp as the chase step). Others unchanged.
-		if nav != null:
+		# of them (same clamp as the chase step). #396: dungeon arena walls
+		# are terrain too, so every enemy on a terrain grid is clamped - a
+		# Water Ball shove must not push a mob or boss out of the arena.
+		if terrain != null:
 			global_position = TerrainMotion.clamp_displacement(terrain, before, global_position, can_swim)
 		_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECEL * delta)
 		return
@@ -260,6 +262,25 @@ func _physics_process(delta: float) -> void:
 const KNOCKBACK_DECEL := 1800.0
 const KNOCKBACK_CONTROL := 60.0
 var _knockback := Vector2.ZERO
+
+## #396: the terrain-aware move for scripted (boss) behaviors that set
+## `velocity` directly - chases, lunges, charges, spins. The velocity goes
+## through TerrainMotion.resolve (slides along walls, terrain speed rules)
+## and the frame's displacement is clamped like a push, so a crowding shove
+## cannot carry the body into a wall either. terrain == null is a plain
+## move_and_slide, exactly as before. The behavior's own velocity is put
+## back afterwards, so a behavior that sets it once per state (a lunge)
+## never compounds a terrain speed multiplier frame after frame.
+func terrain_move_and_slide() -> void:
+	if terrain == null:
+		move_and_slide()
+		return
+	var wanted := velocity
+	velocity = TerrainMotion.resolve(terrain, global_position, wanted, wanted, get_physics_process_delta_time(), can_swim)
+	var before := global_position
+	move_and_slide()
+	global_position = TerrainMotion.clamp_displacement(terrain, before, global_position, can_swim)
+	velocity = wanted
 
 func knockback(push: Vector2) -> void:
 	if hp <= 0:

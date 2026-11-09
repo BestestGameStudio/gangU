@@ -81,7 +81,7 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 		if state != State.CHASE:
 			_enter_chase(enemy, tele)
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.terrain_move_and_slide()
 		return
 	_t += delta
 	var to_player: Vector2 = player.global_position - enemy.global_position
@@ -101,7 +101,7 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 			enemy.velocity = Vector2.ZERO
 			if _t >= RECOVER_TIME:
 				_enter_chase(enemy, tele)
-	enemy.move_and_slide()
+	enemy.terrain_move_and_slide()
 
 func is_enraged(enemy: Enemy) -> bool:
 	return enemy.hp * 2 <= enemy.max_hp
