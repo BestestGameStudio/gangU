@@ -141,7 +141,9 @@ func _initialize() -> void:
 	var title := vbox.get_child(0) as Label
 	_check(title.text == "Equip Spells", "(1) title preserved (got '%s')" % title.text)
 	var cols := vbox.get_child(1) as HBoxContainer
-	_check(cols != null and cols.get_child_count() == 2, "(1) two-column HBox")
+	# #376: the stat grid joins as the right-most column (after a divider);
+	# the two spell columns keep indices 0 and 1.
+	_check(cols != null and cols.get_child_count() == 4 and cols.get_child(3) is StatGrid, "(1) two spell columns + #376 stats column")
 	var unlocked_box := cols.get_child(0) as VBoxContainer
 	var slots_box := cols.get_child(1) as VBoxContainer
 	var uheader := unlocked_box.get_child(0) as Label
