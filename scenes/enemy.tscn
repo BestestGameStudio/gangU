@@ -9,6 +9,7 @@ radius = 13.0
 
 [node name="Enemy" type="CharacterBody2D"]
 script = ExtResource("1")
+cover_seek = true
 
 [node name="Shadow" type="Polygon2D" parent="."]
 position = Vector2(0, 13)

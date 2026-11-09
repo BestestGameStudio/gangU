@@ -18,6 +18,11 @@ signal health_changed(current: int, max_hp: int)
 @export var contact_cooldown: float = 0.8
 @export var contact_range: float = 40.0
 @export var can_swim: bool = false
+## #406 (Daniel, 2026-11-09: "moustache men now seek cover... just regular
+## mobs... any cover"): opt this enemy into the cover-seeking chase (see
+## enemy_behavior_cover.gd). Data per scene: the Mustache Warrior scene
+## (scenes/enemy.tscn) sets it; the Warlord boss and other types do not.
+@export var cover_seek: bool = false
 ## #34: explicit target wiring FIRST - the production main.tscn Player is in no
 ## group, matching the RunManager/ReviveSatchel/HUD explicit-wiring convention.
 ## The "player" group lookup remains as a fallback so existing test scenes

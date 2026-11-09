@@ -35,6 +35,9 @@ var hp: int = 0
 var _dead: bool = false
 
 func _ready() -> void:
+	# #406: a solid container is cover (Daniel: "any cover") - cover-seeking
+	# mobs discover every solid that opted into this group.
+	add_to_group(&"cover")
 	if definition != null:
 		hp = maxi(definition.max_hp, 0)
 		if has_node("Visual"):
