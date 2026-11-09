@@ -69,6 +69,10 @@ func _process(delta: float) -> bool:
 					e.apply_damage(100000)
 			phase = 2; t = 0.0
 		2:
+			# #392: slimes split, keep killing every frame until none remain.
+			for e in get_nodes_in_group("enemies"):
+				if e is Enemy and is_instance_valid(e) and not e.is_queued_for_deletion():
+					e.apply_damage(100000)
 			if t < 0.5:
 				return false
 			_check(objective_done, "setup: DungeonA cleared before death")

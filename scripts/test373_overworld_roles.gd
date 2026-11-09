@@ -93,7 +93,9 @@ func _scene_legs() -> void:
 					on_field = on_field and ground.covers(p)
 			else:
 				patrols_ok = false
-		_check(guards == 1, "(A) %s has exactly one gate guard (got %d)" % [g.name, guards])
+		# #392: GuardsNormal also posts one slime on the guard behavior (Daniel).
+		var want_guards := 2 if g.name == "GuardsNormal" else 1
+		_check(guards == want_guards, "(A) %s has %d gate guard(s) (got %d)" % [g.name, want_guards, guards])
 		_check(patrols_ok, "(A) every other %s enemy patrols a closed loop starting at its spawn" % g.name)
 	var roamers := ow.get_node_or_null("Roamers") as AreaSpawnData
 	_check(roamers != null and not roamers is EntranceGuards, "(A) overworld has a Roamers carrier tied to no dungeon")
@@ -116,7 +118,7 @@ func _scene_legs() -> void:
 	_check(long_paths, "(A) every migration path is long (> 900 px)")
 	_check(clear_of_spawn, "(A) migration paths keep clear of the arrival point")
 	_check(on_field, "(A) every route point is on the overworld field")
-	_check(counts["guard"] == 5 and counts["patrol"] == 10 and counts["migrant"] == 4, "(A) 5 gate guards, 10 patrols, 4 migrants (%s)" % [counts])
+	_check(counts["guard"] == 6 and counts["patrol"] == 10 and counts["migrant"] == 4, "(A) 6 gate guards (5 + #392 slime), 10 patrols, 4 migrants (%s)" % [counts])
 	_check(counts["patrol"] + counts["migrant"] > counts["guard"], "(A) moving roles are the norm")
 	ow.free()
 
@@ -133,7 +135,7 @@ func _flow_legs() -> void:
 	var guards := _by_role(main, "guard")
 	var patrols := _by_role(main, "patrol")
 	var migrants := _by_role(main, "migrant")
-	_check(guards.size() == 5 and patrols.size() == 10 and migrants.size() == 4, "(B) mounted 5 guards / 10 patrols / 4 migrants (got %d/%d/%d)" % [guards.size(), patrols.size(), migrants.size()])
+	_check(guards.size() == 6 and patrols.size() == 10 and migrants.size() == 4, "(B) mounted 6 guards (5 + #392 slime) / 10 patrols / 4 migrants (got %d/%d/%d)" % [guards.size(), patrols.size(), migrants.size()])
 	_check(patrols.all(func(e: Enemy) -> bool: return (e._behavior as EnemyBehaviorGuard).route.size() >= 3), "(B) every patrol received its loop")
 	_check(migrants.all(func(e: Enemy) -> bool: return (e._behavior as EnemyBehaviorGuard).route.size() >= 3), "(B) every migrant received its path")
 	var start := {}
@@ -230,9 +232,13 @@ func _flow_legs() -> void:
 	# (F) clearing DungeonA: its entrance enemies go, migrants stay
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _enter(main, "GateNormal")
-	for e in get_nodes_in_group("enemies"):
-		e.apply_damage(9999)
-	await _frames(3)
+	for _round in 8: # #392: slimes split; kill until none remain
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for e in alive:
+			e.apply_damage(9999)
+		await _frames(3)
 	_check(main.cleared_dungeons.has(&"dungeon_a"), "(F) DungeonA cleared")
 	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3) # #378: the exit lands back in the overworld at the DungeonA entrance

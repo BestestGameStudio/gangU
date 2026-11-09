@@ -52,7 +52,7 @@ func _process(delta: float) -> bool:
 				var obj = area.get_node_or_null("DungeonObjective")
 				print("[9] PROD after NORMAL gate area=", area.name, " portal=", portal != null,
 					" locked=", portal.locked if portal else "?", " objective=", obj.progress() if obj else "?",
-					" -> ", "PASS" if area.name == "DungeonA" and portal and not portal.locked and obj and obj.progress() == Vector2i(0, 3) else "FAIL")
+					" -> ", "PASS" if area.name == "DungeonA" and portal and not portal.locked and obj and obj.progress() == Vector2i(0, 5) else "FAIL")
 				portal._on_body_entered(p)
 				phase = 2; t = 0
 		2:
