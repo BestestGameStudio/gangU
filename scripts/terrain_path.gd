@@ -9,9 +9,16 @@ extends RefCounted
 ##
 ## Contract (unchanged from the #281 summon implementation):
 ##   - A clear straight line steers direct (zero overhead, no path state).
-##   - A blocked line triggers a bounded 4-dir A* over the walkability grid
-##     (no diagonal corner cutting between blocked cells), replanned on a
-##     short timer because the target moves.
+##   - A line blocked by a HARD obstacle triggers a bounded 4-dir A* over
+##     the grid (no diagonal corner cutting between blocked cells),
+##     replanned on a short timer because the target moves. Hard obstacle =
+##     a cell nobody can enter: BLOCKING and not swimmable (trees, walls,
+##     mountains, blocks), or FALLING.
+##   - Swimmable cells (water) are NOT routing obstacles: swimmers cross
+##     them directly and non-swimmers keep the #165 halt-at-the-edge
+##     behavior through TerrainMotion.resolve. The A* itself only routes a
+##     mover through cells IT can enter (walkable, or swimmable when it can
+##     swim), so a non-swimmer is never pathed through water.
 ##   - TerrainMotion.resolve always has the last word on the velocity, so a
 ##     blocked step is cancelled (never entered) even at corners.
 ##   - map == null (harnesses, areas with no Terrain node) returns the
@@ -39,12 +46,12 @@ func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, d
 		return desired
 	if desired == Vector2.ZERO:
 		return TerrainMotion.resolve(map, pos, previous, desired, delta, can_swim)
-	if _line_walkable(map, pos, dest):
+	if _line_routable(map, pos, dest):
 		_path = []
 		_replan_timer = REPLAN_INTERVAL
 		return TerrainMotion.resolve(map, pos, previous, desired, delta, can_swim)
 	if _replan_timer <= 0.0 or _path.is_empty():
-		_path = _find_path(map, pos, dest)
+		_path = _find_path(map, pos, dest, can_swim)
 		_path_index = 0
 		_replan_timer = REPLAN_INTERVAL
 	if _path.is_empty():
@@ -62,22 +69,35 @@ func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, d
 		_replan_timer = 0.0
 	return resolved
 
-## Straight-line walkability, sampled at half-cell steps so no unwalkable
-## cell is skipped between samples.
-func _line_walkable(map: TerrainMap, from: Vector2, to: Vector2) -> bool:
+## True iff no HARD obstacle cell sits on the straight line, sampled at
+## half-cell steps so none is skipped. Swimmable cells pass: entering them
+## is TerrainMotion's call (swim or halt), not a reason to detour.
+func _line_routable(map: TerrainMap, from: Vector2, to: Vector2) -> bool:
 	var dist := from.distance_to(to)
 	var steps := int(ceil(dist / (map.cell_size * 0.5))) + 1
 	for i in steps + 1:
-		if not map.is_walkable_at(from.lerp(to, float(i) / steps)):
+		if _hard_obstacle(map, map.world_to_cell(from.lerp(to, float(i) / steps))):
 			return false
 	return true
+
+## A cell no mover can enter: BLOCKING and not swimmable, or FALLING.
+func _hard_obstacle(map: TerrainMap, cell: Vector2i) -> bool:
+	var props := map.type_properties(map.tile_type_at_cell(cell))
+	if props.get("movement", TerrainTypes.Movement.BLOCKING) == TerrainTypes.Movement.FALLING:
+		return true
+	return not props["walkable"] and not props["swimmable"]
+
+## A cell THIS mover may be routed through (can_swim-aware).
+func _passable(map: TerrainMap, cell: Vector2i, can_swim: bool) -> bool:
+	var props := map.type_properties(map.tile_type_at_cell(cell))
+	return props["walkable"] or (props["swimmable"] and can_swim)
 
 ## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
 ## cutting between blocked cells). Returns the cell path EXCLUDING the start
 ## cell, ending at the goal cell or the reachable walkable cell nearest to it
 ## (the target may hug a wall); empty when nothing reachable improves on the
 ## start cell.
-func _find_path(map: TerrainMap, from: Vector2, to: Vector2) -> Array[Vector2i]:
+func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = false) -> Array[Vector2i]:
 	var start := map.world_to_cell(from)
 	var goal := map.world_to_cell(to)
 	if start == goal:
@@ -92,7 +112,7 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2) -> Array[Vector2i]:
 	var expansions := 0
 	while not open.is_empty() and expansions < MAX_EXPANSIONS:
 		var current := _pop_lowest_f(open, g, goal)
-		if map.is_walkable_at_cell(current) and _h(current, goal) < best_h:
+		if _passable(map, current, can_swim) and _h(current, goal) < best_h:
 			best = current
 			best_h = _h(current, goal)
 		if current == goal:
@@ -103,9 +123,9 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2) -> Array[Vector2i]:
 			var next: Vector2i = current + d
 			if next.x < min_c.x or next.y < min_c.y or next.x > max_c.x or next.y > max_c.y:
 				continue
-			if not map.is_walkable_at_cell(next):
+			if not _passable(map, next, can_swim):
 				continue
-			var ng: float = g[current] + 1.0 + _clearance_penalty(map, next, goal)
+			var ng: float = g[current] + 1.0 + _clearance_penalty(map, next, goal, can_swim)
 			if ng < g.get(next, INF):
 				g[next] = ng
 				came[next] = current
@@ -136,14 +156,15 @@ func _pop_lowest_f(open: Array[Vector2i], g: Dictionary, goal: Vector2i) -> Vect
 func _h(a: Vector2i, b: Vector2i) -> float:
 	return absf(a.x - b.x) + absf(a.y - b.y)
 
-## Soft one-cell clearance around blocked cells: keeps waypoints (and the
-## sprite) off wall corners so the mover never visibly brushes terrain. The
-## goal cell is exempt - a target hugging a wall must stay reachable.
-func _clearance_penalty(map: TerrainMap, cell: Vector2i, goal: Vector2i) -> float:
+## Soft one-cell clearance around cells this mover cannot enter: keeps
+## waypoints (and the sprite) off wall corners so it never visibly brushes
+## terrain. The goal cell is exempt - a target hugging a wall must stay
+## reachable.
+func _clearance_penalty(map: TerrainMap, cell: Vector2i, goal: Vector2i, can_swim: bool = false) -> float:
 	if cell == goal:
 		return 0.0
 	var blocked := 0
 	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-		if not map.is_walkable_at_cell(cell + d):
+		if not _passable(map, cell + d, can_swim):
 			blocked += 1
 	return 0.75 * blocked
