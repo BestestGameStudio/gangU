@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/test266_palette_debug.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/terrain_map.gd" id="2"]
+
+[node name="Test266PaletteDebug" type="Node2D"]
+script = ExtResource("1")
+
+[node name="TerrainMap" type="Node2D" parent="."]
+script = ExtResource("2")
+cell_size = 45
+show_behind_parent = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(900, 540)
+zoom = Vector2(0.6, 0.6)

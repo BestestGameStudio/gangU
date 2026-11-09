@@ -11,6 +11,9 @@ const MIN_ENEMY_SPAWN_DISTANCE := 6
 
 @export var map_seed: int = 1
 @export var layout: TerrainLayout
+## #266: this dungeon's own terrain tiles (looks + movement categories).
+## Null keeps the built-in grass/forest + snow/ice tiles.
+@export var tile_palette: TerrainPalette
 
 @onready var _terrain: TerrainMap = $Terrain
 @onready var _player_spawn: Marker2D = $PlayerSpawn
@@ -18,6 +21,8 @@ const MIN_ENEMY_SPAWN_DISTANCE := 6
 @onready var _spawn_data: AreaSpawnData = $SpawnData
 
 func _ready() -> void:
+	if tile_palette != null:
+		_terrain.palette = tile_palette
 	var result := TerrainGen.generate(_terrain, map_seed, TerrainGen.DEFAULT_SIZE, layout)
 	var spawn: Vector2i = result["spawn"]
 	var exit: Vector2i = result["exit"]

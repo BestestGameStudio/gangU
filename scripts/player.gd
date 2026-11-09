@@ -199,6 +199,15 @@ func _physics_process(delta: float) -> void:
 				facing = &"down" if input_dir.y > 0.0 else &"up"
 		_update_sprite(input_dir != Vector2.ZERO or is_dashing())
 
+## #266: single entry point for instant movement that is not WASD/dash
+## velocity: being pushed, spell movement (blinks, leaps), scripted shoves.
+## Terrain clamps it, so the player stops at the edge of any blocking or
+## falling cell instead of entering it. Returns the offset actually applied.
+func displace(offset: Vector2) -> Vector2:
+	var from := global_position
+	global_position = TerrainMotion.clamp_displacement(terrain, from, from + offset, can_swim)
+	return global_position - from
+
 func _process(_delta: float) -> void:
 	# Face the mouse cursor; manual aim only.
 	var aim_dir := global_position.direction_to(get_global_mouse_position())

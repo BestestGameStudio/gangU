@@ -10,10 +10,25 @@ class_name TerrainTypes
 ## A destroyable type turns into its destroyed_into type when any damage
 ## hits it.
 ##
+## #266: every type carries a movement category. WALKABLE is ground a mover
+## can cross; BLOCKING cannot be entered (walls, forest, mountains; a
+## swimmable BLOCKING type still admits swimmers); FALLING is pits/cliffs
+## and for now is never entered by anything, swimmers included. FALLING is
+## kept separate so a later issue can give it its own outcome. "walkable"
+## in properties() is derived: movement == WALKABLE.
+##
 ## Authority split: TerrainMap owns cell -> type assignments; this registry
 ## owns type -> properties. Downstream issues (A2/A4/B1/B3/C1/C2) consume
 ## ONLY the TerrainMap lookup seam built on this registry, never TileMap
 ## internals and never this file's DEFS directly.
+
+enum Movement { WALKABLE, BLOCKING, FALLING }
+
+const MOVEMENT_NAMES: Dictionary = {
+	Movement.WALKABLE: "walkable",
+	Movement.BLOCKING: "blocking",
+	Movement.FALLING: "falling",
+}
 
 const GROUND: StringName = &"ground"
 const OBSTACLE: StringName = &"obstacle"
@@ -35,7 +50,7 @@ const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE, MUD, W
 ## type -> properties. Data only; no behavior lives here.
 const DEFS: Dictionary = {
 	GROUND: {
-		"walkable": true,
+		"movement": Movement.WALKABLE,
 		"speed_multiplier": 1.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -44,7 +59,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	OBSTACLE: {
-		"walkable": false,
+		"movement": Movement.BLOCKING,
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -53,7 +68,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	GRASS: {
-		"walkable": true,
+		"movement": Movement.WALKABLE,
 		"speed_multiplier": 1.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -62,7 +77,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	TREE: {
-		"walkable": false,
+		"movement": Movement.BLOCKING,
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -71,7 +86,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	SNOW: {
-		"walkable": true,
+		"movement": Movement.WALKABLE,
 		"speed_multiplier": 1.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -80,7 +95,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	ICE: {
-		"walkable": true,
+		"movement": Movement.WALKABLE,
 		"speed_multiplier": 1.0,
 		"friction": 0.12,
 		"swimmable": false,
@@ -89,7 +104,7 @@ const DEFS: Dictionary = {
 		"element_tags": [&"ice"],
 	},
 	MUD: {
-		"walkable": true,
+		"movement": Movement.WALKABLE,
 		"speed_multiplier": 0.5,
 		"friction": 1.0,
 		"swimmable": false,
@@ -98,7 +113,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	WATER: {
-		"walkable": false,
+		"movement": Movement.BLOCKING,
 		"speed_multiplier": 0.6,
 		"friction": 1.0,
 		"swimmable": true,
@@ -107,7 +122,7 @@ const DEFS: Dictionary = {
 		"element_tags": [&"water"],
 	},
 	MOUNTAIN: {
-		"walkable": false,
+		"movement": Movement.BLOCKING,
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -116,7 +131,7 @@ const DEFS: Dictionary = {
 		"element_tags": [],
 	},
 	BLOCK: {
-		"walkable": false,
+		"movement": Movement.BLOCKING,
 		"speed_multiplier": 0.0,
 		"friction": 1.0,
 		"swimmable": false,
@@ -129,7 +144,7 @@ const DEFS: Dictionary = {
 ## Safe fallback for an UNREGISTERED type id: never walkable, never a speed
 ## bonus, no tags. Unknown types BLOCK - downstream must never guess.
 const UNKNOWN_PROPS: Dictionary = {
-	"walkable": false,
+	"movement": Movement.BLOCKING,
 	"speed_multiplier": 0.0,
 	"friction": 1.0,
 	"swimmable": false,
@@ -146,7 +161,8 @@ static func is_valid(type: StringName) -> bool:
 static func properties(type: StringName) -> Dictionary:
 	var src: Dictionary = DEFS.get(type, UNKNOWN_PROPS)
 	return {
-		"walkable": src["walkable"],
+		"movement": src["movement"],
+		"walkable": src["movement"] == Movement.WALKABLE,
 		"speed_multiplier": src["speed_multiplier"],
 		"friction": src["friction"],
 		"swimmable": src["swimmable"],
@@ -157,6 +173,20 @@ static func properties(type: StringName) -> Dictionary:
 
 static func is_walkable(type: StringName) -> bool:
 	return properties(type)["walkable"]
+
+static func movement(type: StringName) -> Movement:
+	return properties(type)["movement"]
+
+## Applies a movement category to a property set in place, keeping the
+## derived fields consistent: "walkable" follows the category, a FALLING
+## tile is never swimmable, and a WALKABLE tile never has zero speed.
+static func apply_movement(props: Dictionary, category: Movement) -> void:
+	props["movement"] = category
+	props["walkable"] = category == Movement.WALKABLE
+	if category == Movement.FALLING:
+		props["swimmable"] = false
+	if category == Movement.WALKABLE and float(props["speed_multiplier"]) <= 0.0:
+		props["speed_multiplier"] = 1.0
 
 static func speed_multiplier(type: StringName) -> float:
 	return properties(type)["speed_multiplier"]
