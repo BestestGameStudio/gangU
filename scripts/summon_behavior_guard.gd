@@ -63,7 +63,9 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 			summon.velocity = Vector2.ZERO
 			if _contact_timer <= 0.0:
 				var hit := DamageCalc.compute(def.contact_damage, summon.damage_modifiers, target.damage_modifiers, summon.damage_rng)
+				var was_alive := OnHit.is_alive(target)
 				target.apply_damage(hit.amount, hit.crit_tier) # #208: tier colors the number
+				OnHit.report(summon, null, target, hit, OnHit.DELIVERY_CONTACT, was_alive) # #390
 				_contact_timer = def.contact_cooldown
 		summon.move_and_slide()
 		return

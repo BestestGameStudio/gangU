@@ -246,10 +246,13 @@ func _deal(body: Node, amount: float, mods: DamageModifiers) -> void:
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 	var result := DamageCalc.compute(amount, mods, body.get(&"damage_modifiers") as DamageModifiers, rng)
+	var was_alive := OnHit.is_alive(body)
 	if body is Enemy:
 		body.apply_damage(result.amount, result.crit_tier)
 	else:
 		body.apply_damage(result.amount)
+	# #390: slam and Rhythm shockwave both report as melee hits of this spell.
+	OnHit.report(source, spell, body, result, OnHit.DELIVERY_MELEE, was_alive)
 
 const CombatEffects = preload("res://scripts/combat_effects.gd")
 

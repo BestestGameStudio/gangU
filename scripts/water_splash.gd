@@ -164,7 +164,8 @@ func _draw() -> void:
 
 ## Shared Water Ball damage dispatch (#331): one DamageCalc roll with the
 ## source's modifiers against `body`, routed like a Projectile hit.
-static func deal_damage(body: Node, p_spell: Spell, p_source: Node) -> void:
+## #390: `delivery` labels the shared OnHit report (Water Shield passes contact).
+static func deal_damage(body: Node, p_spell: Spell, p_source: Node, delivery: StringName = OnHit.DELIVERY_SPLASH) -> void:
 	if body == null or not body.has_method(&"apply_damage"):
 		return
 	# Same attacker composition as Projectile.setup: the source's modifiers
@@ -177,7 +178,9 @@ static func deal_damage(body: Node, p_spell: Spell, p_source: Node) -> void:
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 	var result := DamageCalc.compute(p_spell.damage, mods, body.get(&"damage_modifiers") as DamageModifiers, rng)
+	var was_alive := OnHit.is_alive(body)
 	if body is Enemy:
 		body.apply_damage(result.amount, result.crit_tier)
 	else:
 		body.apply_damage(result.amount)
+	OnHit.report(p_source, p_spell, body, result, delivery, was_alive)
