@@ -68,6 +68,21 @@ traced art, no stock files shipped.
   18 fps) then `<row>` (cols 3, 4, 5, 4, loop, 12 fps). Row assignment from the
   art: the upper thin zigzag is Bolt Flurry (fast multi-shot), the lower broader
   arrowhead is Heavy Bolt (piercing). Sheet is now 6x16 cells.
+- #305 row 16 (spirit_punch): no external art strip. The source strip was
+  drawn procedurally by the author agent with Python/PIL (neither the script
+  nor the strip is committed, so regeneration means re-drawing it): an
+  opaque white side-view fist pointing +X, the same facing convention as the
+  other rows, built from rounded-rectangle palm, finger-bar, thumb and cuff
+  blocks with a light grey edge pass over full transparency. The strip is
+  4 windows of 384x432: the fist at 50%, 75% and 100% size, then a final
+  full-size frame nudged slightly +X. Appended with
+  `tools/sprites/append_sheet_rows.py` and
+  `tools/sprites/specs/spell_upgrades_spirit_punch_row.json`: 6:1
+  premultiplied box downsample into the same 64x72 cells, source alpha below
+  32 dropped, each window centred on its frame, cells filled 0,1,2,3,3,3 to
+  keep the #289 layout: `spirit_punch_start` (cols 0-2, emerge 50/75/100%,
+  one-shot, 18 fps) then `spirit_punch` (cols 3, 4, 5, 4, steady full-size
+  fist, loop, 12 fps). Sheet is now 6x17 cells.
 
 # mustache_warrior.png - Mustache Warrior (common enemy + Warlord boss)
 
