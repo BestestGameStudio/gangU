@@ -27,17 +27,19 @@ var p: CharacterBody2D
 var phase := 0
 var t := 0.0
 var fails := 0
-var _offering_orig := 0.0
+# #350 fixture: the forced offering must be HELD by the driver - a local
+# dies after _initialize, the cache drops the resource, and the overworld
+# later reloads it fresh from disk (production 0.5), undoing the force.
+var _offering: GateOffering = null
 
 func _initialize() -> void:
 	# #350 fixture: force the shared offering to 0.0 so both gates
 	# deterministically roll NORMAL through the production roll. Held for the
-	# driver's whole lifetime: the hub's gates roll on their first in-tree
-	# frame, which can land after _initialize returns. Restored on quit is
+	# driver's whole lifetime: the overworld gates roll when the driver
+	# enters the overworld, after _initialize returns. Restored on quit is
 	# unnecessary - this process only runs this driver.
-	var offering := load("res://resources/gate_offering.tres") as GateOffering
-	_offering_orig = offering.red_chance
-	offering.red_chance = 0.0
+	_offering = load("res://resources/gate_offering.tres") as GateOffering
+	_offering.red_chance = 0.0
 	scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
@@ -83,9 +85,10 @@ func _process(delta: float) -> bool:
 			if scene.get_node_or_null("Player") != null and t > 0.4:
 				p = scene.get_node("Player")
 				_check("hub boot", scene.current_area.name == "Hub")
+				scene.enter_overworld() # #346: dungeon entrances live in the overworld
 				var normal: Node = scene.current_area.get_node_or_null("GateNormal")
 				var red: Node = scene.current_area.get_node_or_null("GateRed")
-				_check("hub: both gates present", normal != null and red != null)
+				_check("overworld: both gates present", normal != null and red != null)
 				_gate_structure(normal, "GateNormal")
 				_gate_structure(red, "GateRed")
 				_check("families: GateNormal rolled NORMAL tint blue (script-driven)",
