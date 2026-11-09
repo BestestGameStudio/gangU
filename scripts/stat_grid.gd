@@ -18,6 +18,7 @@ const ICON_SIZE := 26.0
 const VALUE_FONT := 20
 const TITLE_FONT := 22
 
+var _description: Label
 var _header: Label
 var _grid: GridContainer
 var _ids: Array[StringName] = []
@@ -116,6 +117,15 @@ func _init() -> void:
 	_header.name = "Header"
 	_header.add_theme_font_size_override("font_size", TITLE_FONT)
 	add_child(_header)
+	_description = Label.new()
+	_description.name = "Description"
+	_description.custom_minimum_size.x = 320.0
+	_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_description.add_theme_font_size_override("font_size", 16)
+	_description.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	_description.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_description.hide()
+	add_child(_description)
 	_grid = GridContainer.new()
 	_grid.name = "Grid"
 	_grid.columns = COLUMNS
@@ -137,6 +147,15 @@ func set_entries(p_title: String, entries: Array) -> void:
 		_ids = ids
 	for i in entries.size():
 		(_grid.get_child(i) as StatCell).set_entry(entries[i])
+
+## Description belongs to the selected spell, never a stat cell or tooltip.
+## Calling this repeatedly leaves live/hovered stat cells untouched.
+func set_description(text: String) -> void:
+	_description.text = text
+	_description.visible = not text.is_empty()
+
+func description() -> String:
+	return _description.text
 
 func title() -> String:
 	return _header.text
