@@ -281,3 +281,25 @@ Supplied by Mitravasu on issue #257 (1254x1254 concept image). Cropped to the
 frame, outer black keyed to transparent and area-downscaled to 64x64 with
 ffmpeg. Shown by SpellIcon for any spell without art. Pixel-art import
 (nearest).
+
+# terrain_block.png - destroyable terrain block (Stone Block spell) wall (#327)
+
+Supplied by Mitravasu on issue #327 (2172x724 hand-laid sheet, transparent
+background). Extracted with `tools/sprites/extract_frames.py` and spec
+`tools/sprites/specs/terrain_block.json` into a 384x192 sheet of 64x64 cells
+(scale 3, per-row `resize` 0.873 so a wall frame fills the game cell,
+baseline 63). Faint pixels below alpha 100 were dropped before flattening,
+so the semi-transparent edge blend never reaches the pack.
+
+Row -> animation map (`resources/sprites/terrain_block_frames.tres`):
+- row 0 (6 frames) -> `create` (10 fps, one-shot): the wall builds up.
+- row 1 (4 frames) -> frame 0 is `intact` (looping stand); all four are the
+  `damage` crack progression (8 fps, one-shot) kept for a future
+  partial-damage mechanic - nothing consumes it yet (#169 destroy is one
+  hit).
+- row 2 (6 frames) -> `destroy` (10 fps, one-shot): cracks, collapse,
+  rubble, dust.
+
+Art faces no direction; nothing mirrored. The board's panel margins/labels
+were not extracted (there were none - bare frames). The wall frames slightly
+overhang their cell sideways so adjacent blocks read as one connected wall.
