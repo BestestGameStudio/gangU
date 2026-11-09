@@ -112,7 +112,6 @@ func _initialize() -> void:
 	for c in panel.find_children("*", "VBoxContainer", true, false):
 		if c.get_parent() is PanelContainer:
 			vbox = c
-	var status := vbox.get_child(vbox.get_child_count() - 1) as Label
 	var grid := panel.find_child("StatsBox", true, false) as StatGrid
 
 	# (0) The menu shows ONLY the slots: three columns (slots, divider,
@@ -136,19 +135,18 @@ func _initialize() -> void:
 	_check(panel._slot_buttons[0].text == "LMB: AlphaBolt", "(0) slot 1 text (got '%s')" % panel._slot_buttons[0].text)
 	_check(panel._slot_buttons[2].text == "Q: (empty)", "(0) slot 3 empty text (got '%s')" % panel._slot_buttons[2].text)
 
-	# (1) Click an occupied slot: selects its spell (status, move-source
+	# (1) Click an occupied slot: selects its spell (move-source
 	# highlight, stat grid swaps to the spell).
 	panel._on_slot_pressed(0)
 	await process_frame
 	_check(panel._selected == a, "(1) slot click selects its spell")
-	_check(status.text == "Selected: AlphaBolt", "(1) status text (got '%s')" % status.text)
 	_check(_border_of(panel._slot_buttons[0]) == UiStyle.B_SELECTED, "(1) selected slot highlighted")
 	_check(grid.title() == "AlphaBolt", "(1) stat grid shows the selected spell (got '%s')" % grid.title())
 
 	# (2) Click the SAME slot again: deselect; grid returns to player stats.
 	panel._on_slot_pressed(0)
 	await process_frame
-	_check(panel._selected == null and status.text == "Selected: none", "(2) same-slot click deselects")
+	_check(panel._selected == null, "(2) same-slot click deselects")
 	_check(grid.title() == "Stats", "(2) grid back to player stats (got '%s')" % grid.title())
 
 	# (3) Click a second OCCUPIED slot: the two occupants swap;
@@ -206,7 +204,7 @@ func _initialize() -> void:
 	await process_frame
 	_check(caster.cleared.is_empty() and caster.assigned.is_empty(), "(6) stale selection: no clear/assign reached the caster")
 	_check(caster.fake_slots[0] == b, "(6) occupied target preserved")
-	_check(panel._selected == null and status.text == "Selected: none", "(6) stale selection dropped")
+	_check(panel._selected == null, "(6) stale selection dropped")
 
 	# (7) Equipped spells stay upgradeable from Tab: select BetaBolt (in a
 	# slot) and its upgrade buttons render and apply.

@@ -69,6 +69,15 @@ func modifiers_for(spell: Spell) -> Array[DamageModifier]:
 			out.append(r.to_modifier())
 	return out
 
+## (#426) Tag-free scalar query: the summed `effect_key` across every owned
+## relic. For player-wide passives that hook no spell tags (e.g. the Twin
+## Dash relic's dash_charges); query() below stays the tag-scoped variant.
+func scalar_total(effect_key: StringName) -> float:
+	var value := 0.0
+	for r in _owned:
+		value += r.scalar_effects.get(effect_key, 0.0)
+	return value
+
 ## Generic passive query: returns a summed scalar for a caller-selected
 ## effect key and tag context. No DamageCalc or summon coupling here.
 func query(effect_key: StringName, tags: Array[StringName]) -> float:

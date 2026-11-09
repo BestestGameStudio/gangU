@@ -127,4 +127,5 @@ func _main_flow_legs() -> void:
 	var a_portal: ExitPortal = area.get_node_or_null("ExitPortal")
 	_check(a_portal != null and a_portal.position == Vector2(576, 120), "DungeonA portal still at (576, 120)")
 	_check(area.get_node_or_null("ReviveItem") != null, "DungeonA still mounts its revive item")
-	_check(p.terrain == null, "DungeonA: Player.terrain is null")
+	# #396: DungeonA is a terrain map now (fixed hand-designed layout).
+	_check(p.terrain != null and p.terrain == area.get_node_or_null("Terrain"), "DungeonA: Player.terrain is DungeonA's own grid (#396)")
