@@ -68,5 +68,40 @@ func _initialize() -> void:
 	await process_frame
 	await process_frame
 	_check(_slimes(a2).is_empty(), "39 max HP slime does not split")
+	# Objective counting: killing the parent must NOT complete a CLEAR_ALL
+	# objective while children are alive; it completes only after all descend.
+	area.free()
+	a2.free()
+	await process_frame
+	var a3 := Node2D.new()
+	root.add_child(a3)
+	var p3 := scene.instantiate() as EnemySlime
+	a3.add_child(p3)
+	var obj := DungeonObjective.new()
+	obj.objective_type = DungeonObjective.ObjectiveType.CLEAR_ALL_ENEMIES
+	a3.add_child(obj)
+	await process_frame
+	_check(obj.progress() == Vector2i(0, 1), "objective starts at 0/1")
+	p3.apply_damage(80)
+	await process_frame
+	await process_frame
+	_check(not obj.is_cleared(), "parent death does not clear while children alive")
+	_check(obj.progress() == Vector2i(1, 3), "progress 1/3 after parent death")
+	var live := _slimes(a3).filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+	_check(live.size() == 2, "two children alive")
+	live[0].apply_damage(40)
+	await process_frame
+	await process_frame
+	_check(not obj.is_cleared(), "still not cleared with grandchildren alive")
+	var rest := _slimes(a3).filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+	var guard := 0
+	while not rest.is_empty() and guard < 10:
+		for n in rest:
+			n.apply_damage(n.hp)
+		await process_frame
+		await process_frame
+		rest = _slimes(a3).filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		guard += 1
+	_check(obj.is_cleared(), "cleared only after every descendant is dead")
 	print("[392] DONE failures=", failures)
 	quit(failures)

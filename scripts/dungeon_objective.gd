@@ -92,7 +92,7 @@ func _ready() -> void:
 		_mob_target = target_count if target_count > 0 else mobs.size()
 		_target = _mob_target + 1
 		for m in mobs:
-			m.died.connect(_on_target_died)
+			_watch(m)
 		if boss_scene == null:
 			push_error("DungeonObjective: ELIMINATION requires boss_scene; the objective can never complete.")
 		elif _mob_target == 0:
@@ -101,7 +101,25 @@ func _ready() -> void:
 		var enemies := get_tree().get_nodes_in_group("enemies")
 		_target = target_count if target_count > 0 else enemies.size()
 		for e in enemies:
-			e.died.connect(_on_target_died)
+			_watch(e)
+
+## #392: count a mob's death and, for enemies that spawn children on death
+## (EnemySlime.children_spawned, emitted before this objective sees the death),
+## also count each child. Scoped to enemies this objective already watches.
+func _watch(e: Node) -> void:
+	e.died.connect(_on_target_died)
+	if e.has_signal("children_spawned"):
+		e.children_spawned.connect(_on_children_spawned)
+
+func _on_children_spawned(kids: Array) -> void:
+	if _is_completed:
+		return
+	for k in kids:
+		_target += 1
+		if objective_type == ObjectiveType.ELIMINATION:
+			_mob_target += 1
+		_watch(k)
+	objective_progress_changed.emit(_current, _target)
 
 func _on_target_died() -> void:
 	if _is_completed:

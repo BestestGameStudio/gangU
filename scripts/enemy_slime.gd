@@ -15,6 +15,11 @@ extends Enemy
 const SPLIT_MIN_HP: int = 40
 const SPLIT_COUNT: int = 2
 const SPLIT_OFFSET: float = 12.0
+## Emitted synchronously inside the death (before the deferred add_child), with
+## the not-yet-in-tree children, so an objective watching this slime can raise
+## its target before it processes this slime's death (no early completion).
+signal children_spawned(children: Array)
+
 const META_SPLIT_CHILD := &"split_child"
 
 func _ready() -> void:
@@ -48,6 +53,7 @@ func _split() -> void:
 		return
 	var scene := load(scene_file_path) as PackedScene
 	var pos := global_position
+	var kids: Array = []
 	for i in SPLIT_COUNT:
 		var child := scene.instantiate() as Enemy
 		child.definition = halved_definition(self)
@@ -57,4 +63,7 @@ func _split() -> void:
 		child.set_meta(META_SPLIT_CHILD, true)
 		var side := -1.0 if i == 0 else 1.0
 		child.position = (area as Node2D).to_local(pos + Vector2(side * SPLIT_OFFSET, 0.0)) if area is Node2D else pos
+		kids.append(child)
+	children_spawned.emit(kids)
+	for child in kids:
 		area.call_deferred("add_child", child)
