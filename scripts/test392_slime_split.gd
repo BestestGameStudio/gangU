@@ -72,6 +72,25 @@ func _initialize() -> void:
 	var ck := _slimes(a4).filter(func(n): return is_instance_valid(n) and n.get_instance_id() != p4_id and not n.is_queued_for_deletion())
 	_check(ck.size() == 2 and ck[0].terrain == tm and ck[0].can_swim and is_equal_approx(ck[0].objective_aggro_range, 321.0), "children inherit terrain, can_swim, objective aggro")
 	a4.free()
+	# Art: original slime frames, animations and a green body pixel.
+	var frames: SpriteFrames = load("res://resources/sprites/slime_frames.tres")
+	var counts := {&"idle": 4, &"walk": 6, &"hurt": 2, &"attack": 3, &"death": 5}
+	var anims_ok := frames != null
+	if anims_ok:
+		for a in counts:
+			anims_ok = anims_ok and frames.has_animation(a) and frames.get_frame_count(a) == counts[a]
+	_check(anims_ok, "slime frames have idle/walk/hurt/attack/death with expected counts")
+	var tex: Texture2D = frames.get_frame_texture(&"idle", 0)
+	var img := tex.get_image()
+	var green := false
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a > 0.9 and c.g > c.r + 0.2 and c.g > c.b + 0.2:
+				green = true
+	_check(green, "idle frame has green body pixels")
+	var bs: Dictionary = Bestiary.catalog_entry(&"slime")
+	_check(not bs.is_empty() and bs["scene"] == "res://scenes/enemy_slime.tscn", "bestiary lists slime")
 	# 39 max HP does not split
 	var a2 := Node2D.new()
 	root.add_child(a2)
