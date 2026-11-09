@@ -73,8 +73,9 @@ func _initialize() -> void:
 	await _enter(main, "GateOverworld")
 	var ow: Node = main.current_area
 	var before := _guards(main)
-	_check(before.size() == 16, "uncleared: 16 guards around the 5 entrances, incl. #392 slime (got %d)" % before.size())
-	_check(_near(before, ow.get_node("GateNormal").global_position, 200.0) == 3, "uncleared: 3 guards at the DungeonA entrance (guard, patrol, #392 slime)")
+	# #414 mix: 5 posted guards + 14 patrollers (Normal 1+3, Red 1+2, Generated/Beast/Boss 1+3 each).
+	_check(before.size() == 19, "uncleared: 19 around the 5 entrances, 5 posted guards + 14 patrollers (#414) (got %d)" % before.size())
+	_check(_near(before, ow.get_node("GateNormal").global_position, 200.0) == 4, "uncleared: 4 at the DungeonA entrance (guard, 2 patrols, #414 slime patroller)")
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _clear_dungeon_a(main)
 	_check(main.current_area.name == "DungeonA", "overworld GateNormal -> DungeonA")
@@ -89,8 +90,8 @@ func _initialize() -> void:
 	ow = main.current_area
 	var after := _guards(main)
 	_check(_near(after, ow.get_node("GateNormal").global_position, 200.0) == 0, "(B) cleared DungeonA entrance has no guards")
-	_check(_near(after, ow.get_node("GateRed").global_position, 160.0) == 2, "(B) uncleared DungeonB entrance keeps its guards")
-	_check(after.size() == 13, "(B) 13 guards total (got %d)" % after.size())
+	_check(_near(after, ow.get_node("GateRed").global_position, 160.0) == 3, "(B) uncleared DungeonB entrance keeps its guards (guard + 2 patrols, #414)")
+	_check(after.size() == 15, "(B) 15 total: 19 minus the whole 4-strong DungeonA group (#414) (got %d)" % after.size())
 
 	# (C) re-entry of the cleared dungeon is a full fresh run.
 	# #400: the entrance gate is closed for the post-clear cooldown; wait it
@@ -132,7 +133,7 @@ func _initialize() -> void:
 	_check(fresh.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
 	fresh.enter_overworld()
 	await _frames(3)
-	_check(_guards(fresh).size() == 16, "(E) every entrance is guarded again (got %d)" % _guards(fresh).size())
+	_check(_guards(fresh).size() == 19, "(E) every entrance is guarded again, all 19 (#414) (got %d)" % _guards(fresh).size())
 	print("[348] DONE failures=", failures)
 	if failures == 0:
 		print("RESULT: ALL PASS")
