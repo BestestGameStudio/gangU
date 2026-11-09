@@ -429,6 +429,8 @@ const DUNGEON_D_BOSS_SPAWN: Vector2 = Vector2(576, 280)
 ## #337: DungeonE runs the DEFENSE objective with plain chase/contact mobs.
 const DEFENSE_WAVE_ENEMY: PackedScene = preload("res://scenes/enemy.tscn")
 const DEFENSE_WAVE_TABLE: RewardTable = preload("res://resources/rewards/demo_table.tres")
+## #368: boss of a defense boss wave.
+const DEFENSE_WAVE_BOSS: PackedScene = preload("res://scenes/defense_wave_boss.tscn")
 
 func _mount_objective(area: Node) -> void:
 	var obj := DungeonObjective.new()
@@ -465,6 +467,12 @@ func _mount_objective(area: Node) -> void:
 		obj.wave_nav = area.get_node_or_null("FlowNav") as FlowNav
 		obj.wave_enemy_scene = DEFENSE_WAVE_ENEMY
 		obj.wave_reward_table = DEFENSE_WAVE_TABLE
+		# #368: the final wave is a boss wave - its usual enemies plus one
+		# Siege Brute that marches on the core (implementer defaults; boss
+		# count, placement and balance are open).
+		obj.wave_boss_scene = DEFENSE_WAVE_BOSS
+		var boss_waves: Array[int] = [obj.wave_count]
+		obj.boss_waves = boss_waves
 		var points: Array[Vector2] = []
 		var holder := area.get_node_or_null("WaveSpawns")
 		if holder != null:

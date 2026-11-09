@@ -102,7 +102,9 @@ func _leg_flow() -> void:
 	var s1 := _countdown_secs(bar)
 	_check(s1 >= 0 and s1 < s0, "(B) countdown ticks down (%ds -> %ds)" % [s0, s1])
 	for wave in range(1, obj.total_waves() + 1):
-		_check(bar.icon_kind(wave) == "enemy", "(B) wave %d icon is an enemy glyph" % wave)
+		# #368: Main makes the final wave a boss wave (skull).
+		var want := "skull" if wave == obj.total_waves() else "enemy"
+		_check(bar.icon_kind(wave) == want, "(B) wave %d icon is %s" % [wave, want])
 
 	# (C) fill tracks cleared waves; boss_waves marks skulls (#368 hook).
 	await _physics(int(obj.first_wave_delay * 60.0) + 10)
@@ -112,6 +114,8 @@ func _leg_flow() -> void:
 	await _physics(2)
 	var frac := bar.fill_fraction()
 	_check(frac > 0.19 and frac < 0.21, "(C) fill is one of %d segments (%.2f)" % [obj.total_waves(), frac])
+	# Marker only: drop Main's #368 boss scene so no boss spawns in this run.
+	obj.wave_boss_scene = null
 	obj.boss_waves = [3]
 	_check(bar.icon_kind(3) == "skull" and bar.icon_kind(2) == "enemy", "(C) boss_waves=[3] marks only wave 3 as a skull")
 	_check(obj.wave_size(3) == obj.wave_base_size + 2 * obj.wave_size_growth, "(C) marking a boss wave changes no wave sizes")
