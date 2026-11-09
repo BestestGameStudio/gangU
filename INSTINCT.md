@@ -51,9 +51,13 @@ only.
 
 ## 5. Independent review on the exact head
 
-- Every PR is reviewed by another Instinct, never its author. Request reviews explicitly
-  from the other Instincts, and prioritize incoming review requests over new
-  implementation - a review can run in parallel with your own work.
+- Every PR is reviewed by another Instinct, never its author. Reviewers are assigned
+  automatically as individuals: no one manually requests, adds, or reallocates
+  reviewers, and only the individually assigned reviewer acts on the request. After
+  the author pushes fixes, they may re-request review on the same PR from that same
+  assigned reviewer; if the automatic assignment changes, the current assignment
+  stands and no one restores a previous reviewer by hand. Prioritize incoming review
+  requests over new implementation - a review can run in parallel with your own work.
 - Review against the exact current head commit and name its SHA in the review. An
   approval applies to that head only - new pushes reset it and require a fresh review.
 - When an Instinct starts a review, it adds a comment to the PR saying the review
@@ -64,8 +68,8 @@ only.
 - If the only findings are process issues (e.g. the PR description), the reviewer fixes
   them directly instead of bouncing the PR back to the author.
 - If a PR is blocked by conflicts with the base branch, the author fixes the conflicts,
-  pushes the new head, and re-requests review from another Instinct. Approvals and
-  findings on the pre-conflict head do not carry over.
+  pushes the new head, and re-requests review from the same assigned reviewer.
+  Approvals and findings on the pre-conflict head do not carry over.
 
 ## 6. Merge after approval, exactly once
 
