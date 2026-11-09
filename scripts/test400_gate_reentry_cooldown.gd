@@ -12,6 +12,12 @@ extends SceneTree
 ## The cooldown is shortened via main.gate_reentry_cooldown_seconds so the
 ## harness does not wait a real minute. Kills are synthetic apply_damage
 ## calls - NOT player combat proof (the PR's demo video carries that).
+## #350 pin (labeled, same idiom as test9): GateNormal is pinned NORMAL and
+## the run's cached roll overridden, because a RED-rolled GateNormal makes
+## every DungeonA mount clear-or-die - its exit portal stays LOCKED until a
+## fresh clear, and the fast-travel leg below exits without one. The roll
+## itself is test350's scope; the RED locked-exit policy is production and
+## intentionally untouched here.
 
 var failures := 0
 
@@ -26,6 +32,8 @@ func _frames(n: int) -> void:
 
 func _enter(main: Node, gate_name: String) -> void:
 	var gate: Gate = main.current_area.get_node(gate_name)
+	if gate_name == "GateNormal":
+		gate.gate_type = Gate.GateType.NORMAL # #350 pin (see header)
 	gate._on_body_entered(main.get_node("Player"))
 	await _frames(3)
 
@@ -76,6 +84,7 @@ func _initialize() -> void:
 	main._load_hub()
 	await _frames(3)
 	_check(main.current_area.name == "Hub", "(E) back in the hub")
+	main._offering_rolls[&"GateNormal"] = Gate.GateType.NORMAL # #350 pin: fast travel reuses the cached roll
 	main._commit_fast_travel(&"dungeon_a")
 	await _frames(3)
 	_check(main.current_area.name == "DungeonA", "(E) fast travel enters the cleared dungeon during the cooldown")
