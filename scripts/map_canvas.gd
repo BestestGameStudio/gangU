@@ -30,12 +30,35 @@ var map_scale: float = 0.375
 var tool: Tool = Tool.DRAW
 var symbol: WorldMap.Symbol = WorldMap.Symbol.CROSS
 
+## Transient drag state. A drag belongs to ONE button in ONE area: `_drag_button`
+## is the button that started it (NONE = idle), `_drag_area` the area it began
+## in. Motion only continues a drag while that exact button is still held, so
+## a release the canvas never saw (map closed mid-drag) can't leave a ghost
+## stroke/erase that hover later extends (PR #355 review).
 var _stroke := -1
 var _erasing := false
+var _drag_button: MouseButton = MOUSE_BUTTON_NONE
+var _drag_area: StringName = &""
 
 func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	visibility_changed.connect(cancel_interaction)
+
+## Drops any in-progress stroke/erase. Called on open/close, area change,
+## hide, and whenever the held buttons no longer match the drag.
+func cancel_interaction() -> void:
+	_stroke = -1
+	_erasing = false
+	_drag_button = MOUSE_BUTTON_NONE
+	_drag_area = &""
+
+func is_interacting() -> bool:
+	return _drag_button != MOUSE_BUTTON_NONE
+
+func _start_drag(button: MouseButton) -> void:
+	_drag_button = button
+	_drag_area = world_map.area_id
 
 func screen_to_world(local: Vector2) -> Vector2:
 	return center + (local - size * 0.5) / map_scale
@@ -47,30 +70,48 @@ func _gui_input(event: InputEvent) -> void:
 	if world_map == null:
 		return
 	var id := world_map.area_id
+	# A drag that began in another area is stale (area swapped mid-drag).
+	if is_interacting() and _drag_area != id:
+		cancel_interaction()
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		if mb.button_index != MOUSE_BUTTON_LEFT and mb.button_index != MOUSE_BUTTON_RIGHT:
+			return
 		var w := screen_to_world(mb.position)
+		accept_event()
+		if not mb.pressed:
+			# Only the button that owns the drag ends it.
+			if mb.button_index == _drag_button:
+				cancel_interaction()
+			return
+		# A new press always replaces whatever drag was running.
+		cancel_interaction()
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
-			_erasing = mb.pressed
-			if mb.pressed:
+			_start_drag(MOUSE_BUTTON_RIGHT)
+			_erasing = true
+			world_map.erase_near(id, w, ERASE_RADIUS_PX / map_scale)
+			return
+		match tool:
+			Tool.DRAW:
+				_stroke = world_map.begin_stroke(id, w)
+				if _stroke >= 0:
+					_start_drag(MOUSE_BUTTON_LEFT)
+			Tool.MARKER:
+				world_map.add_marker(id, w, symbol)
+			Tool.ERASE:
+				_start_drag(MOUSE_BUTTON_LEFT)
+				_erasing = true
 				world_map.erase_near(id, w, ERASE_RADIUS_PX / map_scale)
-			accept_event()
-		elif mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed:
-				match tool:
-					Tool.DRAW:
-						_stroke = world_map.begin_stroke(id, w)
-					Tool.MARKER:
-						world_map.add_marker(id, w, symbol)
-					Tool.ERASE:
-						_erasing = true
-						world_map.erase_near(id, w, ERASE_RADIUS_PX / map_scale)
-			else:
-				_stroke = -1
-				_erasing = false
-			accept_event()
 	elif event is InputEventMouseMotion:
-		var w := screen_to_world((event as InputEventMouseMotion).position)
+		var mm := event as InputEventMouseMotion
+		accept_event()
+		if not is_interacting():
+			return # hover never draws or erases
+		var held_mask := MOUSE_BUTTON_MASK_LEFT if _drag_button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_RIGHT
+		if (mm.button_mask & held_mask) == 0:
+			cancel_interaction() # the release happened somewhere we never saw
+			return
+		var w := screen_to_world(mm.position)
 		if _stroke >= 0:
 			var pts: Array = world_map.strokes(id)
 			# Skip sub-pixel jitter so the per-stroke point cap lasts.
@@ -78,7 +119,6 @@ func _gui_input(event: InputEvent) -> void:
 				world_map.extend_stroke(id, _stroke, w)
 		elif _erasing:
 			world_map.erase_near(id, w, ERASE_RADIUS_PX / map_scale)
-		accept_event()
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), FOG_COLOR)

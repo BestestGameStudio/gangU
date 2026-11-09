@@ -33,10 +33,37 @@ func _click(canvas: MapCanvas, pos: Vector2, button: MouseButton, pressed: bool)
 	ev.position = pos
 	canvas._gui_input(ev)
 
-func _move(canvas: MapCanvas, pos: Vector2) -> void:
+func _move(canvas: MapCanvas, pos: Vector2, mask: int = 0) -> void:
 	var ev := InputEventMouseMotion.new()
 	ev.position = pos
+	ev.button_mask = mask
 	canvas._gui_input(ev)
+
+## --- real viewport routing (PR #355 review): events go through root.push_input
+## and the GUI's own hit-test / mouse-focus logic, not straight into _gui_input.
+func _vp_pos(canvas: MapCanvas, local: Vector2) -> Vector2:
+	return canvas.get_global_transform_with_canvas() * local
+
+func _vp_button(canvas: MapCanvas, local: Vector2, button: MouseButton, pressed: bool, mask: int) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = button
+	ev.pressed = pressed
+	ev.button_mask = mask
+	ev.position = _vp_pos(canvas, local)
+	ev.global_position = ev.position
+	root.push_input(ev, true) # already in viewport (content) coords; headless window is 64x64 stretched
+
+func _vp_motion(canvas: MapCanvas, from_local: Vector2, to_local: Vector2, mask: int) -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.button_mask = mask
+	ev.position = _vp_pos(canvas, to_local)
+	ev.global_position = ev.position
+	ev.relative = to_local - from_local
+	root.push_input(ev, true)
+
+func _stroke_len(wm: WorldMap, id: StringName, i: int) -> int:
+	var s: Array = wm.strokes(id)
+	return (s[i] as PackedVector2Array).size() if i < s.size() else -1
 
 func _press_key(code: Key) -> void:
 	var ev := InputEventKey.new()
@@ -133,6 +160,7 @@ func _production() -> void:
 	await process_frame
 	_check(panel.visible and panel.is_in_group("modal_ui"), "M opens the map (modal_ui: clicks never cast)")
 
+	await _shot("347_production_no_reveal_rule") # honest production state: fog only
 	# Stand-in reveal for evidence only (the rule itself is not decided):
 	# reveal a patch around the hub spawn.
 	var player := _main.get_node("Player") as Player
@@ -152,7 +180,7 @@ func _production() -> void:
 	_click(c, center + Vector2(40, 0), MOUSE_BUTTON_LEFT, true)
 	for k in range(1, 25):
 		var a := TAU * k / 24.0
-		_move(c, center + Vector2(cos(a), sin(a)) * 40.0)
+		_move(c, center + Vector2(cos(a), sin(a)) * 40.0, MOUSE_BUTTON_MASK_LEFT)
 	_click(c, center + Vector2(40, 0), MOUSE_BUTTON_LEFT, false)
 	_check(wm.strokes(&"Hub").size() == 1 and (wm.strokes(&"Hub")[0] as PackedVector2Array).size() > 20, "LMB drag with Draw makes one freehand stroke")
 	_move(c, center)
@@ -200,3 +228,147 @@ func _production() -> void:
 	_press_key(KEY_ESCAPE)
 	await process_frame
 	_check(not panel.visible, "Esc closes the map")
+
+	await _routed_interaction(wm, panel)
+	await _death_reset(wm)
+
+## --- 3. Viewport-routed drag lifecycle (PR #355 review: ghost stroke) ---
+func _routed_interaction(wm: WorldMap, panel: MapPanel) -> void:
+	var c := panel.canvas
+	var L := MOUSE_BUTTON_MASK_LEFT
+	var R := MOUSE_BUTTON_MASK_RIGHT
+	# Headless has no OS cursor, so tell the root window the mouse is inside it
+	# (what DisplayServer does on a real desktop) or the GUI ignores the mouse.
+	root.notification(Window.NOTIFICATION_WM_MOUSE_ENTER)
+	panel.open()
+	await process_frame
+	_check(c.get_global_rect().has_point(_vp_pos(c, Vector2(300, 200))), "canvas is laid out where routed clicks land")
+	panel.set_tool(MapCanvas.Tool.DRAW)
+	var n0 := wm.strokes(&"Hub").size()
+
+	# Positive control: a real held drag draws through the viewport.
+	_vp_button(c, Vector2(100, 100), MOUSE_BUTTON_LEFT, true, L)
+	_vp_motion(c, Vector2(100, 100), Vector2(160, 100), L)
+	_vp_button(c, Vector2(160, 100), MOUSE_BUTTON_LEFT, false, 0)
+	await process_frame
+	_check(wm.strokes(&"Hub").size() == n0 + 1 and _stroke_len(wm, &"Hub", n0) == 2, "routed held drag draws a 2-point stroke")
+	_vp_motion(c, Vector2(160, 100), Vector2(260, 160), 0)
+	await process_frame
+	_check(_stroke_len(wm, &"Hub", n0) == 2, "routed hover after release does not extend")
+
+	# Reviewer repro: press, move, M while held, release while hidden, reopen, hover.
+	_vp_button(c, Vector2(300, 200), MOUSE_BUTTON_LEFT, true, L)
+	_vp_motion(c, Vector2(300, 200), Vector2(340, 200), L)
+	await process_frame
+	var ghost := n0 + 1
+	_check(_stroke_len(wm, &"Hub", ghost) == 2 and c.is_interacting(), "repro: stroke in progress with LMB held")
+	_press_key(KEY_M)
+	await process_frame
+	_check(not panel.visible and not c.is_interacting(), "closing mid-drag drops the drag state")
+	_vp_button(c, Vector2(340, 200), MOUSE_BUTTON_LEFT, false, 0)
+	await process_frame
+	_press_key(KEY_M)
+	await process_frame
+	_check(panel.visible, "map reopened")
+	_vp_motion(c, Vector2(340, 200), Vector2(530, 290), 0)
+	await process_frame
+	_check(_stroke_len(wm, &"Hub", ghost) == 2 and wm.strokes(&"Hub").size() == n0 + 2, "repro: hover after close/release/reopen adds NO phantom segment")
+	await _shot("347_repro_no_phantom_segment")
+	# Even a held-button motion with no fresh press must not resume the old stroke.
+	_vp_motion(c, Vector2(530, 290), Vector2(560, 300), L)
+	await process_frame
+	_check(_stroke_len(wm, &"Hub", ghost) == 2, "held motion without a new press does not resume the old stroke")
+
+	# Missed release while still open: motion whose mask lacks LMB ends the drag.
+	_vp_button(c, Vector2(100, 300), MOUSE_BUTTON_LEFT, true, L)
+	await process_frame
+	var lost := n0 + 2
+	_vp_motion(c, Vector2(100, 300), Vector2(200, 300), 0)
+	_vp_motion(c, Vector2(200, 300), Vector2(260, 330), L)
+	await process_frame
+	_check(_stroke_len(wm, &"Hub", lost) == 1 and not c.is_interacting(), "motion without the drag's button cancels it (no draw)")
+
+	# Erasing: markers to aim at, then hover/ghost attempts, then a positive control.
+	panel.set_symbol(WorldMap.Symbol.CIRCLE)
+	for p in [Vector2(600, 100), Vector2(700, 100), Vector2(800, 100)]:
+		_vp_button(c, p, MOUSE_BUTTON_LEFT, true, L)
+		_vp_button(c, p, MOUSE_BUTTON_LEFT, false, 0)
+	await process_frame
+	var m0 := wm.markers(&"Hub").size()
+	var s0 := wm.strokes(&"Hub").size()
+	panel.set_tool(MapCanvas.Tool.ERASE)
+	_vp_motion(c, Vector2(560, 100), Vector2(600, 100), 0)
+	await process_frame
+	_check(wm.markers(&"Hub").size() == m0, "Erase tool: plain hover over a marker erases nothing")
+	# LMB erase drag, closed mid-drag, released hidden, reopened, hovered.
+	_vp_button(c, Vector2(600, 250), MOUSE_BUTTON_LEFT, true, L)
+	await process_frame
+	_press_key(KEY_M)
+	await process_frame
+	_vp_button(c, Vector2(600, 250), MOUSE_BUTTON_LEFT, false, 0)
+	_press_key(KEY_M)
+	await process_frame
+	_vp_motion(c, Vector2(600, 250), Vector2(600, 100), 0)
+	await process_frame
+	_check(wm.markers(&"Hub").size() == m0, "LMB erase: close/release/reopen hover erases nothing")
+	# RMB erase drag (any tool), same lifecycle.
+	panel.set_tool(MapCanvas.Tool.DRAW)
+	_vp_button(c, Vector2(700, 250), MOUSE_BUTTON_RIGHT, true, R)
+	await process_frame
+	_press_key(KEY_M)
+	await process_frame
+	_vp_button(c, Vector2(700, 250), MOUSE_BUTTON_RIGHT, false, 0)
+	_press_key(KEY_M)
+	await process_frame
+	_vp_motion(c, Vector2(700, 250), Vector2(700, 100), 0)
+	await process_frame
+	_check(wm.markers(&"Hub").size() == m0 and wm.strokes(&"Hub").size() == s0, "RMB erase: close/release/reopen hover erases and draws nothing")
+	# Positive control: a real held RMB drag does erase through the viewport.
+	_vp_button(c, Vector2(800, 250), MOUSE_BUTTON_RIGHT, true, R)
+	_vp_motion(c, Vector2(800, 250), Vector2(800, 100), R)
+	_vp_button(c, Vector2(800, 100), MOUSE_BUTTON_RIGHT, false, 0)
+	await process_frame
+	_check(wm.markers(&"Hub").size() == m0 - 1, "routed held RMB drag erases the marker it reaches")
+
+	# Area change mid-drag: the drag belongs to the old area and must end.
+	var hub_s := wm.strokes(&"Hub").size()
+	_vp_button(c, Vector2(150, 400), MOUSE_BUTTON_LEFT, true, L)
+	await process_frame
+	_check(wm.strokes(&"Hub").size() == hub_s + 1 and c.is_interacting(), "area-change: stroke started in Hub")
+	_main._swap(preload("res://scenes/dungeon_a.tscn").instantiate())
+	await physics_frame
+	_check(wm.area_id == &"DungeonA" and not c.is_interacting(), "area swap mid-drag drops the drag state")
+	_vp_motion(c, Vector2(150, 400), Vector2(300, 420), L)
+	await process_frame
+	_check(_stroke_len(wm, &"Hub", hub_s) == 1 and wm.strokes(&"DungeonA").is_empty(), "held motion after the swap draws in neither area")
+	_vp_button(c, Vector2(300, 420), MOUSE_BUTTON_LEFT, false, 0)
+	_main._swap(preload("res://scenes/hub.tscn").instantiate())
+	await physics_frame
+	panel.close()
+	await process_frame
+
+## --- 4. Death resets the map (owner's full-reset decision includes it) ---
+func _death_reset(wm: WorldMap) -> void:
+	_check(wm.area_id == &"Hub" and wm.markers(&"Hub").size() > 0 and wm.strokes(&"Hub").size() > 0 and wm.explored_cells(&"Hub").size() > 0, "before death: same-run hub map has exploration + marks")
+	var panel := _main.get_node("MapPanel") as MapPanel
+	panel.open() # die with the map open: modal_ui must not leak across the reload
+	var old_main := _main
+	(_main.get_node("Player") as Player).apply_damage(1000000)
+	var t := 0.0
+	while t < 6.0 and (current_scene == old_main or current_scene == null):
+		await create_timer(0.1).timeout
+		t += 0.1
+	for i in 3:
+		await physics_frame
+	_main = current_scene
+	_check(_main != old_main and is_instance_valid(_main), "death reloads the run")
+	var wm2 := _main.get_node_or_null("WorldMap") as WorldMap
+	var panel2 := _main.get_node_or_null("MapPanel") as MapPanel
+	_check(wm2 != null and panel2 != null and not panel2.visible, "fresh WorldMap + closed MapPanel after death")
+	if wm2 == null:
+		return
+	var empty := true
+	for id: StringName in [&"Hub", &"DungeonA"]:
+		empty = empty and wm2.explored_cells(id).is_empty() and wm2.markers(id).is_empty() and wm2.strokes(id).is_empty()
+	_check(empty, "death clears exploration, markers and strokes in every area")
+	_check(get_nodes_in_group("modal_ui").is_empty(), "no modal_ui leak after dying with the map open")

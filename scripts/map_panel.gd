@@ -23,6 +23,7 @@ var canvas: MapCanvas
 var _tool_buttons: Array[Button] = []
 var _symbol_buttons: Array[Button] = []
 var _status: Label
+var _last_area: StringName = &""
 
 func _ready() -> void:
 	layer = 9
@@ -58,11 +59,15 @@ func open() -> void:
 		return
 	if is_instance_valid(world_map.player):
 		canvas.center = world_map.player.global_position
+	canvas.cancel_interaction() # never resume a drag from a previous opening
 	visible = true
 	add_to_group("modal_ui")
 	_refresh()
 
 func close() -> void:
+	# The hidden canvas never sees a release that happens while closed, so
+	# drop the drag here (PR #355 review: ghost stroke on reopen).
+	canvas.cancel_interaction()
 	visible = false
 	remove_from_group("modal_ui")
 
@@ -80,6 +85,10 @@ func _process(_delta: float) -> void:
 		canvas.queue_redraw() # player dot moves while the map is open
 
 func _on_changed(_id: StringName) -> void:
+	# Area swapped (possibly mid-drag): the drag belonged to the old area.
+	if world_map.area_id != _last_area:
+		_last_area = world_map.area_id
+		canvas.cancel_interaction()
 	if visible:
 		_refresh()
 

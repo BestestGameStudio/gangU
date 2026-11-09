@@ -11,6 +11,9 @@ extends Node
 ##     nothing here records gates, portals or enemies. Players mark those
 ##     themselves with markers and freehand strokes.
 ##
+##   - Run-scoped (#351 death = full reset): kept across area trips within a
+##     run, wiped on death by RunManager's reload.
+##
 ## OPEN (Colin's call, ARCHITECTURE.md O7): reveal TIMING - when/how a cell
 ## becomes explored. This node does not pick a rule. `reveal_rule` is the
 ## seam: a Callable `func(player_pos: Vector2, cell_size: int) -> Array`
