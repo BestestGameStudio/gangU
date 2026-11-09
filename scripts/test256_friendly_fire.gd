@@ -98,9 +98,13 @@ func _initialize() -> void:
 	_check(s3.hp == 18, "plain apply_damage unchanged (23 -> 18)")
 
 	# --- (e) ownerless summon has no side: player-sourced damage applies ---
-	var s4 := _summon(stage, null, Vector2(700, 700))
+	# #282: kept off every other fixture's projectile line - with the #282
+	# pass-through, (b)'s shot no longer despawns on s2 and would otherwise
+	# continue down x=700 into this fixture. Position-only isolation fix;
+	# the assertion below is the unchanged legacy contract.
+	var s4 := _summon(stage, null, Vector2(1200, 700))
 	await _frames(2)
-	_fire(stage, _spell(7.0), Vector2(700, 700), player)
+	_fire(stage, _spell(7.0), Vector2(1200, 700), player)
 	await _frames(20)
 	_check(s4.hp == 23, "ownerless summon keeps legacy damage from a player projectile")
 
