@@ -1,17 +1,21 @@
 extends SceneTree
-## #396 harness: every gated dungeon map (DungeonA-E) is a terrain map.
+## #396 harness: the gated dungeon maps DungeonA-D are terrain maps.
+## Scope (Daniel, 2026-11-09): DungeonE (Defense) is NOT converted - the
+## Defense change is omitted because maze generation work is in progress.
+## It keeps its old open floor and is the negative control below.
 ## Run: godot --headless --path . --script res://scripts/test396_dungeon_terrain.gd
 ##
 ## Legs:
 ##   (A) TerrainFixedLayout: ASCII rows -> cells (origin, default legend,
 ##       custom legend, unknown char = GROUND) and TerrainMap.fixed_layout
 ##       fills the store in _ready; an unknown tile id refuses the batch.
-##   (B) per dungeon scene: a "Terrain" TerrainMap with a fixed layout and a
-##       palette; the walkable region reachable from PlayerSpawn is enclosed
-##       (finite, bounded by the wall ring) and holds every authored point:
-##       spawns, SpawnData entries, WaveSpawns, DefenseCore, the main.gd boss
-##       spawn and the default exit portal spot (576,120). The decorative
-##       frame sits on the wall's inner edge.
+##   (B) per converted dungeon scene: a "Terrain" TerrainMap with a fixed
+##       layout and a palette; the walkable region reachable from PlayerSpawn
+##       is enclosed (finite, bounded by the wall ring) and holds every
+##       authored point: spawns, SpawnData entries, the main.gd boss spawn
+##       and the default exit portal spot (576,120). The decorative frame
+##       sits on the wall's inner edge. DungeonE is the negative control:
+##       no Terrain node at all.
 ##   (C) movement: a boss-style scripted move (Enemy.terrain_move_and_slide)
 ##       and a knockback both stop at the arena wall; with no terrain the same
 ##       move leaves the arena (negative control: the walls are terrain only).
@@ -23,7 +27,6 @@ const DUNGEONS := [
 	{"scene": "res://scenes/dungeon_b.tscn", "name": "DungeonB", "boss": Vector2(576, 240)},
 	{"scene": "res://scenes/dungeon_c.tscn", "name": "DungeonC", "boss": Vector2(576, 300)},
 	{"scene": "res://scenes/dungeon_d.tscn", "name": "DungeonD", "boss": Vector2(576, 280)},
-	{"scene": "res://scenes/dungeon_e.tscn", "name": "DungeonE", "boss": Vector2(-1, -1)},
 ]
 const EXIT_PORTAL_DEFAULT := Vector2(576, 120)
 ## Flood-fill guard: a leak past the walls would run into this.
@@ -150,6 +153,15 @@ func _leg_scenes() -> void:
 		area.queue_free()
 		await process_frame
 
+	# Negative control: DungeonE (Defense) stays flat - no Terrain node, no
+	# conversion (omitted per Daniel, 2026-11-09).
+	var e_area: Node2D = load("res://scenes/dungeon_e.tscn").instantiate()
+	root.add_child(e_area)
+	await process_frame
+	_check(e_area.get_node_or_null("Terrain") == null, "(B) DungeonE keeps its old open floor (no Terrain, omitted per Daniel)")
+	e_area.queue_free()
+	await process_frame
+
 # (C) -----------------------------------------------------------------------
 func _mover(map: TerrainMap, parent: Node, at: Vector2) -> Enemy:
 	var e: Enemy = load("res://scenes/enemy.tscn").instantiate()
@@ -245,7 +257,7 @@ func _leg_production() -> void:
 		Input.action_press(&"move_left")
 		await _physics(100)
 		Input.action_release(&"move_left")
-		var west_edge := 192.0 if tag in ["DungeonA", "DungeonB", "DungeonE"] else 320.0
+		var west_edge := 192.0 if tag in ["DungeonA", "DungeonB"] else 320.0
 		_check(p.global_position.x < x0 - 100.0 and p.global_position.x >= west_edge and map.is_walkable_at(p.global_position),
 			"(D) %s: walking west stops at the wall (x=%.1f)" % [tag, p.global_position.x])
 	scene.queue_free()

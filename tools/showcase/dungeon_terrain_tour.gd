@@ -1,12 +1,13 @@
 extends SceneTree
 ## RECORDING-ONLY driver for #396 (not a test, not loaded by the game).
-## Boots main.tscn and mounts each gated dungeon (A-E) in turn, framing its
-## whole terrain map (walls + pillars), with the production spawns, bosses
+## Boots main.tscn and mounts each converted gated dungeon (A-D) in turn,
+## framing its whole terrain map (walls + pillars), with the production
+## spawns, bosses
 ## and objective running. The player is made unkillable so the tour never
 ## restarts the run.
 ##   xvfb-run -a -s "-screen 0 1920x1080x24" godot --rendering-driver opengl3 \
 ##     --path . --resolution 1920x1080 --write-movie /tmp/ci/shots/f.png \
-##     --fixed-fps 30 --quit-after 232 --script res://tools/showcase/dungeon_terrain_tour.gd
+##     --fixed-fps 30 --quit-after 187 --script res://tools/showcase/dungeon_terrain_tour.gd
 ## Frame 2 + 45*i + 40 is the settled shot of dungeon i.
 
 const DUNGEONS := [
@@ -14,7 +15,6 @@ const DUNGEONS := [
 	"res://scenes/dungeon_b.tscn",
 	"res://scenes/dungeon_c.tscn",
 	"res://scenes/dungeon_d.tscn",
-	"res://scenes/dungeon_e.tscn",
 ]
 const SEGMENT := 45
 
