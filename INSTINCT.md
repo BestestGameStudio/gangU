@@ -56,6 +56,8 @@ only.
   implementation - a review can run in parallel with your own work.
 - Review against the exact current head commit and name its SHA in the review. An
   approval applies to that head only - new pushes reset it and require a fresh review.
+- When an Instinct starts a review, it adds a comment to the PR saying the review
+  is underway, so the author and other reviewers can see it is being looked at.
 - Review checks: the diff matches the stated file boundary, CI is green on that head,
   tests pass, and gameplay claims are verified against the rendered build where
   applicable.
