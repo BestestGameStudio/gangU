@@ -7,16 +7,17 @@ extends RefCounted
 ## (is_walkable_at / world_to_cell / cell_to_world - read-only); no state
 ## beyond one mover's current path, and no writes to the map.
 ##
-## Contract (unchanged from the #281 summon implementation):
+## Shared routing contract (preserves each caller's prior water behavior):
 ##   - A clear straight line steers direct (zero overhead, no path state).
 ##   - A line blocked by a HARD obstacle triggers a bounded 4-dir A* over
 ##     the grid (no diagonal corner cutting between blocked cells),
 ##     replanned on a short timer because the target moves. Hard obstacle =
 ##     a cell nobody can enter: BLOCKING and not swimmable (trees, walls,
 ##     mountains, blocks), or FALLING.
-##   - Swimmable cells (water) are NOT routing obstacles: swimmers cross
-##     them directly and non-swimmers keep the #165 halt-at-the-edge
-##     behavior through TerrainMotion.resolve. The A* itself only routes a
+##   - By default water is not a routing obstacle: enemies keep #165
+##     swim-or-halt behavior. Summons opt into detour_unwalkable to retain
+##     #281 routing around ALL cells they cannot enter, including water.
+##     Swimmers cross water directly in either mode. The A* only routes a
 ##     mover through cells IT can enter (walkable, or swimmable when it can
 ##     swim), so a non-swimmer is never pathed through water.
 ##   - TerrainMotion.resolve always has the last word on the velocity, so a
@@ -40,13 +41,13 @@ var _replan_timer: float = 0.0
 ## mover wants (used verbatim when no grid is wired or the line is clear);
 ## `speed` shapes waypoint segments when a detour is needed. Call once per
 ## physics step: the replan clock accumulates from delta here.
-func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, dest: Vector2, speed: float, delta: float, can_swim: bool = false) -> Vector2:
+func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, dest: Vector2, speed: float, delta: float, can_swim: bool = false, detour_unwalkable: bool = false) -> Vector2:
 	_replan_timer = maxf(0.0, _replan_timer - delta)
 	if map == null:
 		return desired
 	if desired == Vector2.ZERO:
 		return TerrainMotion.resolve(map, pos, previous, desired, delta, can_swim)
-	if _line_routable(map, pos, dest):
+	if _line_routable(map, pos, dest, can_swim, detour_unwalkable):
 		_path = []
 		_replan_timer = REPLAN_INTERVAL
 		return TerrainMotion.resolve(map, pos, previous, desired, delta, can_swim)
@@ -69,14 +70,15 @@ func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, d
 		_replan_timer = 0.0
 	return resolved
 
-## True iff no HARD obstacle cell sits on the straight line, sampled at
-## half-cell steps so none is skipped. Swimmable cells pass: entering them
-## is TerrainMotion's call (swim or halt), not a reason to detour.
-func _line_routable(map: TerrainMap, from: Vector2, to: Vector2) -> bool:
+## Default callers detour hard obstacles only (#165 enemy swim-or-halt).
+## Summons opt into all unwalkable cells to preserve their #281 behavior.
+## Sample at half-cell steps so no blocked cell is skipped.
+func _line_routable(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = false, detour_unwalkable: bool = false) -> bool:
 	var dist := from.distance_to(to)
 	var steps := int(ceil(dist / (map.cell_size * 0.5))) + 1
 	for i in steps + 1:
-		if _hard_obstacle(map, map.world_to_cell(from.lerp(to, float(i) / steps))):
+		var cell := map.world_to_cell(from.lerp(to, float(i) / steps))
+		if (detour_unwalkable and not _passable(map, cell, can_swim)) or _hard_obstacle(map, cell):
 			return false
 	return true
 

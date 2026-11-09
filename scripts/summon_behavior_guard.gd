@@ -20,8 +20,8 @@ extends RefCounted
 ## summon.terrain == null (harnesses without a Terrain node) behaves exactly
 ## as #280 - no lookup, no pathfinding.
 ## #391: the routing itself now lives in the shared TerrainPath helper
-## (extracted verbatim from here) so enemies steer around terrain the same
-## way; behavior is unchanged.
+## so enemies can share its obstacle routing. Summons opt into routing
+## around all unwalkable cells (including water), preserving #281.
 ##
 ## Contract:
 ##   (a) ENGAGE FIRST - while any live enemy exists, chase the nearest one at
@@ -96,4 +96,4 @@ func _nearest_enemy(summon: Summon) -> Enemy:
 ## a grid is wired; #391 moved the routing to the shared TerrainPath helper.
 func _steer_toward(summon: Summon, dest: Vector2, speed: float, delta: float) -> Vector2:
 	var desired: Vector2 = (dest - summon.global_position).normalized() * speed
-	return _terrain_path.steer(summon.terrain, summon.global_position, summon.velocity, desired, dest, speed, delta, false)
+	return _terrain_path.steer(summon.terrain, summon.global_position, summon.velocity, desired, dest, speed, delta, false, true)

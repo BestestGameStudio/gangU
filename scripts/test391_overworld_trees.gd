@@ -160,7 +160,51 @@ func _initialize() -> void:
 	_check(bare_ground.decor.size() > 0, "D: ground still builds decor without a Terrain node")
 	plain.queue_free()
 
+	await _water_routing_parity()
+
 	print("[391] DONE failures=", failures)
 	if failures == 0:
 		print("RESULT: ALL PASS")
 	quit(1 if failures > 0 else 0)
+
+## #281 extraction parity: summons detour finite water, ordinary enemies
+## retain #165 shore halt, swimmers cross. Exercise the actual summon
+## wrapper as well as the shared helper; do not only test A* internals.
+func _water_routing_parity() -> void:
+	var map := TerrainMap.new()
+	root.add_child(map)
+	for y in range(1, 6):
+		map.set_cell(Vector2i(4, y), TerrainTypes.WATER)
+	var start := Vector2(160, 224)
+	var dest := Vector2(480, 224)
+	var ally := Summon.new()
+	ally.terrain = map
+	ally.position = start
+	var behavior := SummonBehaviorGuard.new()
+	var walker_path := TerrainPath.new()
+	var swimmer_path := TerrainPath.new()
+	var walker := start
+	var swimmer := start
+	var walker_velocity := Vector2.ZERO
+	var swimmer_velocity := Vector2.ZERO
+	var ally_wet := false
+	var swimmer_wet := false
+	for i in 600:
+		if ally.position.distance_to(dest) > 8.0:
+			ally.velocity = behavior._steer_toward(ally, dest, 180.0, 1.0 / 60.0)
+			ally.position += ally.velocity / 60.0
+		ally_wet = ally_wet or not map.is_walkable_at(ally.position)
+		if walker.distance_to(dest) > 8.0:
+			walker_velocity = walker_path.steer(map, walker, walker_velocity, walker.direction_to(dest) * 180.0, dest, 180.0, 1.0 / 60.0, false)
+			walker += walker_velocity / 60.0
+		if swimmer.distance_to(dest) > 8.0:
+			swimmer_velocity = swimmer_path.steer(map, swimmer, swimmer_velocity, swimmer.direction_to(dest) * 180.0, dest, 180.0, 1.0 / 60.0, true)
+			swimmer += swimmer_velocity / 60.0
+		swimmer_wet = swimmer_wet or map.tile_type_at(swimmer) == TerrainTypes.WATER
+	_check(ally.position.distance_to(dest) <= 8.0, "E: summon detours finite WATER strip and reaches target (#281 parity)")
+	_check(not ally_wet, "E: summon detour never enters WATER")
+	_check(walker.x < 256.0 and walker_velocity == Vector2.ZERO, "E: ordinary non-swimming enemy still halts at WATER (#165 parity)")
+	_check(swimmer_wet and swimmer.distance_to(dest) <= 8.0, "E: swimming enemy crosses WATER directly")
+	ally.free()
+	map.queue_free()
+	await process_frame
