@@ -16,7 +16,7 @@ extends SceneTree
 const AREAS := {
 	"res://scenes/hub.tscn": "HUB",
 	"res://scenes/dungeon_a.tscn": "DUNGEON A",
-	"res://scenes/dungeon_b.tscn": "DUNGEON B (RED gate)",
+	"res://scenes/dungeon_b.tscn": "DUNGEON B",  # #350: gate type is rolled now, not baked into the title
 }
 ## #124 regression: the 8 renamed upgraded spell resources and all area titles
 ## must never re-grow a bracketed dev note.
