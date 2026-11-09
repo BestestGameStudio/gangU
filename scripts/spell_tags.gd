@@ -18,8 +18,10 @@ const HOMING: StringName = &"homing"
 const COLD: StringName = &"cold"
 ## #331: element tag for the Water Ball tree. Metadata only today.
 const WATER: StringName = &"water"
+## #370: element tag for the Stone Hammer tree. Metadata only today.
+const EARTH: StringName = &"earth"
 
-const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD, WATER]
+const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD, WATER, EARTH]
 
 static func is_valid(tag: StringName) -> bool:
 	return ALL.has(tag)

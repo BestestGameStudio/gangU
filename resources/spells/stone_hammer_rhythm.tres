@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+spell_name = "Rhythm Hammer"
+icon_upgraded = true
+cooldown = 8.5
+damage = 60.0
+radius = 10.0
+tags = Array[StringName]([&"melee", &"aoe", &"earth"])
+range = 150.0
+projectile_count = 0
+projectile_color = Color(0.5, 0.75, 0.9, 1)
+hammer_radius = 48.0
+hammer_windup = 0.3
+hammer_combo_cdr = 1.0
+hammer_min_cooldown = 0.5
+hammer_combo_idle_reset = 30.0
