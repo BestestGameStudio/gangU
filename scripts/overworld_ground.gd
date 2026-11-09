@@ -132,10 +132,11 @@ func _build_patches() -> void:
 ## #391: every decor tree marks its cells on the area's Terrain grid as
 ## OBSTACLE (blocking). Not the TREE type: TREE is destroyable under any
 ## damage, so one stray spell would silently delete a tree's collision
-## while its code-drawn circle stays. A cell is blocked when its CENTER
-## falls inside the tree circle, keeping the blocked patch at or inside
-## the visual. No Terrain sibling (harnesses, older fixtures) = decor
-## stays purely visual, the pre-#391 behavior.
+## while its code-drawn circle stays. The tree's own cell is always
+## blocked; further cells are blocked when their CENTER falls inside the
+## tree circle, keeping the blocked patch at or inside the visual. No
+## Terrain sibling (harnesses, older fixtures) = decor stays purely
+## visual, the pre-#391 behavior.
 func _plant_tree_collision(area: Node) -> void:
 	var map := area.get_node_or_null("Terrain") as TerrainMap
 	if map == null:
@@ -153,6 +154,10 @@ func _plant_tree_collision(area: Node) -> void:
 				var cell := Vector2i(cx, cy)
 				if map.cell_to_world(cell).distance_to(at) <= r:
 					cells[cell] = TerrainTypes.OBSTACLE
+		# A small tree near a cell corner has no cell center inside its
+		# circle: its own cell is blocked regardless, so no tree is
+		# walkable at its own position.
+		cells[map.world_to_cell(at)] = TerrainTypes.OBSTACLE
 	map.set_cells(cells)
 
 func _clear_spot(p: Vector2) -> bool:
