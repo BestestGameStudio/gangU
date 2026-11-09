@@ -104,7 +104,7 @@ func _unit() -> void:
 	var wm := WorldMap.new()
 	var id := &"Area"
 	_check(wm.explored_cells(id).is_empty() and wm.markers(id).is_empty() and wm.strokes(id).is_empty(), "fresh area is unexplored and unmarked")
-	_check(not wm.reveal_rule.is_valid(), "no reveal rule by default (O7 open)")
+	_check(not wm.reveal_rule.is_valid(), "bare WorldMap ships no rule (production wires it at mount)")
 	var cells := WorldMap.radius_cells(Vector2(96, 96), 2)
 	_check(cells.has(Vector2i(1, 1)) and cells.has(Vector2i(3, 1)) and not cells.has(Vector2i(3, 3)), "radius_cells helper is a circle around the cell")
 	_check(wm.reveal_cells(id, cells) == cells.size(), "reveal_cells adds new cells")
@@ -153,18 +153,25 @@ func _production() -> void:
 	if wm == null or panel == null:
 		return
 	_check(wm.area_id == &"Hub" and wm.player == _main.get_node("Player"), "WorldMap tracks the current area and player")
-	_check(not wm.reveal_rule.is_valid() and wm.explored_cells(&"Hub").is_empty(), "production ships NO reveal rule: nothing auto-reveals (O7 open)")
+	_check(wm.reveal_rule.is_valid(), "production wires a reveal rule (Colin: terrain appears as you explore)")
+	_check(wm.reveal_rule.get_method() == &"explore_rule", "the production rule is WorldMap.explore_rule")
+	# Explore reveal in production: the player's own hub cell (and its
+	# vision circle) is explored after ticks; far cells stay fogged.
+	for i in 3:
+		await physics_frame
+	var hub_player := (_main.get_node("Player") as Node2D).global_position
+	_check(wm.is_explored(&"Hub", WorldMap.world_to_cell(hub_player)), "player's own cell explored by the explore rule")
+	_check(not wm.is_explored(&"Hub", WorldMap.world_to_cell(hub_player) + Vector2i(WorldMap.EXPLORE_RADIUS_CELLS + 3, 0)), "cells beyond the vision circle stay fogged")
 	_check(InputMap.has_action(MapPanel.ACTION) and not panel.visible, "M action registered, map starts closed")
 
 	_press_key(KEY_M)
 	await process_frame
 	_check(panel.visible and panel.is_in_group("modal_ui"), "M opens the map (modal_ui: clicks never cast)")
 
-	await _shot("347_production_no_reveal_rule") # honest production state: fog only
-	# Stand-in reveal for evidence only (the rule itself is not decided):
-	# reveal a patch around the hub spawn.
+	await _shot("347_production_explore_reveal") # production explore reveal: vision circle explored
+	# A second explored patch further out, as if the player had walked there.
 	var player := _main.get_node("Player") as Player
-	wm.reveal_cells(&"Hub", WorldMap.radius_cells(player.global_position, 5))
+	wm.reveal_cells(&"Hub", WorldMap.radius_cells(player.global_position + Vector2(64 * 8, 0), WorldMap.EXPLORE_RADIUS_CELLS))
 	await _shot("347_map_explored_unmarked")
 
 	var c := panel.canvas
@@ -173,8 +180,8 @@ func _production() -> void:
 	# Details are NOT auto-shown: gates exist in the hub but WorldMap holds no marks.
 	_check(wm.markers(&"Hub").is_empty() and wm.strokes(&"Hub").is_empty(), "hub gates are not auto-marked")
 
-	# Draw a freehand loop around the NORMAL gate.
-	var gate := (_main.current_area.get_node("GateNormal") as Node2D).global_position
+	# Draw a freehand loop around the overworld gate.
+	var gate := (_main.current_area.get_node("GateOverworld") as Node2D).global_position
 	panel.set_tool(MapCanvas.Tool.DRAW)
 	var center := c.world_to_screen(gate)
 	_click(c, center + Vector2(40, 0), MOUSE_BUTTON_LEFT, true)
@@ -186,21 +193,21 @@ func _production() -> void:
 	_move(c, center)
 	_check((wm.strokes(&"Hub")[0] as PackedVector2Array).size() == 25, "mouse motion after release does not extend the stroke")
 
-	# Markers: X on the red gate, star on the boss gate, triangle on the spawn.
+	# Markers: X on the overworld gate, star on the shop, triangle on the spawn.
 	panel.set_symbol(WorldMap.Symbol.CROSS)
 	_check(c.tool == MapCanvas.Tool.MARKER, "picking a symbol selects the Marker tool")
-	_click(c, c.world_to_screen((_main.current_area.get_node("GateRed") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
+	_click(c, c.world_to_screen((_main.current_area.get_node("GateOverworld") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
 	_click(c, Vector2.ZERO, MOUSE_BUTTON_LEFT, false)
 	panel.set_symbol(WorldMap.Symbol.STAR)
-	_click(c, c.world_to_screen((_main.current_area.get_node("GateBoss") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
+	_click(c, c.world_to_screen((_main.current_area.get_node("ShopVendor") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
 	_click(c, Vector2.ZERO, MOUSE_BUTTON_LEFT, false)
 	panel.set_symbol(WorldMap.Symbol.TRIANGLE)
 	var tri_pos := c.world_to_screen(Vector2(576, 600))
 	_click(c, tri_pos, MOUSE_BUTTON_LEFT, true)
 	_click(c, tri_pos, MOUSE_BUTTON_LEFT, false)
 	_check(wm.markers(&"Hub").size() == 3, "LMB with Marker places symbol markers")
-	var red := (_main.current_area.get_node("GateRed") as Node2D).global_position
-	_check((wm.markers(&"Hub")[0]["pos"] as Vector2).distance_to(red) < 1.0 and wm.markers(&"Hub")[0]["symbol"] == WorldMap.Symbol.CROSS, "marker stored at the clicked world position with its symbol")
+	var oworld := (_main.current_area.get_node("GateOverworld") as Node2D).global_position
+	_check((wm.markers(&"Hub")[0]["pos"] as Vector2).distance_to(oworld) < 1.0 and wm.markers(&"Hub")[0]["symbol"] == WorldMap.Symbol.CROSS, "marker stored at the clicked world position with its symbol")
 	await _shot("347_map_player_marks")
 
 	# RMB erases with any tool; Erase tool on LMB too.
@@ -369,6 +376,14 @@ func _death_reset(wm: WorldMap) -> void:
 		return
 	var empty := true
 	for id: StringName in [&"Hub", &"DungeonA"]:
-		empty = empty and wm2.explored_cells(id).is_empty() and wm2.markers(id).is_empty() and wm2.strokes(id).is_empty()
+		empty = empty and wm2.markers(id).is_empty() and wm2.strokes(id).is_empty()
+	empty = empty and wm2.explored_cells(&"DungeonA").is_empty()
+	# The fresh map re-reveals only around the player's spawn (fresh state, not carried over).
+	var spawn_cell := (_main.get_node("Player") as Player).global_position
+	var fresh: Array = WorldMap.radius_cells(spawn_cell, WorldMap.EXPLORE_RADIUS_CELLS)
+	var got := wm2.explored_cells(&"Hub")
+	empty = empty and got.size() == fresh.size()
+	for cell: Vector2i in fresh:
+		empty = empty and got.has(cell)
 	_check(empty, "death clears exploration, markers and strokes in every area")
 	_check(get_nodes_in_group("modal_ui").is_empty(), "no modal_ui leak after dying with the map open")
