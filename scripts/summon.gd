@@ -88,7 +88,8 @@ func apply_damage(amount: int) -> void:
 ## Projectile before its source is trusted; enemy, null, unknown, and
 ## non-Projectile callers - and any ownerless summon target, which has no
 ## side to protect - fall through to the legacy damage path unchanged.
-func apply_damage_from(amount: int, projectile: Node2D) -> void:
+## crit_tier (#208) is accepted for dispatch parity; summons show no numbers.
+func apply_damage_from(amount: int, projectile: Node2D, _crit_tier: int = 0) -> void:
 	if is_instance_valid(player) and player is Player and projectile is Projectile:
 		var src: Node2D = projectile.source
 		if is_instance_valid(src) and (src is Player or (src is Summon and src.player == player)):

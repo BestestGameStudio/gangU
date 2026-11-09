@@ -44,11 +44,12 @@ static func hit_spark(parent: Node, pos: Vector2) -> void:
 	fx.position = pos
 	parent.call_deferred("add_child", fx)
 
-## Floating number for the damage a hit dealt, at the enemy's position.
-static func damage_number(parent: Node, at: Vector2, amount: int) -> void:
+## Floating number for the damage a hit dealt, at the enemy's position,
+## colored by the hit's rolled crit tier (#208).
+static func damage_number(parent: Node, at: Vector2, amount: int, crit_tier: int = 0) -> void:
 	if amount <= 0:
 		return
-	parent.call_deferred("add_child", DamageNumber.create(at, amount))
+	parent.call_deferred("add_child", DamageNumber.create(at, amount, crit_tier))
 
 ## Muzzle accent at the cast point, rotated to the cast direction and tinted
 ## with the spell's own projectile color.

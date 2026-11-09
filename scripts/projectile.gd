@@ -304,8 +304,13 @@ func _on_body_entered(body: Node2D) -> void:
 		# projectile for caller-identity checks; every other receiver keeps the
 		# legacy call unchanged (window ACK 2026-11-08: additive branch only,
 		# source exclusion / hit bookkeeping / RNG / signals / pierce preserved).
+		# #208: the rolled crit tier rides along to receivers that show damage
+		# numbers (Enemy, gated receivers); legacy apply_damage(amount) shapes
+		# (Player, stubs) keep the one-argument call.
 		if body.has_method(&"apply_damage_from"):
-			body.apply_damage_from(result.amount, self)
+			body.apply_damage_from(result.amount, self, result.crit_tier)
+		elif body is Enemy:
+			body.apply_damage(result.amount, result.crit_tier)
 		else:
 			body.apply_damage(result.amount)
 		_hit_bodies.append(body)

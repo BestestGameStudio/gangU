@@ -104,14 +104,15 @@ const FLASH_TIME: float = 0.12
 ## #110: combat feedback - code-drawn death burst + hit spark (visual only).
 const CombatEffects = preload("res://scripts/combat_effects.gd")
 
-func apply_damage(amount: int) -> void:
+## crit_tier (#208) only colors the damage number; HP math ignores it.
+func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	if hp <= 0:
 		return
 	hp = clampi(hp - amount, 0, max_hp)
 	_flash_t = FLASH_TIME
 	modulate = Color(2.4, 2.4, 2.4)
 	health_changed.emit(hp, max_hp)
-	CombatEffects.damage_number(get_parent(), global_position, amount)
+	CombatEffects.damage_number(get_parent(), global_position, amount, crit_tier)
 	if hp > 0:
 		# #110: brief contact spark at the damage-apply site (ENEMY-CENTER,
 		# not the exact physical impact point). Visual only.
