@@ -5,15 +5,14 @@ extends Resource
 ## scope until Colin decides otherwise.
 ##
 ## A hub gate that carries an offering rolls its gate_type from this resource
-## each time it is presented (every hub load). The type then carries the
-## existing semantics: NORMAL allows retreat, RED locks the player in until
-## the objective is complete (D12, applied in main.gd from the type of the gate
-## actually entered).
+## ONCE per run; Main caches the roll per gate, so the type stays fixed until
+## death (the death restart reloads Main and clears the record). The type
+## carries the existing semantics: NORMAL allows retreat, RED locks the player
+## in until the objective is complete (D12, applied in main.gd from the type
+## of the gate actually entered).
 ##
-## The chance distribution is NOT decided (Colin's call). red_chance therefore
-## defaults to UNSET, and an unset offering keeps the gate's authored type, so
-## the hub behaves exactly as before until a value is chosen. No code here may
-## pick a value.
+## The production distribution is 50/50 (Colin, 2026-11-08). An unset
+## red_chance still keeps the gate's authored type for tests and tooling.
 
 const UNSET := -1.0
 
