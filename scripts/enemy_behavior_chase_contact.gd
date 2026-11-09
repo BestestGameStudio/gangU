@@ -23,12 +23,30 @@ var _contact_timer: float = 0.0
 ## #391: per-enemy routing state (never shared), one helper per behavior
 ## instance - the same idiom as the cooldown timer.
 var _terrain_path := TerrainPath.new()
+## #406: cover-seeking helper, consulted only when the enemy opts in via
+## Enemy.cover_seek (the Mustache Warrior scene). The behavior slot keeps
+## holding THIS instance, so the #209/#337 target-resolution seam and the
+## #346/#373 guard/patrol/migrate engaged-chase super() call are unchanged.
+var _cover := EnemyBehaviorCover.new()
 
 ## #209: target parameter widened (Player -> duck-typed) so the default
 ## chase/contact behavior can target Summons; the target contract used here
 ## is hp, global_position, damage_modifiers and apply_damage, which both
 ## Player and Summon provide.
 func physics_step(enemy: Enemy, player, delta: float) -> void:
+	# #406 (Daniel, 2026-11-09: "moustache men now seek cover", "just
+	# regular mobs", "any cover"): an opted-in enemy chases through the
+	# cover machine; everything else runs the unchanged chase below.
+	if enemy.cover_seek:
+		_cover.physics_step(self, enemy, player, delta)
+		return
+	_chase_step(enemy, player, delta)
+
+## The #99 chase/contact step, unchanged. Called directly by physics_step
+## (no cover opt-in) and by the #406 cover machine as its ENGAGED state and
+## every fallback (non-Player target, FlowNav, dead/missing player, no
+## cover in range).
+func _chase_step(enemy: Enemy, player, delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		enemy.velocity = Vector2.ZERO
 		_slide(enemy)
