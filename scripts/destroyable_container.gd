@@ -45,7 +45,8 @@ func apply_damage(amount: int) -> void:
 	print("[214] container rejected ", amount, " damage from an unknown source")
 
 ## The gated damage path (projectile dispatch). PLAYER-cast spells only.
-func apply_damage_from(amount: int, projectile: Node2D) -> void:
+## crit_tier (#208) only colors the damage number.
+func apply_damage_from(amount: int, projectile: Node2D, crit_tier: int = 0) -> void:
 	if _dead:
 		return
 	if not (projectile is Projectile):
@@ -56,7 +57,7 @@ func apply_damage_from(amount: int, projectile: Node2D) -> void:
 		return
 	hp = maxi(0, hp - maxi(amount, 0))
 	health_changed.emit(hp)
-	CombatEffects.damage_number(get_parent(), global_position, amount)
+	CombatEffects.damage_number(get_parent(), global_position, amount, crit_tier)
 	if hp == 0:
 		_dead = true
 		died.emit()
