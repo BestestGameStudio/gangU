@@ -54,6 +54,9 @@ extends RefCounted
 ##           runs FAST ("when moving between cover, they run fast").
 ##   HOLD  - at the cover: stand still while the player's mouse points
 ##           their way (aim direction within AIM_CONE of player->enemy).
+##           Shelter is re-checked even while aimed at: if the player
+##           strafes so the cover no longer shields them, they DASH to valid
+##           shelter, or ENGAGE when none exists.
 ##   CHARGE- the per-enemy away-timer runs whenever the mouse is NOT
 ##           pointing their way (in SEEK/DASH/HOLD) and resets the moment
 ##           it points back; at AWAY_CHARGE_TIME the moustache man charges:
@@ -96,6 +99,7 @@ const FLANK_COS: float = 0.3 ## held cover no longer toward the player past this
 const RE_ENGAGE_DIST: float = 280.0 ## disengaged past this, seek cover again (PLACEHOLDER)
 const REPICK_INTERVAL: float = 0.25 ## cover rescan/invalidation cadence (mirrors TerrainPath.REPLAN_INTERVAL)
 const WAYPOINT_EPS: float = 10.0
+const SHELTER_HALF_WIDTH: float = 8.0 ## sightline must stay blocked this far either side (body width, not a corner graze) (PLACEHOLDER)
 const STALL_TIME: float = 1.0 ## wedged this long on an unreachable hold point: drop the cover and engage (PLACEHOLDER)
 
 enum State { SEEK, DASH, HOLD, CHARGE, ENGAGED }
@@ -196,19 +200,21 @@ func _hold(enemy: Enemy, player: Player, pointing: bool) -> void:
 		else:
 			_state = State.ENGAGED
 		return
-	if pointing:
-		return
-	var to_player: Vector2 = player.global_position - enemy.global_position
-	var to_cover: Vector2 = _cover_pos - enemy.global_position
-	var flanked := to_cover.length_squared() < 1.0 or to_cover.normalized().dot(to_player.normalized()) < FLANK_COS
-	if flanked:
-		# The player strafed around the cover: reposition (possibly to the
-		# far side of the same object). No cover left anywhere = engage.
+	# Shelter is re-checked BEFORE the aim gate: a player who strafes
+	# around the cover while still aiming at the mob must not leave it
+	# standing exposed ("stay behind cover", not "stand still").
+	if _flanked(enemy, player):
+		# Reposition (possibly to the far side of the same object). No
+		# cover left anywhere = the normal chase/contact fallback.
 		if _pick_cover(enemy, player, false):
 			_state = State.DASH
 		else:
+			_drop_cover()
 			_state = State.ENGAGED
-	elif _pick_cover(enemy, player, true):
+		return
+	if pointing:
+		return
+	if _pick_cover(enemy, player, true):
 		# Mouse is away: advance to a cover closer to the player.
 		_state = State.DASH
 	else:
@@ -259,6 +265,30 @@ func _pick_cover(enemy: Enemy, player: Player, advance_only: bool) -> bool:
 	_cover_pos = best["pos"]
 	_hold_pos = best["hold"]
 	return true
+
+## The held cover no longer shields the enemy from the player: the cover
+## left the toward-player cone (FLANK_COS), or - for terrain cover - the
+## enemy->player sightline no longer crosses any blocking material.
+func _flanked(enemy: Enemy, player: Player) -> bool:
+	var to_player: Vector2 = player.global_position - enemy.global_position
+	var to_cover: Vector2 = _cover_pos - enemy.global_position
+	if to_cover.length_squared() < 1.0 or to_cover.normalized().dot(to_player.normalized()) < FLANK_COS:
+		return true
+	if _cover_node == null and enemy.terrain != null:
+		return not _sheltered(enemy.terrain, enemy.global_position, player.global_position)
+	return false
+
+## Body-width shelter: the sightline AND two parallel sightlines offset by
+## +-SHELTER_HALF_WIDTH all cross blocking material, so a ray that merely
+## grazes a cover corner does not count as "behind cover". Hold points
+## built behind a cell centre (_cover_candidates) satisfy this by
+## construction, so the candidate filter and the HOLD re-check agree.
+func _sheltered(map: TerrainMap, pos: Vector2, watcher: Vector2) -> bool:
+	var d := watcher - pos
+	if d.length_squared() < 1.0:
+		return false
+	var off := d.normalized().orthogonal() * SHELTER_HALF_WIDTH
+	return _occluded(map, pos, watcher) and _occluded(map, pos + off, watcher + off) and _occluded(map, pos - off, watcher - off)
 
 func _drop_cover() -> void:
 	_has_cover = false
@@ -333,7 +363,7 @@ func _cover_candidates(enemy: Enemy, player: Player, dbg: Dictionary = {}) -> Ar
 				if not _hold_walkable(map, hold, enemy.can_swim):
 					rej["hold_unwalkable"] += 1
 					continue
-				if not _occluded(map, hold, player.global_position):
+				if not _sheltered(map, hold, player.global_position):
 					rej["not_occluded"] += 1
 					continue
 				out.append({"pos": cpos, "hold": hold, "cell": cell})

@@ -39,6 +39,14 @@ extends SceneTree
 ##   (K) player death: the enemy idles (zero velocity).
 ##   (L) freeze (#305): a frozen enemy accumulates no away-time and does
 ##       not move; it resumes after release.
+##   (N) aimed strafe, single cover (PR #408 review repro): HOLD behind
+##       an OBSTACLE, then the player walks round it to centre+(0,220)
+##       while STILL aiming at the mob. It must not stay in an exposed
+##       HOLD: with no valid shelter left it engages. Normal collisions,
+##       real physics frames.
+##   (O) aimed strafe, second cover available: same strafe, still aimed,
+##       the mob DASHes to a hold that the new sightline crosses blocked
+##       terrain for - no look-away needed to recover cover.
 
 const DT := 1.0 / 60.0
 
@@ -80,6 +88,8 @@ func _initialize() -> void:
 	await _leg_k_player_death()
 	await _leg_l_freeze_pauses()
 	await _leg_g_dash_fast()
+	await _leg_n_aimed_strafe_single_cover()
+	await _leg_o_aimed_strafe_reshelter()
 
 	print("[406] failures: ", failures)
 	quit(1 if failures > 0 else 0)
@@ -447,3 +457,88 @@ func _leg_g_dash_fast() -> void:
 	e.set_physics_process(false)
 	_check(saw_dash_fast, "G: moving between cover runs fast (speed x FAST_MULT)")
 	_teardown(stage)
+
+## Aimed-strafe fixture (review repro): production scenes with their own
+## collision layers kept, real physics frames. Settles HOLD while aimed at,
+## then arcs the player from centre+(220,0) to centre+(0,220) over 60
+## frames and keeps aiming at the mob for 180 more. Returns
+## [stage, map, player, enemy, held_pos, max_exposed_hold_frames].
+func _aimed_strafe(extra_cover: Array[Vector2i]) -> Array:
+	# Earlier legs fire-and-forget their teardown; let it finish so no
+	# stale stage is still alive once this leg turns collisions on.
+	await process_frame
+	await process_frame
+	var s: Array = _mk_stage()
+	var stage: Node2D = s[0]
+	var map: TerrainMap = s[1]
+	var tree := Vector2i(20, 20)
+	map.set_cell(tree, TerrainTypes.OBSTACLE)
+	for c in extra_cover:
+		map.set_cell(c, TerrainTypes.OBSTACLE)
+	var centre: Vector2 = map.cell_to_world(tree)
+	var p: Player = _player_scene.instantiate()
+	p.name = "Player"
+	p.set_process(false) # harness owns the aim
+	stage.add_child(p)
+	p.global_position = centre + Vector2(220, 0)
+	p.set_physics_process(false)
+	var e: Enemy = _enemy_scene.instantiate()
+	e.player_path = NodePath("../Player")
+	e.terrain = map
+	e.set_physics_process(false)
+	stage.add_child(e)
+	await process_frame
+	e.global_position = centre + Vector2(-220, 0)
+	p.global_position = centre + Vector2(220, 0)
+	await _drive_real(e, 240, p, true)
+	var held := e.global_position
+	var settled := _state(e) == EnemyBehaviorCover.State.HOLD and _blocked_cell_on_segment(map, e.global_position, p.global_position)
+	var max_exposed := 0
+	var exposed := 0
+	e.set_physics_process(true)
+	await physics_frame
+	for i in 240:
+		var t := minf(1.0, float(i) / 60.0)
+		p.global_position = centre + Vector2.from_angle(t * PI * 0.5) * 220.0
+		_aim_at(p, e.global_position)
+		await physics_frame
+		# Exposed = HOLD without body-width shelter (a corner graze of the
+		# centre ray is not cover).
+		if _state(e) == EnemyBehaviorCover.State.HOLD and not _cover(e)._sheltered(map, e.global_position, p.global_position):
+			exposed += 1
+			max_exposed = maxi(max_exposed, exposed)
+		else:
+			exposed = 0
+	e.set_physics_process(false)
+	return [stage, map, p, e, held, max_exposed, settled]
+
+func _leg_n_aimed_strafe_single_cover() -> void:
+	var r: Array = await _aimed_strafe([])
+	var map: TerrainMap = r[1]
+	var p: Player = r[2]
+	var e: Enemy = r[3]
+	_check(r[6], "N: settled in HOLD with the cover on the sightline before the strafe")
+	# The 0.25s repick cadence is the only allowed lag (15 frames + slack).
+	_check(r[5] <= 20, "N: aimed-at mob never stays in an exposed HOLD (max %d frames)" % r[5])
+	_check(not (_state(e) == EnemyBehaviorCover.State.HOLD and not _blocked_cell_on_segment(map, e.global_position, p.global_position)),
+		"N: after the aimed strafe it is not holding with an open sightline")
+	_check(e.global_position.distance_to(r[4]) > 40.0, "N: with no shelter left it leaves the exposed spot (normal fallback)")
+	await _teardown(r[0])
+
+func _leg_o_aimed_strafe_reshelter() -> void:
+	# A second obstacle two cells "south" of the first: from the post-strafe
+	# player position it shields a hold point between the two cells.
+	var r: Array = await _aimed_strafe([Vector2i(20, 22)])
+	var map: TerrainMap = r[1]
+	var p: Player = r[2]
+	var e: Enemy = r[3]
+	_check(r[6], "O: settled in HOLD with the cover on the sightline before the strafe")
+	_check(r[5] <= 20, "O: aimed-at mob never stays in an exposed HOLD (max %d frames)" % r[5])
+	_check(_state(e) == EnemyBehaviorCover.State.HOLD, "O: re-sheltered into HOLD while still aimed at")
+	_check(_blocked_cell_on_segment(map, e.global_position, p.global_position),
+		"O: the new hold has blocking cover on the enemy->player sightline")
+	_check(_cover(e)._sheltered(map, e.global_position, p.global_position),
+		"O: the new hold is body-width sheltered (not a corner graze)")
+	_check(e.global_position.distance_to(r[4]) > 20.0, "O: it actually moved to the new shelter")
+	_check(map.is_walkable_at(e.global_position), "O: new hold is on walkable ground")
+	await _teardown(r[0])
