@@ -129,7 +129,7 @@ func _leg_hub() -> void:
 	for c in hub.get_children():
 		if c is Gate:
 			gates.append(c)
-	_check(gates.size() == 4, "(C) hub has four gates (got %d)" % gates.size())
+	_check(gates.size() == 5, "(C) hub has five gates (got %d; #326 added GateBeast)" % gates.size())
 	_check(hub.get_node_or_null("GateGenerated") is Gate, "(C) GateGenerated present (#185)")
 	var g := hub.get_node_or_null("GateBoss") as Gate
 	_check(g != null and g.gate_type == Gate.GateType.BOSS, "(C) GateBoss is a BOSS gate")

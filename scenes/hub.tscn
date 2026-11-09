@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bgangu7hub"]
+[gd_scene load_steps=11 format=3 uid="uid://bgangu7hub"]
 
 [ext_resource type="Script" path="res://scripts/hub_floor.gd" id="hub_floor"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="2"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://bgangu325sta" path="res://scenes/bestiary_station.tscn" id="9_best"]
 [ext_resource type="PackedScene" path="res://scenes/dungeon_generated.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/dungeon_c.tscn" id="7_dnc"]
+[ext_resource type="PackedScene" path="res://scenes/dungeon_d.tscn" id="9_dnd"]
 
 [node name="Hub" type="Node2D"]
 
@@ -93,6 +94,12 @@ label_text = "GENERATED"
 position = Vector2(712, 250)
 gate_type = 2
 target_dungeon = ExtResource("7_dnc")
+
+[node name="GateBeast" parent="." instance=ExtResource("2")]
+position = Vector2(300, 600)
+gate_type = 2
+target_dungeon = ExtResource("9_dnd")
+label_text = "BEAST"
 
 [node name="ShopVendor" parent="." instance=ExtResource("5")]
 position = Vector2(852, 600)
