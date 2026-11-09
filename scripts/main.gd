@@ -104,6 +104,12 @@ func _ready() -> void:
 	var spell_directory_panel: SpellDirectoryPanel = preload("res://scenes/spell_directory_panel.tscn").instantiate()
 	spell_directory_panel.name = "SpellDirectoryPanel"
 	add_child(spell_directory_panel)
+	## (#325) Hub bestiary: read-only walk-up panel over the cross-run
+	## encountered-enemy record (Bestiary, static + saved to user://, so it
+	## survives the restart reload). Same ONE-persistent-child pattern.
+	var bestiary_panel: BestiaryPanel = preload("res://scenes/bestiary_panel.tscn").instantiate()
+	bestiary_panel.name = "BestiaryPanel"
+	add_child(bestiary_panel)
 	## (#131, foundation C4) Run-scoped owned relics - same ONE-persistent
 	## child pattern as the wallet/satchel/pool; per-run reset comes free
 	## from the reload. Inert until relic content lands (C2 catalog).

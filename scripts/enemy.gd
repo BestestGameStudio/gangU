@@ -57,6 +57,8 @@ func _ready() -> void:
 	hp = max_hp
 	damage_rng.randomize()
 	add_to_group("enemies")
+	# #325: note the encounter in the cross-run hub bestiary (keyed by scene).
+	Bestiary.record_enemy(self)
 	# #99: instantiate MY OWN behavior (never a shared Resource). Slot unset
 	# or no definition = the current chase/contact implementation; a slot
 	# script without physics_step falls back to it with a warning.
