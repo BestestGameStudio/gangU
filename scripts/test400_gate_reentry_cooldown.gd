@@ -52,9 +52,13 @@ func _initialize() -> void:
 	_check(main.current_area.name == "Overworld", "TRAVEL gate -> overworld")
 	await _enter(main, "GateNormal")
 	_check(main.current_area.name == "DungeonA", "GateNormal -> DungeonA")
-	for e in get_nodes_in_group("enemies"):
-		e.apply_damage(9999)
-	await _frames(3)
+	for _round in 8: # #392: DungeonA slimes split - keep killing until none remain
+		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
+		if alive.is_empty():
+			break
+		for e in alive:
+			e.apply_damage(9999)
+		await _frames(3)
 	_check(main.cleared_dungeons.has(&"dungeon_a"), "DungeonA cleared")
 
 	# exit portal -> back at the overworld entrance (#378)
