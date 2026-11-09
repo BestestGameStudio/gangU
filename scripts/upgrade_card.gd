@@ -72,10 +72,22 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 	(splash as PlaceholderSplash).tint = tint
 	splash.queue_redraw()
 	tooltip_text = "%s\n%s\n%s" % [upgrade_name, description, action_label.text]
+	call_deferred("_fit_content")
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED and is_instance_valid(_content):
-		# The Button does not derive its minimum from its decorative children.
-		# Grow vertically for wrapped names/descriptions, never truncate copy.
-		_content.custom_minimum_size.x = maxf(size.x - 24.0, 0.0)
-		custom_minimum_size.y = maxf(200.0, _content.get_combined_minimum_size().y + 24.0)
+func _process(_delta: float) -> void:
+	_fit_content()
+
+func _fit_content() -> void:
+	if not is_instance_valid(_content): return
+	var width := maxf(size.x - 24.0, 0.0)
+	if not is_equal_approx(_content.custom_minimum_size.x, width):
+		_content.custom_minimum_size.x = width
+	# Text wrapping can change minimum height without resizing the Button.
+	# Propagate it to the HBox so ScrollContainer has real scrollable content.
+	var text_height := 0.0
+	for label: Label in [name_label, description_label, action_label]:
+		var font := label.get_theme_font("font")
+		text_height += font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, width, label.get_theme_font_size("font_size")).y
+	var height := maxf(200.0, maxf(text_height + 55.0 + 15.0, _content.get_combined_minimum_size().y) + 24.0)
+	if not is_equal_approx(custom_minimum_size.y, height):
+		custom_minimum_size.y = height
