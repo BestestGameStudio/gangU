@@ -120,13 +120,27 @@ static func spell_entries(spell: Spell, player: Player, caster: SpellCaster) -> 
 			crit_lines.append("  (+%s per kill, lasts the run)" % _pct(spell.hammer_kill_crit, false))
 	out.append(_entry(&"crit", _pct(player_crit + relic_crit + bonus_crit, false), "Crit Chance", "\n".join(crit_lines)))
 
-	out.append(_entry(&"range", "%d" % roundi(spell.range), "Range", "How far the spell reaches, in pixels."))
+	# Range / Pierce mirror Projectile's expiry rules (projectile.gd _physics_process
+	# and _on_body_entered) without changing them:
+	#  - pierce_hits > 0: NO travel budget (spell.range is ignored); the shot
+	#    lives until it has landed pierce_hits TOTAL hits, and re-hits of the
+	#    same enemy count once rehit_delay has passed.
+	#  - PIERCING tag: passes through every enemy (one hit each), expires at range.
+	#  - otherwise: stops at the first hit or at range.
+	if spell.pierce_hits > 0:
+		out.append(_entry(&"range", "No limit", "Range",
+			"This shot has no maximum distance.\nIt keeps flying until it has landed its hits\n(blocks that stop shots still stop it)."))
+		out.append(_entry(&"pierce", "%d" % spell.pierce_hits, "Hits",
+			"Total hits each projectile lands before it vanishes.\nHitting the same enemy again counts too\n(once every %ss per enemy)." % String.num(spell.rehit_delay, 2)))
+	else:
+		out.append(_entry(&"range", "%d" % roundi(spell.range), "Range", "How far the spell reaches, in pixels."))
 	var shots := maxi(spell.projectile_count, 1) * maxi(spell.burst_count, 1)
 	if shots > 1:
 		out.append(_entry(&"projectiles", "x%d" % shots, "Projectiles",
 			"Projectiles per cast.\n%d per volley x %d volleys" % [maxi(spell.projectile_count, 1), maxi(spell.burst_count, 1)]))
-	if spell.pierce_hits > 0:
-		out.append(_entry(&"pierce", "%d" % spell.pierce_hits, "Pierce", "Extra enemies each projectile passes through."))
+	if spell.pierce_hits == 0 and spell.tags.has(SpellTags.PIERCING):
+		out.append(_entry(&"pierce", "All", "Pierce",
+			"Passes through every enemy in its path,\nhitting each one once, until it reaches its range."))
 	if hammer:
 		var scale := caster.hammer_state.size_scale(spell, player) if player != null else 1.0
 		var area_details := "Strike radius, in pixels.\nBase: %d" % roundi(spell.hammer_radius)

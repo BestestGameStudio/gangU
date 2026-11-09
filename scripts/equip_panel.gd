@@ -145,6 +145,15 @@ func _ready() -> void:
 	if _caster.hammer_state != null:
 		_caster.hammer_state.crit_changed.connect(_on_live_stat_change)
 		_caster.hammer_state.combo_changed.connect(_on_live_stat_change)
+	_hook_relics()
+
+## Relics hooked to a spell's tags change its crit/amp totals, so a relic
+## gained while the menu is open refreshes the grid too. OwnedRelics is
+## mounted on Main after this panel, so this is retried in show_panel.
+func _hook_relics() -> void:
+	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	if relics != null and not relics.changed.is_connected(_on_live_stat_change):
+		relics.changed.connect(_on_live_stat_change)
 
 func _build_ui() -> void:
 	var dim := ColorRect.new()
@@ -218,6 +227,7 @@ func _input(event: InputEvent) -> void:
 
 func show_panel() -> void:
 	_selected = null
+	_hook_relics()
 	_refresh()
 	visible = true
 	add_to_group("modal_ui") # caster cast-guard hook (coordinated with B)
