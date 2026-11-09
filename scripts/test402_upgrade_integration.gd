@@ -85,7 +85,7 @@ func run() -> void:
 		scroller = panel._upgrade_box.get_node("UpgradeScroll")
 		var plate := panel._plate
 		ck(plate.get_global_rect().position.y >= 0 and plate.get_global_rect().end.y <= 648, "Leaping Hammer full panel bounded by viewport")
-		ck(panel._status.get_global_rect().end.y <= 648, "long-content selected status stays on screen")
+		ck(panel._upgrade_box.get_global_rect().end.y <= 648, "long-content upgrade section stays on screen")
 		ck(panel._stats_box.description() == SpellDescription.for_spell(leap), "long source description preserved")
 		ck(card.description_label.text == SpellDescription.for_spell(load("res://resources/spells/stone_hammer_gambler.tres")), "full long upgrade copy preserved")
 		if DisplayServer.get_name() != "headless": root.get_texture().get_image().save_png("/downloads/402_long_top.png")

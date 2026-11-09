@@ -67,7 +67,7 @@ func run() -> void:
 		ck(scroll_r.size.y >= 200.0, "card area tall enough for a full card (%.0f)" % scroll_r.size.y)
 		for c in offered:
 			ck(scroll_r.encloses(c.get_global_rect()), "card '%s' fully visible inside the column" % c.name_label.text)
-	ck(panel._status.get_global_rect().end.y <= panel._plate.get_global_rect().end.y, "status stays inside the plate")
+	ck(panel._detail_box.get_global_rect().end.y <= panel._plate.get_global_rect().end.y, "detail column (stats + upgrades) stays inside the plate")
 	await shot("spell_stats_upgrades")
 
 	# A third card (fixture) still fits without horizontal scrolling.

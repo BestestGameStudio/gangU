@@ -56,7 +56,6 @@ var _stats_box: StatGrid
 var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
-var _status: Label
 var _upgrade_scroll: ScrollContainer
 var _plate: PanelContainer
 var _detail_box: VBoxContainer
@@ -250,9 +249,8 @@ func _build_ui() -> void:
 	_upgrade_box.add_theme_constant_override("separation", 4)
 	_upgrade_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_detail_box.add_child(_upgrade_box)
-	_status = Label.new()
-	_status.add_theme_font_size_override("font_size", 18)
-	vbox.add_child(_status)
+	# #417: no "Selected: <spell>" status line; the highlighted slot and the
+	# stat grid title already show the selection.
 
 func _input(event: InputEvent) -> void:
 	# Toggle in _input, BEFORE GUI handling: a focused panel button would
@@ -353,7 +351,6 @@ func _refresh() -> void:
 			else:
 				b.pressed.connect(func(): _on_upgrade_pressed(pid))
 			cards.add_child(b)
-	_status.text = "Selected: %s" % (_selected.spell_name if _selected != null else "none")
 
 func _on_upgrade_pressed(path_id) -> void:
 	if _upgrader == null or _selected == null:
