@@ -66,5 +66,44 @@ func run() -> void:
 		await click(offered[0])
 		ck(progress.upgrade_tokens() == 0, "actual mouse click spends one token")
 		ck(not caster.get_unlocked().has(split), "token route replaces selected spell")
+	# Long production content: keep source stats and every upgrade word, while
+	# bounding the panel and making the final action reachable by scrolling.
+	panel.hide_panel()
+	var leap: Spell = load("res://resources/spells/stone_hammer_leap.tres")
+	caster.unlock_spell(leap)
+	caster.clear_slot(caster.get_slots().find(leap))
+	caster.clear_slot(0)
+	caster.assign_slot(0, leap)
+	progress.add_upgrade_token()
+	panel.show_panel()
+	panel._on_slot_pressed(0)
+	for i in 30: await process_frame
+	offered = cards(panel)
+	ck(offered.size() == 1 and offered[0].name_label.text == "Dice Roll [G]", "real long-description Dice Roll offered")
+	if offered.size() == 1:
+		var card: UpgradeCard = offered[0]
+		scroller = panel._upgrade_box.get_node("UpgradeScroll")
+		var plate := panel._upgrade_box.get_parent().get_parent() as PanelContainer
+		ck(plate.get_global_rect().position.y >= 0 and plate.get_global_rect().end.y <= 648, "Leaping Hammer full panel bounded by viewport")
+		ck(panel._status.get_global_rect().end.y <= 648, "long-content selected status stays on screen")
+		ck(panel._stats_box.description() == SpellDescription.for_spell(leap), "long source description preserved")
+		ck(card.description_label.text == SpellDescription.for_spell(load("res://resources/spells/stone_hammer_gambler.tres")), "full long upgrade copy preserved")
+		if DisplayServer.get_name() != "headless": root.get_texture().get_image().save_png("/downloads/402_long_top.png")
+		scroller.scroll_vertical = 99999
+		for i in 8: await process_frame
+		ck(scroller.scroll_vertical > 0, "long upgrade content actually scrolls")
+		var action_rect := card.action_label.get_global_rect()
+		ck(scroller.get_global_rect().encloses(action_rect), "long upgrade action reachable inside scroll viewport")
+		if DisplayServer.get_name() != "headless": root.get_texture().get_image().save_png("/downloads/402_long_bottom.png")
+		# Click the visible bottom action, not an off-screen card centre.
+		var at := action_rect.get_center()
+		for down in [true, false]:
+			var event := InputEventMouseButton.new()
+			event.position = at
+			event.button_index = MOUSE_BUTTON_LEFT
+			event.pressed = down
+			root.push_input(event)
+			await process_frame
+		ck(progress.upgrade_tokens() == 0 and not caster.get_unlocked().has(leap), "scrolled action mouse click applies long token upgrade")
 	print("[402i] DONE failures=", failures)
 	quit(failures)
