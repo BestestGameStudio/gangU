@@ -165,7 +165,7 @@ func _red_leg() -> void:
 	_check("red: objective clear unlocks the portal", not portal.locked)
 	portal._on_body_entered(p)
 	await _frames(6)
-	_check("red: exit returns to the hub after clearing", left[0] and main.current_area.name == &"Hub")
+	_check("red: exit returns to the overworld entrance after clearing (#378)", left[0] and main.current_area.name == &"Overworld")
 	await _shutdown(main)
 
 func _normal_leg() -> void:
@@ -185,7 +185,7 @@ func _normal_leg() -> void:
 	if portal != null:
 		portal._on_body_entered(p)
 		await _frames(6)
-		_check("normal: retreat to hub before clearing", main.current_area.name == &"Hub")
+		_check("normal: retreat to the overworld entrance before clearing (#378)", main.current_area.name == &"Overworld")
 	await _shutdown(main)
 
 func _finish() -> void:

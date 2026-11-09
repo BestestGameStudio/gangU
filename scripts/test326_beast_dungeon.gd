@@ -12,7 +12,7 @@ extends SceneTree
 ##   (C) PRODUCTION flow (main.tscn): GateBeast -> DungeonD spawns the Beast
 ##       on entry (no mobs) wired to the Player; ELIMINATION objective; exit
 ##       portal LOCKED while it lives (entry ignored), unlocks when it dies,
-##       returns to the hub. Kills are synthetic apply_damage calls.
+##       returns to the overworld entrance (#378). Kills are synthetic apply_damage calls.
 ##   (D) DungeonC is unchanged: GateBoss still leads to the Head boss.
 
 var failures := 0
@@ -125,7 +125,7 @@ func _leg_production() -> void:
 	_check(obj.is_cleared() and not portal.locked, "(C) Beast death clears the den and unlocks the portal")
 	portal._on_body_entered(p)
 	await _physics(4)
-	_check(scene.current_area.name == "Hub", "(C) unlocked portal returns to the hub")
+	_check(scene.current_area.name == "Overworld", "(C) unlocked portal returns to the overworld entrance (#378)")
 	scene.queue_free()
 	current_scene = null
 	await process_frame

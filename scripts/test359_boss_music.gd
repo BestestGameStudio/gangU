@@ -121,7 +121,7 @@ func _kill_and_leave(tag: String, main: Node, area: Node, music: BossMusic) -> v
 	_check(tag + ": theme faded out after the kill", not music.playing)
 	portal._on_body_entered(main.get_node("Player"))
 	await _frames(6)
-	_check(tag + ": back in the hub, still silent", main.current_area.name == &"Hub" and not music.playing)
+	_check(tag + ": back at the overworld entrance (#378), still silent", main.current_area.name == &"Overworld" and not music.playing)
 
 func _red_or_normal_leg(red: bool) -> void:
 	var tag := "red" if red else "normal"

@@ -53,7 +53,9 @@ func _check(label: String, ok: bool) -> void:
 func _enter_gate(gate_name: String, pin_type: int = -1) -> void:
 	if scene.current_area.get_node_or_null(gate_name) == null:
 		scene.enter_overworld() # #346: dungeon entrances live in the overworld
-		mounted_positions.clear() # drop the overworld guards; the legs measure the dungeon mount
+	# drop the overworld guards (mounted by enter_overworld or, since #378, by
+	# the exit portal landing here); the legs measure the dungeon mount
+	mounted_positions.clear()
 	var g: Gate = scene.current_area.get_node(gate_name)
 	# #350 pin (test350 covers the roll): after the gate's own _ready roll,
 	# before entry, so main.gd's RED lock-in follows the pinned type.
@@ -129,11 +131,11 @@ func _process(delta: float) -> bool:
 				_check("completion: dungeon_a cleared", obj.is_cleared())
 				_check("completion: killed enemies freed", _area_enemies().size() == 0)
 				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
-				portal._on_body_entered(p) # retreat to hub
+				portal._on_body_entered(p) # retreat to the DungeonA entrance (#378)
 				phase = 3; t = 0
 		3:
 			if t > 0.4:
-				_check("retreat: back in hub, same run", scene.current_area.name == "Hub")
+				_check("retreat: back at the overworld entrance, same run", scene.current_area.name == "Overworld")
 				_enter_gate("GateRed", Gate.GateType.RED) # #350 pin
 				phase = 4; t = 0
 		4:
