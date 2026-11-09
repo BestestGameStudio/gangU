@@ -11,6 +11,8 @@ signal collected(drop: RewardDrop, entry: RewardEntry)
 
 var entry: RewardEntry
 
+const TOKEN_COLOR := Color(0.75, 0.45, 1.0)
+
 func setup(p_entry: RewardEntry) -> void:
 	entry = p_entry
 
@@ -23,6 +25,10 @@ func _ready() -> void:
 		# #128 placeholder presentation: gold diamond labeled with the amount.
 		$NameLabel.text = "%dc" % entry.currency_amount
 		$Visual.color = Color(1.0, 0.85, 0.2)
+	elif entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
+		# #315 placeholder presentation (art is human-open): violet diamond.
+		$NameLabel.text = "Upgrade Token"
+		$Visual.color = TOKEN_COLOR
 	elif entry.spell == null:
 		push_warning("RewardDrop: no spell entry assigned.")
 		return
@@ -64,6 +70,15 @@ func _on_body_entered(body: Node2D) -> void:
 			# Defensive fallback only: the wallet mount is live on main.
 			push_warning("RewardDrop: currency wallet unavailable; pool grant recorded only.")
 		print("[rewards] currency collected: +", entry.currency_amount)
+	elif entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
+		# #315: the token goes to the run's SpellProgress (mounted on Main);
+		# it is spent from the Tab panel's Upgrades section.
+		var progress := get_tree().get_first_node_in_group("spell_progress") as SpellProgress
+		if progress != null:
+			progress.add_upgrade_token(1)
+		else:
+			push_warning("RewardDrop: SpellProgress unavailable; upgrade token lost.")
+		print("[rewards] upgrade token collected")
 	else:
 		# Item rewards unwired until #54 content approval.
 		print("[rewards] item drop collected; item route unwired (#54 pending)")
