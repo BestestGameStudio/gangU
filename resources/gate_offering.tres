@@ -4,4 +4,4 @@
 
 [resource]
 script = ExtResource("1")
-red_chance = -1.0
+red_chance = 0.5
