@@ -88,6 +88,12 @@ func _process(delta: float) -> bool:
 					_pass("legacy cast has no mouse button (LMB moved to slot 1)")
 				else:
 					_fail("legacy cast still binds a mouse button", _mouse_button(&"cast"))
+				# 4b: consumable-use moved to C (E is slot 4 now).
+				var use_keys := _keycodes(&"use_consumable")
+				if use_keys == [KEY_C]:
+					_pass("use_consumable bound to physical KEY_C")
+				else:
+					_fail("use_consumable keycodes", use_keys)
 				phase = 2; t = 0
 		2:
 			# 5: one LMB press casts slot 1 exactly once.
