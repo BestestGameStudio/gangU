@@ -339,6 +339,7 @@ func _swap(area: Node) -> void:
 		_world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
 	_mount_area_spawns(current_area)
 	_mount_entrance_guards(current_area)
+	_mount_location_triggers(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
 	_mount_revive_item(current_area)
@@ -372,6 +373,52 @@ func _mount_area_spawns(area: Node) -> void:
 	area.add_child(spawner)
 	spawner.setup(data.entries, data.player_path, terrain, area)
 	spawner.spawn_initial()
+
+## #365: location-triggered events (foundation). Run-scoped fire history,
+## keyed by LocationTrigger.id(); resets with the run reload like
+## cleared_dungeons. Nothing reads it yet: repeat/reset rules are undesigned,
+## and this is the record such a rule would consult.
+var _location_event_fires: Dictionary = {}
+
+## Emitted for every accepted trigger fire, before its event starts.
+signal location_event_triggered(trigger_id: StringName, trigger: LocationTrigger)
+
+func location_event_fire_count(trigger_id: StringName) -> int:
+	return _location_event_fires.get(trigger_id, 0)
+
+## #365: wire every LocationTrigger inside the mounted area. On a fire Main
+## records it, emits location_event_triggered and starts the trigger's
+## OverworldEvent with a fresh context. No production area places a trigger
+## yet, so this is inert until content lands.
+func _mount_location_triggers(area: Node) -> void:
+	for t: LocationTrigger in get_tree().get_nodes_in_group("location_triggers"):
+		if not area.is_ancestor_of(t):
+			continue
+		if not t.triggered.is_connected(_on_location_triggered):
+			t.triggered.connect(_on_location_triggered.bind(area))
+
+func _on_location_triggered(trigger: LocationTrigger, body: Node2D, area: Node) -> void:
+	if area != current_area or not is_instance_valid(area):
+		return
+	var id := trigger.id()
+	_location_event_fires[id] = location_event_fire_count(id) + 1
+	location_event_triggered.emit(id, trigger)
+	if trigger.event == null:
+		return
+	var ctx := OverworldEventContext.new()
+	ctx.area = area
+	ctx.trigger = trigger
+	ctx.player = body as Player
+	ctx.host = self
+	ctx.run_fire_count = _location_event_fires[id]
+	# Deferred: body_entered arrives during the physics flush, where adding
+	# bodies (an ambush's enemies) is not allowed (D14).
+	_start_location_event.call_deferred(trigger.event, ctx)
+
+func _start_location_event(event: OverworldEvent, ctx: OverworldEventContext) -> void:
+	if ctx.area != current_area or not is_instance_valid(ctx.area):
+		return # the area was left in the same frame
+	event.start(ctx)
 
 ## #346: overworld entrance guards. Every EntranceGuards node under the
 ## area's "EntranceGuards" container whose dungeon is still uncleared this
