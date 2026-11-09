@@ -24,7 +24,8 @@ void fragment() {
 	vec4 s = texture(screen_tex, SCREEN_UV);
 	float g = dot(s.rgb, vec3(0.299, 0.587, 0.114));
 	float m = 1.0 - smoothstep(0.48, 0.5, d);
-	COLOR = vec4(vec3(g), s.a * m);
+	// Screen-texture alpha is unreliable (often 0); carry our own mask.
+	COLOR = vec4(vec3(g), m);
 }
 """
 
@@ -61,8 +62,9 @@ func _ready() -> void:
 	add_child(_collision)
 
 	_back_buffer = BackBufferCopy.new()
-	_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_RECT
-	_back_buffer.rect = Rect2(-radius, -radius, radius * 2.0, radius * 2.0)
+	# VIEWPORT mode: rect-mode copies sample uninitialised (black) outside
+	# their rect under the Compatibility renderer.
+	_back_buffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
 	add_child(_back_buffer)
 
 	var mat := ShaderMaterial.new()
