@@ -55,12 +55,16 @@ func _static_legs() -> void:
 	# enemy definition or the mob demo table carries a token entry.
 	_check(token_table.entries.size() == 1 and token_table.entries[0].kind == RewardEntry.Kind.UPGRADE_TOKEN,
 		"token table = one UPGRADE_TOKEN entry")
-	for path in ["head_boss", "beast_boss", "mustache_warlord"]:
+	# Boss set comes from the bestiary's boss flags (scene basename = the
+	# enemy .tres name), so a new boss type cannot slip past this check.
+	var bosses: Array = Bestiary.CATALOG.filter(func(e): return e.get("boss", false)).map(func(e): return (e["scene"] as String).get_file().get_basename())
+	_check(bosses.size() >= 4, "boss allow-list covers every bestiary boss (incl. Siege Brute)")
+	for path in bosses:
 		var d: EnemyDefinition = load("res://resources/enemies/%s.tres" % path)
 		_check(d.reward_table == token_table, "%s drops the token table" % path)
 	var dir := DirAccess.open("res://resources/enemies")
 	for f in dir.get_files():
-		if not f.ends_with(".tres") or f.begins_with("head_boss") or f.begins_with("beast_boss") or f.begins_with("mustache_warlord"):
+		if not f.ends_with(".tres") or f.get_basename() in bosses:
 			continue
 		var d: EnemyDefinition = load("res://resources/enemies/" + f)
 		_check(d.reward_table == null or not _has_token(d.reward_table), "non-boss %s cannot drop a token" % f)
