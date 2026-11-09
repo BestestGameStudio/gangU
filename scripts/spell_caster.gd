@@ -320,10 +320,11 @@ func _cast_spell(spell: Spell) -> void:
 	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
 	# signals below stay unconditional; positive counts are byte-identical.
 	# #305: a launch spell defers this whole block to launch_ended.
-	# #305: Signature freeze bubble. ADDS to the attack - the fan-out (or
-	# its launch-deferred equivalent) and the ONE cooldown/signal pair below
-	# are untouched. A refused launch/terrain placement returned above, so a
-	# bubble here always belongs to a committed cast.
+	# #305: freeze bubble. The ONE cooldown/signal pair below is untouched.
+	# A refused launch/terrain placement returned above, so a bubble here
+	# always belongs to a committed cast. #323: the Spirit Punch Signature
+	# ("The World") carries projectile_count 0 and no launch, so its cast is
+	# the bubble alone.
 	if spell.freeze_radius > 0.0:
 		FreezeBubble.spawn(get_tree().current_scene, cast_pos, spell.freeze_radius, spell.freeze_duration)
 	if spell.projectile_count > 0 and spell.launch_speed <= 0.0:
