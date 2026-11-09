@@ -84,6 +84,15 @@ func _tier_suffix(path) -> String:
 			return " [G]"
 	return ""
 
+## #255: rank border tier for an owned spell (Base when the provider has no
+## tier accessor); empty slots show none.
+func _rank_tier(spell: Spell) -> int:
+	if spell == null:
+		return SpellRankBorder.NONE
+	if _upgrader != null and _upgrader.has_method(&"get_tier"):
+		return _upgrader.get_tier(spell)
+	return 0
+
 func _can_upgrade(spell: Spell) -> bool:
 	return spell != null and _upgrader != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(spell)
 
@@ -229,6 +238,7 @@ func _refresh() -> void:
 		var row_icon := _pin_icon(b, ROW_ICON_LEFT)
 		row_icon.show_spell(spell)
 		row_icon.set_upgrade_available(_can_upgrade(spell))
+		row_icon.set_rank_tier(_rank_tier(spell))
 		b.pressed.connect(func(): _on_spell_pressed(spell))
 		_unlocked_box.add_child(b)
 	var slots: Array = _caster.get_slots()
@@ -242,6 +252,7 @@ func _refresh() -> void:
 		UiStyle.style_button(_slot_buttons[i], sborder, 4.0, SLOT_ICON_LEFT + UiStyle.ICON_SIZE + ICON_GAP, move_source)
 		_slot_icons[i].show_spell(occupant)
 		_slot_icons[i].set_upgrade_available(_can_upgrade(occupant))
+		_slot_icons[i].set_rank_tier(_rank_tier(occupant))
 	# Upgrade section: only when a provider is wired AND a spell is selected.
 	for c in _upgrade_box.get_children():
 		c.queue_free()
