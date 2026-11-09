@@ -22,6 +22,13 @@ extends SceneTree
 ##       the nav; a core attacker walks the maze from its entrance to the core
 ##       without ever standing in a wall and damages it; a player hunter
 ##       finds the player in a far corner of the maze.
+##   (G) crowded waves (review repro, seed 22): production Main -> DungeonMaze,
+##       player left on its chamber spawn, all five natural timed waves run
+##       for 180 s with nothing frozen or removed (player/core HP raised only
+##       so the run lasts). No live enemy is ever inside a wall on any physics
+##       frame (peer depenetration used to shove enemies into OBSTACLE and
+##       strand them), and the waves converge on the core chamber. Also: FlowNav steps
+##       a mover that is inside a wall out to an adjacent field cell.
 ##   (F) unchanged elsewhere: DungeonE wave enemies carry no nav, and a
 ##       nav-less enemy still chases in a straight line.
 
@@ -46,6 +53,7 @@ func _initialize() -> void:
 	await _leg_overworld()
 	for s in FLOW_SEEDS:
 		await _leg_flow(s)
+	await _leg_crowded()
 	MazeDefenseDungeon.forced_seed = -1
 	await _leg_unchanged()
 	print("[367] DONE failures=", failures)
@@ -347,6 +355,74 @@ func _leg_flow(maze_seed: int) -> void:
 		_check(h.global_position.distance_to(p.global_position) <= h.contact_range,
 			"(E) player hunter found the player %d cells away through the maze (%d frames)" % [best_d, frames])
 		_check(not in_wall, "(E) ...without ever standing inside a wall")
+	main.queue_free()
+	current_scene = null
+	await process_frame
+
+func _leg_crowded() -> void:
+	MazeDefenseDungeon.forced_seed = 22
+	print("[367] --- (G) crowded five-wave run on maze seed 22")
+	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+	root.add_child(main)
+	current_scene = main
+	await process_frame
+	main._swap((load("res://scenes/dungeon_maze.tscn") as PackedScene).instantiate())
+	var p: Player = main.get_node("Player")
+	p.max_hp = 100000
+	p.hp = 100000
+	var area: Node = main.current_area
+	await physics_frame
+	var obj := area.get_node("DungeonObjective") as DungeonObjective
+	var core := obj.core()
+	core.max_hp = 100000
+	core.hp = 100000
+	var terrain := area.get_node("Terrain") as TerrainMap
+	var nav := area.get_node("FlowNav") as FlowNav
+	_check(terrain.is_walkable_at(p.global_position), "(G) player stays on its chamber spawn (floor)")
+	var bad_frames := 0
+	var first_bad := ""
+	var seen := {}
+	for f in 10800:
+		await physics_frame
+		for e in _wave_enemies(area):
+			seen[e.get_instance_id()] = true
+			if not terrain.is_walkable_at(e.global_position):
+				bad_frames += 1
+				if first_bad == "":
+					first_bad = "frame %d at %s" % [f, e.global_position]
+				break
+	_check(obj.waves_spawned() == obj.wave_count, "(G) all %d normal waves spawned (got %d)" % [obj.wave_count, obj.waves_spawned()])
+	_check(seen.size() >= obj.wave_size(1) * obj.wave_count, "(G) crowded: %d wave enemies took part" % seen.size())
+	_check(bad_frames == 0, "(G) no wave enemy inside a wall on any of 10800 frames (bad frames=%d, first %s)" % [bad_frames, first_bad])
+	# Not stranded: every live enemy stands on the core's distance field, and
+	# the wave has converged on the chamber, not stuck in the corridors.
+	var goal_cell := terrain.world_to_cell(core.global_position)
+	var live := _wave_enemies(area)
+	var on_field := 0
+	var converged := 0
+	for e in live:
+		var d := nav.distance(terrain.world_to_cell(e.global_position), goal_cell)
+		if d >= 0:
+			on_field += 1
+		if d >= 0 and d <= 10:
+			converged += 1
+	_check(not live.is_empty() and on_field == live.size(), "(G) every live enemy is on the core's path field (%d/%d)" % [on_field, live.size()])
+	_check(converged * 2 >= live.size(), "(G) the waves converged on the core chamber (%d/%d within 10 steps)" % [converged, live.size()])
+	# Recovery: from a wall cell next to a corridor, FlowNav aims at the
+	# adjacent field cell instead of straight through the wall.
+	var goal := terrain.world_to_cell(core.global_position)
+	var dist := nav.field(goal)
+	var wall := Vector2i(-1, -1)
+	var b: Rect2i = nav.bounds
+	for y in range(b.position.y + 1, b.end.y - 1):
+		for x in range(b.position.x + 1, b.end.x - 1):
+			var c := Vector2i(x, y)
+			if not nav.passable(c) and dist.has(c + Vector2i(1, 0)) and wall == Vector2i(-1, -1):
+				wall = c
+	var wp := nav.waypoint(terrain.cell_to_world(wall), core.global_position)
+	var wp_cell := terrain.world_to_cell(wp)
+	_check(wall != Vector2i(-1, -1) and dist.has(wp_cell) and (wp_cell - wall).abs().x + (wp_cell - wall).abs().y == 1,
+		"(G) FlowNav steps a mover in wall %s out to adjacent field cell %s" % [wall, wp_cell])
 	main.queue_free()
 	current_scene = null
 	await process_frame

@@ -21,7 +21,6 @@ extends Node
 const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 ## Old fields kept for moving goals before the cache is flushed.
 const MAX_FIELDS := 8
-
 var map: TerrainMap = null:
 	set = set_map
 ## Cells the search may visit. An empty rect means unbounded, which is only
@@ -58,6 +57,20 @@ func waypoint(from: Vector2, to: Vector2) -> Vector2:
 	var goal := map.world_to_cell(to)
 	if a == goal:
 		return to
+	var dist := field(goal)
+	if not dist.has(a):
+		# Recovery: a mover off the field (inside a wall after the map changed
+		# under it, say) steps out into the best edge-adjacent field cell.
+		# TerrainMotion lets a mover leave a cell it could not enter, so this
+		# is a legal move. With no such neighbour, fall back to the target.
+		var out := a
+		var out_d := -1
+		for d in DIRS:
+			var c := a + d
+			if dist.has(c) and (out_d < 0 or int(dist[c]) < out_d):
+				out = c
+				out_d = dist[c]
+		return to if out == a else map.cell_to_world(out)
 	var n := next_cell(a, goal)
 	if n == a or n == goal:
 		return to

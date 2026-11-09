@@ -131,8 +131,12 @@ func _leg_hub() -> void:
 	for c in hub.get_children():
 		if c is Gate and (c as Gate).gate_type != Gate.GateType.TRAVEL:
 			gates.append(c)
-	_check(gates.size() == 6, "(C) overworld has six dungeon entrances (got %d; Beast and Defense entrances integrated)" % gates.size())
+	_check(gates.size() == 7, "(C) overworld has seven dungeon entrances (got %d; Beast, Defense and Maze entrances integrated)" % gates.size())
 	_check(hub.get_node_or_null("GateGenerated") is Gate, "(C) GateGenerated present (#185)")
+	var maze_gate := hub.get_node_or_null("GateMaze") as Gate
+	_check(maze_gate != null and maze_gate in gates and maze_gate.target_dungeon != null
+		and maze_gate.target_dungeon.resource_path == "res://scenes/dungeon_maze.tscn",
+		"(C) the seventh entrance is GateMaze -> dungeon_maze.tscn (#367)")
 	var g := hub.get_node_or_null("GateBoss") as Gate
 	_check(g != null and g.gate_type == Gate.GateType.BOSS, "(C) GateBoss is a BOSS gate")
 	if g != null:

@@ -240,7 +240,12 @@ func _physics_process(delta: float) -> void:
 	# #331: a strong knockback owns the body until it decays below
 	# KNOCKBACK_CONTROL, so the push reads; the behavior resumes after.
 	if _knockback.length() > KNOCKBACK_CONTROL:
+		var before := global_position
 		move_and_collide(_knockback * delta)
+		# #367: maze walls are terrain, not colliders; keep a nav enemy out
+		# of them (same clamp as the chase step). Others unchanged.
+		if nav != null:
+			global_position = TerrainMotion.clamp_displacement(terrain, before, global_position, can_swim)
 		_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECEL * delta)
 		return
 	_knockback = Vector2.ZERO

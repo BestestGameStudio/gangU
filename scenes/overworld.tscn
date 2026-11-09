@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=17 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
