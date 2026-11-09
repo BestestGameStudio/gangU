@@ -8,7 +8,10 @@ const CENTER := Vector2(576, 410)
 const HALF := Vector2(460, 310)
 const CHAMFER := 140.0
 const SPAWN := Vector2(576, 480)
-const LANDINGS: Array[Vector2] = [Vector2(300, 380), Vector2(852, 380), Vector2(852, 600)]
+## #346: the dungeon gates moved to the overworld; the hub keeps one landing
+## under its overworld passage and one at the shop. The passage sits at y 240,
+## clear of main.tscn's pre-swap Player position (576, 324).
+const LANDINGS: Array[Vector2] = [Vector2(576, 240), Vector2(852, 600)]
 
 const HEIGHTS: Array[float] = [40.0, 52.0, 64.0]
 const WIDTHS: Array[float] = [52.0, 72.0, 96.0]

@@ -300,22 +300,31 @@ func live_shots(spell: Spell) -> Array[Projectile]:
 			out.append(p)
 	return out
 
-## #331: re-aim every live shot of `spell` at the aim point. Returns how many
-## turned. Not a cast: no cooldown, no signals.
+## #331: re-aim every redirectable live shot of `spell` at the aim point.
+## Returns how many turned. Not a cast: no cooldown, no signals.
+## (Daniel 2026-11-09) a shot at its spell.redirect_limit no longer turns.
 func redirect_shots(spell: Spell) -> int:
-	var shots := live_shots(spell)
 	var target := aim_point()
-	for p in shots:
-		p.redirect(target)
-	return shots.size()
+	var turned := 0
+	for p in live_shots(spell):
+		if p.redirect(target):
+			turned += 1
+	return turned
 
-## #331: true when the press belongs to a recast_redirect spell with shots
-## in flight - a fresh press redirects them, a held one does nothing; either
-## way the input must not cast.
+## #331: true when the press belongs to a recast_redirect spell with
+## redirectable shots in flight - a fresh press redirects them, a held one
+## does nothing; either way the input must not cast. (Daniel 2026-11-09:
+## Guided tier 1 shots turn only once) shots that used up their redirects
+## don't hold the gate, so the next press casts a fresh shot normally.
 func _redirect_gate(spell: Spell, just_pressed: bool) -> bool:
 	if spell == null or not spell.recast_redirect:
 		return false
-	if live_shots(spell).is_empty():
+	var redirectable := false
+	for p in live_shots(spell):
+		if p.can_redirect():
+			redirectable = true
+			break
+	if not redirectable:
 		return false
 	if just_pressed:
 		redirect_shots(spell)

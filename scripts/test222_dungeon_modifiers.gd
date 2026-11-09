@@ -47,7 +47,7 @@ func run() -> void:
 
 	# Inert in production: no shipped area carries a DungeonModifiers child.
 	var any_prod := false
-	for path in ["res://scenes/hub.tscn", "res://scenes/dungeon_a.tscn", "res://scenes/dungeon_b.tscn", "res://scenes/dungeon_c.tscn"]:
+	for path in ["res://scenes/hub.tscn", "res://scenes/dungeon_a.tscn", "res://scenes/dungeon_b.tscn", "res://scenes/dungeon_c.tscn", "res://scenes/dungeon_d.tscn"]:
 		if not ResourceLoader.exists(path):
 			continue
 		var a := (load(path) as PackedScene).instantiate()

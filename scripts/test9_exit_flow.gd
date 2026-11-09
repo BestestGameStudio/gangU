@@ -3,6 +3,9 @@ extends SceneTree
 ## PRODUCTION (main.tscn composition): normal-dungeon DungeonA mounts an
 ## UNLOCKED exit portal (retreat anytime); using it returns to the hub in the
 ## same run (HP + SpellCaster instance retained); death restarts the run.
+## #350 FIXTURE (clearly labeled): production offerings roll 50/50 per run,
+## so the entered gates' types are pinned (GateNormal=NORMAL, GateRed=RED)
+## before each entry; the roll itself is covered by test350.
 ## FIXTURE (clearly labeled): red-dungeon lock-in regression - a LOCKED
 ## ExitPortal wired to a DungeonObjective in the #8 fixture scene
 ## test_dungeon_clear.tscn; unlocks exactly on objective completion.
@@ -24,8 +27,14 @@ func _initialize() -> void:
 	p = scene.get_node("Player")
 	caster = p.get_node("SpellCaster")
 
-func _enter_gate(gate_name: String) -> void:
+func _enter_gate(gate_name: String, pin_type: int = -1) -> void:
+	if scene.current_area.get_node_or_null(gate_name) == null:
+		scene.enter_overworld() # #346: dungeon entrances live in the overworld
 	var g: Gate = scene.current_area.get_node(gate_name)
+	# #350 pin (test350 covers the roll): after the gate's own _ready roll,
+	# before entry, so main.gd's RED lock-in follows the pinned type.
+	if pin_type >= 0:
+		g.gate_type = pin_type
 	g._on_body_entered(p)
 
 func _process(delta: float) -> bool:
@@ -34,7 +43,7 @@ func _process(delta: float) -> bool:
 		0:
 			if t > 0.3:
 				p.apply_damage(58) # HP 42 as retention probe
-				_enter_gate("GateNormal")
+				_enter_gate("GateNormal", Gate.GateType.NORMAL) # #350 pin
 				phase = 1; t = 0
 		1:
 			if t > 0.4:
@@ -92,7 +101,7 @@ func _process(delta: float) -> bool:
 				caster = p.get_node("SpellCaster")
 				print("[9] PROD death restart area=", scene.current_area.name, " hp=", p.hp,
 					" -> ", "PASS" if scene.current_area.name == "Hub" and p.hp == 100 else "FAIL")
-				_enter_gate("GateRed")
+				_enter_gate("GateRed", Gate.GateType.RED) # #350 pin
 				phase = 6; t = 0
 		6:
 			if t > 0.4:

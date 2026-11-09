@@ -91,6 +91,17 @@ func _initialize() -> void:
 
 func _process(_d: float) -> bool:
 	frame += 1
+	if main.current_area != null and main.current_area.name == &"Hub":
+		# #346: the dungeon gates live in the overworld (same layout around
+		# the same spawn). Guards are removed (labels, not combat, are under
+		# test) and the HUB passage stops monitoring: the vertical sweep walks
+		# straight through it at (576, 640).
+		main.enter_overworld()
+		for e in get_nodes_in_group("enemies"):
+			e.free()
+		(main.current_area.get_node("GateHub") as Area2D).monitoring = false
+		frame = 1
+		return false
 	if main.current_area == null or main.current_area.get_node_or_null("GateNormal") == null:
 		if frame > 600:
 			print("[106] hub never mounted -> FAIL")
@@ -100,7 +111,7 @@ func _process(_d: float) -> bool:
 		0:
 			if frame < 30:
 				return false # camera settle
-			_check(true, "setup: hub mounted with both gates")
+			_check(true, "setup: overworld mounted with both gates")
 			dir = Vector2.UP
 			steps_left = 300 # 900px up: gates exit the bottom edge
 			stage = 1

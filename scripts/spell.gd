@@ -82,15 +82,27 @@ class_name Spell
 ## Steer branch, Specialization: pressing the spell's key while its shots are
 ## still flying re-aims them at the cursor instead of casting again.
 @export var recast_redirect: bool = false
+## (Daniel 2026-11-09: the first guided tier changes direction ONCE.) Max
+## times one shot can be re-aimed by recast_redirect presses; a shot at its
+## limit is ignored by the redirect gate, so the next press casts normally.
+## 0 = unlimited (legacy behavior, e.g. Seeking).
+@export var redirect_limit: int = 0
 ## Steer branch, Mastery: seconds each shot turns toward the cursor after it
 ## spawns (or after a redirect). A negative value chases for the shot's whole
 ## life (Signature). 0 = no cursor chase.
 @export var cursor_chase_time: float = 0.0
 ## Max turn toward the cursor in rad/s while chasing.
 @export var cursor_turn_rate: float = 7.0
-## Steer branch, Signature: bodies one shot can hit before it disappears.
+## Steer branch, Signature: hits one shot lands before it disappears
+## (Daniel 2026-11-09: the signature STAYS until it has hit 5 times - the
+## travel-range expiry does not apply while pierce_hits > 0). Re-hits of the
+## same body count too (see rehit_delay), so a boss is not a one-hit wall.
 ## 0 = legacy (despawn on the first hit unless PIERCING-tagged).
 @export var pierce_hits: int = 0
+## (Daniel 2026-11-09 boss fix.) Seconds a pierce_hits shot waits before it
+## may damage the SAME body again; one pass-through still lands one hit, a
+## loop back lands another. Only read when pierce_hits > 0.
+@export var rehit_delay: float = 0.35
 ## Splash branch, Specialization: when > 0 the cast lobs a WaterSplash to the
 ## cursor (clamped to `range`) instead of a flat projectile; it lands and deals
 ## `damage` to every enemy within this radius. projectile_count lobs land

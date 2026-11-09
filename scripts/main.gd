@@ -13,6 +13,9 @@ extends Node2D
 ## mounter reads it on every area swap. No SpawnData child => no enemies for
 ## that area (the hub stays empty; DungeonB's carrier holds zero entries).
 ## No area-name checks and no hardcoded positions/tables remain in code.
+## #346: boot -> hub -> (TRAVEL gate) -> overworld -> (entrance) -> dungeon;
+## exit portals return to the hub. Overworld entrance guards mount from
+## "EntranceGuards" carriers only while their dungeon is uncleared this run.
 
 func _ready() -> void:
 	print("gangU booted OK")
@@ -195,12 +198,56 @@ var _shop: Shop = null
 ## (#347) The run's map record; told about every area swap.
 var _world_map: WorldMap = null
 
+## (#350) Type of the gate the current dungeon was entered through, or -1 when
+## the area was not entered through a gate (hub, direct _swap fixtures). Since
+## a hub offering's NORMAL/RED type is rolled by chance, the RED lock-in follows
+## the gate actually entered, not the target area's name.
+var _entry_gate_type: int = -1
+
+## #346 core loop (Colin, 2026-11-08): the hub sits OUTSIDE the overworld and
+## keeps its services; one TRAVEL gate in the hub leads to the overworld,
+## whose entrances lead into the dungeons. Leaving a dungeon by its exit
+## portal still returns to the hub (shop refresh, bestiary, directory).
+const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
+
+## #346: dungeon_ids cleared this run. Per-run for free: a death restart
+## reloads Main. An overworld entrance only gets its guards while its
+## dungeon is absent from here.
+var cleared_dungeons: Dictionary = {}
+
 func _load_hub() -> void:
+	_entry_gate_type = -1
 	_swap(preload("res://scenes/hub.tscn").instantiate())
 
+## #346: go straight to the overworld (same swap a hub TRAVEL gate makes).
+func enter_overworld() -> void:
+	_swap((load(OVERWORLD_SCENE) as PackedScene).instantiate())
+
 func _on_gate_entered(gate: Gate) -> void:
-	print("gate entered: ", "RED" if gate.gate_type == Gate.GateType.RED else "NORMAL")
-	_swap.call_deferred(gate.target_dungeon.instantiate())
+	print("gate entered: ", Gate.GateType.keys()[gate.gate_type], " -> ", gate.target_dungeon.resource_path if gate.target_dungeon else gate.target_path)
+	_entry_gate_type = gate.gate_type
+	var target := gate.target_scene()
+	if target == null:
+		push_warning("Gate %s has no target scene" % gate.name)
+		return
+	_swap.call_deferred(target.instantiate())
+
+## (#350) RED semantics for the mounted area: the entered gate's type when there
+## is one; otherwise the authored default (DungeonB is the RED dungeon).
+## #350: each gate's 50/50 offering type is rolled ONCE per run and stays
+## fixed until death (Colin, 2026-11-08). Per-run reset comes free from the
+## full scene reload on death restart, same as the other per-run records.
+var _offering_rolls: Dictionary = {}
+
+func offering_type_for(gate_name: StringName, authored: Gate.GateType, offering: GateOffering, rng: RandomNumberGenerator = null) -> Gate.GateType:
+	if not _offering_rolls.has(gate_name):
+		_offering_rolls[gate_name] = offering.roll(authored, rng)
+	return _offering_rolls[gate_name]
+
+func _area_is_red(area: Node) -> bool:
+	if _entry_gate_type >= 0:
+		return _entry_gate_type == Gate.GateType.RED
+	return area.name == &"DungeonB"
 
 func _swap(area: Node) -> void:
 	if current_area:
@@ -220,6 +267,7 @@ func _swap(area: Node) -> void:
 	if _world_map:
 		_world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
 	_mount_area_spawns(current_area)
+	_mount_entrance_guards(current_area)
 	_mount_objective(current_area)
 	_mount_exit_portal(current_area)
 	_mount_revive_item(current_area)
@@ -253,6 +301,32 @@ func _mount_area_spawns(area: Node) -> void:
 	spawner.setup(data.entries, data.player_path, terrain, area)
 	spawner.spawn_initial()
 
+## #346: overworld entrance guards. Every EntranceGuards node under the
+## area's "EntranceGuards" container whose dungeon is still uncleared this
+## run contributes its entries; all of them go through ONE EnemySpawner
+## (#220 seam), parented to the area so leaving the overworld frees them.
+func _mount_entrance_guards(area: Node) -> void:
+	var holder := area.get_node_or_null("EntranceGuards")
+	if holder == null:
+		return
+	var entries: Array = []
+	var player_path := NodePath("../../Player")
+	for g in holder.get_children():
+		var guards := g as EntranceGuards
+		if guards == null:
+			continue
+		if guards.dungeon_id != &"" and cleared_dungeons.has(guards.dungeon_id):
+			continue
+		entries.append_array(guards.entries)
+		player_path = guards.player_path
+	if entries.is_empty():
+		return
+	var spawner := EnemySpawner.new()
+	spawner.name = "GuardSpawner"
+	area.add_child(spawner)
+	spawner.setup(entries, player_path, area.get_node_or_null("Terrain") as TerrainMap, area)
+	spawner.spawn_initial()
+
 ## #8 production objective: CLEAR_ALL over the spawned enemies in
 ## DungeonA. Mounted AFTER _mount_area_spawns - DungeonObjective._ready
 ## scans the "enemies" group, so the enemies must already be in the tree or
@@ -267,6 +341,11 @@ const DUNGEON_B_BOSS_SPAWN: Vector2 = Vector2(576, 240)
 ## ELIMINATION with zero mobs, so the Head boss spawns on entry.
 const HEAD_BOSS_SCENE: PackedScene = preload("res://scenes/head_boss.tscn")
 const DUNGEON_C_BOSS_SPAWN: Vector2 = Vector2(576, 300)
+## #326 (human request by Mitravasu, 2026-11-09: "create a new dungeon for
+## it"): DungeonD is the Beast boss's den - a boss arena only like DungeonC,
+## ELIMINATION with zero mobs, so the Beast (#174) spawns on entry.
+const BEAST_BOSS_SCENE: PackedScene = preload("res://scenes/beast_boss.tscn")
+const DUNGEON_D_BOSS_SPAWN: Vector2 = Vector2(576, 280)
 
 func _mount_objective(area: Node) -> void:
 	var obj := DungeonObjective.new()
@@ -285,6 +364,12 @@ func _mount_objective(area: Node) -> void:
 		obj.boss_scene = HEAD_BOSS_SCENE
 		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_C_BOSS_SPAWN) if area is Node2D else DUNGEON_C_BOSS_SPAWN
 		obj.boss_spawned.connect(_on_boss_spawned)
+	elif area.name == "DungeonD":
+		obj.dungeon_id = &"dungeon_d"
+		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
+		obj.boss_scene = BEAST_BOSS_SCENE
+		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_D_BOSS_SPAWN) if area is Node2D else DUNGEON_D_BOSS_SPAWN
+		obj.boss_spawned.connect(_on_boss_spawned)
 	else:
 		obj.free()
 		return
@@ -298,6 +383,7 @@ func _on_boss_spawned(boss: Node) -> void:
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
+	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
 	## (#132) Confirmed dungeon VICTORY only: free stock refresh and the
 	## paid-refresh price resets (Daniel 2026-11-07). A plain return to hub
 	## (exit portal without a clear) never reaches this path.
@@ -314,7 +400,7 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## An area with an "ExitPoint" marker gets an unlocked portal at that marker.
 func _mount_exit_portal(area: Node) -> void:
 	var exit_point := area.get_node_or_null("ExitPoint") as Node2D
-	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC"]:
+	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC", &"DungeonD"]:
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
@@ -325,10 +411,14 @@ func _mount_exit_portal(area: Node) -> void:
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var completable := obj != null and (obj.objective_type != DungeonObjective.ObjectiveType.ELIMINATION or obj.boss_scene != null)
 	# #173: boss-gate DungeonC is clear-or-die too (locked until the Head dies).
-	if area.name in [&"DungeonB", &"DungeonC"] and completable:
+	# #326: the Beast's den DungeonD is clear-or-die too (locked until the
+	# Beast dies). #350: RED is whatever the entered gate rolled, so a
+	# RED-rolled DungeonA locks and a NORMAL-rolled DungeonB allows retreat.
+	var red := _area_is_red(area)
+	if (red or area.name == &"DungeonC" or area.name == &"DungeonD") and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
-	portal.red_portal_look = area.name == &"DungeonB"  # #204: portal look only on the RED dungeon's exit portal (both its locked and unlocked states)
+	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 

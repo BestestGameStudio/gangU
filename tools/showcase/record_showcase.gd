@@ -10,7 +10,8 @@ extends SceneTree
 ## parses on branches where that boss does not exist yet.
 
 # --- Targets: edit these per showcase ----------------------------------------
-## Hub gate node to walk into, and the area it leads to. GateBoss / DungeonC
+## Gate node to walk into (overworld since #346; hub on older main), and the
+## area it leads to. GateBoss / DungeonC
 ## exist from #173 (PR #213) on; on older main use GateRed / DungeonB.
 const GATE_NAME := "GateBoss"
 const AREA_NAME := "DungeonC"
@@ -187,12 +188,22 @@ func _initialize() -> void:
 	say("hub")
 	await _wait(1.3)
 	var gate: Node2D = scene.current_area.get_node_or_null(GATE_NAME)
+	if gate == null and scene.has_method("enter_overworld"):
+		# #346: dungeon entrances live in the overworld. Start the walk just
+		# south of the entrance (the waypoint below is hub-relative).
+		scene.enter_overworld()
+		gate = scene.current_area.get_node_or_null(GATE_NAME)
+		if gate != null:
+			p.global_position = gate.global_position + Vector2(0, 140)
+			focus.global_position = p.global_position
+			cam.global_position = p.global_position
 	if gate == null:
 		push_error("record_showcase: hub has no gate '%s' (edit GATE_NAME)" % GATE_NAME)
 		quit(1)
 		return
-	move_target = HUB_WAYPOINT
-	await _wait(0.8)
+	if scene.current_area.name == &"Hub":
+		move_target = HUB_WAYPOINT
+		await _wait(0.8)
 	move_target = gate.global_position
 	if not await _wait_until(_in_area, 4.0):
 		gate._on_body_entered(p)

@@ -14,7 +14,8 @@ extends Node
 ## - Bookkeeping: spawned / spawn_died signals and alive_count(entry).
 ##
 ## Entry format is the AreaSpawnData one ("position", "enemy",
-## "reward_table"); unknown extra keys are tolerated and ignored.
+## "reward_table"); an optional "definition" (EnemyDefinition, #346) is
+## assigned before tree entry; other unknown keys are tolerated and ignored.
 
 signal spawned(enemy: Enemy, entry: Dictionary)
 signal spawn_died(enemy: Enemy, entry: Dictionary)
@@ -58,6 +59,10 @@ func request_spawn(entry: Dictionary) -> Enemy:
 	var e := enemy_scene.instantiate() as Enemy
 	e.position = entry["position"] as Vector2
 	e.reward_table = entry["reward_table"] as RewardTable
+	# #346: optional per-entry definition (stats + behavior slot), assigned
+	# before tree entry so Enemy._ready applies it.
+	if entry.get("definition") is EnemyDefinition:
+		e.definition = entry["definition"]
 	e.player_path = player_path
 	e.terrain = terrain
 	var idx := _entry_index(entry)

@@ -73,6 +73,8 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: String) -> void:
+	if main.current_area.get_node_or_null(gate_name) == null:
+		main.enter_overworld() # #346: dungeon entrances live in the overworld
 	var gate: Gate = main.current_area.get_node(gate_name)
 	gate.entered.emit(gate)
 	await _frames(3)
@@ -84,10 +86,11 @@ func _main_flow_legs() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 	_check(main.current_area.name == "Hub", "boots into the hub")
+	main.enter_overworld() # #346: the generated entrance moved to the overworld
 	var gate: Gate = main.current_area.get_node_or_null("GateGenerated")
-	_check(gate != null and gate.gate_type == Gate.GateType.NORMAL, "hub has a NORMAL GateGenerated")
+	_check(gate != null and gate.gate_type == Gate.GateType.NORMAL, "overworld has a NORMAL GateGenerated")
 	_check(gate != null and gate.get_node("TypeLabel").text == "GENERATED", "GateGenerated is labelled GENERATED")
-	_check(p.terrain == null, "hub: Player.terrain is null")
+	_check(p.terrain == null, "overworld: Player.terrain is null")
 
 	await _enter(main, "GateGenerated")
 	var area: Node = main.current_area
