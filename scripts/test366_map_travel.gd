@@ -48,8 +48,9 @@ func _run() -> void:
 	await _frames()
 	var ow: StringName = main.current_area.name
 	var sites := wm.sites(ow)
-	_check(sites.has(&"dungeon_a") and sites.has(&"dungeon_e") and sites.size() == 5, "overworld entrances recorded for the 5 catalog dungeons")
+	_check(sites.has(&"dungeon_a") and sites.has(&"dungeon_e") and sites.size() == 6, "overworld entrances recorded for the 6 catalog dungeons")
 	_check((sites[&"dungeon_a"] as Vector2) == (main.current_area.get_node("GateNormal") as Node2D).global_position, "site sits at its gate")
+	_check((sites[&"dungeon_maze"] as Vector2) == (main.current_area.get_node("GateMaze") as Node2D).global_position, "GateMaze site sits at its gate (#367)")
 	_check(wm.cleared_sites(ow).is_empty(), "nothing cleared -> nothing marked (uncleared stays hidden)")
 	panel.open()
 	_check(canvas.site_at(canvas.world_to_screen(sites[&"dungeon_a"])) == &"", "uncleared entrance not selectable")

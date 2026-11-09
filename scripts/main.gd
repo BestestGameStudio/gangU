@@ -425,12 +425,16 @@ func _mount_objective(area: Node) -> void:
 		obj.boss_scene = BEAST_BOSS_SCENE
 		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_D_BOSS_SPAWN) if area is Node2D else DUNGEON_D_BOSS_SPAWN
 		obj.boss_spawned.connect(_on_boss_spawned)
-	elif area.name == "DungeonE":
+	elif area.name == "DungeonE" or area.name == "DungeonMaze":
 		# #337: DEFENSE - protect the area's DefenseCore through a fixed number
 		# of periodic waves spawned at its "WaveSpawns" markers. Wave/HP numbers
 		# are the objective's tunable defaults (implementer's choice).
-		obj.dungeon_id = &"dungeon_e"
+		# #367: DungeonMaze is the maze variant - its WaveSpawns are the maze
+		# entrances and its FlowNav steers every wave enemy through the maze.
+		# Same defaults otherwise, mixed targeting (core_attacker_share) included.
+		obj.dungeon_id = &"dungeon_e" if area.name == "DungeonE" else &"dungeon_maze"
 		obj.objective_type = DungeonObjective.ObjectiveType.DEFENSE
+		obj.wave_nav = area.get_node_or_null("FlowNav") as FlowNav
 		obj.wave_enemy_scene = DEFENSE_WAVE_ENEMY
 		obj.wave_reward_table = DEFENSE_WAVE_TABLE
 		var points: Array[Vector2] = []
@@ -647,7 +651,7 @@ func _enter_dungeon(dungeon_id: StringName, path: String) -> void:
 	var gate_name: StringName = &"GateRed" if dungeon_id == &"dungeon_b" else &"GateNormal"
 	if dungeon_id in [&"dungeon_a", &"dungeon_b"]:
 		_entry_gate_type = offering_type_for(gate_name, authored, preload("res://resources/gate_offering.tres"))
-	elif dungeon_id == &"dungeon_e":
+	elif dungeon_id == &"dungeon_e" or dungeon_id == &"dungeon_maze":
 		_entry_gate_type = Gate.GateType.NORMAL # Preserve authored defense gate; no offering roll.
 	else:
 		_entry_gate_type = Gate.GateType.BOSS

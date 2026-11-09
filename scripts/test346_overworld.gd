@@ -95,7 +95,7 @@ func _scene_legs() -> void:
 	ground.build_from(ow)
 	var spawn: Vector2 = (ow.get_node("PlayerSpawn") as Node2D).position
 	_check(ground.covers(spawn), "(B) ground covers the arrival point")
-	_check(ground.roads.size() == 7, "(B) one road per gate (got %d)" % ground.roads.size()) # #337: + GateDefense
+	_check(ground.roads.size() == 8, "(B) one road per gate (got %d)" % ground.roads.size()) # #337: + GateDefense, #367: + GateMaze
 	var far := 0.0
 	for c in ow.get_children():
 		if c is Gate:

@@ -45,6 +45,10 @@ var _player: Player
 ## part of each wave. See _resolve_target.
 var objective_target: DefenseCore = null
 var objective_aggro_range: float = 150.0
+## #367: grid pathfinding (maze defense waves). Null - every other enemy -
+## keeps the straight-line chase. The chase/contact behavior steers through
+## it toward whatever _resolve_target picked (core or player).
+var nav: FlowNav = null
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.
 var _behavior: RefCounted
@@ -236,7 +240,12 @@ func _physics_process(delta: float) -> void:
 	# #331: a strong knockback owns the body until it decays below
 	# KNOCKBACK_CONTROL, so the push reads; the behavior resumes after.
 	if _knockback.length() > KNOCKBACK_CONTROL:
+		var before := global_position
 		move_and_collide(_knockback * delta)
+		# #367: maze walls are terrain, not colliders; keep a nav enemy out
+		# of them (same clamp as the chase step). Others unchanged.
+		if nav != null:
+			global_position = TerrainMotion.clamp_displacement(terrain, before, global_position, can_swim)
 		_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECEL * delta)
 		return
 	_knockback = Vector2.ZERO
