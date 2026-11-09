@@ -1,6 +1,7 @@
-[gd_scene load_steps=17 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=18 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
+[ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
 [ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="346_gate"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="346_dna"]
@@ -22,6 +23,16 @@
 
 [node name="Ground" type="Node2D" parent="."]
 script = ExtResource("346_ground")
+
+# #391: walkability grid for the field. Ground marks every decor tree's
+# blocking cells on it; player/enemy/summon wiring is main.gd's standard
+# "Terrain" lookup. Hidden: the field is code-drawn by OverworldGround, so
+# the debug tile presentation would double-draw over it. 32px cells (half
+# the dungeon's 64) keep the blocked patch close to each tree's circle.
+[node name="Terrain" type="Node2D" parent="."]
+visible = false
+script = ExtResource("391_terrain")
+cell_size = 32
 
 [node name="TitleLayer" type="CanvasLayer" parent="."]
 layer = 2

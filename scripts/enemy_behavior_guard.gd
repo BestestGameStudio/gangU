@@ -28,6 +28,10 @@ var engaged_from := Vector2.INF
 ## a stationary guard. Set by configure_route after the enemy enters the tree.
 var route := PackedVector2Array()
 
+## #391: idle-walk routing state, SEPARATE from the inherited chase helper -
+## engaged chases and post/route walks never share a half-walked path.
+var _walk_path := TerrainPath.new()
+
 ## #373: EnemySpawner calls this with an entry's "route" (converted to global
 ## space) right after the enemy enters the tree.
 func configure_route(points: PackedVector2Array) -> void:
@@ -66,11 +70,15 @@ func _idle_step(enemy: Enemy, delta: float) -> void:
 	_walk_to(enemy, home, enemy.speed, delta)
 
 ## Walks toward `at` at `speed` (terrain-aware). True once within HOME_EPSILON.
+## #391: routes around blocking terrain through the shared TerrainPath
+## helper when a grid is wired - a patrol loop or migration path that
+## crosses a tree detours around it instead of stalling on it. With no grid
+## (or a clear straight line) the walk is exactly as #346/#373.
 func _walk_to(enemy: Enemy, at: Vector2, speed: float, delta: float) -> bool:
 	var to := at - enemy.global_position
 	var arrived := to.length() <= HOME_EPSILON
 	# Never overshoot the point in one step (fast movers would orbit it).
 	var walk := Vector2.ZERO if arrived else to.normalized() * minf(speed, to.length() / maxf(delta, 0.0001))
-	enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, walk, delta, enemy.can_swim)
+	enemy.velocity = _walk_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, walk, at, speed, delta, enemy.can_swim)
 	enemy.move_and_slide()
 	return arrived

@@ -3,10 +3,14 @@ class_name OverworldGround
 ## #346: code-drawn overworld field (HubFloor idiom: lives in the area scene,
 ## freed with it, drawn once). A wide grass field with dirt roads from the
 ## arrival point to every gate, plus scattered trees and rocks kept off the
-## roads and away from the gates. Decor is purely visual - no collision - so
-## the whole field is walkable. Layout is read from the parent scene on
+## roads and away from the gates. Layout is read from the parent scene on
 ## _ready (PlayerSpawn + every Gate sibling), so moving an entrance in
 ## overworld.tscn moves its road with it. Deterministic (hashed, no RNG).
+## #391 (Daniel, 2026-11-09: "trees block everything, enemies can pathfind
+## around trees, all trees collide"): every decor TREE is now solid - its
+## circle marks blocking cells on the area's Terrain grid, so walking,
+## dashing, knockback and blinks all stop at trees and grid-wired movers
+## (enemies, summons) path around them. Rocks stay walkable decor.
 
 const CENTER := Vector2(576, -150)
 const RADII := Vector2(1200, 1050)
@@ -65,6 +69,7 @@ func build_from(area: Node) -> void:
 		roads.append(_road(spawn, landmarks[i], i))
 	_build_patches()
 	_build_decor()
+	_plant_tree_collision(area)
 
 func covers(p: Vector2) -> bool:
 	return Geometry2D.is_point_in_polygon(p, outline)
@@ -123,6 +128,32 @@ func _build_patches() -> void:
 			patches.append(poly)
 			patch_colors.append(GRASS_DARK if _hash01(gx, gy, 25) < 0.5 else GRASS_LIGHT)
 			n += 1
+
+## #391: every decor tree marks its cells on the area's Terrain grid as
+## OBSTACLE (blocking). Not the TREE type: TREE is destroyable under any
+## damage, so one stray spell would silently delete a tree's collision
+## while its code-drawn circle stays. A cell is blocked when its CENTER
+## falls inside the tree circle, keeping the blocked patch at or inside
+## the visual. No Terrain sibling (harnesses, older fixtures) = decor
+## stays purely visual, the pre-#391 behavior.
+func _plant_tree_collision(area: Node) -> void:
+	var map := area.get_node_or_null("Terrain") as TerrainMap
+	if map == null:
+		return
+	var cells := {}
+	for d in decor:
+		if d["kind"] != "tree":
+			continue
+		var at: Vector2 = d["at"]
+		var r: float = d["r"]
+		var lo := map.world_to_cell(at - Vector2(r, r))
+		var hi := map.world_to_cell(at + Vector2(r, r))
+		for cx in range(lo.x, hi.x + 1):
+			for cy in range(lo.y, hi.y + 1):
+				var cell := Vector2i(cx, cy)
+				if map.cell_to_world(cell).distance_to(at) <= r:
+					cells[cell] = TerrainTypes.OBSTACLE
+	map.set_cells(cells)
 
 func _clear_spot(p: Vector2) -> bool:
 	if p.distance_to(spawn) < GATE_CLEAR:

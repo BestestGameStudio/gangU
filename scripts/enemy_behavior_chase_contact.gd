@@ -12,8 +12,17 @@ extends RefCounted
 ## between hits; idle (zero velocity) when there is no live player.
 ## Stats stay on the enemy (definition-supplied); this class owns only
 ## the cooldown timer.
+##
+## #391 (Daniel, 2026-11-09: "enemies can pathfind around trees"): when a
+## terrain grid is wired, the chase routes around blocking terrain through
+## the shared TerrainPath helper (the #281 summon routing, extracted): a
+## clear straight line steers exactly as before, a blocked line follows a
+## bounded A* detour. enemy.terrain == null behaves exactly as #99.
 
 var _contact_timer: float = 0.0
+## #391: per-enemy routing state (never shared), one helper per behavior
+## instance - the same idiom as the cooldown timer.
+var _terrain_path := TerrainPath.new()
 
 ## #209: target parameter widened (Player -> duck-typed) so the default
 ## chase/contact behavior can target Summons; the target contract used here
@@ -32,11 +41,17 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		pad = player.contact_radius
 	# #367: an enemy with a FlowNav (maze defense) steers along the grid path
 	# instead of straight at the target; range checks still use the target.
+	# #391: a nav-less enemy instead routes around terrain obstacles (trees)
+	# through TerrainPath's bounded A* detour; both paths end in
+	# TerrainMotion.resolve, so terrain semantics are identical either way.
 	var heading: Vector2 = to_player
 	if enemy.nav != null:
 		heading = enemy.nav.waypoint(enemy.global_position, player.global_position) - enemy.global_position
 	var chase: Vector2 = heading.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
-	enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
+	if enemy.nav != null:
+		enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
+	else:
+		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, chase, player.global_position, enemy.speed, delta, enemy.can_swim)
 	_slide(enemy)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if to_player.length() <= enemy.contact_range + pad and _contact_timer <= 0.0:
