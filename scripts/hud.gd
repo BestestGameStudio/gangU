@@ -55,6 +55,8 @@ var _progress_elapsed := 0.0
 @onready var _hp_bar: ProgressBar = $Root/HPBar
 @onready var _spell_grid: GridContainer = $Root/SpellGrid
 @onready var _objective_label: Label = $Root/ObjectiveLabel
+## #369: top-center defense wave bar; mounted with the discovered objective.
+@onready var _defense_bar: DefenseWaveBar = $DefenseWaveBar
 
 func _ready() -> void:
 	_hp_bar.add_theme_stylebox_override("background", _hp_bar_style(HP_TRACK_TEXTURE, HP_TRACK_CAP))
@@ -165,6 +167,7 @@ func _update_objective(delta: float) -> void:
 		return
 	_objective = null # never held, or the area swap freed it
 	_objective_label.visible = false
+	_defense_bar.show_objective(null)
 	_discover_elapsed += delta
 	if _discover_elapsed < 0.25:
 		return
@@ -176,6 +179,11 @@ func _update_objective(delta: float) -> void:
 	_objective.objective_progress_changed.connect(_on_objective_progress)
 	_objective.objective_completed.connect(_on_objective_completed)
 	_objective.objective_failed.connect(_on_objective_failed)
+	# #369: the wave bar only exists for DEFENSE missions.
+	if found.objective_type == DungeonObjective.ObjectiveType.DEFENSE:
+		_defense_bar.show_objective(found)
+	else:
+		_defense_bar.show_objective(null)
 	var p := _objective.progress()
 	_show_objective(p.x, p.y)
 	if _objective.is_failed():
