@@ -19,6 +19,13 @@ signal health_changed(current: int, max_hp: int)
 signal dash_started(direction: Vector2)
 signal dash_ended()
 
+## #305: spell launch (Mastery: the player is launched forward BEFORE
+## attacking). Same contract shape as the dash: a started/ended pair, plus
+## cancelled when death interrupts the launch so a pending attack is dropped.
+signal launch_started(direction: Vector2)
+signal launch_ended()
+signal launch_cancelled()
+
 @export var dash_speed: float = 900.0
 @export var dash_duration: float = 0.15
 @export var dash_cooldown: float = 0.6
@@ -27,6 +34,12 @@ var _dash_time_left := 0.0
 var _dash_cooldown_left := 0.0
 var _dash_dir := Vector2.DOWN
 var _last_move_dir := Vector2.DOWN
+
+## #305: spell launch state. Speed/duration come from the casting Spell
+## resource (provisional tunings), not from the dash exports above.
+var _launch_dir := Vector2.DOWN
+var _launch_speed := 0.0
+var _launch_time_left := 0.0
 
 var terrain: TerrainMap = null
 
@@ -174,6 +187,11 @@ func _physics_process(delta: float) -> void:
 		if _dash_time_left > 0.0:
 			_dash_time_left = 0.0
 			_end_dash()
+		# #305: death also cancels a spell launch - no launch_ended, so the
+		# deferred attack is dropped (the cast committed when it started).
+		if _launch_time_left > 0.0:
+			_launch_time_left = 0.0
+			launch_cancelled.emit()
 		return
 	var input_dir := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	if input_dir != Vector2.ZERO:
@@ -188,8 +206,21 @@ func _physics_process(delta: float) -> void:
 		_spawn_dash_ghost()
 		if _dash_time_left == 0.0:
 			_end_dash()
+	# #305: a spell launch overrides desired velocity like the dash (and wins
+	# over it while both run); it feeds the SAME resolve/move_and_slide call
+	# below, so terrain clamps apply exactly like dashing. launch_ended emits
+	# only AFTER movement resolves, so the deferred attack spawns at the
+	# settled position.
+	var launch_finished := false
+	if _launch_time_left > 0.0:
+		desired = _launch_dir * _launch_speed
+		_launch_time_left = maxf(_launch_time_left - delta, 0.0)
+		if _launch_time_left == 0.0:
+			launch_finished = true
 	velocity = TerrainMotion.resolve(terrain, global_position, velocity, desired, delta, can_swim)
 	move_and_slide()
+	if launch_finished:
+		launch_ended.emit()
 	if sprite != null:
 		if input_dir != Vector2.ZERO:
 			# 8-way -> 4-way: dominant axis wins, exact diagonals face vertically.
@@ -197,7 +228,7 @@ func _physics_process(delta: float) -> void:
 				facing = &"right" if input_dir.x > 0.0 else &"left"
 			else:
 				facing = &"down" if input_dir.y > 0.0 else &"up"
-		_update_sprite(input_dir != Vector2.ZERO or is_dashing())
+		_update_sprite(input_dir != Vector2.ZERO or is_dashing() or is_launching())
 
 ## #266: single entry point for instant movement that is not WASD/dash
 ## velocity: being pushed, spell movement (blinks, leaps), scripted shoves.
@@ -223,7 +254,7 @@ func _process(_delta: float) -> void:
 ## `input_dir` zero falls back to the last movement direction. Returns whether
 ## a dash started.
 func try_dash(input_dir: Vector2 = Vector2.ZERO) -> bool:
-	if hp <= 0 or _dash_time_left > 0.0 or _dash_cooldown_left > 0.0:
+	if hp <= 0 or _dash_time_left > 0.0 or _dash_cooldown_left > 0.0 or _launch_time_left > 0.0:
 		return false
 	_dash_dir = input_dir.normalized() if input_dir != Vector2.ZERO else _last_move_dir
 	_dash_time_left = dash_duration
@@ -240,6 +271,25 @@ func is_dashing() -> bool:
 
 func dash_cooldown_remaining() -> float:
 	return _dash_cooldown_left
+
+
+## #305: start a spell launch (Mastery: launched forward BEFORE attacking).
+## Same gate shape as try_dash: refuses when dead or already launching and
+## consumes nothing on refusal. No cooldown of its own - the spell's
+## cooldown governs. Zero direction falls back to the last movement
+## direction, matching the dash.
+func launch(direction: Vector2, speed: float, duration: float) -> bool:
+	if hp <= 0 or _launch_time_left > 0.0:
+		return false
+	_launch_dir = direction.normalized() if direction != Vector2.ZERO else _last_move_dir
+	_launch_speed = speed
+	_launch_time_left = duration
+	launch_started.emit(_launch_dir)
+	return true
+
+
+func is_launching() -> bool:
+	return _launch_time_left > 0.0
 
 
 func _end_dash() -> void:

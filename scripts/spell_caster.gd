@@ -284,10 +284,22 @@ func _cast_spell(spell: Spell) -> void:
 	if spell.terrain_block != &"":
 		if _place_terrain_block(spell) == null:
 			return
+	# #305: launch spells move the player BEFORE attacking (Mastery spec).
+	# A refused launch (dead or already launching) returns here like a
+	# refused terrain block (#216): not a cast, so no cooldown, no signals,
+	# no attack. An accepted launch commits the cast - cooldown and both
+	# signals fire below - and the attack waits for launch_ended so punches
+	# spawn at the settled position.
+	if spell.launch_speed > 0.0:
+		var player := get_parent() as Player
+		if player == null or not player.launch(dir, spell.launch_speed, spell.launch_duration):
+			return
+		_arm_launch(spell, player)
 	# #212: summon-only spells carry projectile_count 0 - skip the projectile
 	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
 	# signals below stay unconditional; positive counts are byte-identical.
-	if spell.projectile_count > 0:
+	# #305: a launch spell defers this whole block to launch_ended.
+	if spell.projectile_count > 0 and spell.launch_speed <= 0.0:
 		_spawn_fanout(spell, dir)
 		# #305: a burst re-fires the fan-out burst_count times, one immediately
 		# (above) and the rest at burst_interval spacing, re-aimed at the cursor
@@ -329,6 +341,48 @@ func _run_burst(spell: Spell, remaining: int) -> void:
 		if dir.length_squared() == 0.0:
 			dir = Vector2.RIGHT.rotated(get_parent().rotation)
 		_spawn_fanout(spell, dir)
+
+
+## #305: an accepted spell launch. The cast is already committed (cooldown
+## and signals fired); the attack itself waits for launch_ended so
+## projectiles spawn at the settled position. The two one-shot connections
+## are paired: whichever fires first disconnects the other, so a
+## death-cancelled launch can never fire a stale volley on a later launch.
+var _pending_launch_spell: Spell = null
+var _pending_launch_player: Player = null
+var _pending_launch_ended_cb: Callable
+var _pending_launch_cancelled_cb: Callable
+
+func _arm_launch(spell: Spell, player: Player) -> void:
+	_pending_launch_spell = spell
+	_pending_launch_player = player
+	_pending_launch_ended_cb = _on_launch_ended.bind(spell, player)
+	_pending_launch_cancelled_cb = _on_launch_cancelled.bind(player)
+	player.launch_ended.connect(_pending_launch_ended_cb, CONNECT_ONE_SHOT)
+	player.launch_cancelled.connect(_pending_launch_cancelled_cb, CONNECT_ONE_SHOT)
+
+func _on_launch_ended(spell: Spell, player: Player) -> void:
+	if player.is_connected(&"launch_cancelled", _pending_launch_cancelled_cb):
+		player.launch_cancelled.disconnect(_pending_launch_cancelled_cb)
+	_pending_launch_spell = null
+	_pending_launch_player = null
+	# Re-aimed at the live cursor like a repeated manual cast (#246), but
+	# from the settled post-launch position.
+	var dir := global_position.direction_to(get_global_mouse_position())
+	if dir.length_squared() == 0.0:
+		dir = Vector2.RIGHT.rotated(get_parent().rotation)
+	if spell.projectile_count > 0:
+		_spawn_fanout(spell, dir)
+		if spell.burst_count > 1:
+			_run_burst(spell, spell.burst_count - 1)
+
+func _on_launch_cancelled(player: Player) -> void:
+	if player.is_connected(&"launch_ended", _pending_launch_ended_cb):
+		player.launch_ended.disconnect(_pending_launch_ended_cb)
+	_pending_launch_spell = null
+	_pending_launch_player = null
+	# No attack and no refund: the cast committed when the launch was
+	# accepted, matching the refused-cast semantics above.
 
 
 ## #216: the caster's owner carries the area's TerrainMap (main.gd _swap
