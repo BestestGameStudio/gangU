@@ -510,9 +510,10 @@ func can_fast_return() -> bool:
 	if _is_proven_safe_area():
 		return true
 	var objective := current_area.get_node_or_null("DungeonObjective") as DungeonObjective
-	## Current-visit clear is confirmed. Historical-clear re-entry policy is
-	## still an owner decision; it is NOT inferred from the dictionary.
-	return objective != null and objective.is_cleared() and is_cleared(objective.dungeon_id)
+	## #349 owner choice: once cleared this run, re-entry may return to hub
+	## immediately, without completing the fresh interior objective again.
+	## Existing exit-portal locks are unchanged; this is the explicit shortcut.
+	return objective != null and is_cleared(objective.dungeon_id)
 
 func _request_fast_travel(dungeon_id: StringName) -> void:
 	_commit_fast_travel.call_deferred(dungeon_id)
