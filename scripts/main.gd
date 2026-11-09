@@ -30,7 +30,9 @@ func _ready() -> void:
 	var hud: HUD = preload("res://scenes/hud.tscn").instantiate()
 	hud.player_path = NodePath("../Player") # explicit, read in HUD._ready on tree entry
 	add_child(hud)
-	## #359: one persistent boss-music player; started by _on_boss_spawned in RED dungeons.
+	## #359: one persistent boss-music player; started by _on_boss_spawned
+	## (RED-entered dungeons + the Head/Beast arenas). Freed with Main on a
+	## death restart, so a theme never leaks into the reloaded run.
 	boss_music = BossMusic.new()
 	boss_music.name = "BossMusic"
 	add_child(boss_music)
@@ -182,7 +184,7 @@ func _ready() -> void:
 	_load_hub()
 
 var current_area: Node = null
-## #359: boss theme player (RED dungeon bosses only).
+## #359: boss theme player (RED dungeon bosses, Head, Beast).
 var boss_music: BossMusic = null
 ## (#132) The mounted hub shop, kept so a dungeon victory can trigger its
 ## FREE stock refresh + paid-price reset from _on_objective_completed.
@@ -370,20 +372,27 @@ func _mount_objective(area: Node) -> void:
 func _on_boss_spawned(boss: Node) -> void:
 	if boss is Enemy:
 		boss.player_path = NodePath("../../Player")
-	# #359: RED dungeon bosses get a boss theme (random of the two tracks).
-	if boss_music and current_area and _area_is_red(current_area):
+	# #359: boss theme (random of the two tracks) for RED-entered dungeon bosses
+	# and the boss arenas (Head, Beast). A NORMAL-rolled dungeon's boss is silent.
+	if boss_music and current_area and _boss_theme_area(current_area):
 		boss_music.start()
+
+## #359: areas whose boss fight plays the boss theme.
+const BOSS_THEME_ARENAS: Array[StringName] = [&"DungeonC", &"DungeonD"]
+
+func _boss_theme_area(area: Node) -> bool:
+	return _area_is_red(area) or area.name in BOSS_THEME_ARENAS
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
-	if boss_music:
-		boss_music.fade_out() # #359: boss down, theme fades
 	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
 	## (#132) Confirmed dungeon VICTORY only: free stock refresh and the
 	## paid-refresh price resets (Daniel 2026-11-07). A plain return to hub
 	## (exit portal without a clear) never reaches this path.
 	if _shop != null:
 		_shop.on_dungeon_victory()
+	if boss_music:
+		boss_music.fade_out() # #359: boss down, theme fades
 
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
 ## anytime, objective not required). Returns to the hub in the SAME run via a

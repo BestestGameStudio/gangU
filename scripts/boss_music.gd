@@ -1,14 +1,15 @@
 class_name BossMusic
 extends AudioStreamPlayer
-## #359: boss theme for RED dungeon bosses. Main mounts ONE of these and calls
-## start() when a boss spawns in a RED-entered dungeon (main._area_is_red), then
-## fade_out() when the objective clears and stop() on every area swap.
+## #359: boss theme. Main mounts ONE of these and calls start() when a boss
+## spawns in a RED-entered dungeon or in the Head / Beast arenas
+## (main._boss_theme_area), fade_out() when the objective clears and
+## stop_music() on every area swap. A death restart frees it with Main.
 ## One of TRACKS is picked at random per fight and loops until stopped.
 ##
-## Volume (Mitravasu: "really loud, dampen them quite a bit"): the source files
-## were mastered hot (mean -4.6 / -7.3 dB, peaks at 0 dBFS). The committed .ogg
-## files have the gain baked down (-15 dB boss1, -17 dB boss2, both now ~-21.5 dB
-## mean), and MUSIC_VOLUME_DB is a further runtime trim to tweak by ear.
+## Volume (#359: "really loud, so dampen them quite a bit"): the source files
+## measure mean -7.3 / -4.6 dB with 0 dBFS peaks. The committed .ogg files have
+## the gain baked down (-15 dB boss1, -17 dB boss2; now -21.7 / -21.5 dB mean),
+## and MUSIC_VOLUME_DB is a further runtime trim. See assets/audio/music/SOURCE.md.
 
 const TRACKS: Array[AudioStream] = [
 	preload("res://assets/audio/music/boss1.ogg"),
