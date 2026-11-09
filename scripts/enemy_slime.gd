@@ -45,6 +45,21 @@ static func halved_definition(parent: Enemy) -> EnemyDefinition:
 		d.behavior = parent.definition.behavior
 	return d
 
+## Children keep the parent's movement/targeting context so they never become a
+## straight-line exception: terrain and player_path above, plus anything an
+## area or objective handed this enemy after spawn. Duck-typed by property
+## name so a pathfinding field added to Enemy later (e.g. #384's `nav`, any
+## tree-avoidance nav) is inherited without editing this file again.
+const INHERITED_PROPS: Array[StringName] = [&"nav", &"can_swim", &"objective_target", &"objective_aggro_range"]
+
+func _inherit_context(child: Enemy) -> void:
+	var names := {}
+	for p in get_property_list():
+		names[p["name"]] = true
+	for prop in INHERITED_PROPS:
+		if names.has(prop):
+			child.set(prop, get(prop))
+
 func _split() -> void:
 	if not can_split(max_hp):
 		return
@@ -60,6 +75,7 @@ func _split() -> void:
 		child.reward_table = reward_table
 		child.player_path = player_path
 		child.terrain = terrain
+		_inherit_context(child)
 		child.set_meta(META_SPLIT_CHILD, true)
 		var side := -1.0 if i == 0 else 1.0
 		child.position = (area as Node2D).to_local(pos + Vector2(side * SPLIT_OFFSET, 0.0)) if area is Node2D else pos

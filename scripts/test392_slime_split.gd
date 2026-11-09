@@ -55,6 +55,23 @@ func _initialize() -> void:
 			await process_frame
 			var after := _slimes(area).filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
 			_check(after.size() == 2, "20 HP slime dies without splitting")
+	# Children inherit movement/targeting context from the parent.
+	var a4 := Node2D.new()
+	root.add_child(a4)
+	var p4 := scene.instantiate() as EnemySlime
+	p4.can_swim = true
+	p4.objective_aggro_range = 321.0
+	a4.add_child(p4)
+	await process_frame
+	var tm := TerrainMap.new()
+	p4.terrain = tm
+	var p4_id := p4.get_instance_id()
+	p4.apply_damage(80)
+	await process_frame
+	await process_frame
+	var ck := _slimes(a4).filter(func(n): return is_instance_valid(n) and n.get_instance_id() != p4_id and not n.is_queued_for_deletion())
+	_check(ck.size() == 2 and ck[0].terrain == tm and ck[0].can_swim and is_equal_approx(ck[0].objective_aggro_range, 321.0), "children inherit terrain, can_swim, objective aggro")
+	a4.free()
 	# 39 max HP does not split
 	var a2 := Node2D.new()
 	root.add_child(a2)
