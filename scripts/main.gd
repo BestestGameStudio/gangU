@@ -183,6 +183,9 @@ func _ready() -> void:
 	var world_map := WorldMap.new()
 	world_map.name = "WorldMap"
 	world_map.player = $Player
+	# (#347) Colin, 2026-11-08: terrain appears as you explore - wire the
+	# production explore rule (vision circle, matches TerrainFog).
+	world_map.reveal_rule = WorldMap.explore_rule
 	add_child(world_map)
 	_world_map = world_map
 	var map_panel := MapPanel.new()
