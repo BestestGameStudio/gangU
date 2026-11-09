@@ -90,7 +90,8 @@ func _main_flow_legs() -> void:
 	var gate: Gate = main.current_area.get_node_or_null("GateGenerated")
 	_check(gate != null and gate.gate_type == Gate.GateType.NORMAL, "overworld has a NORMAL GateGenerated")
 	_check(gate != null and gate.get_node("TypeLabel").text == "GENERATED", "GateGenerated is labelled GENERATED")
-	_check(p.terrain == null, "overworld: Player.terrain is null")
+	# #391: the overworld has its own (tree collision) grid since #391.
+	_check(p.terrain == main.current_area.get_node("Terrain"), "overworld: Player.terrain is the overworld grid")
 
 	await _enter(main, "GateGenerated")
 	var area: Node = main.current_area
@@ -117,7 +118,7 @@ func _main_flow_legs() -> void:
 	portal.entered.emit(portal)
 	await _frames(3)
 	_check(main.current_area.name == "Overworld", "exit portal returns to the overworld entrance (#378)")
-	_check(p.terrain == null, "back in the overworld: Player.terrain reset to null")
+	_check(p.terrain == main.current_area.get_node("Terrain"), "back in the overworld: Player.terrain is the overworld grid again (#391)")
 
 	await _enter(main, "GateNormal")
 	area = main.current_area
