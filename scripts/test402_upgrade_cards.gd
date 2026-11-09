@@ -6,6 +6,7 @@ func ck(ok: bool, label: String) -> void:
 	if not ok: failures += 1
 func _initialize() -> void: call_deferred("run")
 func run() -> void:
+	root.size = Vector2i(1152, 648)
 	var row := HBoxContainer.new()
 	row.position = Vector2(80, 80)
 	row.add_theme_constant_override("separation", 12)
