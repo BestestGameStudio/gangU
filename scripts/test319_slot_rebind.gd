@@ -124,6 +124,17 @@ func _process(delta: float) -> bool:
 					_pass("slot-2 press casts Mana Shot after modal closes")
 				else:
 					_fail("slot-2 press cast log", cast_log)
+				# 8: Q (slot 3) casts a newly auto-bound spell (#262 funnel).
+				caster.unlock_spell(load("res://resources/spells/placeholder_bolt.tres"))
+				Input.action_press(&"spell_slot_3")
+				phase = 6; t = 0
+		6:
+			if t > 0.3:
+				Input.action_release(&"spell_slot_3")
+				if cast_log == ["Fire Ball", "Mana Shot", "Placeholder Bolt"]:
+					_pass("Q slot-3 press casts the auto-bound Bolt")
+				else:
+					_fail("slot-3 press cast log", cast_log)
 				print("[319] RESULT: ", "ALL PASS" if ok else "FAILURES")
 				quit(0 if ok else 1)
 	return not ok
