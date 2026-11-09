@@ -71,9 +71,12 @@ func _process(delta: float) -> bool:
 			_check(burst.burst_count == 3 and burst.launch_speed == 0.0, "burst result is burst-only")
 			_check(launch.burst_count == 3 and launch.launch_speed > 0.0 and launch.freeze_radius == 0.0,
 				"launch result carries burst, no bubble")
-			_check(bubble.burst_count == 3 and bubble.launch_speed > 0.0
+			# #323: Signature ("The World") is the 5s freeze ONLY - no launch,
+			# no fists. Burst (tier 1) and launch (tier 2) are unchanged above.
+			_check(bubble.launch_speed == 0.0 and bubble.projectile_count == 0
 				and bubble.freeze_radius > 0.0 and bubble.freeze_duration == 5.0,
-				"bubble result carries burst + launch + 5s freeze")
+				"Signature result is freeze-only (no launch, no fists)")
+			_check(up_bubble.display_name == "The World", "Signature upgrade is named The World (#323)")
 			# Runtime: grant base (auto-binds slot 2 after boot Fire 0/Mana 1).
 			caster.unlock_spell(base)
 			_check(caster.get_slots()[2] == base, "base grant auto-binds slot 2")

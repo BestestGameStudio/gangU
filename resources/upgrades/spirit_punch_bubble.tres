@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("1")
 id = &"spirit_punch_bubble"
-display_name = "Freeze bubble"
+display_name = "The World"
 source_spell = ExtResource("2")
 result_spell = ExtResource("3")
 xp_threshold = 20
