@@ -57,9 +57,26 @@ enum ObjectiveType { CLEAR_ALL_ENEMIES, DEFEAT_BOSS, ELIMINATION, DEFENSE }
 ## turns on the player only when they come close); the rest hunt the player.
 @export_range(0.0, 1.0) var core_attacker_share: float = 0.5
 ## #369/#368: 1-based wave indexes that are boss waves. The HUD wave bar
-## (#369) renders these with skull icons. Empty until boss waves (#368)
-## land; marking a wave here has no effect on composition or spawning.
+## (#369) renders these with skull icons. #368: a boss wave spawns its usual
+## wave_size(n) enemies PLUS wave_boss_count instances of wave_boss_scene;
+## the wave only counts as cleared once its bosses are dead too. No
+## wave_boss_scene = the wave is only marked (no boss spawns).
 @export var boss_waves: Array[int] = []
+## #368: boss enemy of a boss wave (an Enemy scene; joins the "boss" group
+## and is announced through boss_spawned). Main sets the Siege Brute.
+@export var wave_boss_scene: PackedScene
+## #368: bosses per boss wave (implementer default, balance is open).
+@export var wave_boss_count: int = 1
+## #368: true = the boss marches on the core (turning on the player only when
+## they come close, like core attackers); false = it hunts the player.
+@export var wave_boss_targets_core: bool = true
+## #368: seconds after its wave starts before the boss walks in. The wave's
+## regulars have cleared the spawn point by then, so the boss never spawns
+## inside one of them (a body spawned exactly on another is pushed out
+## arbitrarily - in DungeonE that threw it out of the arena). The boss is
+## reserved in the wave's alive count from the start, so the wave cannot
+## read cleared before its boss arrives.
+@export var wave_boss_delay: float = 1.5
 @export var wave_enemy_scene: PackedScene
 @export var wave_reward_table: RewardTable
 ## Area-local spawn positions; enemies of a wave are spread over them.
@@ -171,6 +188,8 @@ var _next_wave_t: float = 0.0
 ## alive count per wave (index = wave - 1)
 var _wave_alive: Array[int] = []
 var _spawner: EnemySpawner = null
+## #368: boss arrivals waiting out wave_boss_delay: [seconds_left, wave].
+var _pending_bosses: Array = []
 
 func is_failed() -> bool:
 	return _failed
@@ -224,6 +243,7 @@ func _setup_defense() -> void:
 func _physics_process(delta: float) -> void:
 	if objective_type != ObjectiveType.DEFENSE or _is_completed or _failed:
 		return
+	_tick_pending_bosses(delta)
 	if defense_core == null or wave_enemy_scene == null or _waves_spawned >= _target:
 		return
 	if _waves_spawned > 0 and _alive_total() == 0:
@@ -262,8 +282,62 @@ func spawn_next_wave() -> void:
 		# rises before it falls and a wave never reads cleared early.
 		if e.has_signal("children_spawned"):
 			e.children_spawned.connect(_on_wave_children_spawned.bind(wave))
+	if is_boss_wave(wave) and wave_boss_scene != null and wave_boss_count > 0:
+		_wave_alive[wave - 1] += wave_boss_count
+		_pending_bosses.append([wave_boss_delay, wave])
+		if wave_boss_delay <= 0.0:
+			_tick_pending_bosses(0.0)
 	wave_started.emit(wave, _target)
 	objective_progress_changed.emit(_current, _target)
+
+## #368: the bosses of boss wave n. They come in at spawn points the regular
+## enemies of the wave start from too (offset by the wave index, so a boss
+## does not always use the same entrance), count toward that wave's alive
+## total and drop from the definition's reward table (no direct table).
+## Their wave_boss_count slots were reserved in _wave_alive at wave start; a
+## boss the spawner refuses releases its slot like a death would.
+func _spawn_wave_bosses(wave: int) -> void:
+	var pts := wave_spawn_points.size()
+	for b in wave_boss_count:
+		var at: Vector2 = wave_spawn_points[(wave + b * 2 + 1) % pts]
+		var boss := _spawner.request_spawn({"position": at, "enemy": wave_boss_scene, "reward_table": null})
+		if boss == null:
+			_on_wave_enemy_died(wave)
+			continue
+		boss.nav = wave_nav
+		if wave_boss_targets_core:
+			boss.objective_target = defense_core
+		boss.add_to_group("boss")
+		boss.died.connect(_on_wave_enemy_died.bind(wave))
+		if boss.has_signal("children_spawned"):
+			boss.children_spawned.connect(_on_wave_children_spawned.bind(wave))
+		boss_spawned.emit(boss)
+
+## #368: counts down pending boss arrivals and spawns the due ones. Runs from
+## _physics_process (or spawn_next_wave), never from a physics callback (D14).
+func _tick_pending_bosses(delta: float) -> void:
+	if _pending_bosses.is_empty() or _failed or _is_completed:
+		return
+	var due: Array[int] = []
+	for p in _pending_bosses:
+		p[0] -= delta
+		if p[0] <= 0.0:
+			due.append(p[1])
+	_pending_bosses = _pending_bosses.filter(func(p: Array) -> bool: return p[0] > 0.0)
+	for wave in due:
+		_spawn_wave_bosses(wave)
+
+## #368: boss arrivals still waiting out wave_boss_delay.
+func pending_bosses() -> int:
+	return _pending_bosses.size() * maxi(wave_boss_count, 0)
+
+## #368: live bosses of the current defense (harness / HUD introspection).
+func wave_bosses() -> Array[Enemy]:
+	var out: Array[Enemy] = []
+	for n in get_tree().get_nodes_in_group(&"boss"):
+		if n is Enemy and (n as Enemy).hp > 0 and n.get_parent() == get_parent():
+			out.append(n)
+	return out
 
 func _alive_total() -> int:
 	var t := 0

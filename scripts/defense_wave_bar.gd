@@ -2,8 +2,8 @@ class_name DefenseWaveBar
 extends Control
 ## #369: top-center wave progress bar for DEFENSE missions (#337).
 ## One icon per wave - an enemy glyph for a regular wave, a skull for a boss
-## wave (the #368 hook, DungeonObjective.boss_waves, stays empty until boss
-## waves land). Clearing a wave fills the bar; a countdown centered under the
+## wave (DungeonObjective.boss_waves; #368 makes the final wave
+## a boss wave in Main). Clearing a wave fills the bar; a countdown centered under the
 ## bar shows when the next wave is about to spawn.
 ## Visible only while the mounted DungeonObjective is a DEFENSE objective.
 ## Driven by polling the objective every frame, so no signal wiring is needed

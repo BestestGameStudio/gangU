@@ -154,7 +154,8 @@ func _leg_flow() -> void:
 	_check(obj.waves_spawned() == 3, "(E) wave 3 arrives on the periodic timer while wave 2 lives")
 	while obj.waves_spawned() < obj.wave_count:
 		obj.spawn_next_wave()
-	await _physics(2)
+	# #368: the final wave's boss walks in wave_boss_delay after its wave.
+	await _physics(int(obj.wave_boss_delay * 60.0) + 4)
 	_check(not obj.is_cleared(), "(E) not complete while wave enemies live")
 	await _kill_all(area)
 	_check(obj.is_cleared() and not obj.is_failed(), "(E) all %d waves cleared -> objective complete" % obj.wave_count)
