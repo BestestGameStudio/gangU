@@ -1,12 +1,25 @@
 class_name SpellDirectoryPanel
 extends CanvasLayer
-## (#218) Read-only spell directory panel. Hidden by default; the hub
+## (#218) Spell directory panel. Hidden by default; the hub
 ## directory location opens it on walk-up and closes it on walk-away (the
 ## ShopPanel idiom). Lists EVERY spell in the caster's current-run unlock
 ## set (SpellCaster.get_unlocked(), #60) as icon + name rows, refreshed
-## live through the spell_unlocked signal. READ-ONLY by design: no buy,
-## no equip changes, no unlock grants - it only displays what the player
-## already unlocked this run.
+## live through the spell_unlocked signal. No buy and no unlock grants -
+## it only displays what the player already unlocked this run.
+##
+## (#375, Daniel 2026-11-09: "You can swap spells at the spell directory")
+## Bounded swap lane: clicking a row selects that unlocked spell and shows
+## the six slot targets (cast-key labels + occupants); clicking a slot
+## equips the selection there - an occupied target SWAPS (the previous
+## occupant stays unlocked, now unequipped), an empty target equips. The
+## move is composed from the caster's strict clear_slot/assign_slot
+## primitives, so one-spell-one-slot and refusal semantics are preserved;
+## nothing here grants, removes or replaces spells. Rearranging already
+## EQUIPPED spells stays in the Tab menu (#375): a slotted selection
+## clicking a slot is refused with a hint. There is deliberately no
+## unequip action (unsettled). Rows stay Button-free (gui_input) and the
+## slot bar lives OUTSIDE the Rows box, so #218's row-structure contract
+## is untouched. Upgrade-path listing stays display-only.
 ##
 ## (#318) Each row also shows the spell's current tier and its full upgrade
 ## tree from SpellProgress (direct paths with live cast progress, deeper
@@ -26,12 +39,17 @@ const MAX_PATH_DEPTH := 4
 const TIER_NAMES: Array[String] = ["Base", "Specialization", "Mastery", "Signature"]
 
 var _caster: SpellCaster
+## (#375) Currently selected row spell; null = browsing (slot bar hidden).
+var _selected: Spell = null
 ## (#318) Upgrade-path provider, discovered via the "spell_progress" group
 ## at render time (main.gd mounts it after this panel). Optional: a missing
 ## provider just shows "No further upgrades".
 var _progress: SpellProgress
 var _count_label: Label
 var _rows: VBoxContainer
+## (#375) Six slot-target buttons, visible only while a spell is selected.
+var _slot_bar: HBoxContainer
+var _status: Label
 
 func _ready() -> void:
 	add_to_group("spell_directory_panel")
@@ -48,10 +66,14 @@ func _bind_caster(for_caster: SpellCaster) -> void:
 	if is_instance_valid(_caster):
 		_caster.spell_unlocked.disconnect(_on_spell_unlocked)
 		_caster.spell_replaced.disconnect(_on_spell_replaced)
+		_caster.slot_assigned.disconnect(_on_slot_changed)
+		_caster.slot_cleared.disconnect(_on_slot_cleared)
 	_caster = for_caster
 	if is_instance_valid(_caster):
 		_caster.spell_unlocked.connect(_on_spell_unlocked)
 		_caster.spell_replaced.connect(_on_spell_replaced)
+		_caster.slot_assigned.connect(_on_slot_changed)
+		_caster.slot_cleared.connect(_on_slot_cleared)
 
 func open(for_caster: SpellCaster = null) -> void:
 	if for_caster != null:
@@ -62,6 +84,9 @@ func open(for_caster: SpellCaster = null) -> void:
 
 func close() -> void:
 	visible = false
+	_selected = null
+	if _status != null:
+		_status.text = ""
 	remove_from_group("modal_ui")
 
 func _build_skeleton() -> void:
@@ -109,6 +134,19 @@ func _build_skeleton() -> void:
 	_rows.add_theme_constant_override("separation", 6)
 	_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_rows)
+	_slot_bar = HBoxContainer.new()
+	_slot_bar.name = "SlotBar"
+	_slot_bar.alignment = BoxContainer.ALIGNMENT_CENTER
+	_slot_bar.add_theme_constant_override("separation", 6)
+	_slot_bar.visible = false
+	vbox.add_child(_slot_bar)
+	_status = Label.new()
+	_status.name = "StatusLabel"
+	_status.text = ""
+	_status.add_theme_font_size_override("font_size", 12)
+	_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_status)
 	var hint := Label.new()
 	hint.text = "Walk away to close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
@@ -143,11 +181,18 @@ func _render() -> void:
 		return
 	for spell in unlocked:
 		_rows.add_child(_make_row(spell))
+	_refresh_slot_bar()
 
 func _make_row(spell: Spell) -> Control:
 	var row := PanelContainer.new()
 	row.name = "Row"
-	row.add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_DIM, ROW_PAD))
+	row.add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_SELECTED if spell == _selected else UiStyle.B_DIM, ROW_PAD))
+	# (#375) Row click selects for swapping. gui_input, NOT a Button: the
+	# #218 harness pins a Button-free Rows box, and the slot bar carries the
+	# only real buttons. Children are click-through so the row gets the click.
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	row.gui_input.connect(_on_row_gui_input.bind(spell))
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 4)
 	row.add_child(vbox)
@@ -162,6 +207,17 @@ func _make_row(spell: Spell) -> Control:
 	name_label.text = spell.spell_name
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(name_label)
+	# (#375) Equipped marker: the cast-key label of the slot holding this
+	# spell, so the listing shows what is currently equipped where.
+	if _caster != null:
+		var slot_idx := _caster.get_slots().find(spell)
+		if slot_idx != -1:
+			var slot_label := Label.new()
+			slot_label.name = "SlotLabel"
+			slot_label.text = SpellCaster.slot_key_label(slot_idx)
+			slot_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
+			slot_label.add_theme_font_size_override("font_size", PATH_FONT_SIZE)
+			hbox.add_child(slot_label)
 	var tier_label := Label.new()
 	tier_label.name = "TierLabel"
 	var tier: int = _progress.get_tier(spell) if _progress != null else 0
@@ -182,7 +238,85 @@ func _make_row(spell: Spell) -> Control:
 		paths.add_child(none)
 	else:
 		_add_paths(paths, spell, 0, {spell: true}, true)
+	for child in row.find_children("*", "Control", true, false):
+		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return row
+
+## (#375) Left-click on a row toggles its selection for swapping.
+func _on_row_gui_input(event: InputEvent, spell: Spell) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		select_spell(spell)
+
+## (#375) Select an unlocked spell (or click it again to deselect). A spell
+## the caster no longer holds cannot be selected (stale after an upgrade).
+func select_spell(spell: Spell) -> void:
+	if _caster == null or not _caster.get_unlocked().has(spell):
+		_selected = null
+	else:
+		_selected = null if _selected == spell else spell
+	if _status != null:
+		_status.text = ""
+	_render()
+
+## (#375) Slot target clicked while a spell is selected. The move is the
+## panel's composition of strict caster primitives (EquipPanel idiom):
+## validate everything BEFORE any clear so a refused assign never erases an
+## occupied target. Occupied target = swap (occupant stays unlocked);
+## empty target = equip. An already-slotted selection is refused:
+## rearranging equipped spells is the Tab menu's job (#375).
+func _on_slot_chosen(index: int) -> void:
+	if _caster == null or _selected == null:
+		return
+	if not _caster.get_unlocked().has(_selected):
+		_selected = null
+		_render()
+		return
+	var slots := _caster.get_slots()
+	var current := slots.find(_selected)
+	if current == index:
+		# Tapping the slot the spell already holds: no-op, drop selection.
+		_selected = null
+		_status.text = ""
+		_render()
+		return
+	if current != -1:
+		_status.text = "%s is equipped to %s - rearrange slots in the Tab menu" % [_selected.spell_name, SpellCaster.slot_key_label(current)]
+		_render()
+		return
+	var occupant: Spell = slots[index] if index < slots.size() else null
+	if occupant != null:
+		_caster.clear_slot(index)
+	if not _caster.assign_slot(index, _selected):
+		if occupant != null:
+			_caster.assign_slot(index, occupant) # rollback: never lose the occupant
+		push_warning("SpellDirectoryPanel: assign_slot refused; refreshed from caster state.")
+		_status.text = "Swap refused"
+	else:
+		_status.text = "%s -> %s%s" % [_selected.spell_name, SpellCaster.slot_key_label(index), " (swapped out %s)" % occupant.spell_name if occupant != null else ""]
+		_selected = null
+	_render()
+
+## (#375) Rebuild the six slot targets from live caster state; visible only
+## while a selection is active so the default directory stays a plain list.
+func _refresh_slot_bar() -> void:
+	for c in _slot_bar.get_children():
+		_slot_bar.remove_child(c)
+		c.queue_free()
+	_slot_bar.visible = _selected != null
+	if _selected == null or _caster == null:
+		return
+	var slots := _caster.get_slots()
+	for i in SpellCaster.SLOT_COUNT:
+		var occupant: Spell = slots[i] if i < slots.size() else null
+		var b := Button.new()
+		b.name = "SlotTarget%d" % i
+		b.text = "%s\n%s" % [SpellCaster.slot_key_label(i), occupant.spell_name if occupant != null else "(empty)"]
+		b.add_theme_font_size_override("font_size", 11)
+		b.custom_minimum_size = Vector2(76, 40)
+		UiStyle.style_button(b, UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM)
+		var idx := i
+		b.pressed.connect(func(): _on_slot_chosen(idx))
+		_slot_bar.add_child(b)
 
 ## (#318) Recursively lists the upgrade tree reachable from `source`: one
 ## line per SpellUpgrade, indented by depth and tinted with the target tier's
@@ -233,7 +367,18 @@ func _on_spell_unlocked(_spell: Spell) -> void:
 	if visible:
 		_render()
 
-func _on_spell_replaced(_old_spell: Spell, _new_spell: Spell) -> void:
+func _on_spell_replaced(old_spell: Spell, _new_spell: Spell) -> void:
+	# An upgrade consumed the selected spell: never act on a removed resource.
+	if _selected == old_spell:
+		_selected = null
+	if visible:
+		_render()
+
+func _on_slot_changed(_index: int, _spell: Spell) -> void:
+	if visible:
+		_render()
+
+func _on_slot_cleared(_index: int) -> void:
 	if visible:
 		_render()
 
