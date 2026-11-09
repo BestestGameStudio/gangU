@@ -91,7 +91,7 @@ func _initialize() -> void:
 	await _check_bubble()
 	await _check_surging()
 	await _check_big_ball()
-	_check_tree()
+	await _check_tree()
 
 	print("test331 done: %d checks, %d failures" % [_checks, _failures])
 	print("RESULT: %s" % ("ALL PASS" if _failures == 0 else "FAIL"))
@@ -380,6 +380,7 @@ func _check_tree() -> void:
 				break
 			cur = next[0].result_spell
 	progress.free()
+	await _check_one_route()
 	# Production wiring: main.gd registers every Water Ball upgrade.
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
 	for id in ["water_guided", "water_seeking", "water_tidal", "water_splash", "water_barrage", "water_heavy_rain", "water_bubble", "water_surging_bubble", "water_big_ball"]:
@@ -390,3 +391,41 @@ func _check_tree() -> void:
 		if entry.spell != null and entry.spell.spell_name == "Water Ball":
 			found = true
 	_check(found, "demo loot table can drop Water Ball")
+
+## Mitra on #339: each row is ONE route. Picking Steer closes Splash and
+## Bubble for good, even when a second Water Ball is looted afterwards.
+func _check_one_route() -> void:
+	var holder := Node2D.new()
+	_area.add_child(holder)
+	var caster := SpellCaster.new()
+	caster.name = "RouteCaster"
+	holder.add_child(caster)
+	var progress := SpellProgress.new()
+	progress.caster_path = NodePath("../RouteCaster")
+	for id in ["water_guided", "water_seeking", "water_tidal", "water_splash", "water_barrage", "water_heavy_rain", "water_bubble", "water_surging_bubble", "water_big_ball"]:
+		progress.upgrades.append(load("res://resources/upgrades/%s.tres" % id))
+	holder.add_child(progress)
+	await physics_frame
+	var base := _spell("water_ball")
+	caster.add_spell(base)
+	for i in 10:
+		caster.spell_cast.emit(base)
+	_check(progress.get_upgrade_paths(base).size() == 3, "route: all three rows offered before choosing")
+	_check(progress.apply_upgrade(base, &"water_guided"), "route: Steer (Guided) applies")
+	var guided := _spell("water_ball_guided")
+	_check(progress.get_upgrade_paths(guided).size() == 1 and progress.get_upgrade_paths(guided)[0].id == &"water_seeking", "route: Guided only continues down Steer")
+	# A second base Water Ball looted later must not reopen the other rows.
+	caster.add_spell(base)
+	_check(progress.route_taken(base), "route: base is marked as route taken")
+	_check(progress.get_upgrade_paths(base).is_empty(), "route: Splash/Bubble not offered on a re-looted Water Ball")
+	_check(not progress.can_upgrade(base), "route: re-looted Water Ball cannot upgrade")
+	_check(not progress.apply_upgrade(base, &"water_splash"), "route: Splash refused after Steer")
+	_check(not progress.apply_upgrade(base, &"water_bubble"), "route: Bubble refused after Steer")
+	_check(not caster.get_unlocked().has(_spell("water_splash")) and not caster.get_unlocked().has(_spell("water_bubble")), "route: no second branch held")
+	# Deeper in the route the lock still holds (Seeking descends from base too).
+	for i in 15:
+		caster.spell_cast.emit(guided)
+	_check(progress.apply_upgrade(guided, &"water_seeking"), "route: Steer continues to Seeking")
+	_check(progress.get_upgrade_paths(base).is_empty(), "route: still locked at tier 2")
+	holder.queue_free()
+	await physics_frame
