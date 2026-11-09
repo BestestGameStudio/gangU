@@ -96,8 +96,9 @@ func _process(delta: float) -> bool:
 				p = scene.get_node("Player")
 				_check("hub boot", scene.current_area.name == "Hub")
 				_check_flat_leg()
+				scene.enter_overworld() # #346: dungeon entrances live in the overworld
 				var red: Gate = scene.current_area.get_node_or_null("GateRed")
-				_check("hub: red gate present", red != null)
+				_check("overworld: red gate present", red != null)
 				red._on_body_entered(p)
 				phase = 1; t = 0
 		1:

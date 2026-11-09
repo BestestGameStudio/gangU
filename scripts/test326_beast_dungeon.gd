@@ -50,8 +50,10 @@ func _leg_area() -> void:
 	a.free()
 
 # (B) -----------------------------------------------------------------------
+# #346 rebase: the dungeon entrances live in the overworld now, so the
+# structural gate checks read scenes/overworld.tscn instead of the hub.
 func _leg_hub() -> void:
-	var hub: Node = load("res://scenes/hub.tscn").instantiate()
+	var hub: Node = load("res://scenes/overworld.tscn").instantiate()
 	root.add_child(hub)
 	await process_frame
 	var g := hub.get_node_or_null("GateBeast") as Gate
@@ -67,10 +69,10 @@ func _leg_hub() -> void:
 		for c in hub.get_children():
 			if c == g or not (c is Node2D) or c.name == "PlayerSpawn":
 				continue
-			if (c is Gate or c.name in ["ShopVendor", "SpellDirectory", "BestiaryStation"]) and (c as Node2D).position.distance_to(g.position) < 120.0:
+			if (c is Gate) and (c as Node2D).position.distance_to(g.position) < 120.0:
 				ok = false
 				print("[326]   too close to ", c.name)
-		_check(ok, "(B) >= 120px from every other gate, the shop, the directory and the bestiary station")
+		_check(ok, "(B) >= 120px from every other overworld gate")
 	hub.queue_free()
 	await process_frame
 
@@ -81,11 +83,13 @@ func _leg_production() -> void:
 	current_scene = scene
 	await process_frame
 	var p: Player = scene.get_node("Player")
+	scene.enter_overworld() # #346: entrances live in the overworld now
 	var gate := scene.current_area.get_node_or_null("GateBeast") as Gate
-	_check(gate != null, "(C) production hub mounts GateBeast")
+	_check(gate != null, "(C) production overworld mounts GateBeast")
 	if gate == null:
 		scene.queue_free()
 		return
+	await _physics(4)
 	gate._on_body_entered(p)
 	await _physics(6)
 	var area: Node = scene.current_area
@@ -133,8 +137,10 @@ func _leg_dungeon_c_unchanged() -> void:
 	current_scene = scene
 	await process_frame
 	var p: Player = scene.get_node("Player")
+	scene.enter_overworld() # #346: entrances live in the overworld now
+	await _physics(4)
 	var gate := scene.current_area.get_node_or_null("GateBoss") as Gate
-	var had_gate := gate != null # the hub (and gate) is freed by the swap
+	var had_gate := gate != null # the overworld (and gate) is freed by the swap
 	if had_gate:
 		gate._on_body_entered(p)
 		await _physics(6)

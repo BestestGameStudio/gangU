@@ -36,6 +36,8 @@ func _grab_refs() -> void:
 	satchel = scene.get_node("ReviveSatchel")
 
 func _enter_gate(gate_name: String) -> void:
+	if scene.current_area.get_node_or_null(gate_name) == null:
+		scene.enter_overworld() # #346: dungeon entrances live in the overworld
 	var g: Gate = scene.current_area.get_node(gate_name)
 	g._on_body_entered(p)
 

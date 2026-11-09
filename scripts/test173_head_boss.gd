@@ -12,8 +12,8 @@ extends SceneTree
 ##       mount; walk art faces LEFT (moving right mirrors it); a hit while
 ##       chasing plays hurt; death frees the Enemy and leaves a corpse that
 ##       plays "death".
-##   (C) hub: a third gate (GateBoss, BOSS type, violet, "BOSS") next to
-##       GateNormal / GateRed, targeting scenes/dungeon_c.tscn.
+##   (C) overworld (#346; was the hub): a gate (GateBoss, BOSS type, violet,
+##       "BOSS") beside GateNormal / GateRed, targeting scenes/dungeon_c.tscn.
 ##   (D) PRODUCTION flow (main.tscn): GateBoss -> DungeonC spawns the Head
 ##       boss immediately (no mobs) wired to the Player; the exit portal is
 ##       LOCKED while it lives (entry ignored), unlocks when it dies, and
@@ -121,15 +121,17 @@ func _leg_scene() -> void:
 	await process_frame
 
 # (C) -----------------------------------------------------------------------
+## #346: the dungeon entrances moved from the hub to the overworld; the
+## leg's variable keeps its old name, the scene is the overworld.
 func _leg_hub() -> void:
-	var hub: Node = load("res://scenes/hub.tscn").instantiate()
+	var hub: Node = load("res://scenes/overworld.tscn").instantiate()
 	root.add_child(hub)
 	await process_frame
 	var gates: Array = []
 	for c in hub.get_children():
-		if c is Gate:
+		if c is Gate and (c as Gate).gate_type != Gate.GateType.TRAVEL:
 			gates.append(c)
-	_check(gates.size() == 5, "(C) hub has five gates (got %d; #326 added GateBeast)" % gates.size())
+	_check(gates.size() == 5, "(C) overworld has five dungeon entrances (got %d; #326's Beast entrance integrated in the rebase)" % gates.size())
 	_check(hub.get_node_or_null("GateGenerated") is Gate, "(C) GateGenerated present (#185)")
 	var g := hub.get_node_or_null("GateBoss") as Gate
 	_check(g != null and g.gate_type == Gate.GateType.BOSS, "(C) GateBoss is a BOSS gate")
@@ -150,8 +152,9 @@ func _leg_production() -> void:
 	current_scene = scene
 	await process_frame
 	var p: Player = scene.get_node("Player")
+	scene.enter_overworld() # #346
 	var gate := scene.current_area.get_node_or_null("GateBoss") as Gate
-	_check(gate != null, "(D) production hub mounts GateBoss")
+	_check(gate != null, "(D) production overworld mounts GateBoss")
 	if gate == null:
 		return
 	gate._on_body_entered(p)

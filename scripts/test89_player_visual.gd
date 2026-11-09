@@ -150,6 +150,7 @@ func _process(delta: float) -> bool:
 					absf(wrapf(p.rotation - expected, -PI, PI)) < 0.05)
 				_check("upright: sprite still upright after re-aim",
 					absf(sprite.global_rotation) < 0.001)
+				scene.enter_overworld() # #346: dungeon entrances live in the overworld
 				var g: Gate = scene.current_area.get_node("GateNormal")
 				g._on_body_entered(p)
 				phase = 8; t = 0
