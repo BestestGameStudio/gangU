@@ -284,7 +284,7 @@ func _refresh() -> void:
 	var slots: Array = _caster.get_slots()
 	for i in _slot_buttons.size():
 		var occupant: Spell = slots[i] if i < slots.size() else null
-		_slot_buttons[i].text = "%d: %s" % [i + 1, occupant.spell_name if occupant != null else "(empty)"]
+		_slot_buttons[i].text = "%s: %s" % [SpellCaster.slot_key_label(i), occupant.spell_name if occupant != null else "(empty)"] # #319: show cast key, not digit
 		var move_source := occupant != null and occupant == _selected
 		var sborder := UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM
 		if move_source:

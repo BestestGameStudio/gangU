@@ -47,9 +47,9 @@ func _initialize() -> void:
 	_check(caster.get_unlocked().count(fire) == 1 and caster.get_unlocked().count(mana) == 1, "starters seeded once, not double-added")
 	equip.show_panel()
 	await process_frame
-	_check(equip._slot_buttons[0].text == "1: Fire Ball", "Tab panel shows the seeded slot (got '%s')" % equip._slot_buttons[0].text)
-	_check(equip._slot_buttons[1].text == "2: Mana Shot", "Tab panel shows seeded slot 2 (got '%s')" % equip._slot_buttons[1].text)
-	_check(equip._slot_buttons[2].text == "3: (empty)", "Tab panel slot 3 empty")
+	_check(equip._slot_buttons[0].text == "LMB: Fire Ball", "Tab panel shows the seeded slot (got '%s')" % equip._slot_buttons[0].text)
+	_check(equip._slot_buttons[1].text == "RMB: Mana Shot", "Tab panel shows seeded slot 2 (got '%s')" % equip._slot_buttons[1].text)
+	_check(equip._slot_buttons[2].text == "Q: (empty)", "Tab panel slot 3 empty")
 	equip.hide_panel()
 
 	# Grid: six squares in 3x2, empties are placeholders.

@@ -170,8 +170,8 @@ func _initialize() -> void:
 		if c is Button:
 			slot_buttons.append(c)
 	_check(slot_buttons.size() == 6, "(5) six slot buttons")
-	_check(slot_buttons[0].text == "1: AlphaBolt", "(5) slot 1 text preserved (got '%s')" % slot_buttons[0].text)
-	_check(slot_buttons[1].text == "2: (empty)", "(5) slot 2 empty text (got '%s')" % slot_buttons[1].text)
+	_check(slot_buttons[0].text == "LMB: AlphaBolt", "(5) slot 1 text preserved (got '%s')" % slot_buttons[0].text)
+	_check(slot_buttons[1].text == "RMB: (empty)", "(5) slot 2 empty text (got '%s')" % slot_buttons[1].text)
 	_check(_border_of(slot_buttons[0]) == C_ASSIGNED, "(5) occupied slot border")
 	_check(_border_of(slot_buttons[1]) == C_DIM, "(5) empty slot border")
 
@@ -200,8 +200,8 @@ func _initialize() -> void:
 	await process_frame
 	_check(caster.assigned.size() == 1 and caster.assigned[0][0] == 2 and caster.assigned[0][1] == a, "(8) assign_slot(2, AlphaBolt) recorded")
 	_check(caster.cleared.has(0), "(8) old slot cleared (move semantics)")
-	_check(slot_buttons[2].text == "3: AlphaBolt", "(8) slot 3 shows spell (got '%s')" % slot_buttons[2].text)
-	_check(slot_buttons[0].text == "1: (empty)", "(8) slot 1 emptied (got '%s')" % slot_buttons[0].text)
+	_check(slot_buttons[2].text == "Q: AlphaBolt", "(8) slot 3 shows spell (got '%s')" % slot_buttons[2].text)
+	_check(slot_buttons[0].text == "LMB: (empty)", "(8) slot 1 emptied (got '%s')" % slot_buttons[0].text)
 	_check(status.text == "Selected: none", "(8) selection cleared after assign")
 	_check(_border_of(slot_buttons[2]) == C_ASSIGNED, "(8) newly occupied slot border")
 	_check(_row_chip(unlocked_box, "AlphaBolt") != null and _row_chip(unlocked_box, "AlphaBolt").color == C_CHIP_ON, "(8) chip follows new slot")

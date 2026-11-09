@@ -168,9 +168,9 @@ func _run_legs() -> void:
 	_check(InputMap.has_action(&"use_consumable"), "use_consumable action registered")
 	var bound_e := false
 	for ev in InputMap.action_get_events(&"use_consumable"):
-		if ev is InputEventKey and ev.physical_keycode == KEY_E:
+		if ev is InputEventKey and ev.physical_keycode == KEY_C:
 			bound_e = true
-	_check(bound_e, "use_consumable bound to physical KEY_E")
+	_check(bound_e, "use_consumable bound to physical KEY_C (#319: E is now spell slot 4)")
 
 	_done()
 

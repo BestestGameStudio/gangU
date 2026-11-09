@@ -20,12 +20,13 @@ extends Node
 signal carried_changed(consumable: Consumable, new_count: int)
 
 ## Dedicated-use key (manual use is a DEDICATED KEY, per the human input
-## decision; the exact key was delegated, changeable later). E is free in
-## the current controls: WASD move, Space/mouse-LMB cast, Tab equip panel,
-## digits 1-6 spell slots, switch_spell unbound. Runtime registration,
-## idempotent across reloads (InputMap is global); project.godot untouched.
+## decision; the exact key was delegated, changeable later). #319 (Daniel,
+## 2026-11-08): C, because E became spell slot 4 when the slot keys moved
+## to LMB/RMB/Q/E/R/F. C is free: WASD move, Space cast, Tab equip panel,
+## switch_spell unbound. Runtime registration, idempotent across reloads
+## (InputMap is global); project.godot untouched.
 const USE_ACTION := &"use_consumable"
-const USE_KEY := KEY_E
+const USE_KEY := KEY_C
 
 ## Explicit wiring convention (matches ReviveSatchel/SpellProgress): set
 ## before tree entry; no group fallback.
