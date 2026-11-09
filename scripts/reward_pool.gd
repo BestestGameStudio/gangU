@@ -33,6 +33,10 @@ func remove_on_grant(entry: RewardEntry) -> void:
 	if entry.kind == RewardEntry.Kind.CURRENCY:
 		print("[rewards] currency grant: +", entry.currency_amount, "c (pool keeps entry eligible)")
 		return
+	# #315: the boss upgrade token repeats per boss kill (provisional).
+	if entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
+		print("[rewards] upgrade token grant (pool keeps entry eligible)")
+		return
 	if _granted.has(entry):
 		return
 	_granted.append(entry)
