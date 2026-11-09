@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=13 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/dungeon_d.tscn" id="346_dnd"]
 [ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://scenes/enemy.tscn" id="346_enemy"]
 [ext_resource type="Resource" uid="uid://bgangurdemotable" path="res://resources/rewards/demo_table.tres" id="346_table"]
+[ext_resource type="Resource" path="res://resources/gate_offering.tres" id="350_offer"]
 [ext_resource type="Resource" path="res://resources/enemies/overworld_guard.tres" id="346_guard_def"]
 
 [node name="Overworld" type="Node2D"]
@@ -45,11 +46,13 @@ label_text = "HUB"
 [node name="GateNormal" parent="." instance=ExtResource("346_gate")]
 position = Vector2(300, 380)
 target_dungeon = ExtResource("346_dna")
+offering = ExtResource("350_offer")
 
 [node name="GateRed" parent="." instance=ExtResource("346_gate")]
 position = Vector2(852, 380)
 gate_type = 1
 target_dungeon = ExtResource("346_dnb")
+offering = ExtResource("350_offer")
 
 [node name="GateGenerated" parent="." instance=ExtResource("346_gate")]
 position = Vector2(150, -520)

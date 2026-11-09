@@ -39,6 +39,10 @@ func _enter_gate(gate_name: String) -> void:
 	if scene.current_area.get_node_or_null(gate_name) == null:
 		scene.enter_overworld() # #346: dungeon entrances live in the overworld
 	var g: Gate = scene.current_area.get_node(gate_name)
+	# #350 pin (test350 covers the roll): this driver's unclaimed-revive
+	# retreats need DungeonA's unlocked portal, so the entered gate is
+	# pinned NORMAL after its own _ready roll, before entry.
+	g.gate_type = Gate.GateType.NORMAL
 	g._on_body_entered(p)
 
 func _retreat() -> void:

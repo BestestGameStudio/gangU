@@ -3,6 +3,7 @@ extends Area2D
 ## #7: gate object. Normal and red gates are distinct in code (gate_type) and
 ## visuals (tint + label). Entering a gate transports the player to its dungeon.
 ## Red-gate lock-in rules themselves are #9 scope; this is transport + typing only.
+## #350: NORMAL vs RED may be decided by chance via an optional GateOffering.
 
 ## #346: TRAVEL is the hub <-> overworld passage (not a dungeon entrance).
 enum GateType { NORMAL, RED, BOSS, TRAVEL }
@@ -15,6 +16,12 @@ enum GateType { NORMAL, RED, BOSS, TRAVEL }
 @export_file("*.tscn") var target_path: String = ""
 ## Replaces the type name on the gate's label when set.
 @export var label_text: String = ""
+## #350: when set, this gate is a chance-based NORMAL/RED dungeon offering:
+## gate_type is rolled from it on _ready (before tint/label). BOSS gates
+## never roll. An offering whose chance is unset keeps the authored type.
+@export var offering: GateOffering
+## Optional seeded RNG for the roll (tests); null uses the global RNG.
+var offering_rng: RandomNumberGenerator = null
 
 signal entered(gate: Gate)
 
@@ -35,6 +42,12 @@ var _anim_t := 0.0
 func _ready() -> void:
 	add_to_group("gates")
 	body_entered.connect(_on_body_entered)
+	if offering != null and gate_type != GateType.BOSS:
+		var host := _offering_host()
+		if host != null:
+			gate_type = host.offering_type_for(name, gate_type, offering, offering_rng)
+		else:
+			gate_type = offering.roll(gate_type, offering_rng)
 	var label: Label = $TypeLabel
 	var tint := RED_TINT if gate_type == GateType.RED else NORMAL_TINT
 	label.text = "RED" if gate_type == GateType.RED else "NORMAL"
@@ -50,6 +63,16 @@ func _ready() -> void:
 	# placement measures neighbor gates by it.
 	($ColorRect as ColorRect).color = tint
 	_build_portal(tint)
+
+## #350: the run's Main caches one roll per gate so an offering stays fixed
+## until death; a bare gate outside a Main (unit tests) rolls directly.
+func _offering_host() -> Node:
+	var n := get_parent()
+	while n != null:
+		if n.has_method("offering_type_for"):
+			return n
+		n = n.get_parent()
+	return null
 
 static func ellipse_points(rx: float, ry: float, count: int) -> PackedVector2Array:
 	var pts := PackedVector2Array()

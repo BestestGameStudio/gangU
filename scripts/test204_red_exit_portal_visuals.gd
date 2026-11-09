@@ -99,6 +99,7 @@ func _process(delta: float) -> bool:
 				scene.enter_overworld() # #346: dungeon entrances live in the overworld
 				var red: Gate = scene.current_area.get_node_or_null("GateRed")
 				_check("overworld: red gate present", red != null)
+				red.gate_type = Gate.GateType.RED # #350 pin: offerings roll 50/50 per run (test350 covers the roll)
 				red._on_body_entered(p)
 				phase = 1; t = 0
 		1:

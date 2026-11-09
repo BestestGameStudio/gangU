@@ -182,6 +182,12 @@ var current_area: Node = null
 ## FREE stock refresh + paid-price reset from _on_objective_completed.
 var _shop: Shop = null
 
+## (#350) Type of the gate the current dungeon was entered through, or -1 when
+## the area was not entered through a gate (hub, direct _swap fixtures). Since
+## a hub offering's NORMAL/RED type is rolled by chance, the RED lock-in follows
+## the gate actually entered, not the target area's name.
+var _entry_gate_type: int = -1
+
 ## #346 core loop (Colin, 2026-11-08): the hub sits OUTSIDE the overworld and
 ## keeps its services; one TRAVEL gate in the hub leads to the overworld,
 ## whose entrances lead into the dungeons. Leaving a dungeon by its exit
@@ -194,6 +200,7 @@ const OVERWORLD_SCENE := "res://scenes/overworld.tscn"
 var cleared_dungeons: Dictionary = {}
 
 func _load_hub() -> void:
+	_entry_gate_type = -1
 	_swap(preload("res://scenes/hub.tscn").instantiate())
 
 ## #346: go straight to the overworld (same swap a hub TRAVEL gate makes).
@@ -202,11 +209,29 @@ func enter_overworld() -> void:
 
 func _on_gate_entered(gate: Gate) -> void:
 	print("gate entered: ", Gate.GateType.keys()[gate.gate_type], " -> ", gate.target_dungeon.resource_path if gate.target_dungeon else gate.target_path)
+	_entry_gate_type = gate.gate_type
 	var target := gate.target_scene()
 	if target == null:
 		push_warning("Gate %s has no target scene" % gate.name)
 		return
 	_swap.call_deferred(target.instantiate())
+
+## (#350) RED semantics for the mounted area: the entered gate's type when there
+## is one; otherwise the authored default (DungeonB is the RED dungeon).
+## #350: each gate's 50/50 offering type is rolled ONCE per run and stays
+## fixed until death (Colin, 2026-11-08). Per-run reset comes free from the
+## full scene reload on death restart, same as the other per-run records.
+var _offering_rolls: Dictionary = {}
+
+func offering_type_for(gate_name: StringName, authored: Gate.GateType, offering: GateOffering, rng: RandomNumberGenerator = null) -> Gate.GateType:
+	if not _offering_rolls.has(gate_name):
+		_offering_rolls[gate_name] = offering.roll(authored, rng)
+	return _offering_rolls[gate_name]
+
+func _area_is_red(area: Node) -> bool:
+	if _entry_gate_type >= 0:
+		return _entry_gate_type == Gate.GateType.RED
+	return area.name == &"DungeonB"
 
 func _swap(area: Node) -> void:
 	if current_area:
@@ -368,11 +393,14 @@ func _mount_exit_portal(area: Node) -> void:
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var completable := obj != null and (obj.objective_type != DungeonObjective.ObjectiveType.ELIMINATION or obj.boss_scene != null)
 	# #173: boss-gate DungeonC is clear-or-die too (locked until the Head dies).
-	# #326: so is the Beast's den DungeonD (locked until the Beast dies).
-	if area.name in [&"DungeonB", &"DungeonC", &"DungeonD"] and completable:
+	# #326: the Beast's den DungeonD is clear-or-die too (locked until the
+	# Beast dies). #350: RED is whatever the entered gate rolled, so a
+	# RED-rolled DungeonA locks and a NORMAL-rolled DungeonB allows retreat.
+	var red := _area_is_red(area)
+	if (red or area.name == &"DungeonC" or area.name == &"DungeonD") and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
-	portal.red_portal_look = area.name == &"DungeonB"  # #204: portal look only on the RED dungeon's exit portal (both its locked and unlocked states)
+	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 

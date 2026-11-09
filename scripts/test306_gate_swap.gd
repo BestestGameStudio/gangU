@@ -61,6 +61,10 @@ func _run() -> void:
 	_check("travel lands exactly on the overworld PlayerSpawn", _player.global_position == ow_spawn.global_position)
 	var hub: Node = _main.current_area
 	var gate := hub.get_node_or_null("GateNormal") as Gate
+	# #350 pin (test350 covers the roll): this driver verifies NORMAL-gate
+	# transport, so the gate is pinned NORMAL after its own _ready roll.
+	if gate != null:
+		gate.gate_type = Gate.GateType.NORMAL
 	_check("Overworld has production NORMAL gate with a target", gate != null and gate.gate_type == Gate.GateType.NORMAL and gate.target_dungeon != null)
 	if gate == null or gate.target_dungeon == null:
 		await _finish()
