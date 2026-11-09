@@ -4,7 +4,9 @@ extends Resource
 ## Concurrent pool-API pin (lead, 2026-11-07): {kind, spell, item_scene,
 ## weight}. Item route stays UNWIRED until the #54 content decision lands.
 
-enum Kind { SPELL, ITEM, CURRENCY }
+## UPGRADE_TOKEN (#315): boss-only token, routed to SpellProgress on pickup.
+## Stays pool-eligible after grant (like CURRENCY) so every boss kill can drop one.
+enum Kind { SPELL, ITEM, CURRENCY, UPGRADE_TOKEN }
 
 @export var kind: Kind = Kind.SPELL
 ## The spell this entry grants on pickup (kind SPELL).

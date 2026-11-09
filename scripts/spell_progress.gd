@@ -84,3 +84,63 @@ func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
 			return ok
 	push_warning("SpellProgress: unknown upgrade id '%s' for %s." % [upgrade_id, spell])
 	return false
+
+## --- #315 boss upgrade token ------------------------------------------------
+## Daniel 2026-11-08: "a special upgrade token item dropped only by the boss, it
+## can upgrade a spell by one tier". Run-scoped count (reset free with the
+## RunManager reload). PROVISIONAL mechanics, all open human choices:
+##   - one token = one tier step on ONE upgrade path the spell already offers
+##     (no skipping: tier N -> N+1 only, same paths as the cast route);
+##   - the token IGNORES the path's cast-count threshold, and is only spent
+##     when that threshold is NOT yet met (a qualified spell uses the free
+##     cast route, so a token is never wasted);
+##   - cast counts are left untouched (the result spell starts its own count
+##     at 0, exactly like the cast route).
+
+signal tokens_changed(count: int)
+
+var _upgrade_tokens: int = 0
+
+func upgrade_tokens() -> int:
+	return _upgrade_tokens
+
+## Called by the boss drop on pickup (RewardEntry.Kind.UPGRADE_TOKEN).
+func add_upgrade_token(n: int = 1) -> void:
+	if n <= 0:
+		return
+	_upgrade_tokens += n
+	tokens_changed.emit(_upgrade_tokens)
+	upgrades_changed.emit(null)
+
+## True when this path is offered only because a token is held: the caster
+## has the spell, the path has content, and the cast threshold is not met.
+func path_needs_token(spell: Spell, u: SpellUpgrade) -> bool:
+	return u != null and int(_cast_counts.get(spell, 0)) < u.xp_threshold
+
+## A token could advance this spell one tier right now.
+func can_token_upgrade(spell: Spell) -> bool:
+	if _upgrade_tokens <= 0 or _caster == null or not _caster.has_method("get_unlocked"):
+		return false
+	if spell not in _caster.get_unlocked():
+		return false
+	for u in get_upgrade_paths(spell):
+		if u.result_spell != null and path_needs_token(spell, u):
+			return true
+	return false
+
+## Spend one token on one path through the SAME apply_upgrade -> replace_spell
+## route; the token is consumed only when the upgrade actually applies.
+func apply_upgrade_with_token(spell: Spell, upgrade_id: StringName) -> bool:
+	if _upgrade_tokens <= 0:
+		push_warning("SpellProgress: no upgrade token held; refusing.")
+		return false
+	if _caster == null or not _caster.has_method("get_unlocked") or spell not in _caster.get_unlocked():
+		push_warning("SpellProgress: token target spell not held; refusing.")
+		return false
+	if not apply_upgrade(spell, upgrade_id):
+		return false
+	# apply_upgrade already emitted upgrades_changed once (single-emit contract).
+	_upgrade_tokens -= 1
+	tokens_changed.emit(_upgrade_tokens)
+	print("[315] upgrade token spent on ", spell.spell_name, " -> ", upgrade_id, " (", _upgrade_tokens, " left)")
+	return true

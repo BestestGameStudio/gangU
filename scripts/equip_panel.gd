@@ -97,7 +97,14 @@ func _rank_tier(spell: Spell) -> int:
 	return 0
 
 func _can_upgrade(spell: Spell) -> bool:
-	return spell != null and _upgrader != null and _upgrader.has_method(&"can_upgrade") and _upgrader.can_upgrade(spell)
+	return spell != null and _upgrader != null and _upgrader.has_method(&"can_upgrade") and (_upgrader.can_upgrade(spell) or _can_token_upgrade(spell))
+
+## #315: optional token channel (duck-typed; providers without it are unchanged).
+func _can_token_upgrade(spell: Spell) -> bool:
+	return spell != null and _upgrader != null and _upgrader.has_method(&"can_token_upgrade") and _upgrader.can_token_upgrade(spell)
+
+func _path_needs_token(spell: Spell, path) -> bool:
+	return _upgrader != null and _upgrader.has_method(&"path_needs_token") and _upgrader.path_needs_token(spell, path)
 
 func _ready() -> void:
 	visible = false
@@ -299,15 +306,27 @@ func _refresh() -> void:
 	if _can_upgrade(_selected):
 		var uheader := Label.new()
 		uheader.text = "Upgrades"
+		var tokens: int = _upgrader.upgrade_tokens() if _upgrader.has_method(&"upgrade_tokens") else 0
+		if tokens > 0:
+			uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
 		uheader.add_theme_font_size_override("font_size", 22)
 		_upgrade_box.add_child(uheader)
+		var token_ready := _can_token_upgrade(_selected)
 		for path in _upgrader.get_upgrade_paths(_selected):
+			var needs_token := _path_needs_token(_selected, path)
+			# A path offered by neither route (threshold unmet, no token) is
+			# not shown; with no token API this is the unchanged listing.
+			if needs_token and not token_ready:
+				continue
 			var b := Button.new()
 			b.add_theme_font_size_override("font_size", 22)
 			UiStyle.style_button(b, UiStyle.B_ACCENT)
-			b.text = path.display_name + _tier_suffix(path)
+			b.text = path.display_name + _tier_suffix(path) + (" - use token" if needs_token else "")
 			var pid = path.id
-			b.pressed.connect(func(): _on_upgrade_pressed(pid))
+			if needs_token:
+				b.pressed.connect(func(): _on_token_upgrade_pressed(pid))
+			else:
+				b.pressed.connect(func(): _on_upgrade_pressed(pid))
 			_upgrade_box.add_child(b)
 	_status.text = "Selected: %s" % (_selected.spell_name if _selected != null else "none")
 
@@ -320,6 +339,17 @@ func _on_upgrade_pressed(path_id) -> void:
 	elif _caster != null and not _caster.get_unlocked().has(sel):
 		# Successful replace consumed the selected spell; drop the stale
 		# selection so no later slot click can act on a removed resource.
+		_selected = null
+	_refresh()
+
+## #315: same flow as _on_upgrade_pressed, spending one boss upgrade token.
+func _on_token_upgrade_pressed(path_id) -> void:
+	if _upgrader == null or _selected == null or not _upgrader.has_method(&"apply_upgrade_with_token"):
+		return
+	var sel := _selected
+	if not _upgrader.apply_upgrade_with_token(sel, path_id):
+		push_warning("EquipPanel: token upgrade refused; refreshing.")
+	elif _caster != null and not _caster.get_unlocked().has(sel):
 		_selected = null
 	_refresh()
 
