@@ -45,6 +45,12 @@ class_name Spell
 ## numbers only - balance is an open human choice.
 @export var projectile_count: int = 1
 @export var spread_degrees: float = 0.0
+## (#305) Burst: how many times one cast repeats its fan-out, and the pause
+## between repetitions in seconds. 1 = a single fan-out, so every existing
+## spell is unchanged. One cooldown per cast regardless of burst length.
+## Provisional placeholder numbers only - balance is an open human choice.
+@export var burst_count: int = 1
+@export var burst_interval: float = 0.1
 ## (#209) Summon hook: when set, casting this spell asks the SummonManager to
 ## spawn this definition (the shared cap applies). Null on every existing
 ## spell, so casting behavior is unchanged. The first concrete summon spell
