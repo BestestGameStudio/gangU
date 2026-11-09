@@ -24,11 +24,6 @@
 [node name="Ground" type="Node2D" parent="."]
 script = ExtResource("346_ground")
 
-# #391: walkability grid for the field. Ground marks every decor tree's
-# blocking cells on it; player/enemy/summon wiring is main.gd's standard
-# "Terrain" lookup. Hidden: the field is code-drawn by OverworldGround, so
-# the debug tile presentation would double-draw over it. 32px cells (half
-# the dungeon's 64) keep the blocked patch close to each tree's circle.
 [node name="Terrain" type="Node2D" parent="."]
 visible = false
 script = ExtResource("391_terrain")
