@@ -25,14 +25,16 @@ func _press_tab() -> void:
 		k.pressed = pr
 		get_root().push_input(k)
 
+## #376 restyled the block into a StatGrid (icon + value cells). The rows
+## this harness checked map to "<title>: <value>" of each cell.
 func _stats_texts(panel: Node) -> Array:
 	var out: Array = []
-	var box := panel.find_child("StatsBox", true, false)
+	var box := panel.find_child("StatsBox", true, false) as StatGrid
 	if box == null:
 		return out
-	for c in box.get_children():
-		if not c.is_queued_for_deletion() and c is Label:
-			out.append(c.text)
+	out.append(box.title())
+	for id in box.cell_ids():
+		out.append("%s: %s" % [box.cell(id).title, box.value_of(id)])
 	return out
 
 func _initialize() -> void:
@@ -71,11 +73,11 @@ func _initialize() -> void:
 
 	var texts := _stats_texts(panel)
 	_check(texts.has("Stats"), "stats header rendered")
-	_check(texts.has("HP: 150 / 150"), "HP row from hp/max_hp")
-	_check(texts.has("Damage amp: +25%"), "damage amp row from PlayerStats math")
+	_check(texts.has("Health: 150/150"), "HP row from hp/max_hp")
+	_check(texts.has("Damage Amp: +25%"), "damage amp row from PlayerStats math")
 	_check(texts.has("Armor: +20%"), "armor row from PlayerStats math")
-	_check(texts.has("Move speed: 352"), "move speed row from PlayerStats math")
-	_check(texts.has("Cooldown reduction: +0%"), "CDR row shows the defined base 0% (not invented)")
+	_check(texts.has("Move Speed: 352"), "move speed row from PlayerStats math")
+	_check(texts.has("Cooldown Reduction: +0%"), "CDR row shows the defined base 0% (not invented)")
 
 	# Live refresh: damage the player, reopen, HP row must follow.
 	player.apply_damage(30)
@@ -84,7 +86,7 @@ func _initialize() -> void:
 	_press_tab() # reopen
 	await _frames(2)
 	texts = _stats_texts(panel)
-	_check(texts.has("HP: 120 / 150"), "reopen refreshes live HP (120 / 150)")
+	_check(texts.has("Health: 120/150"), "reopen refreshes live HP (120 / 150)")
 
 	_press_tab() # leave closed
 	await _frames(1)
