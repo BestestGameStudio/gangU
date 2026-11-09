@@ -39,7 +39,9 @@ func _registry_legs() -> void:
 	for type: StringName in TerrainTypes.ALL:
 		if TerrainTypes.is_destroyable(type):
 			destroyable.append(type)
-	_check(destroyable == [&"tree"], "only TREE is destroyable among registered types (got %s)" % [destroyable])
+	# #216 adds BLOCK (the spell-created block, destroyed into GROUND).
+	_check(destroyable == [&"tree", &"block"], "only TREE and BLOCK are destroyable among registered types (got %s)" % [destroyable])
+	_check(TerrainTypes.destroyed_into(TerrainTypes.BLOCK) == &"ground", "BLOCK is destroyed into GROUND")
 	_check(TerrainTypes.destroyed_into(TerrainTypes.TREE) == &"grass", "TREE is destroyed into GRASS")
 	_check(TerrainTypes.properties(TerrainTypes.TREE)["destroyable"] == true, "properties() carries destroyable")
 	_check(not TerrainTypes.is_destroyable(&"lava") and TerrainTypes.destroyed_into(&"lava") == &"", "unknown type is not destroyable")

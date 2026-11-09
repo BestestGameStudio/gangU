@@ -50,3 +50,9 @@ class_name Spell
 ## spell, so casting behavior is unchanged. The first concrete summon spell
 ## is #212.
 @export var summon: SummonDefinition = null
+## (#216) Terrain-block hook: when set to a destroyable TerrainTypes id,
+## casting places that tile at the aimed cell (within `range` pixels) through
+## TerrainBlock. A refused placement (no terrain in the area, unwalkable or
+## occupied cell) is not a cast: no cooldown, no signals. Empty on every
+## other spell, so their casting is unchanged.
+@export var terrain_block: StringName = &""

@@ -29,6 +29,8 @@ signal slot_assigned(index: int, spell: Spell)
 signal slot_cleared(index: int)
 ## Post-B follow-up: replace_spell swapped a granted spell for a new one.
 signal spell_replaced(old_spell: Spell, new_spell: Spell)
+## #216: a terrain-block spell placed its tile at `cell`.
+signal terrain_block_placed(spell: Spell, cell: Vector2i)
 
 @export var projectile_scene: PackedScene
 
@@ -277,6 +279,11 @@ func _cast_spell(spell: Spell) -> void:
 	var dir := global_position.direction_to(get_global_mouse_position())
 	if dir.length_squared() == 0.0:
 		dir = Vector2.RIGHT.rotated(get_parent().rotation)
+	# #216: terrain-block spells place their tile BEFORE anything else; a
+	# refused placement returns here, so it costs no cooldown and emits nothing.
+	if spell.terrain_block != &"":
+		if _place_terrain_block(spell) == null:
+			return
 	# #212: summon-only spells carry projectile_count 0 - skip the projectile
 	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
 	# signals below stay unconditional; positive counts are byte-identical.
@@ -296,3 +303,18 @@ func _cast_spell(spell: Spell) -> void:
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
 	CombatEffects.muzzle(get_tree().current_scene, global_position, dir.angle(), spell.projectile_color)
+
+## #216: the caster's owner carries the area's TerrainMap (main.gd _swap
+## sets Player.terrain). Areas without one (hub, DungeonA-C) refuse the cast.
+func _place_terrain_block(spell: Spell) -> Variant:
+	var owner_node := get_parent() as Node2D
+	var map: TerrainMap = null
+	if owner_node != null:
+		map = owner_node.get(&"terrain") as TerrainMap
+	if map == null:
+		return null
+	var blockers := TerrainBlock.blockers_in(get_tree(), owner_node)
+	var cell: Variant = TerrainBlock.place(map, global_position, get_global_mouse_position(), spell.range, spell.terrain_block, blockers)
+	if cell != null:
+		terrain_block_placed.emit(spell, cell)
+	return cell

@@ -56,6 +56,9 @@ var _attacker_modifiers: DamageModifiers
 var _attacker_rng: RandomNumberGenerator
 var _traveled: float = 0.0
 var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projectile
+## #216: the source's TerrainMap (Player/Enemy `terrain`), read at setup.
+## Null (hub, hand-built areas, harness fixtures) skips terrain hits entirely.
+var _terrain: TerrainMap = null
 
 ## #37 homing (peer-lead tuning under the Colin-side grant, not owner numbers):
 const HOMING_RANGE: float = 400.0 ## steer only toward enemies within this range
@@ -84,6 +87,7 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	direction = p_direction.normalized()
 	source = p_source
 	if p_source != null:
+		_terrain = p_source.get(&"terrain") as TerrainMap
 		_attacker_modifiers = p_source.get(&"damage_modifiers") as DamageModifiers
 		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
 	# #131 (C4): owned relics contribute their tag-matched passive modifiers
@@ -230,7 +234,10 @@ func _physics_process(delta: float) -> void:
 		step = remaining
 	var from: Vector2 = global_position
 	position += direction * step
-	_sweep_hits(from, direction * step)
+	# #216 review: bodies and destroyable terrain crossed in this one segment
+	# resolve in the order the projectile reaches them, so a nearer block
+	# absorbs a non-piercing shot before a farther body (and vice versa).
+	_sweep_segment(from, direction * step)
 	if is_queued_for_deletion():
 		return
 	_traveled += step
@@ -284,6 +291,8 @@ func _steer(delta: float) -> void:
 	rotation = direction.angle()
 
 func _on_body_entered(body: Node2D) -> void:
+	if is_queued_for_deletion():
+		return # #216 review: a shot already spent (e.g. on a block) hits nothing more
 	if body == source:
 		return
 	if _hit_bodies.has(body):
@@ -308,9 +317,50 @@ func _on_body_entered(body: Node2D) -> void:
 			return
 	queue_free()
 
+## #216 (wires #169): the flight path is sampled at most half a cell apart (no
+## tunnelling through a cell on a big frame step). Returns [{t, cell}] for each destroyable cell the centre line enters, with
+## t = the fraction of the segment at which it enters that cell.
+func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	if _terrain == null or not is_instance_valid(_terrain):
+		return events
+	var length := motion.length()
+	var spacing := _terrain.cell_size * 0.5
+	var samples := maxi(1, ceili(length / spacing))
+	var seen: Dictionary = {}
+	for i in range(1, samples + 1):
+		var pt := from + motion * (float(i) / float(samples))
+		var cell := _terrain.world_to_cell(pt)
+		if seen.has(cell):
+			continue
+		seen[cell] = true
+		if not TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+			continue
+		events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell})
+	return events
+
+## Fraction of the segment at which the centre line enters `cell` (0 if it
+## starts inside). Computed in the map's local space; affine maps keep t.
+func _cell_entry_t(from: Vector2, motion: Vector2, cell: Vector2i) -> float:
+	var a := _terrain.to_local(from)
+	var d := _terrain.to_local(from + motion) - a
+	var cs := float(_terrain.cell_size)
+	var lo := Vector2(cell) * cs
+	var hi := lo + Vector2(cs, cs)
+	var t_enter := 0.0
+	for axis in 2:
+		if absf(d[axis]) < 0.000001:
+			continue
+		var t1 := (lo[axis] - a[axis]) / d[axis]
+		var t2 := (hi[axis] - a[axis]) / d[axis]
+		t_enter = maxf(t_enter, minf(t1, t2))
+	return clampf(t_enter, 0.0, 1.0)
+
 ## #109: sweep the hit circle from `from` along `motion`; every body the path
-## crosses takes the hit even if no single physics frame overlaps it.
-func _sweep_hits(from: Vector2, motion: Vector2) -> void:
+## crosses takes the hit even if no single physics frame overlaps it. Returns
+## [{t, body}], t = the segment fraction of first contact with that body.
+func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = $CollisionShape2D.shape
 	params.transform = Transform2D(direction.angle(), from)
@@ -318,11 +368,59 @@ func _sweep_hits(from: Vector2, motion: Vector2) -> void:
 	params.collision_mask = collision_mask
 	params.collide_with_bodies = true
 	params.collide_with_areas = false
-	var hits: Array[Dictionary] = get_world_2d().direct_space_state.intersect_shape(params, 8)
+	var space := get_world_2d().direct_space_state
+	var hits: Array[Dictionary] = space.intersect_shape(params, 8)
+	var rids: Array[RID] = []
 	for h in hits:
-		var b: Node2D = h.get("collider")
+		rids.append(h.get("rid"))
+	# #216 re-review: cast_motion skips shapes already overlapped at the start
+	# of the motion, so it never reports t=0 for them. Query the start pose
+	# separately; any body touched there is first contact at t=0.
+	var overlapping: Array[RID] = []
+	if not hits.is_empty():
+		params.motion = Vector2.ZERO
+		for h in space.intersect_shape(params, 8):
+			overlapping.append(h.get("rid"))
+		params.motion = motion
+	for idx in hits.size():
+		var b: Node2D = hits[idx].get("collider")
 		if b == null or b == source or _hit_bodies.has(b):
 			continue
-		_on_body_entered(b)
+		if overlapping.has(rids[idx]):
+			events.append({"t": 0.0, "body": b})
+			continue
+		# Contact time against this body alone: exclude every other hit.
+		var others: Array[RID] = []
+		for j in rids.size():
+			if j != idx:
+				others.append(rids[j])
+		params.exclude = others
+		var cast: PackedFloat32Array = space.cast_motion(params)
+		var t: float = cast[1] if cast.size() == 2 else 0.0
+		events.append({"t": t, "body": b})
+	return events
+
+## #216 review: one ordered pass over everything this segment crosses. Bodies
+## go through _on_body_entered (source exclusion, damage dispatch, one-hit
+## bookkeeping, pierce); destroyable cells through TerrainMap.destroy_cell, the
+## single terrain-damage entry point (owner rule from #169: any hit destroys a
+## destroyable tile). Either kind consumes a non-piercing shot; ties go to the
+## body. Non-destroyable tiles never produce an event (pass-through as before).
+func _sweep_segment(from: Vector2, motion: Vector2) -> void:
+	var events: Array[Dictionary] = _body_events(from, motion)
+	events.append_array(_terrain_events(from, motion))
+	events.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		if x.t != y.t:
+			return x.t < y.t
+		return x.has("body") and not y.has("body"))
+	for e in events:
+		if e.has("body"):
+			var b: Node2D = e.body
+			if not is_instance_valid(b) or _hit_bodies.has(b):
+				continue
+			_on_body_entered(b)
+		elif _terrain.destroy_cell(e.cell):
+			if not spell.tags.has(SpellTags.PIERCING):
+				queue_free()
 		if is_queued_for_deletion():
 			return

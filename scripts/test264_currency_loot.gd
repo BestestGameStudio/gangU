@@ -34,16 +34,18 @@ func _check(cond: bool, name: String) -> void:
 func _static_checks() -> void:
 	table = load(TABLE_PATH)
 	_check(table != null, "demo table loads")
-	var spells := 0
+	var spell_names := []
 	for e in table.entries:
 		if e.kind == RewardEntry.Kind.CURRENCY:
 			currency_entry = e
 		elif e.kind == RewardEntry.Kind.SPELL:
-			spells += 1
+			spell_names.append(e.spell.spell_name)
 	_check(currency_entry != null, "demo table carries a CURRENCY entry")
 	_check(currency_entry != null and currency_entry.currency_amount > 0 and currency_entry.weight > 0.0,
 		"currency entry has a positive amount and weight")
-	_check(spells == 2, "spell entries unchanged (Placeholder Bolt + Summon Ally)")
+	spell_names.sort()
+	_check(spell_names == ["Placeholder Bolt", "Stone Block", "Summon Ally"],
+		"spell entries are Placeholder Bolt + Summon Ally + Stone Block")
 	_check(table.entries[0].kind == RewardEntry.Kind.SPELL, "entries[0] is still the bolt spell entry")
 
 	for path in ["res://scenes/dungeon_a.tscn", "res://scenes/dungeon_b.tscn"]:

@@ -32,6 +32,7 @@ const TYPE_COLORS: Dictionary = {
 	TerrainTypes.MUD: Color(0.42, 0.3, 0.16, 1.0),
 	TerrainTypes.WATER: Color(0.15, 0.4, 0.8, 1.0),
 	TerrainTypes.MOUNTAIN: Color(0.5, 0.5, 0.52, 1.0),
+	TerrainTypes.BLOCK: Color(0.7, 0.56, 0.34, 1.0), ## #216 placeholder sandstone
 }
 ## Fallback swatch for a registered type with no listed color.
 const DEFAULT_TILE_COLOR: Color = Color(0.3, 0.3, 0.35, 1.0)
