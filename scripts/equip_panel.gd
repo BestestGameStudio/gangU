@@ -57,6 +57,21 @@ var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
 var _status: Label
+var _upgrade_scroll: ScrollContainer
+
+func _process(_delta: float) -> void:
+	if not visible or not is_instance_valid(_upgrade_scroll):
+		return
+	# Allocate only the space left after the live source stats, slots, header
+	# and status. Long upgrade content scrolls inside this bounded region.
+	var body := _upgrade_box.get_parent() as VBoxContainer
+	var plate := body.get_parent() as PanelContainer
+	var style := plate.get_theme_stylebox("panel")
+	var other := body.get_combined_minimum_size().y - _upgrade_scroll.custom_minimum_size.y + style.get_minimum_size().y
+	var available := get_viewport().get_visible_rect().size.y - 16.0 - other
+	var height := minf(210.0, maxf(32.0, available))
+	if not is_equal_approx(_upgrade_scroll.custom_minimum_size.y, height):
+		_upgrade_scroll.custom_minimum_size.y = height
 
 ## Slot button state channels: occupied vs empty border, and a bright
 ## selected / move-source highlight on the slot whose spell is selected.
@@ -287,6 +302,7 @@ func _refresh() -> void:
 		_upgrade_box.add_child(uheader)
 		var scroll := ScrollContainer.new()
 		scroll.name = "UpgradeScroll"
+		_upgrade_scroll = scroll
 		scroll.custom_minimum_size = Vector2(472, 210)
 		_upgrade_box.add_child(scroll)
 		var cards := HBoxContainer.new()
