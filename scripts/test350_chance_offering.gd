@@ -1,12 +1,14 @@
 extends SceneTree
 ## #350 headless driver: a dungeon offering's NORMAL/RED type is decided by
-## chance (no rank system), and the existing semantics follow the rolled type:
+## chance (no rank system), and the existing semantics follow the rolled type.
+## #346: the offering gates live in the overworld, so each leg enters it via
+## main.enter_overworld() before touching gates;
 ## NORMAL allows retreat, RED locks the player in until the objective clears.
 ## The production distribution is 50/50 (Colin, 2026-11-08), rolled once per
 ## run per gate and fixed until death. Legs:
 ##   roll   - GateOffering unit rolls (unset / 0 / 1 / seeded mix / BOSS)
-##   prod   - production offering is 50/50; hub gates roll a valid type
-##   fixed  - a gate's rolled type survives a hub reload within the run, and
+##   prod   - production offering is 50/50; overworld gates roll a valid type
+##   fixed  - a gate's rolled type survives an overworld re-entry within the
 ##            a death restart (fresh Main) starts an empty roll record
 ##   red    - every offering forced RED (test-only value): GateNormal rolls
 ##            RED, DungeonA mounts its portal LOCKED with the red look and
@@ -41,6 +43,12 @@ func _boot() -> Node:
 func _shutdown(main: Node) -> void:
 	main.queue_free()
 	await _frames(3)
+
+## #346: dungeon gates (and their #350 offerings) live in the overworld.
+func _enter_overworld(main: Node) -> Node:
+	main.enter_overworld()
+	await _frames(4)
+	return main.current_area
 
 func _run() -> void:
 	_roll_leg()
@@ -89,38 +97,39 @@ func _roll_leg() -> void:
 
 func _prod_leg(offering: GateOffering) -> void:
 	var main := await _boot()
-	var hub: Node = main.current_area
-	var gn := hub.get_node_or_null("GateNormal") as Gate
-	var gr := hub.get_node_or_null("GateRed") as Gate
-	_check("prod: both hub dungeon gates carry the shared offering", gn != null and gr != null and gn.offering == offering and gr.offering == offering)
+	var ow: Node = await _enter_overworld(main)
+	var gn := ow.get_node_or_null("GateNormal") as Gate
+	var gr := ow.get_node_or_null("GateRed") as Gate
+	_check("prod: both overworld dungeon gates carry the shared offering", gn != null and gr != null and gn.offering == offering and gr.offering == offering)
 	var valid := [Gate.GateType.NORMAL, Gate.GateType.RED]
 	_check("prod: both gates rolled a valid NORMAL/RED type",
 		gn != null and gr != null and gn.gate_type in valid and gr.gate_type in valid)
 	_check("prod: rolls recorded per gate on Main", gn != null and gr != null
 		and main._offering_rolls.get(&"GateNormal") == gn.gate_type
 		and main._offering_rolls.get(&"GateRed") == gr.gate_type)
-	var gb := hub.get_node_or_null("GateBoss") as Gate
-	var gg := hub.get_node_or_null("GateGenerated") as Gate
+	var gb := ow.get_node_or_null("GateBoss") as Gate
+	var gg := ow.get_node_or_null("GateGenerated") as Gate
 	_check("prod: boss and generated gates are not chance offerings", gb != null and gb.offering == null and gg != null and gg.offering == null)
 	await _shutdown(main)
 
 func _fixed_leg() -> void:
 	var main := await _boot()
-	var gn := main.current_area.get_node_or_null("GateNormal") as Gate
+	var ow: Node = await _enter_overworld(main)
+	var gn := ow.get_node_or_null("GateNormal") as Gate
 	_check("fixed: GateNormal present", gn != null)
 	if gn == null:
 		await _shutdown(main)
 		return
 	var rolled: int = gn.gate_type
-	main._load_hub.call_deferred()
-	await _frames(8)
-	var gn2 := main.current_area.get_node_or_null("GateNormal") as Gate
-	_check("fixed: hub reload within the run keeps the rolled type", gn2 != null and gn2 != gn and gn2.gate_type == rolled)
+	var ow2: Node = await _enter_overworld(main)
+	var gn2 := ow2.get_node_or_null("GateNormal") as Gate
+	_check("fixed: overworld re-entry within the run keeps the rolled type", gn2 != null and gn2 != gn and gn2.gate_type == rolled)
 	await _shutdown(main)
 	# A death restart rebuilds Main from scratch, so the new run must boot
 	# with its own freshly rolled record, never the previous run's types.
 	var main2 := await _boot()
-	var gr2 := main2.current_area.get_node_or_null("GateRed") as Gate
+	var ow3: Node = await _enter_overworld(main2)
+	var gr2 := ow3.get_node_or_null("GateRed") as Gate
 	_check("fixed: death restart (fresh Main) re-rolls into its own record",
 		gr2 != null and main2._offering_rolls.get(&"GateRed") == gr2.gate_type
 		and main2._offering_rolls.size() <= 2)
@@ -128,6 +137,7 @@ func _fixed_leg() -> void:
 
 func _red_leg() -> void:
 	var main := await _boot()
+	await _enter_overworld(main)
 	var p: Player = main.get_node("Player")
 	var gate := main.current_area.get_node_or_null("GateNormal") as Gate
 	_check("red: GateNormal rolled RED", gate != null and gate.gate_type == Gate.GateType.RED)
@@ -160,6 +170,7 @@ func _red_leg() -> void:
 
 func _normal_leg() -> void:
 	var main := await _boot()
+	await _enter_overworld(main)
 	var p: Player = main.get_node("Player")
 	var gate := main.current_area.get_node_or_null("GateRed") as Gate
 	_check("normal: GateRed rolled NORMAL", gate != null and gate.gate_type == Gate.GateType.NORMAL)
