@@ -288,11 +288,14 @@ func _cast_spell(spell: Spell) -> void:
 	# fan-out entirely (window ACK: guard this loop ONLY). Cooldown and both
 	# signals below stay unconditional; positive counts are byte-identical.
 	if spell.projectile_count > 0:
-		for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
-			var p: Projectile = projectile_scene.instantiate()
-			p.setup(spell, d, get_parent())
-			get_tree().current_scene.add_child(p)
-			p.global_position = global_position
+		_spawn_fanout(spell, dir)
+		# #305: a burst re-fires the fan-out burst_count times, one immediately
+		# (above) and the rest at burst_interval spacing, re-aimed at the cursor
+		# like a repeated manual cast (#246). Player-owned caster, so the burst
+		# keeps pace while a freeze bubble holds everything else; one cooldown
+		# and one signal pair per cast stay untouched below.
+		if spell.burst_count > 1:
+			_run_burst(spell, spell.burst_count - 1)
 	# #268: the owning Player's cooldown reduction shortens the cooldown this
 	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
 	var duration := _effective_cooldown(spell.cooldown)
@@ -303,6 +306,30 @@ func _cast_spell(spell: Spell) -> void:
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
 	CombatEffects.muzzle(get_tree().current_scene, global_position, dir.angle(), spell.projectile_color)
+
+## One fan-out of projectiles toward dir: one spawn per direction from the
+## pure SpellFanout helper (defaults return [dir]).
+func _spawn_fanout(spell: Spell, dir: Vector2) -> void:
+	for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
+		var p: Projectile = projectile_scene.instantiate()
+		p.setup(spell, d, get_parent())
+		get_tree().current_scene.add_child(p)
+		p.global_position = global_position
+
+
+## #305: remaining burst repetitions, each re-aimed at the live cursor like
+## a repeated manual cast. Runs on this player-owned caster's own clock, so
+## it is outside the freeze contract's entity set (only the player moves).
+func _run_burst(spell: Spell, remaining: int) -> void:
+	for i in remaining:
+		await get_tree().create_timer(spell.burst_interval).timeout
+		if not is_instance_valid(self):
+			return
+		var dir := global_position.direction_to(get_global_mouse_position())
+		if dir.length_squared() == 0.0:
+			dir = Vector2.RIGHT.rotated(get_parent().rotation)
+		_spawn_fanout(spell, dir)
+
 
 ## #216: the caster's owner carries the area's TerrainMap (main.gd _swap
 ## sets Player.terrain). Areas without one (hub, DungeonA-C) refuse the cast.
