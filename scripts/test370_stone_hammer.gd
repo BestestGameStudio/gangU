@@ -138,10 +138,16 @@ func _check_base() -> void:
 	var far := _enemy(Vector2(500, 420))
 	await physics_frame
 	_cast(base, Vector2(500, 300))
+	var cd_at_cast := _caster.cooldown_remaining(base)
 	await physics_frame
 	_check(_hammers().size() == 1, "base: one hammer swing spawned")
 	_check(_caster.live_shots(base).is_empty(), "base: no projectile")
-	_check(is_equal_approx(_caster.cooldown_remaining(base), 8.5), "base: 8.5s cooldown starts on cast")
+	# Cooldown ticks down in _process, so only the value right after the cast
+	# is exactly 8.5; after the await it has lost a frame or more.
+	_check(is_equal_approx(cd_at_cast, 8.5), "base: 8.5s cooldown starts on cast")
+	_check(is_equal_approx(_caster.cooldown_duration(base), 8.5), "base: cooldown total is 8.5s")
+	var cd_left := _caster.cooldown_remaining(base)
+	_check(cd_left <= cd_at_cast and cd_left > 8.5 - 0.25, "base: cooldown only decays by elapsed frames")
 	await _wait(base.hammer_windup * 0.5)
 	_check(at.hp == 1000, "base: nothing is hit during the wind-up")
 	await _wait(base.hammer_windup * 0.5 + 0.08)
