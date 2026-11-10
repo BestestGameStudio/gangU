@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=27 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
@@ -22,6 +22,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/overworld_migrant.tres" id="373_migrant_def"]
 [ext_resource type="Resource" path="res://resources/enemies/slime_patrol.tres" id="414_slime_patrol_def"]
 [ext_resource type="Script" path="res://scripts/area_spawn_data.gd" id="373_spawn_data"]
+[ext_resource type="Script" path="res://scripts/wolf_caves.gd" id="474_caves"]
 [ext_resource type="PackedScene" path="res://scenes/enemy_fishy.tscn" id="464_fishy"]
 [ext_resource type="Resource" path="res://resources/enemies/overworld_fishy.tres" id="464_fishy_def"]
 [ext_resource type="Script" path="res://scripts/overworld_ambience.gd" id="477_ambience"]
@@ -39,6 +40,9 @@ cell_size = 32
 [node name="BlockVisuals" type="Node2D" parent="."]
 script = ExtResource("437_blockvis")
 map_path = NodePath("../Terrain")
+
+[node name="WolfCaves" type="Node" parent="."]
+script = ExtResource("474_caves")
 
 [node name="DayNightTint" type="CanvasModulate" parent="."]
 script = ExtResource("448_tint")
