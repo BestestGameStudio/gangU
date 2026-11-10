@@ -32,6 +32,10 @@ const REPLAN_INTERVAL: float = 0.25
 const WAYPOINT_EPS: float = 8.0
 const MAX_EXPANSIONS: int = 2000
 const SEARCH_MARGIN: int = 16
+## Flat-array search state is sized to the whole start-goal box; above this many
+## cells (512 x 512) the Dictionary search (state proportional to visited cells,
+## identical results) runs instead, so far endpoints never allocate a huge box.
+const MAX_BOX_CELLS: int = 262144
 
 var _path: Array[Vector2i] = []
 var _path_index: int = 0
@@ -135,6 +139,127 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 		return []
 	var min_c := Vector2i(mini(start.x, goal.x) - SEARCH_MARGIN, mini(start.y, goal.y) - SEARCH_MARGIN)
 	var max_c := Vector2i(maxi(start.x, goal.x) + SEARCH_MARGIN, maxi(start.y, goal.y) + SEARCH_MARGIN)
+	# Same search as #494 (same costs, same (f, first-insertion seq) ordering,
+	# same stale-entry rule, cap and margin), with per-search state in flat
+	# arrays indexed by the cell's position in the search box instead of
+	# Dictionaries keyed by Vector2i, lazily cached passability and clearance
+	# penalty per cell, and a heap of int cell indexes.
+	var w := max_c.x - min_c.x + 1
+	var n := w * (max_c.y - min_c.y + 1)
+	if n > MAX_BOX_CELLS:
+		return _find_path_sparse(map, from, to, can_swim)
+	var g := PackedFloat64Array()
+	g.resize(n)
+	g.fill(INF)
+	var came := PackedInt32Array()
+	came.resize(n)
+	came.fill(-1)
+	var seqs := PackedInt32Array()
+	seqs.resize(n)
+	seqs.fill(-1)
+	var pas := PackedByteArray()
+	pas.resize(n)
+	var pen := PackedFloat64Array()
+	pen.resize(n)
+	pen.fill(-1.0)
+	var si := (start.y - min_c.y) * w + (start.x - min_c.x)
+	var gi := (goal.y - min_c.y) * w + (goal.x - min_c.x)
+	g[si] = 0.0
+	seqs[si] = 0
+	var next_seq := 1
+	_hf = PackedFloat64Array()
+	_hs = PackedInt64Array()
+	_hi = PackedInt32Array()
+	var h_start := float(absi(start.x - goal.x) + absi(start.y - goal.y))
+	_ipush(h_start, 0, si)
+	var best := si
+	var best_h := h_start
+	var expansions := 0
+	var steps: Array[int] = [1, -1, w, -w]
+	while _hi.size() > 0 and expansions < MAX_EXPANSIONS:
+		var top_f := _hf[0]
+		var top_s := _hs[0]
+		var cur := _ipop()
+		var cx := cur % w
+		var cy := cur / w
+		var ch := float(absi(cx + min_c.x - goal.x) + absi(cy + min_c.y - goal.y))
+		if seqs[cur] != top_s or top_f > g[cur] + ch:
+			continue # stale entry
+		seqs[cur] = -1
+		var cp := pas[cur]
+		if cp == 0:
+			cp = 1 if map.can_enter_cell(Vector2i(cx + min_c.x, cy + min_c.y), can_swim) else 2
+			pas[cur] = cp
+		if cp == 1 and ch < best_h:
+			best = cur
+			best_h = ch
+		if cur == gi:
+			best = cur
+			break
+		expansions += 1
+		var gc := g[cur]
+		for k in 4:
+			var nx := cx + (1 if k == 0 else (-1 if k == 1 else 0))
+			var ny := cy + (1 if k == 2 else (-1 if k == 3 else 0))
+			if nx < 0 or ny < 0 or nx >= w or ny > max_c.y - min_c.y:
+				continue
+			var ni := cur + steps[k]
+			var np := pas[ni]
+			if np == 0:
+				np = 1 if map.can_enter_cell(Vector2i(nx + min_c.x, ny + min_c.y), can_swim) else 2
+				pas[ni] = np
+			if np != 1:
+				continue
+			var pn := 0.0
+			if ni != gi:
+				pn = pen[ni]
+				if pn < 0.0:
+					var blocked := 0
+					var ncell := Vector2i(nx + min_c.x, ny + min_c.y)
+					for d in DIRS:
+						var q := ncell + d
+						var qx := q.x - min_c.x
+						var qy := q.y - min_c.y
+						var qp := 0
+						if qx >= 0 and qy >= 0 and qx < w and qy <= max_c.y - min_c.y:
+							qp = pas[qy * w + qx]
+							if qp == 0:
+								qp = 1 if map.can_enter_cell(q, can_swim) else 2
+								pas[qy * w + qx] = qp
+						else:
+							qp = 1 if map.can_enter_cell(q, can_swim) else 2
+						if qp != 1:
+							blocked += 1
+					pn = 0.75 * blocked
+					pen[ni] = pn
+			var ng := gc + 1.0 + pn
+			if ng < g[ni]:
+				g[ni] = ng
+				came[ni] = cur
+				if seqs[ni] < 0:
+					seqs[ni] = next_seq
+					next_seq += 1
+				_ipush(ng + float(absi(nx + min_c.x - goal.x) + absi(ny + min_c.y - goal.y)), seqs[ni], ni)
+	if best == si:
+		return []
+	var rev: Array[Vector2i] = [Vector2i(best % w + min_c.x, best / w + min_c.y)]
+	var c := best
+	while came[c] >= 0:
+		c = came[c]
+		if c != si:
+			rev.push_front(Vector2i(c % w + min_c.x, c / w + min_c.y))
+	return rev
+
+## Reference search used when the box is too large for flat arrays.
+func _find_path_sparse(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = false) -> Array[Vector2i]:
+	var start := map.world_to_cell(from)
+	var goal := map.world_to_cell(to)
+	if start == goal:
+		return []
+	var min_c := Vector2i(mini(start.x, goal.x) - SEARCH_MARGIN, mini(start.y, goal.y) - SEARCH_MARGIN)
+	var max_c := Vector2i(maxi(start.x, goal.x) + SEARCH_MARGIN, maxi(start.y, goal.y) + SEARCH_MARGIN)
+	# #494 reference search (Dictionary state, proportional to visited cells). Used when
+	# the start-goal box is too large for flat arrays (see MAX_BOX_CELLS).
 	# #494: binary-heap open set. Entries order by (f, seq); seq is the
 	# cell's first-insertion order, which reproduces the old linear scan's
 	# "first lowest f in the open list" tie-break exactly. Improved cells are
@@ -188,9 +313,6 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 			rev.push_front(c)
 	return rev
 
-const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-var _hf := PackedFloat64Array()
-var _hs := PackedInt64Array()
 var _hc: Array[Vector2i] = []
 
 func _heap_less(f1: float, s1: int, f2: float, s2: int) -> bool:
@@ -244,6 +366,62 @@ func _heap_swap(a: int, b: int) -> void:
 	_hc[a] = _hc[b]
 	_hc[b] = tc
 
+var _hi := PackedInt32Array()
+
+func _ipush(f: float, s: int, c: int) -> void:
+	var i := _hi.size()
+	_hf.append(f)
+	_hs.append(s)
+	_hi.append(c)
+	while i > 0:
+		var p := (i - 1) >> 1
+		var pf := _hf[p]
+		if f < pf or (f == pf and s < _hs[p]):
+			_hf[i] = pf
+			_hs[i] = _hs[p]
+			_hi[i] = _hi[p]
+			i = p
+		else:
+			break
+	_hf[i] = f
+	_hs[i] = s
+	_hi[i] = c
+
+func _ipop() -> int:
+	var top := _hi[0]
+	var last := _hi.size() - 1
+	var f := _hf[last]
+	var s := _hs[last]
+	var c := _hi[last]
+	_hf.resize(last)
+	_hs.resize(last)
+	_hi.resize(last)
+	if last == 0:
+		return top
+	var i := 0
+	while true:
+		var l := 2 * i + 1
+		if l >= last:
+			break
+		var m := l
+		var r := l + 1
+		if r < last and (_hf[r] < _hf[l] or (_hf[r] == _hf[l] and _hs[r] < _hs[l])):
+			m = r
+		if _hf[m] < f or (_hf[m] == f and _hs[m] < s):
+			_hf[i] = _hf[m]
+			_hs[i] = _hs[m]
+			_hi[i] = _hi[m]
+			i = m
+		else:
+			break
+	_hf[i] = f
+	_hs[i] = s
+	_hi[i] = c
+	return top
+
+const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+var _hf := PackedFloat64Array()
+var _hs := PackedInt64Array()
 func _h(a: Vector2i, b: Vector2i) -> float:
 	return absf(a.x - b.x) + absf(a.y - b.y)
 
