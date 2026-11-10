@@ -6,8 +6,8 @@ extends EnemyBehavior
 ## phase stun, dead/absent player guard, RECOVER), is_enraged, the
 ## anti-repeat attack history, the wind-up skeleton and the shared
 ## transitions. Each subclass keeps its own attack data, constants, timing
-## and attack logic; behavior is unchanged. Contact damage stays in each
-## subclass's _chase (the DamageCalc/OnHit reroute is NOT part of PART1).
+## and attack logic; behavior is unchanged. Contact damage stays in the shared
+## _chase (the DamageCalc/OnHit reroute is NOT part of PART1).
 
 enum State { CHASE, WINDUP, LUNGE, SPIN, VOLLEY, PULSE, SCREAM, RECOVER, STUN }
 enum Attack { LUNGE, SPIN, VOLLEY, PULSE, SCREAM }
@@ -86,8 +86,21 @@ func is_enraged(enemy: Enemy) -> bool:
 # --- per-boss hooks ----------------------------------------------------------
 
 ## The per-boss state machine (CHASE / WINDUP / the attacks).
-func _step(_enemy: Enemy, _player: Player, _to_player: Vector2, _delta: float, _tele: BossTelegraph) -> void:
-	pass
+var attack_steps: Dictionary = {}
+
+func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
+	match state:
+		State.CHASE:
+			_chase(enemy, player, to_player, delta, tele)
+		State.WINDUP:
+			_windup(enemy, to_player, tele)
+		_:
+			if attack_steps.has(state):
+				var step: Callable = attack_steps[state]
+				step.call(enemy, player, to_player, delta, tele)
+
+func _dispatch_volley(enemy: Enemy, _player: Player, to_player: Vector2, _delta: float, _tele: BossTelegraph) -> void:
+	_volley_step(enemy, to_player)
 
 # --- CHASE -------------------------------------------------------------------
 
