@@ -6,6 +6,7 @@
 script = ExtResource("1_relic")
 id = &"twin_dash"
 display_name = "Twin Dash"
+description = "Grants a second dash charge."
 scalar_effects = Dictionary[StringName, float]({
 &"dash_charges": 1.0
 })

@@ -133,12 +133,16 @@ func _run_legs() -> void:
 	_build_shop([_entry(fireball, 10), _entry(bolt, 10), re])
 	panel._render()
 	_check(shop.stock_entries().size() == 3, "stock unchanged: 3 goods drawn (shop logic untouched)")
-	_check(_names(_relic_rows()) == ["Test Amulet"], "relic row shows the relic's display name under RELICS")
+	# #449: relic rows are icon-only now; the name lives in the RelicIcon tooltip.
+	var _ri := _relic_rows().find_children("*", "RelicIcon", true, false)
+	_check(_ri.size() == 1 and (_ri[0] as RelicIcon).tooltip_text.begins_with("Test Amulet"),
+		"relic row shows the relic under RELICS (icon-only, name in tooltip)")
 	_check(not _names(_rows()).has("Test Amulet"), "relic is NOT duplicated among the general rows")
 	_check(_rows().get_child_count() + _relic_rows().get_child_count() == shop.stock_size,
 		"both sections together render exactly stock_size slots")
 	_check(_rows().find_children("OutOfStockLabel", "Label", true, false).size() == 1, "1 OUT OF STOCK sign for the free slot")
-	var price := _relic_rows().get_child(0).find_children("*", "Label", true, false)[1] as Label
+	# #449: icon-only relic rows - the price is now the row's first label.
+	var price := _relic_rows().get_child(0).find_children("*", "Label", true, false)[0] as Label
 	_check(price.text == "25c", "relic row shows the catalog price")
 
 	## 4. BUY in the relic section uses the normal atomic buy flow.

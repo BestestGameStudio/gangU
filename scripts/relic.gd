@@ -15,6 +15,10 @@ extends Resource
 @export var id: StringName
 @export var display_name: String
 
+## #449: short player-facing text for hover tooltips (shop and tab menu
+## relic icons are icon-only, with name + description on hover).
+@export var description: String = ""
+
 ## (#66) Classification this passive hooks, from the SpellTags controlled
 ## vocabulary. Metadata only; effect parameters live below.
 @export var hooked_tags: Array[StringName] = []

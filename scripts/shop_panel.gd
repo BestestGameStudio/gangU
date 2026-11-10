@@ -158,13 +158,24 @@ func _make_row(entry: ShopEntry) -> Control:
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
 	row.add_child(hbox)
-	var icon := SpellIcon.new()
-	icon.show_spell(entry.good as Spell)
-	hbox.add_child(icon)
-	var name_label := Label.new()
-	name_label.text = _good_name(entry.good)
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(name_label)
+	# #449: relic rows are ICON ONLY - the relic's name and description
+	# live in the icon's hover tooltip (Daniel, 2026-11-09). Spells and
+	# consumables keep the existing SpellIcon + name label.
+	if entry.good is Relic:
+		var relic_icon := RelicIcon.new()
+		relic_icon.show_relic(entry.good as Relic)
+		hbox.add_child(relic_icon)
+		var spacer := Control.new()
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(spacer)
+	else:
+		var icon := SpellIcon.new()
+		icon.show_spell(entry.good as Spell)
+		hbox.add_child(icon)
+		var name_label := Label.new()
+		name_label.text = _good_name(entry.good)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(name_label)
 	var price_label := Label.new()
 	price_label.text = "%dc" % entry.price
 	price_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
