@@ -1,5 +1,5 @@
 class_name EnemyBehaviorFishy
-extends RefCounted
+extends EnemyBehavior
 ## #464: the Fishy. A tanky support enemy with a fishing rod. It keeps its
 ## distance, winds up a straight-line cast toward the player and, if the hook
 ## lands, reels the player in while the line deals damage over time. While
