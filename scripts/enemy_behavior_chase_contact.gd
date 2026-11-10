@@ -1,5 +1,5 @@
 class_name EnemyBehaviorChaseContact
-extends RefCounted
+extends EnemyBehavior
 ## #99 (Foundation E2): the CURRENT chase/contact behavior, extracted
 ## unchanged from enemy.gd into a swappable behavior. enemy_definition.gd's
 ## behavior slot names a Script; each Enemy instantiates its OWN behavior

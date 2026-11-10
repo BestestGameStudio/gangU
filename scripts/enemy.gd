@@ -77,8 +77,8 @@ func _ready() -> void:
 	if definition != null and definition.behavior != null:
 		behavior_script = definition.behavior
 	_behavior = behavior_script.new()
-	if not _behavior.has_method("physics_step"):
-		push_warning("Enemy: definition behavior script lacks physics_step(enemy, player, delta); using the default chase/contact behavior.")
+	if not _behavior is EnemyBehavior:
+		push_warning("Enemy: definition behavior script is not an EnemyBehavior (needs physics_step(enemy, player, delta)); using the default chase/contact behavior.")
 		_behavior = EnemyBehaviorChaseContact.new()
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player

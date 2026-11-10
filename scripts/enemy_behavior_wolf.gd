@@ -1,5 +1,5 @@
 class_name EnemyBehaviorWolf
-extends RefCounted
+extends EnemyBehavior
 ## #474 (Daniel, 2026-11-09): wolf pack hunter. Wolves spawn from overworld
 ## caves at night, hunt the player in a pack, and pounce: a 0.5s crouch
 ## telegraph, then a fast lunge that lands HEAVY damage ("heavy damage,

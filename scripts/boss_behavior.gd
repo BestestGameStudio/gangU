@@ -1,5 +1,5 @@
 class_name BossBehavior
-extends RefCounted
+extends EnemyBehavior
 ## #513 PART1: shared base for the boss behaviors (#173 Head, #174 Beast,
 ## #177 Warlord), extracted from three near-identical copies. Holds the
 ## State/Attack enums, the physics_step prologue (arrival pop, one-time

@@ -1,5 +1,5 @@
 class_name EnemyBehaviorBird
-extends RefCounted
+extends EnemyBehavior
 ## #478 (Daniel, 2026-11-09): the overworld's day-time dive-bomber, the
 ## wolves' day counterpart. "Birds circle off screen, shadow is displayed
 ## on the ground. It telegraphs a radius on the ground directly on the
