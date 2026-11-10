@@ -107,6 +107,7 @@ func _initialize() -> void:
 	await _frames(2)
 	_check(_passes_through(player, s3), "control fixture: s3 passes through the player")
 	var spell := Spell.new()
+	spell.mode = Spell.CastMode.PROJECTILE
 	spell.spell_name = "Fixture Bolt"
 	spell.damage = 7.0
 	spell.radius = 4.0

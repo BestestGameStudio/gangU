@@ -45,6 +45,7 @@ func _ready() -> void:
 	var catalog := ShopCatalog.new()
 	for i in range(names.size()):
 		var s := Spell.new()
+		s.mode = Spell.CastMode.PROJECTILE
 		s.spell_name = names[i]
 		var e := ShopEntry.new()
 		e.good = s

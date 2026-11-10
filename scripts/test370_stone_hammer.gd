@@ -108,6 +108,7 @@ func _initialize() -> void:
 
 func _check_data() -> void:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	_check(s.hammer_radius == 0.0 and s.hammer_kill_crit == 0.0 and s.hammer_crit_scale == 0.0 and s.hammer_vortex_radius == 0.0, "crush fields default off")
 	_check(s.hammer_combo_cdr == 0.0 and not s.hammer_jump and s.hammer_shockwave_radius == 0.0 and s.hammer_dice_every == 0, "rhythm fields default off")
 	_check(SpellTags.is_valid(SpellTags.EARTH), "earth tag is in the vocabulary")

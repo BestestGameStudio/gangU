@@ -147,6 +147,7 @@ func _run_legs() -> void:
 
 	for i in range(20):
 		var extra := Spell.new()
+		extra.mode = Spell.CastMode.PROJECTILE
 		extra.spell_name = "Extra %d" % i
 		real_caster.unlock_spell(extra)
 	directory._on_body_entered(real_player)

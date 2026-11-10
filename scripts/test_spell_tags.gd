@@ -43,6 +43,7 @@ func _initialize() -> void:
 	print("[TAGS] match_any/match_all query helpers OK")
 	# Effects field retired.
 	var probe := Spell.new()
+	probe.mode = Spell.CastMode.PROJECTILE
 	if "effects" in probe:
 		print("[TAGS] FAIL effects field still present on Spell"); ok = false
 	else:

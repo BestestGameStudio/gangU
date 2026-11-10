@@ -51,6 +51,7 @@ func _initialize() -> void:
 	_check(dispatched >= 25, "%d spells dispatched to a sprite row" % dispatched)
 	_check(n >= 40, "scanned %d shipped spells" % n)
 	var code := Spell.new()
+	code.mode = Spell.CastMode.PROJECTILE
 	code.spell_name = "Fire Ball"
 	_check(code.id() == &"", "code-built spell has empty id")
 	_check(Projectile.sprite_anim_for(code) == &"fire_ball", "code-built spell falls back to the name table")

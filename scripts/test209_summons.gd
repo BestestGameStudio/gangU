@@ -41,6 +41,7 @@ func _initialize() -> void:
 	m.spawn_refused.connect(func(_defn): refused[0] = true)
 	_check(m.request_spawn(d, Vector2(999, 0)) == null and refused[0], "11th spawn refused at the shared cap")
 	var spell := Spell.new()
+	spell.mode = Spell.CastMode.PROJECTILE
 	spell.summon = d
 	m._on_spell_cast(spell)
 	_check(m.live_count() == 10, "cast-driven spawn is refused at the same shared cap")
@@ -63,6 +64,7 @@ func _initialize() -> void:
 
 	# --- cast hook: only spells carrying a definition spawn ---
 	var plain := Spell.new()
+	plain.mode = Spell.CastMode.PROJECTILE
 	m._on_spell_cast(plain)
 	_check(m.live_count() == 10, "spell without a summon definition spawns nothing")
 	m.base_cap = 12

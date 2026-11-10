@@ -102,6 +102,7 @@ func _spawn_enemy(at: Vector2, hp_max: int) -> Enemy:
 
 func _spell(damage: float, tags: Array[StringName]) -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.damage = damage
 	s.tags = tags
 	s.range = 400.0

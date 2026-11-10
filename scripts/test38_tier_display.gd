@@ -56,6 +56,7 @@ func _check(ok: bool, label: String) -> void:
 
 func _spell(n: String) -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.spell_name = n
 	s.cooldown = 1.0
 	return s
