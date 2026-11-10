@@ -57,7 +57,6 @@ const VOLLEY_SECOND_WAVE_AT: float = 0.45 ## enraged only
 const VOLLEY_TIME: float = 0.6
 const MUZZLE_OFFSET: float = 34.0
 
-var _hits: int = 0
 var _tick_t: float = 0.0
 
 # --- BossBehavior hooks ------------------------------------------------------
@@ -69,6 +68,12 @@ func _configure() -> void:
 	recover_time = RECOVER_TIME
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
+	lunge_data = LungeData.new()
+	lunge_data.speed = LUNGE_SPEED
+	lunge_data.enraged_speed = LUNGE_SPEED_ENRAGED
+	lunge_data.duration = LUNGE_TIME
+	lunge_data.hit_range = LUNGE_HIT_RANGE
+	lunge_data.damage = LUNGE_DAMAGE
 	volley_data = VolleyData.new()
 	volley_data.spell = ORB_SPELL
 	volley_data.scene = PROJECTILE_SCENE
@@ -141,12 +146,7 @@ func _pick_attack(dist: float) -> int:
 # --- ATTACKS -----------------------------------------------------------------
 
 func _lunge(enemy: Enemy, player: Player, dist: float, _tele: BossTelegraph) -> void:
-	var spd: float = LUNGE_SPEED_ENRAGED if is_enraged(enemy) else LUNGE_SPEED
-	enemy.velocity = _dir * spd
-	if _hits == 0 and dist <= LUNGE_HIT_RANGE:
-		_hits = 1
-		player.apply_damage(LUNGE_DAMAGE)
-		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+	_lunge_step(enemy, player, dist)
 	if _t >= LUNGE_TIME:
 		_enter_recover(enemy)
 

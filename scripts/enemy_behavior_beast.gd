@@ -52,7 +52,6 @@ const SCREAM_RADIUS_ENRAGED: float = 180.0
 const SCREAM_DAMAGE: int = 15
 const SCREAM_TIME: float = 0.55
 
-var _hits: int = 0
 var _lunges: int = 0
 var _screams: int = 0
 
@@ -68,6 +67,12 @@ func _configure() -> void:
 	arrival_color = BEAST_GREEN
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
+	lunge_data = LungeData.new()
+	lunge_data.speed = LUNGE_SPEED
+	lunge_data.enraged_speed = LUNGE_SPEED_ENRAGED
+	lunge_data.duration = LUNGE_TIME
+	lunge_data.hit_range = LUNGE_HIT_RANGE
+	lunge_data.damage = LUNGE_DAMAGE
 
 ## Enraged chain: the second lunge's "wind-up" is just the re-aim pause.
 func _windup_duration() -> float:
@@ -121,11 +126,7 @@ func _pick_attack(dist: float) -> int:
 
 func _lunge(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegraph) -> void:
 	var enraged: bool = is_enraged(enemy)
-	enemy.velocity = _dir * (LUNGE_SPEED_ENRAGED if enraged else LUNGE_SPEED)
-	if _hits == 0 and to_player.length() <= LUNGE_HIT_RANGE:
-		_hits = 1
-		player.apply_damage(LUNGE_DAMAGE)
-		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+	_lunge_step(enemy, player, to_player.length())
 	if _t < LUNGE_TIME:
 		return
 	if enraged and _lunges < 2:

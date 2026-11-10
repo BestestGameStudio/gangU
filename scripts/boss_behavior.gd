@@ -258,3 +258,23 @@ func _volley_shots(enemy: Enemy) -> int:
 
 func _volley_spread(enemy: Enemy) -> float:
 	return volley_data.enraged_spread if is_enraged(enemy) else volley_data.spread
+
+# --- shared lunge attack -----------------------------------------------------
+
+class LungeData extends RefCounted:
+	var speed: float
+	var enraged_speed: float
+	var duration: float
+	var hit_range: float
+	var damage: int
+
+var lunge_data: LungeData
+var _hits: int = 0
+
+## Movement/contact are shared; the caller keeps its end/chain transition.
+func _lunge_step(enemy: Enemy, player: Player, dist: float) -> void:
+	enemy.velocity = _dir * (lunge_data.enraged_speed if is_enraged(enemy) else lunge_data.speed)
+	if _hits == 0 and dist <= lunge_data.hit_range:
+		_hits = 1
+		player.apply_damage(lunge_data.damage)
+		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
