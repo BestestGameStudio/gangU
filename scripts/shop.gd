@@ -157,6 +157,10 @@ func on_dungeon_victory() -> void:
 ## boss spells (head_bolt, warlord_orb - Daniel 2026-11-09: "Do not keep
 ## enemy spells"), so each stock is Daniel's "3 Random from the pool";
 ## ownership exclusion still applies per-draw.
+## (#496, Colin 2026-11-10) NARROWED: only BASE spells are sold. Any spell
+## that is a SpellUpgrade result_spell (resources/upgrades/*.tres, e.g.
+## Heavy Rain) is an upgraded variant earned through use and is left out
+## of the catalog; test496/test466/test129 enforce this from upgrade data.
 func _reroll_stock() -> void:
 	var pool := offerable_entries()
 	pool.shuffle()
