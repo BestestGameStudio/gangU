@@ -75,6 +75,16 @@ var _atlas_source: TileSetAtlasSource = null
 @export var fixed_layout: TerrainFixedLayout = null
 
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
+## Per-type property cache (palette-aware), filled on first use and dropped
+## when the palette changes. Hot queries read the flag bits so they never
+## allocate; _type_props holds read-only property sets for internal reads.
+const _WALKABLE := 1
+const _SWIMMABLE := 2
+const _FALLING := 4
+const _BLOCKS_PROJECTILES := 8
+const _CONCEALS := 16
+var _type_flags: Dictionary = {} ## StringName -> int (_WALKABLE | ...)
+var _type_props: Dictionary = {} ## StringName -> read-only Dictionary
 ## #407: solid circles that stop projectiles (overworld trees). World-space
 ## Vector3(x, y, radius). Kept apart from the cell store: OBSTACLE cells
 ## (dungeon borders, maze walls) keep letting shots through as before.
@@ -138,7 +148,7 @@ func clear_cell(cell: Vector2i) -> void:
 ## else is left untouched. Returns true iff the cell changed.
 func destroy_cell(cell: Vector2i) -> bool:
 	var old_type := tile_type_at_cell(cell)
-	var old_props := type_properties(old_type)
+	var old_props := _props_of(old_type)
 	if not old_props["destroyable"]:
 		return false
 	var new_type: StringName = old_props["destroyed_into"]
@@ -156,7 +166,7 @@ func destroy_at(world_pos: Vector2) -> bool:
 ## hits `cell`, or null. Matched by element tag only, through the
 ## palette-aware properties (TerrainInteractions owns the rule list).
 func interaction_for_cell(cell: Vector2i, spell_tags: Array) -> TerrainInteraction:
-	var tile_tags: Array = type_properties(tile_type_at_cell(cell))["element_tags"]
+	var tile_tags: Array = _props_of(tile_type_at_cell(cell))["element_tags"]
 	var rule := TerrainInteractions.find(spell_tags, tile_tags, interaction_rules)
 	if rule == null or not is_valid_type(rule.result_type):
 		return null
@@ -231,7 +241,7 @@ func lob_blocked(from: Vector2, to: Vector2) -> bool:
 		var cell := world_to_cell(from.lerp(to, float(i) / float(samples)))
 		if cell == start:
 			continue
-		if type_properties(tile_type_at_cell(cell))["blocks_projectiles"] and not is_low_cover_cell(cell):
+		if blocks_projectiles_at_cell(cell) and not is_low_cover_cell(cell):
 			return true
 	return false
 
@@ -250,7 +260,7 @@ func tile_type_at(world_pos: Vector2) -> StringName:
 	return tile_type_at_cell(world_to_cell(world_pos))
 
 func is_walkable_at_cell(cell: Vector2i) -> bool:
-	return type_properties(tile_type_at_cell(cell))["walkable"]
+	return _cell_flags(cell) & _WALKABLE != 0
 
 func is_walkable_at(world_pos: Vector2) -> bool:
 	return is_walkable_at_cell(world_to_cell(world_pos))
@@ -258,11 +268,34 @@ func is_walkable_at(world_pos: Vector2) -> bool:
 ## #461: true when the cell at world_pos hides whoever stands there (tall
 ## grass). Palette-aware like every other property lookup.
 func conceals_at(world_pos: Vector2) -> bool:
-	return type_properties(tile_type_at(world_pos)).get("conceals", false)
+	return _cell_flags(world_to_cell(world_pos)) & _CONCEALS != 0
 
 ## #266: the cell's TerrainTypes.Movement category.
 func movement_at_cell(cell: Vector2i) -> TerrainTypes.Movement:
-	return type_properties(tile_type_at_cell(cell))["movement"]
+	return _props_of(tile_type_at_cell(cell))["movement"]
+
+## True iff a mover may stand in `cell` (the TerrainMotion rule): never a
+## FALLING cell, otherwise walkable, or swimmable for a mover that swims.
+func can_enter_cell(cell: Vector2i, can_swim: bool) -> bool:
+	var f := _cell_flags(cell)
+	if f & _FALLING:
+		return false
+	return f & _WALKABLE != 0 or (can_swim and f & _SWIMMABLE != 0)
+
+## A cell no mover can enter: FALLING, or neither walkable nor swimmable.
+func is_hard_obstacle_cell(cell: Vector2i) -> bool:
+	var f := _cell_flags(cell)
+	return f & _FALLING != 0 or f & (_WALKABLE | _SWIMMABLE) == 0
+
+## #433: solid terrain that stops projectiles.
+func blocks_projectiles_at_cell(cell: Vector2i) -> bool:
+	return _cell_flags(cell) & _BLOCKS_PROJECTILES != 0
+
+func speed_multiplier_at_cell(cell: Vector2i) -> float:
+	return _props_of(tile_type_at_cell(cell))["speed_multiplier"]
+
+func friction_at_cell(cell: Vector2i) -> float:
+	return _props_of(tile_type_at_cell(cell))["friction"]
 
 func movement_at(world_pos: Vector2) -> TerrainTypes.Movement:
 	return movement_at_cell(world_to_cell(world_pos))
@@ -273,7 +306,38 @@ func is_valid_type(type: StringName) -> bool:
 
 ## Properties of `type` on this map (palette-aware, fresh copy).
 func type_properties(type: StringName) -> Dictionary:
-	return palette.properties(type) if palette != null else TerrainTypes.properties(type)
+	return _props_of(type).duplicate(true)
+
+func _props_of(type: StringName) -> Dictionary:
+	var props: Variant = _type_props.get(type)
+	if props == null:
+		_cache_type(type)
+		props = _type_props[type]
+	return props
+
+func _cell_flags(cell: Vector2i) -> int:
+	var type: StringName = _cells.get(cell, TerrainTypes.GROUND)
+	var f: Variant = _type_flags.get(type)
+	return f if f != null else _cache_type(type)
+
+func _cache_type(type: StringName) -> int:
+	var props := palette.properties(type) if palette != null else TerrainTypes.properties(type)
+	var f := 0
+	if props["walkable"]:
+		f |= _WALKABLE
+	if props["swimmable"]:
+		f |= _SWIMMABLE
+	if props["movement"] == TerrainTypes.Movement.FALLING:
+		f |= _FALLING
+	if props["blocks_projectiles"]:
+		f |= _BLOCKS_PROJECTILES
+	if props.get("conceals", false):
+		f |= _CONCEALS
+	(props["element_tags"] as Array).make_read_only()
+	props.make_read_only()
+	_type_props[type] = props
+	_type_flags[type] = f
+	return f
 
 ## type + full properties at a world position, in one call. The returned
 ## Dictionary is a fresh copy (registry-safe).
@@ -298,6 +362,8 @@ func _set_season(value: TerrainSeason.Season) -> void:
 
 func _set_palette(value: TerrainPalette) -> void:
 	palette = value
+	_type_flags.clear()
+	_type_props.clear()
 	if palette != null:
 		var errors := palette.validate()
 		if not errors.is_empty():
@@ -392,7 +458,7 @@ func _rebuild_presentation() -> void:
 		var col := Vector2i(types.find(type), 0)
 		if col.x < 0:
 			continue # palette swapped away from this type: no look to draw
-		if type_properties(type)["walkable"]:
+		if _props_of(type)["walkable"]:
 			_ground_layer.set_cell(cell, 0, col)
 		else:
 			_obstacle_layer.set_cell(cell, 0, col)

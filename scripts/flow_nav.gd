@@ -137,8 +137,7 @@ func field(goal: Vector2i) -> Dictionary:
 func passable(cell: Vector2i) -> bool:
 	if bounds.size != Vector2i.ZERO and not bounds.has_point(cell):
 		return false
-	var props := map.type_properties(map.tile_type_at_cell(cell))
-	return props["walkable"] and props.get("movement", TerrainTypes.Movement.WALKABLE) != TerrainTypes.Movement.FALLING
+	return map.is_walkable_at_cell(cell)
 
 func _on_cell_changed(_cell: Vector2i, _old: StringName, _new: StringName) -> void:
 	_fields.clear()

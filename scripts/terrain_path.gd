@@ -84,15 +84,13 @@ func _line_routable(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool 
 
 ## A cell no mover can enter: BLOCKING and not swimmable, or FALLING.
 func _hard_obstacle(map: TerrainMap, cell: Vector2i) -> bool:
-	var props := map.type_properties(map.tile_type_at_cell(cell))
-	if props.get("movement", TerrainTypes.Movement.BLOCKING) == TerrainTypes.Movement.FALLING:
-		return true
-	return not props["walkable"] and not props["swimmable"]
+	return map.is_hard_obstacle_cell(cell)
 
-## A cell THIS mover may be routed through (can_swim-aware).
+## A cell THIS mover may be routed through (can_swim-aware). FALLING tiles
+## are never swimmable (TerrainTypes.apply_movement), so this is exactly
+## walkable-or-swimmable.
 func _passable(map: TerrainMap, cell: Vector2i, can_swim: bool) -> bool:
-	var props := map.type_properties(map.tile_type_at_cell(cell))
-	return props["walkable"] or (props["swimmable"] and can_swim)
+	return map.can_enter_cell(cell, can_swim)
 
 ## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
 ## cutting between blocked cells). Returns the cell path EXCLUDING the start

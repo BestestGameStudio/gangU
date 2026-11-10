@@ -14,24 +14,29 @@ const GRIP: float = 3600.0
 static func resolve(map: TerrainMap, position: Vector2, previous: Vector2, desired: Vector2, delta: float, can_swim: bool) -> Vector2:
 	if map == null:
 		return desired
-	var here := map.properties_at(position)
+	var here := map.world_to_cell(position)
 	var velocity := desired
 	# A mover standing on a cell it could not enter (spawned there, or the
 	# map changed under it) walks out at full grip instead of being trapped.
-	if _enterable(here, can_swim):
-		var target: Vector2 = desired * float(here["speed_multiplier"])
-		var friction: float = here["friction"]
+	if map.can_enter_cell(here, can_swim):
+		var target: Vector2 = desired * map.speed_multiplier_at_cell(here)
+		var friction: float = map.friction_at_cell(here)
 		velocity = target if friction >= 1.0 else previous.move_toward(target, friction * GRIP * delta)
-	for candidate: Vector2 in [velocity, Vector2(velocity.x, 0.0), Vector2(0.0, velocity.y)]:
-		if _can_step(map, position, position + candidate * delta, can_swim):
-			return candidate
+	if _can_step(map, here, position + velocity * delta, can_swim):
+		return velocity
+	var along_x := Vector2(velocity.x, 0.0)
+	if _can_step(map, here, position + along_x * delta, can_swim):
+		return along_x
+	var along_y := Vector2(0.0, velocity.y)
+	if _can_step(map, here, position + along_y * delta, can_swim):
+		return along_y
 	return Vector2.ZERO
 
 ## #266: true iff a mover may stand in the cell at `world_pos`. FALLING
 ## cells are never enterable (for now), BLOCKING ones only by a swimmer
 ## when the tile is swimmable. A null map allows everything.
 static func can_enter(map: TerrainMap, world_pos: Vector2, can_swim: bool) -> bool:
-	return map == null or _enterable(map.properties_at(world_pos), can_swim)
+	return map == null or map.can_enter_cell(map.world_to_cell(world_pos), can_swim)
 
 ## #266: the terrain seam for every movement that is not a per-frame
 ## velocity (pushes/knockback, spell blinks/leaps, scripted shoves). Walks
@@ -55,17 +60,11 @@ static func clamp_displacement(map: TerrainMap, from: Vector2, to: Vector2, can_
 		reached = p
 	return reached
 
-static func _enterable(props: Dictionary, can_swim: bool) -> bool:
-	if props.get("movement", TerrainTypes.Movement.BLOCKING) == TerrainTypes.Movement.FALLING:
-		return false
-	return props["walkable"] or (props["swimmable"] and can_swim)
-
-static func _can_step(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool) -> bool:
-	var a := map.world_to_cell(from)
+static func _can_step(map: TerrainMap, a: Vector2i, to: Vector2, can_swim: bool) -> bool:
 	var b := map.world_to_cell(to)
 	if a == b:
 		return true
-	return _enterable(map.properties_at(to), can_swim) and not _cuts_corner(map, a, b, can_swim)
+	return map.can_enter_cell(b, can_swim) and not _cuts_corner(map, a, b, can_swim)
 
 ## #328: a move that changes both the column and the row of the mover's
 ## cell passes the shared corner of the two side cells, so it is only
@@ -75,7 +74,4 @@ static func _can_step(map: TerrainMap, from: Vector2, to: Vector2, can_swim: boo
 static func _cuts_corner(map: TerrainMap, a: Vector2i, b: Vector2i, can_swim: bool) -> bool:
 	if a.x == b.x or a.y == b.y:
 		return false
-	for side: Vector2i in [Vector2i(b.x, a.y), Vector2i(a.x, b.y)]:
-		if not _enterable(map.properties_at(map.cell_to_world(side)), can_swim):
-			return true
-	return false
+	return not map.can_enter_cell(Vector2i(b.x, a.y), can_swim) or not map.can_enter_cell(Vector2i(a.x, b.y), can_swim)
