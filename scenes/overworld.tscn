@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=23 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
@@ -22,6 +22,7 @@
 [ext_resource type="Resource" path="res://resources/enemies/overworld_migrant.tres" id="373_migrant_def"]
 [ext_resource type="Resource" path="res://resources/enemies/slime_patrol.tres" id="414_slime_patrol_def"]
 [ext_resource type="Script" path="res://scripts/area_spawn_data.gd" id="373_spawn_data"]
+[ext_resource type="Script" path="res://scripts/overworld_ambience.gd" id="477_ambience"]
 
 [node name="Overworld" type="Node2D"]
 
@@ -137,3 +138,6 @@ player_path = NodePath("../../Player")
 script = ExtResource("373_spawn_data")
 entries = [{ "position": Vector2(-250, -200), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(-250, -200), Vector2(150, -450), Vector2(576, -500), Vector2(1000, -450), Vector2(1400, -200)] }, { "position": Vector2(-210, -160), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(-210, -160), Vector2(190, -410), Vector2(616, -460), Vector2(1040, -410), Vector2(1440, -160)] }, { "position": Vector2(-300, 250), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(-300, 250), Vector2(-330, -300), Vector2(-150, -820)] }, { "position": Vector2(1450, 250), "enemy": ExtResource("346_enemy"), "reward_table": ExtResource("346_table"), "definition": ExtResource("373_migrant_def"), "route": [Vector2(1450, 250), Vector2(1500, -300), Vector2(1350, -800)] }]
 player_path = NodePath("../../Player")
+
+[node name="Ambience" type="AudioStreamPlayer" parent="."]
+script = ExtResource("477_ambience")
