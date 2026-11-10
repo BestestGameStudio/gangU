@@ -150,6 +150,30 @@ func areas_with_cleared_sites() -> Array[StringName]:
 			out.append(id)
 	return out
 
+## (#435) The panning limits of the player's CURRENT area: the bounding rect
+## of the overworld's land outline, so a dragged map never shows beyond it.
+## Empty Rect2 when the current area has no overworld ground (dungeons).
+func pan_bounds() -> Rect2:
+	if terrain == null or not is_instance_valid(terrain) or terrain.get_parent() == null:
+		return Rect2()
+	for c in terrain.get_parent().get_children():
+		if c is OverworldGround and not (c as OverworldGround).outline.is_empty():
+			var o := (c as OverworldGround).outline
+			var r := Rect2(o[0], Vector2.ZERO)
+			for p in o:
+				r = r.expand(p)
+			return r
+	return Rect2()
+
+## (#440 review) The overworld land outline polygon (empty where none).
+func pan_outline() -> PackedVector2Array:
+	if terrain == null or not is_instance_valid(terrain) or terrain.get_parent() == null:
+		return PackedVector2Array()
+	for c in terrain.get_parent().get_children():
+		if c is OverworldGround and not (c as OverworldGround).outline.is_empty():
+			return (c as OverworldGround).outline
+	return PackedVector2Array()
+
 ## Where to center a view of area `id`: the player's last spot there, else
 ## the middle of its marked dungeons, else the origin.
 func view_center(id: StringName) -> Vector2:
