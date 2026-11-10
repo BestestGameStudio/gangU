@@ -184,7 +184,7 @@ func _leg_c_pounce() -> void:
 	_mk_clock(0.85)
 	var wolf: Enemy = _wolf_scene.instantiate()
 	wolf.player_path = NodePath("../Player")
-	wolf.set_meta("wolf_anchor", Vector2(-170, 0))
+	wolf.context = _ctx_at(Vector2(-170, 0))
 	stage.add_child(wolf)
 	wolf.global_position = Vector2(-170, 0)
 	await _frames(5)
@@ -274,7 +274,7 @@ func _leg_h_next_night_hunt() -> void:
 	await _frames(30)
 	var flagged := false
 	for w in cave.pack:
-		if w.has_meta("wolf_retreat") and w.get_meta("wolf_retreat"):
+		if (w.context as WolfContext).retreat:
 			flagged = true
 	_check(flagged, "(H) daybreak flags the live pack wolf_retreat (fixture)")
 	# The fight runs into the next night; the player then steps out of fight
@@ -290,7 +290,7 @@ func _leg_h_next_night_hunt() -> void:
 	_check(hunting > 0, "(H) next night: survivors hunt again instead of obeying the stale retreat (hunting %d/%d)" % [hunting, cave.pack.size()])
 	var cleared := true
 	for w in cave.pack:
-		if w.has_meta("wolf_retreat") and w.get_meta("wolf_retreat"):
+		if (w.context as WolfContext).retreat:
 			cleared = false
 	_check(cleared, "(H) nightfall clears the stale wolf_retreat flag")
 	await _teardown(stage)
@@ -311,7 +311,7 @@ func _leg_f_tree_weave() -> void:
 	var wolf: Enemy = _wolf_scene.instantiate()
 	wolf.player_path = NodePath("../Player")
 	wolf.terrain = map
-	wolf.set_meta("wolf_anchor", Vector2(-220, 0))
+	wolf.context = _ctx_at(Vector2(-220, 0))
 	stage.add_child(wolf)
 	wolf.global_position = Vector2(-220, 0)
 	var reached := false
@@ -350,3 +350,9 @@ func _leg_g_pack_hunt() -> void:
 	_check(_state(cave.pack[0]) != "PROWL", "(G) the engaged wolf hunts")
 	_check(_state(cave.pack[5]) == "HUNT", "(G) pack alert pulls the far packmate into the hunt (got %s)" % _state(cave.pack[5]))
 	await _teardown(stage)
+
+func _ctx_at(anchor: Vector2) -> WolfContext:
+	var c := WolfContext.new()
+	c.anchor = anchor
+	c.has_anchor = true
+	return c
