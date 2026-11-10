@@ -322,3 +322,24 @@ style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
 
 - Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
 - Rows: idle x4 (5 fps loop), walk x6 (10 fps loop), hurt x2, attack x3, death x5 (one-shots).
+
+# wolf.png - original code-drawn Wolf sheet (#474)
+
+Original art drawn by `tools/sprites/draw_wolf.gd` (procedural pixel drawing,
+no external assets, no traced or generated images), same idiom as the Slime.
+`resources/sprites/wolf_frames.tres` is built from it by
+`tools/sprites/build_wolf_frames.gd`. Placeholder-quality style pass;
+replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
+
+- Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
+- Rows: idle x4 (5 fps loop), walk x6 (12 fps loop), hurt x2, attack x3,
+  death x5 (one-shots). The attack row doubles as the pounce set: `telegraph`
+  holds the crouch (frame 0) and `pounce` plays the lunge stretch + snap
+  (frames 1-2), packed alongside the base rows.
+
+# wolf_cave.png - original code-drawn wolf den decor (#474)
+
+Original art drawn by `tools/sprites/draw_wolf_cave.gd` (procedural pixel
+drawing, no external assets): one 64x64 sprite, a rocky mound with a dark
+den opening. Caves are decor only (Daniel: "Decor" - not enterable), drawn
+under characters (z -10, above the ground layer).
