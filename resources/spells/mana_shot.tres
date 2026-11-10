@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 5
 icon_frames = ExtResource("2_frames")
 icon_prefix = &"mana"
 spell_name = "Mana Shot"

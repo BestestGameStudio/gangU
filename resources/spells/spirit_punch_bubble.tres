@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 0
 spell_name = "Spirit Punch"
 icon_upgraded = true
 cooldown = 0.8

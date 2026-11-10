@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 4
 spell_name = "Water Barrage"
 icon_upgraded = true
 cooldown = 1.2

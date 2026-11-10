@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 5
 spell_name = "Mustache Rock"
 cooldown = 0.0
 damage = 3.0

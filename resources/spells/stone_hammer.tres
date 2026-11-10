@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 1
 spell_name = "Stone Hammer"
 cooldown = 8.5
 damage = 60.0

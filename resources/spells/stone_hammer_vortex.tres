@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 1
 spell_name = "Vortex Hammer"
 icon_upgraded = true
 cooldown = 8.5
