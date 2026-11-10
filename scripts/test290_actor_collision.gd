@@ -17,6 +17,11 @@ func _check(cond: bool, name: String) -> void:
 		failures += 1
 	print("[290] ", name, " -> ", "PASS" if cond else "FAIL")
 
+## #515: "passes through" = neither body's mask contains the other's layer
+## (replaces the old ActorCollision per-pair exceptions).
+func _passes_through(a: CollisionObject2D, b: CollisionObject2D) -> bool:
+	return (a.collision_mask & b.collision_layer) == 0 and (b.collision_mask & a.collision_layer) == 0
+
 func _frames(n: int) -> void:
 	for i in range(n):
 		await physics_frame
@@ -58,8 +63,8 @@ func _initialize() -> void:
 	var p1 := _player(stage, Vector2(200, 200))
 	var e1 := _enemy(stage, Vector2(300, 200))
 	await _frames(2)
-	_check(p1.get_collision_exceptions().has(e1) and e1.get_collision_exceptions().has(p1),
-		"player-first spawn: exceptions added in both directions")
+	_check(_passes_through(p1, e1),
+		"player and enemy layers/masks leave each other out")
 	await _frames(90) ## 110 px/s * 1.5 s > 100 px gap
 	var d1 := e1.global_position.distance_to(p1.global_position)
 	_check(d1 <= 10.0, "chasing enemy reaches the player's centre instead of stopping at the 29px hull (d=%.1f)" % d1)
@@ -73,8 +78,8 @@ func _initialize() -> void:
 	await _frames(1)
 	var p2 := _player(stage, Vector2(500, 200))
 	await _frames(2)
-	_check(p2.get_collision_exceptions().has(e2) and e2.get_collision_exceptions().has(p2),
-		"enemy-first spawn: exceptions added in both directions")
+	_check(_passes_through(p2, e2),
+		"enemy-first spawn: same layers/masks")
 	e2.set_physics_process(false)
 	p2.set_physics_process(false)
 	var hits2 := await _drive(p2, Vector2(320, 0), 60, e2) ## 320 px over 1 s
@@ -90,7 +95,8 @@ func _initialize() -> void:
 	await _frames(1)
 	var e3 := _enemy(stage, Vector2(300, 600), NodePath(p3.get_path()))
 	await _frames(2)
-	_check(e3.get_collision_exceptions().has(p3), "exception added via the player_path target")
+	_check(not p3.is_in_group("player"), "fixture player is outside the legacy 'player' group")
+	_check(_passes_through(e3, p3), "player_path-wired target also passes through")
 	await _frames(90)
 	_check(e3.global_position.distance_to(p3.global_position) <= 10.0, "production-wired enemy also overlaps the player")
 	e3.queue_free()
@@ -122,7 +128,7 @@ func _initialize() -> void:
 	await _frames(2)
 	ea.set_physics_process(false)
 	eb.set_physics_process(false)
-	_check(ea.get_collision_exceptions().has(eb), "#493: exception between two enemies")
+	_check(_passes_through(ea, eb), "#493: enemy layers/masks leave each other out")
 	var hits5 := await _drive(ea, Vector2(200, 0), 40, eb)
 	_check(hits5 == 0 and ea.global_position.x > 1600.0, "#493: enemy passes through another enemy (x=%.1f)" % ea.global_position.x)
 	ea.queue_free()
