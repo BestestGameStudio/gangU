@@ -11,6 +11,8 @@
 radius = 26.0
 
 [node name="HeadBoss" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
 script = ExtResource("1_enemy")
 definition = ExtResource("2_def")
 
