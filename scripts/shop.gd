@@ -74,7 +74,7 @@ func setup(catalog: ShopCatalog) -> void:
 
 func _ready() -> void:
 	add_to_group("shop")
-	_wallet = get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
+	_wallet = Run.wallet()
 	_consumables = get_tree().get_first_node_in_group("consumables") as Consumables
 	if caster_path != NodePath(""):
 		_caster = get_node_or_null(caster_path) as SpellCaster
@@ -85,7 +85,7 @@ func _ready() -> void:
 	if refresh_schedule == null:
 		refresh_schedule = ShopRefreshSchedule.new()
 	if _wallet == null:
-		push_warning("Shop: no currency_wallet group node; all buys refuse.")
+		push_warning("Shop: no CurrencyWallet in Run; all buys refuse.")
 	if _caster == null:
 		push_warning("Shop: no player SpellCaster found; spell grants refuse.")
 	if _consumables == null:
@@ -168,7 +168,7 @@ func _reroll_stock() -> void:
 func _relic_provider() -> OwnedRelics:
 	if owned_relics_path != NodePath(""):
 		return get_node_or_null(owned_relics_path) as OwnedRelics
-	return get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	return Run.relics()
 
 func can_grant(good: Resource) -> bool:
 	if good is Spell:

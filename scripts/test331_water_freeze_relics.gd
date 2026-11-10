@@ -85,7 +85,6 @@ func _wait_release(b: FreezeBubble) -> void:
 ## hooked to `tag` (or none at all when tag is empty).
 func _set_relic(tag: StringName, amp: float = 1.0) -> void:
 	if _relics != null:
-		_relics.remove_from_group("owned_relics")
 		_relics.free()
 		_relics = null
 	if tag == &"":

@@ -211,7 +211,7 @@ func _ready() -> void:
 ## gained while the menu is open refreshes the grid too. OwnedRelics is
 ## mounted on Main after this panel, so this is retried in show_panel.
 func _hook_relics() -> void:
-	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	var relics := Run.relics()
 	if relics != null and not relics.changed.is_connected(_on_live_stat_change):
 		relics.changed.connect(_on_live_stat_change)
 	if relics != null and not relics.changed.is_connected(_refresh_relics):
@@ -316,7 +316,7 @@ func _refresh_relics() -> void:
 	for c in _relics_list.get_children():
 		_relics_list.remove_child(c)
 		c.queue_free()
-	var owned := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	var owned := Run.relics()
 	var relics: Array[Relic] = owned.all() if owned != null else ([] as Array[Relic])
 	if relics.is_empty():
 		var empty := Label.new()

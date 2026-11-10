@@ -55,7 +55,7 @@ func _process(delta: float) -> bool:
 			# Mount a harness-local pool only when the group is empty. The
 			# pool has no reset API, so a pool that already granted this
 			# entry fails loudly below instead of passing on stale state.
-			pool = get_first_node_in_group("reward_pool") as RewardPool
+			pool = Run.reward_pool()
 			if pool == null:
 				pool = RewardPool.new()
 				pool.name = "RewardPool"

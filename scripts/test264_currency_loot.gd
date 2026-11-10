@@ -98,8 +98,8 @@ func _process(delta: float) -> bool:
 		0:
 			if scene.current_area == null:
 				return false
-			pool = get_first_node_in_group("reward_pool") as RewardPool
-			wallet = get_first_node_in_group("currency_wallet") as CurrencyWallet
+			pool = Run.reward_pool()
+			wallet = Run.wallet()
 			_check(pool != null and wallet != null, "Main mounts reward pool and wallet")
 			if pool == null or wallet == null or currency_entry == null:
 				return _finish()

@@ -16,8 +16,12 @@ signal pool_changed()
 var _table: RewardTable
 var _granted: Array[RewardEntry] = []
 
-func _ready() -> void:
-	add_to_group("reward_pool")
+## (#520) Reached through Run.reward_pool(), not a group lookup.
+func _enter_tree() -> void:
+	Run.register(self)
+
+func _exit_tree() -> void:
+	Run.unregister(self)
 
 func setup(table: RewardTable) -> void:
 	_table = table

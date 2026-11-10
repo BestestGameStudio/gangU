@@ -53,8 +53,8 @@ func _process(delta: float) -> bool:
 			if pool == null or progress == null or panel == null:
 				print("[E] FAIL missing mount: pool=", pool != null, " progress=", progress != null, " panel=", panel != null); ok = false
 				return _done()
-			if get_nodes_in_group("reward_pool").size() != 1:
-				print("[E] FAIL reward_pool group size"); ok = false
+			if Run.reward_pool() != pool:
+				print("[E] FAIL Run.reward_pool() is not Main's RewardPool"); ok = false
 			else:
 				print("[E] reward pool mounted once OK")
 			if get_nodes_in_group("spell_progress").size() != 1:

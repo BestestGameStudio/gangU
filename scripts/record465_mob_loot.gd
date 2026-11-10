@@ -34,7 +34,7 @@ func _initialize() -> void:
 		if _main.current_area != null:
 			break
 		await _frame()
-	_wallet = get_first_node_in_group("currency_wallet") as CurrencyWallet
+	_wallet = Run.wallet()
 
 	_phase = "into DungeonA (real mobs, real production loot table)"
 	await _enter("GateOverworld")

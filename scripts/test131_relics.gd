@@ -51,7 +51,7 @@ func run() -> void:
 	var r := relic(&"fixture_a")
 	var events: Array = []
 	owned.changed.connect(func(): events.append(true))
-	check(owned != null and owned.is_in_group("owned_relics"), "production mount/group")
+	check(owned != null and Run.relics() == owned, "production mount/Run.relics()")
 	check(r.is_valid_definition(), "valid stable id/tag definition")
 	var invalid := relic(&"")
 	check(not owned.add(invalid), "empty identity refused")
@@ -118,13 +118,13 @@ func run() -> void:
 	ep._on_body_entered(target)
 	check(target.received == 70, "enemy projectile does not receive player relic")
 	enemy.free()
-	owned.remove_from_group("owned_relics")
+	Run.unregister(owned)
 	var plain := projectile_scene.instantiate() as Projectile
 	plain.setup(spell, Vector2.RIGHT, player)
 	main.add_child(plain)
 	plain._on_body_entered(target)
 	check(target.received == 90, "absent provider retains original damage")
-	owned.add_to_group("owned_relics")
+	Run.register(owned)
 
 	# Shop mounted BEFORE OwnedRelics: lazy provider must still work.
 	var catalog := ShopCatalog.new()
