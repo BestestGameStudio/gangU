@@ -39,11 +39,11 @@ func _physics_process(_dt: float) -> bool:
 			_check("is_dashing() true", _player.is_dashing())
 			_check("second dash refused while dashing", not _player.try_dash(Vector2.UP))
 		14:
-			# 0.15s at 60 fps = 9 physics frames; dash is over by now.
+			# 0.09s at 60 fps = ~6 physics frames (#450); dash is over by now.
 			var moved := _player.global_position - _start
 			print("[198] moved ", moved)
 			_check("dash ended", not _player.is_dashing() and _ended == 1)
-			_check("moved ~135 px right (100..170)", moved.x > 100.0 and moved.x < 170.0 and absf(moved.y) < 1.0)
+			_check("moved ~81 px right (#450: 60..100)", moved.x > 60.0 and moved.x < 100.0 and absf(moved.y) < 1.0)
 			_check("player stops after dash (no input)", _player.velocity.length() < 1.0)
 			_check("cooldown still running", _player.dash_cooldown_remaining() > 0.0)
 			_check("dash refused on cooldown", not _player.try_dash(Vector2.LEFT))

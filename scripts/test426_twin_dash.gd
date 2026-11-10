@@ -181,7 +181,10 @@ func _run() -> void:
 	await _frames(12)
 	var moved := _player.global_position - start
 	print("[426] two dashes moved ", moved)
-	_check(moved.x > 220.0, "two dashes cover about double the distance")
+	# #450: compare against the base dash distance (81 px) instead of a hard
+	# number, so range tuning does not break this check.
+	var one_dash := _player.dash_speed * _player.dash_duration
+	_check(moved.x > one_dash * 1.8, "two dashes cover about double the distance")
 	_check(_player.dash_charges() == 0 and not _player.try_dash(Vector2.LEFT), "third dash refused with no charges")
 	_check(_player.dash_cooldown_remaining() > 0.0, "cooldown running once both charges are spent")
 	# First recharge started at the first dash (frame 0); 24 frames gone.
