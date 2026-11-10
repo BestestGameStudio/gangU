@@ -6,6 +6,8 @@
 radius = 14.0
 
 [node name="ReviveItem" type="Area2D"]
+collision_layer = 64
+collision_mask = 2
 script = ExtResource("1_item")
 
 [node name="Visual" type="Polygon2D" parent="."]
