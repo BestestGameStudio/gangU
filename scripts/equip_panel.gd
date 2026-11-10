@@ -7,10 +7,12 @@ class_name EquipPanel
 ## equipping from the unlock inventory lives at the hub spell directory
 ## (#375 directory slice, #393).
 ##
-## Interaction: click an occupied slot to SELECT its spell - the stat grid
-## swaps to that spell's stats and its upgrade buttons appear. Click a
-## second slot to REARRANGE: the two occupants swap, or the spell moves
-## into an empty slot. Clicking the same slot again deselects.
+## Interaction (#441, Daniel 2026-11-09): click an occupied slot to SELECT
+## its spell - the stat grid swaps to that spell's stats and its upgrade
+## buttons appear; clicking it again deselects. REARRANGE is hold-and-drag
+## ONLY: press and hold a slot, drag onto another slot to swap the two
+## spells, or onto an empty slot to move the spell there. Click-to-swap is
+## gone ("Hold and drag only, works for empty space").
 ##
 ## Rearrange is composed out of the pinned strict slot primitives
 ## (REFUSAL semantics): the selection is validated BEFORE any clear_slot(),
@@ -60,6 +62,16 @@ var _upgrade_scroll: ScrollContainer
 var _plate: PanelContainer
 var _detail_box: VBoxContainer
 
+## #441 hold-and-drag state: where the left press started, the active drag
+## source slot (-1 = none), the floating ghost icon, and a one-shot guard
+## so a drag that ends on its own source slot doesn't also fire a click.
+var _press_slot := -1
+var _press_pos := Vector2.ZERO
+var _drag_from := -1
+var _drag_ghost: SpellIcon = null
+var _suppress_next_click := false
+const DRAG_THRESHOLD := 10.0
+
 ## #416 (Daniel, 2026-11-09): the menu must not change size when switching
 ## between player stats and spell stats, and the upgrades sit UNDER the
 ## spell stats in a column wide enough for three upgrade cards. The detail
@@ -67,8 +79,17 @@ var _detail_box: VBoxContainer
 ## viewport); the upgrade scroll fills whatever height is left, so content
 ## changes never resize the panel.
 const UPGRADE_CARD_GAP := 12
-const DETAIL_WIDTH := UpgradeCard.CARD_WIDTH * 3 + UPGRADE_CARD_GAP * 2 + 12.0 # + scrollbar
-const PANEL_HEIGHT := 620.0
+# Three #441-slim cards + gaps + scrollbar, but never narrower than the
+# player-stats grid's minimum width (589 measured): the #416 no-resize rule
+# covers WIDTH too, so the column floor keeps the plate one fixed size.
+const DETAIL_WIDTH := 600.0
+## #441 (Daniel, 2026-11-09): the plate hugs its content instead of the old
+## 620px fixed height ("a lot of empty vertical space below the spell
+## slots"). Measured composition on the pinned harness: title 36 + sep 10 +
+## columns 376 (player stats 115 + sep + upgrades header ~35 + one full
+## upgrade card 216 at the #441 card width; the slots column needs 289) +
+## plate margins 20. Still FIXED so the #416 no-resize rule holds.
+const PANEL_HEIGHT := 442.0
 const SCREEN_MARGIN := 16.0
 
 func _process(_delta: float) -> void:
@@ -225,6 +246,7 @@ func _build_ui() -> void:
 		b.custom_minimum_size = Vector2(220, 0)
 		var idx := i
 		b.pressed.connect(func(): _on_slot_pressed(idx))
+		b.gui_input.connect(func(ev: InputEvent): _on_slot_gui_input(ev, idx))
 		_slots_box.add_child(b)
 		_slot_buttons.append(b)
 		_slot_icons.append(_pin_icon(b, SLOT_ICON_LEFT))
@@ -274,6 +296,9 @@ func show_panel() -> void:
 func hide_panel() -> void:
 	visible = false
 	remove_from_group("modal_ui")
+	_press_slot = -1
+	if _drag_from != -1 or _drag_ghost != null:
+		_end_drag()
 
 ## #269/#376: fill the right-side stat grid. No selection = player stats;
 ## a selected spell = that spell's stats (Daniel: "Clicking a spell will
@@ -301,7 +326,7 @@ func _refresh() -> void:
 	for i in _slot_buttons.size():
 		var occupant: Spell = slots[i] if i < slots.size() else null
 		_slot_buttons[i].text = "%s: %s" % [SpellCaster.slot_key_label(i), occupant.spell_name if occupant != null else "(empty)"] # #319: show cast key, not digit
-		var move_source := occupant != null and occupant == _selected
+		var move_source := occupant != null and (occupant == _selected or i == _drag_from)
 		var sborder := UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM
 		if move_source:
 			sborder = UiStyle.B_SELECTED
@@ -375,48 +400,105 @@ func _on_token_upgrade_pressed(path_id) -> void:
 		_selected = null
 	_refresh()
 
-## #375 Tab interaction: one click selects a slot's spell (stats + upgrades),
-## a second click on another slot rearranges (swap, or move into an empty
-## slot), a second click on the SAME slot deselects. Composed from the
-## strict primitives; the caster is never asked for a hidden move.
+## #441 Tab interaction: click SELECTS a slot's spell (stats + upgrades),
+## clicking the selected slot again deselects, clicking an empty slot
+## deselects. Rearrange is hold-and-drag only (see _on_slot_gui_input).
 func _on_slot_pressed(index: int) -> void:
+	if _suppress_next_click:
+		# A drag that ended on its own source slot also fires pressed; the
+		# rearrange already ran (or was a no-op), so swallow the click.
+		_suppress_next_click = false
+		return
 	if _caster == null:
 		return
 	var slots: Array = _caster.get_slots()
 	if index < 0 or index >= slots.size():
 		return
-	if _selected == null:
-		# Nothing held: an occupied slot selects its spell; an empty slot
-		# has nothing to select.
-		var occupant: Spell = slots[index]
-		if occupant != null:
-			_selected = occupant
+	var occupant: Spell = slots[index]
+	if occupant == null or occupant == _selected:
+		_selected = null
+	else:
+		_selected = occupant
+	_refresh()
+
+## #441: press-and-hold on a slot starts a drag once the pointer moves past
+## DRAG_THRESHOLD; releasing over another slot swaps the two spells, over
+## an empty slot moves the spell there. A ghost icon follows the cursor so
+## the dragged spell is visible the whole way (Daniel watches the demos).
+func _on_slot_gui_input(event: InputEvent, index: int) -> void:
+	if _caster == null:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_press_slot = index
+			_press_pos = event.global_position
+			_drag_from = -1
+		else:
+			if _drag_from != -1:
+				var target := _slot_at(event.global_position)
+				if target != -1 and target != _drag_from:
+					_rearrange_slots(_drag_from, target)
+				# Only a release INSIDE the source button also fires its
+				# pressed signal; that trailing click must be swallowed.
+				_suppress_next_click = target == _drag_from
+				_end_drag()
+			_press_slot = -1
+	elif event is InputEventMouseMotion and _press_slot != -1 and (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+		if _drag_from == -1:
+			if _press_pos.distance_to(event.global_position) <= DRAG_THRESHOLD:
+				return
+			var slots: Array = _caster.get_slots()
+			if _press_slot >= slots.size() or slots[_press_slot] == null:
+				return # nothing to drag from an empty slot
+			_drag_from = _press_slot
+			_begin_drag_ghost(slots[_drag_from])
 			_refresh()
+		if _drag_ghost != null:
+			_drag_ghost.global_position = event.global_position - _drag_ghost.size * 0.5
+
+func _slot_at(global_pos: Vector2) -> int:
+	for i in _slot_buttons.size():
+		if _slot_buttons[i].get_global_rect().has_point(global_pos):
+			return i
+	return -1
+
+func _begin_drag_ghost(spell: Spell) -> void:
+	_end_drag_ghost()
+	_drag_ghost = SpellIcon.new(UiStyle.ICON_SIZE * 1.5, true)
+	_drag_ghost.size = Vector2.ONE * UiStyle.ICON_SIZE * 1.5
+	_drag_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_drag_ghost.modulate.a = 0.85
+	_drag_ghost.show_spell(spell)
+	add_child(_drag_ghost)
+
+func _end_drag_ghost() -> void:
+	if _drag_ghost != null:
+		_drag_ghost.queue_free()
+		_drag_ghost = null
+
+func _end_drag() -> void:
+	_drag_from = -1
+	_end_drag_ghost()
+	_refresh()
+
+## Rearrange two slots, composed from the strict clear_slot/assign_slot
+## primitives: validate BEFORE any clear, roll back toward the prior layout
+## on refusal, one-spell-one-slot preserved. Selection is untouched - a
+## dragged spell that was selected stays selected.
+func _rearrange_slots(source: int, target_index: int) -> void:
+	if _caster == null:
 		return
-	# A selection is held: this click is the rearrange target (or a
-	# deselect). Validate BEFORE any clear so a failed rearrange never
-	# erases an occupied slot.
-	if not _caster.get_unlocked().has(_selected):
-		# Stale/removed selection (e.g. a base spell consumed by an
-		# upgrade): refuse before any mutation.
-		_selected = null
-		_refresh()
+	var slots: Array = _caster.get_slots()
+	if source < 0 or source >= slots.size() or target_index < 0 or target_index >= slots.size():
 		return
-	var source := slots.find(_selected)
-	if source == -1:
-		# The selected spell is no longer slotted; nothing to rearrange.
-		_selected = null
-		_refresh()
+	var moved: Spell = slots[source]
+	if moved == null or not _caster.get_unlocked().has(moved):
 		return
-	if index == source:
-		_selected = null # click the same slot again: put it back / deselect
-		_refresh()
-		return
-	var target: Spell = slots[index]
+	var target: Spell = slots[target_index]
 	_caster.clear_slot(source)
 	if target != null:
-		_caster.clear_slot(index)
-	var ok := _caster.assign_slot(index, _selected)
+		_caster.clear_slot(target_index)
+	var ok := _caster.assign_slot(target_index, moved)
 	if ok and target != null:
 		ok = _caster.assign_slot(source, target)
 	if not ok:
@@ -425,13 +507,12 @@ func _on_slot_pressed(index: int) -> void:
 		# from caster truth either way.
 		push_warning("EquipPanel: rearrange refused; restoring prior layout.")
 		var now: Array = _caster.get_slots()
-		if not now.has(_selected) and now[source] == null:
-			_caster.assign_slot(source, _selected)
+		if not now.has(moved) and now[source] == null:
+			_caster.assign_slot(source, moved)
 			now = _caster.get_slots()
 		if target != null and not now.has(target):
-			if now[index] == null:
-				_caster.assign_slot(index, target)
+			if now[target_index] == null:
+				_caster.assign_slot(target_index, target)
 			elif now[source] == null:
 				_caster.assign_slot(source, target)
-	_selected = null
 	_refresh()

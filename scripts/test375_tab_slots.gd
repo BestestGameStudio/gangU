@@ -1,11 +1,12 @@
 extends SceneTree
 ## #375 Tab-side acceptance harness (Daniel, 2026-11-09): the spell menu
 ## shows ONLY your six slots; click an occupied slot to select its spell
-## (stat grid + upgrades for equipped spells), click a second slot to
-## rearrange (swap occupants, or move into an empty slot), click the same
-## slot again to deselect. Rearrange is composed from the strict
-## clear_slot/assign_slot primitives: validate first, rollback on refusal,
-## one-spell-one-slot preserved. Unslotted unlocked spells never appear.
+## (stat grid + upgrades for equipped spells), click it again to deselect.
+## #441 (Daniel, 2026-11-09): rearrange is HOLD-AND-DRAG only - clicks
+## never move spells; the drag lands in _rearrange_slots, composed from
+## the strict clear_slot/assign_slot primitives: validate first, rollback
+## on refusal, one-spell-one-slot preserved. Unslotted unlocked spells
+## never appear.
 ## Fixture: stub Player + stub SpellCaster (typed subclasses so the panel's
 ## casts pass) + duck-typed upgrade provider.
 ## Run: godot --headless --path . -s scripts/test375_tab_slots.gd
@@ -149,29 +150,41 @@ func _initialize() -> void:
 	_check(panel._selected == null, "(2) same-slot click deselects")
 	_check(grid.title() == "Stats", "(2) grid back to player stats (got '%s')" % grid.title())
 
-	# (3) Click a second OCCUPIED slot: the two occupants swap;
-	# one-spell-one-slot preserved; selection cleared.
+	# (2b) #441: clicks NEVER rearrange. Select AlphaBolt, then click
+	# BetaBolt's slot: the selection moves, the layout does not.
 	caster.assigned.clear()
 	caster.cleared.clear()
-	panel._on_slot_pressed(0) # pick up AlphaBolt
+	panel._on_slot_pressed(0) # select AlphaBolt
 	await process_frame
-	panel._on_slot_pressed(1) # drop on BetaBolt's slot -> swap
+	panel._on_slot_pressed(1) # click BetaBolt's slot
+	await process_frame
+	_check(caster.cleared.is_empty() and caster.assigned.is_empty(), "(2b) clicks never clear/assign (no click-to-swap)")
+	_check(caster.fake_slots[0] == a and caster.fake_slots[1] == b, "(2b) layout unchanged by clicks")
+	_check(panel._selected == b, "(2b) second click selects the clicked spell (got %s)" % panel._selected)
+	panel._on_slot_pressed(1) # deselect for the next case
+	await process_frame
+	_check(panel._selected == null, "(2b) deselected")
+
+	# (3) Drag-swap two OCCUPIED slots (the drag lands in
+	# _rearrange_slots): the two occupants swap; one-spell-one-slot
+	# preserved.
+	caster.assigned.clear()
+	caster.cleared.clear()
+	panel._rearrange_slots(0, 1) # drag AlphaBolt onto BetaBolt's slot
 	await process_frame
 	_check(caster.fake_slots[0] == b and caster.fake_slots[1] == a, "(3) occupants swapped (got %s / %s)" % [caster.fake_slots[0], caster.fake_slots[1]])
 	_check(caster.cleared == [0, 1], "(3) both slots cleared, source first (got %s)" % str(caster.cleared))
 	_check(caster.assigned.size() == 2 and caster.assigned[0] == [1, a] and caster.assigned[1] == [0, b],
 		"(3) assigned to target then source (got %s)" % str(caster.assigned))
 	_check(caster.fake_slots.count(a) == 1 and caster.fake_slots.count(b) == 1, "(3) one spell one slot")
-	_check(panel._selected == null, "(3) selection cleared after rearrange")
+	_check(panel._selected == null, "(3) no selection involved in a drag")
 	_check(panel._slot_buttons[0].text == "LMB: BetaBolt" and panel._slot_buttons[1].text == "RMB: AlphaBolt",
 		"(3) slot texts follow the swap (got '%s' / '%s')" % [panel._slot_buttons[0].text, panel._slot_buttons[1].text])
 
-	# (4) Click an EMPTY slot: the selected spell moves there.
+	# (4) Drag onto an EMPTY slot: the spell moves there.
 	caster.assigned.clear()
 	caster.cleared.clear()
-	panel._on_slot_pressed(1) # pick up AlphaBolt
-	await process_frame
-	panel._on_slot_pressed(3) # move into empty slot 4
+	panel._rearrange_slots(1, 3) # drag AlphaBolt into empty slot 4
 	await process_frame
 	_check(caster.cleared == [1] and caster.assigned == [[3, a]], "(4) move into empty slot (cleared %s, assigned %s)" % [str(caster.cleared), str(caster.assigned)])
 	_check(caster.fake_slots[1] == null and caster.fake_slots[3] == a, "(4) old slot emptied, new slot holds the spell")
@@ -184,18 +197,16 @@ func _initialize() -> void:
 	caster.assigned.clear()
 	caster.cleared.clear()
 	caster.refuse_assigns = 1
-	panel._on_slot_pressed(3) # pick up AlphaBolt
-	await process_frame
-	panel._on_slot_pressed(0) # try to swap with BetaBolt: first assign refused
+	panel._rearrange_slots(3, 0) # drag AlphaBolt onto BetaBolt: first assign refused
 	await process_frame
 	_check(caster.refuse_assigns == 0, "(5) the refusal was exercised")
 	_check(caster.fake_slots[0] == b and caster.fake_slots[3] == a, "(5) layout restored after refusal (got %s / %s)" % [caster.fake_slots[0], caster.fake_slots[3]])
 	_check(caster.fake_slots.count(a) == 1 and caster.fake_slots.count(b) == 1, "(5) one spell one slot survives the rollback")
-	_check(panel._selected == null, "(5) selection cleared after refused rearrange")
+	_check(panel._selected == null, "(5) no selection involved in a refused drag")
 
 	# (6) Stale selection: a selected resource the caster no longer holds
-	# (e.g. consumed by an upgrade) is refused BEFORE any clear, so an
-	# occupied target slot is never erased.
+	# (e.g. consumed by an upgrade). Clicks never mutate slots, so an
+	# occupied slot is never erased; the click just moves the selection.
 	var removed := _spell("RemovedBolt")
 	panel._selected = removed # white-box: simulates a post-upgrade stale selection
 	caster.assigned.clear()
@@ -204,12 +215,10 @@ func _initialize() -> void:
 	await process_frame
 	_check(caster.cleared.is_empty() and caster.assigned.is_empty(), "(6) stale selection: no clear/assign reached the caster")
 	_check(caster.fake_slots[0] == b, "(6) occupied target preserved")
-	_check(panel._selected == null, "(6) stale selection dropped")
+	_check(panel._selected == b, "(6) stale selection replaced by the clicked spell")
 
-	# (7) Equipped spells stay upgradeable from Tab: select BetaBolt (in a
-	# slot) and its upgrade buttons render and apply.
-	panel._on_slot_pressed(0) # select BetaBolt
-	await process_frame
+	# (7) Equipped spells stay upgradeable from Tab: BetaBolt (in a slot)
+	# is selected; its upgrade buttons render and apply.
 	_check(panel._selected == b, "(7) equipped spell selected")
 	var upgrade_box := panel._upgrade_box # #416: under the stats in the detail column
 	var uh := upgrade_box.get_child(0) as Label

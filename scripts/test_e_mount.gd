@@ -303,10 +303,10 @@ func _process(delta: float) -> bool:
 						print("[E] stale-selection click preserves occupied slot OK")
 					else:
 						print("[E] FAIL stale click cleared slot: ", caster.get_slots()[0]); ok = false
-					# Successful reselection + rearrange still works: Split moves to
-					# slot 2, swapping with its occupant.
-					panel._on_slot_pressed(0)
-					panel._slot_buttons[1].pressed.emit()
+					# Rearrange still works (#441: hold-and-drag only, landing in
+					# _rearrange_slots): Split moves to slot 2, swapping with its
+					# occupant.
+					panel._rearrange_slots(0, 1)
 					if caster.get_slots()[1] == split:
 						print("[E] reselect + rearrange to slot 2 OK")
 					else:
