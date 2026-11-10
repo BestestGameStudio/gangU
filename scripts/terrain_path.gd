@@ -32,6 +32,10 @@ const REPLAN_INTERVAL: float = 0.25
 const WAYPOINT_EPS: float = 8.0
 const MAX_EXPANSIONS: int = 2000
 const SEARCH_MARGIN: int = 16
+## Flat-array search state is sized to the whole start-goal box; above this many
+## cells (512 x 512) the Dictionary search (state proportional to visited cells,
+## identical results) runs instead, so far endpoints never allocate a huge box.
+const MAX_BOX_CELLS: int = 262144
 
 var _path: Array[Vector2i] = []
 var _path_index: int = 0
@@ -142,6 +146,8 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 	# penalty per cell, and a heap of int cell indexes.
 	var w := max_c.x - min_c.x + 1
 	var n := w * (max_c.y - min_c.y + 1)
+	if n > MAX_BOX_CELLS:
+		return _find_path_sparse(map, from, to, can_swim)
 	var g := PackedFloat64Array()
 	g.resize(n)
 	g.fill(INF)
@@ -243,6 +249,122 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 		if c != si:
 			rev.push_front(Vector2i(c % w + min_c.x, c / w + min_c.y))
 	return rev
+
+## Reference search used when the box is too large for flat arrays.
+func _find_path_sparse(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = false) -> Array[Vector2i]:
+	var start := map.world_to_cell(from)
+	var goal := map.world_to_cell(to)
+	if start == goal:
+		return []
+	var min_c := Vector2i(mini(start.x, goal.x) - SEARCH_MARGIN, mini(start.y, goal.y) - SEARCH_MARGIN)
+	var max_c := Vector2i(maxi(start.x, goal.x) + SEARCH_MARGIN, maxi(start.y, goal.y) + SEARCH_MARGIN)
+	# #494 reference search (Dictionary state, proportional to visited cells). Used when
+	# the start-goal box is too large for flat arrays (see MAX_BOX_CELLS).
+	# #494: binary-heap open set. Entries order by (f, seq); seq is the
+	# cell's first-insertion order, which reproduces the old linear scan's
+	# "first lowest f in the open list" tie-break exactly. Improved cells are
+	# re-pushed under the same seq; stale entries are skipped on pop.
+	_hf = PackedFloat64Array()
+	_hs = PackedInt64Array()
+	_hc = []
+	var seqs := {start: 0}
+	var next_seq := 1
+	var came := {}
+	var g := {start: 0.0}
+	_heap_push(_h(start, goal), 0, start)
+	var best := start
+	var best_h := _h(start, goal)
+	var expansions := 0
+	while _hc.size() > 0 and expansions < MAX_EXPANSIONS:
+		var top_f := _hf[0]
+		var top_s := _hs[0]
+		var current := _heap_pop()
+		if seqs.get(current, -1) != top_s or top_f > g.get(current, INF) + _h(current, goal):
+			continue # stale entry
+		seqs.erase(current)
+		if _passable(map, current, can_swim) and _h(current, goal) < best_h:
+			best = current
+			best_h = _h(current, goal)
+		if current == goal:
+			best = current
+			break
+		expansions += 1
+		for d in DIRS:
+			var next: Vector2i = current + d
+			if next.x < min_c.x or next.y < min_c.y or next.x > max_c.x or next.y > max_c.y:
+				continue
+			if not _passable(map, next, can_swim):
+				continue
+			var ng: float = g[current] + 1.0 + _clearance_penalty(map, next, goal, can_swim)
+			if ng < g.get(next, INF):
+				g[next] = ng
+				came[next] = current
+				if not seqs.has(next):
+					seqs[next] = next_seq
+					next_seq += 1
+				_heap_push(ng + _h(next, goal), seqs[next], next)
+	if best == start:
+		return []
+	var rev: Array[Vector2i] = [best]
+	var c := best
+	while came.has(c):
+		c = came[c]
+		if c != start:
+			rev.push_front(c)
+	return rev
+
+var _hc: Array[Vector2i] = []
+
+func _heap_less(f1: float, s1: int, f2: float, s2: int) -> bool:
+	return f1 < f2 or (f1 == f2 and s1 < s2)
+
+func _heap_push(f: float, s: int, c: Vector2i) -> void:
+	var i := _hc.size()
+	_hf.append(f)
+	_hs.append(s)
+	_hc.append(c)
+	while i > 0:
+		var p := (i - 1) >> 1
+		if not _heap_less(_hf[i], _hs[i], _hf[p], _hs[p]):
+			break
+		_heap_swap(i, p)
+		i = p
+
+func _heap_pop() -> Vector2i:
+	var top := _hc[0]
+	var last := _hc.size() - 1
+	_heap_swap(0, last)
+	_hf.remove_at(last)
+	_hs.remove_at(last)
+	_hc.remove_at(last)
+	var n := last
+	var i := 0
+	while true:
+		var l := 2 * i + 1
+		var r := l + 1
+		var m := i
+		if l < n and _heap_less(_hf[l], _hs[l], _hf[m], _hs[m]):
+			m = l
+		if r < n and _heap_less(_hf[r], _hs[r], _hf[m], _hs[m]):
+			m = r
+		if m == i:
+			break
+		_heap_swap(i, m)
+		i = m
+	return top
+
+func _heap_swap(a: int, b: int) -> void:
+	if a == b:
+		return
+	var tf := _hf[a]
+	_hf[a] = _hf[b]
+	_hf[b] = tf
+	var ts := _hs[a]
+	_hs[a] = _hs[b]
+	_hs[b] = ts
+	var tc := _hc[a]
+	_hc[a] = _hc[b]
+	_hc[b] = tc
 
 var _hi := PackedInt32Array()
 
