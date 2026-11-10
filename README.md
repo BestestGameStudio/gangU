@@ -100,6 +100,10 @@ godot --headless --path . --script res://tools/run_tests.gd -- test348 -j 4 --ti
 godot --headless --path . --script res://tools/run_tests.gd -- --list            # show what would run
 ```
 
+Every `.gd` script needs its `.gd.uid` committed next to it (generate it with Godot 4.5.1, e.g.
+`godot --headless --path . --import`). `scripts/test519_uid_files.gd` fails on a tracked `.gd`
+without a tracked `.uid`, or on an orphan `.uid`.
+
 - While iterating locally, pass a filter for the area you changed. The `Tests` workflow
   (`.github/workflows/tests.yml`) runs the whole suite on every pull request and on every push to `main`.
 - Debug maps, demo drivers and movie drivers (the `extends Node2D` scripts behind `scenes/test*.tscn`,

@@ -81,7 +81,8 @@ func site_at(local: Vector2) -> StringName:
 	var best_d := SITE_PICK_PX
 	var s := world_map.cleared_sites(view())
 	for d: StringName in s:
-		var dist := world_to_screen(s[d]).distance_to(local)
+		var sp: Vector2 = s[d]
+		var dist := world_to_screen(sp).distance_to(local)
 		if dist <= best_d:
 			best = d
 			best_d = dist
@@ -280,8 +281,10 @@ func _gui_input(event: InputEvent) -> void:
 		if _stroke >= 0:
 			var pts: Array = world_map.strokes(id)
 			# Skip sub-pixel jitter so the per-stroke point cap lasts.
-			if _stroke < pts.size() and (pts[_stroke] as PackedVector2Array)[-1].distance_to(w) * map_scale >= 3.0:
-				world_map.extend_stroke(id, _stroke, w)
+			if _stroke < pts.size():
+				var stroke_pts: PackedVector2Array = pts[_stroke]
+				if stroke_pts[-1].distance_to(w) * map_scale >= 3.0:
+					world_map.extend_stroke(id, _stroke, w)
 		elif _erasing:
 			world_map.erase_near(id, w, ERASE_RADIUS_PX / map_scale)
 
@@ -311,10 +314,13 @@ func _draw() -> void:
 		else:
 			draw_polyline(pts, INK_COLOR, INK_WIDTH, true)
 	for m: Dictionary in world_map.markers(id):
-		draw_symbol(self, world_to_screen(m["pos"]), m["symbol"], MARKER_SIZE, MARKER_COLOR)
+		var mpos: Vector2 = m["pos"]
+		var msym: int = m["symbol"]
+		draw_symbol(self, world_to_screen(mpos), msym, MARKER_SIZE, MARKER_COLOR)
 	var sites := world_map.cleared_sites(id)
 	for d: StringName in sites:
-		_draw_site(world_to_screen(sites[d]), d, d == selected_site)
+		var dpos: Vector2 = sites[d]
+		_draw_site(world_to_screen(dpos), d, d == selected_site)
 	if id == world_map.area_id and is_instance_valid(world_map.player):
 		var pp := world_to_screen(world_map.player.global_position)
 		draw_circle(pp, 6.0, Color.BLACK)
@@ -345,9 +351,11 @@ static func draw_symbol(ci: CanvasItem, p: Vector2, sym: int, s: float, col: Col
 	var outline := Color(0, 0, 0, 0.85)
 	match sym:
 		WorldMap.Symbol.CROSS:
-			for w_col in [[4.5, outline], [2.5, col]]:
-				ci.draw_line(p + Vector2(-s, -s), p + Vector2(s, s), w_col[1], w_col[0])
-				ci.draw_line(p + Vector2(-s, s), p + Vector2(s, -s), w_col[1], w_col[0])
+			for w_col: Array in [[4.5, outline], [2.5, col]]:
+				var wc_width: float = w_col[0]
+				var wc_color: Color = w_col[1]
+				ci.draw_line(p + Vector2(-s, -s), p + Vector2(s, s), wc_color, wc_width)
+				ci.draw_line(p + Vector2(-s, s), p + Vector2(s, -s), wc_color, wc_width)
 		WorldMap.Symbol.CIRCLE:
 			ci.draw_arc(p, s, 0.0, TAU, 24, outline, 4.5)
 			ci.draw_arc(p, s, 0.0, TAU, 24, col, 2.5)

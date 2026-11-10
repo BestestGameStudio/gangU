@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/dungeon_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/mustache_warlord.tscn" id="2_boss"]
+
+[resource]
+script = ExtResource("1_def")
+area_name = &"DungeonB"
+id = &"dungeon_b"
+label = "Dungeon B"
+scene = "res://scenes/dungeon_b.tscn"
+objective_type = 2
+boss_scene = ExtResource("2_boss")
+boss_spawn = Vector2(576, 240)
+default_exit_portal = true
+red_by_default = true
