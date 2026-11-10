@@ -109,11 +109,13 @@ func _initialize() -> void:
 			vbox = c
 	var grid := panel.find_child("StatsBox", true, false) as StatGrid
 
-	# (1) Nothing selected: no "Selected: none" line; the upgrade box is now
-	# the last row of the panel (title, columns, upgrades).
+	# (1) Nothing selected: no "Selected: none" line; the panel rows are now
+	# title + columns (#416 moved the upgrades into the columns' detail
+	# column, under the stats, where the status line used to sit below).
 	_check(_selected_texts(panel).is_empty(), "(1) no 'Selected' text with nothing selected (got %s)" % str(_selected_texts(panel)))
-	_check(vbox != null and vbox.get_child_count() == 3, "(1) panel rows: title + columns + upgrades (got %d)" % (vbox.get_child_count() if vbox != null else -1))
-	_check(vbox != null and vbox.get_child(vbox.get_child_count() - 1) == panel._upgrade_box, "(1) upgrade box is the last row")
+	_check(vbox != null and vbox.get_child_count() == 2, "(1) panel rows: title + columns (got %d)" % (vbox.get_child_count() if vbox != null else -1))
+	_check(panel._upgrade_box.get_parent() == panel._detail_box, "(1) upgrade box lives in the detail column")
+	_check(panel._detail_box.get_child(panel._detail_box.get_child_count() - 1) == panel._upgrade_box, "(1) upgrade box is the last detail-column row (under the stats)")
 	_check(grid.title() == "Stats", "(1) stat grid shows player stats")
 	await _shot("tab_menu_nothing_selected.png")
 
@@ -128,8 +130,8 @@ func _initialize() -> void:
 	_check(panel._slot_buttons[0].text == "LMB: %s" % fire.spell_name, "(2) slot label kept (got '%s')" % panel._slot_buttons[0].text)
 	await _shot("tab_menu_spell_selected.png")
 
-	# (3) Select an upgradeable spell: upgrade section still renders and is
-	# still the last row; no status line under it.
+	# (3) Select an upgradeable spell: upgrade section still renders, still
+	# the last row of the detail column; no status line under it.
 	panel._on_slot_pressed(0) # deselect
 	await process_frame
 	panel._on_slot_pressed(1)
@@ -137,7 +139,7 @@ func _initialize() -> void:
 	var uh := panel._upgrade_box.get_child(0) as Label if panel._upgrade_box.get_child_count() > 0 else null
 	_check(uh != null and uh.text == "Upgrades", "(3) upgrade section still renders")
 	_check(_selected_texts(panel).is_empty(), "(3) no 'Selected' text with upgrades shown")
-	_check(vbox.get_child(vbox.get_child_count() - 1) == panel._upgrade_box, "(3) nothing below the upgrade section")
+	_check(panel._detail_box.get_child(panel._detail_box.get_child_count() - 1) == panel._upgrade_box, "(3) nothing below the upgrade section")
 
 	# (4) Deselect: still no text.
 	panel._on_slot_pressed(1)

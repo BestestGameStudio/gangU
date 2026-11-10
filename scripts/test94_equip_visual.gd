@@ -125,7 +125,7 @@ func _initialize() -> void:
 	var title := vbox.get_child(0) as Label
 	_check(title.text == "Spells", "(1) title names the spell menu (got '%s')" % title.text)
 	var cols := vbox.get_child(1) as HBoxContainer
-	_check(cols != null and cols.get_child_count() == 3 and cols.get_child(2) is StatGrid,
+	_check(cols != null and cols.get_child_count() == 3 and cols.get_child(2).get_child(0) is StatGrid,
 		"(1) slots column + divider + #376 stats column (got %d children)" % (cols.get_child_count() if cols != null else -1))
 	var slots_box := cols.get_child(0) as VBoxContainer
 	_check(slots_box != null, "(1) first column is the slots box")
@@ -164,7 +164,7 @@ func _initialize() -> void:
 	# amber style.
 	panel._on_slot_pressed(1) # BetaBolt is slotted + upgradeable
 	await process_frame
-	var upgrade_box := vbox.get_child(2) as VBoxContainer
+	var upgrade_box: VBoxContainer = panel._upgrade_box # #416: under the stats in the detail column
 	var uh := upgrade_box.get_child(0) as Label
 	_check(uh != null and uh.text == "Upgrades", "(4) Upgrades header on selection")
 	var ub := upgrade_box.find_children("*", "UpgradeCard", true, false)[0] as UpgradeCard
