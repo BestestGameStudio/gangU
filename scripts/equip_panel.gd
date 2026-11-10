@@ -89,8 +89,13 @@ const DETAIL_WIDTH := 600.0
 ## columns 376 (player stats 115 + sep + upgrades header ~35 + one full
 ## upgrade card 216 at the #441 card width; the slots column needs 289) +
 ## plate margins 20. Still FIXED so the #416 no-resize rule holds.
-const PANEL_HEIGHT := 442.0
+## #427 rebase: the relics section (separator + header + one names row, 83)
+## sits below the columns, so the fixed height grows 442 -> 525 to keep the
+## tallest state (upgrade cards + relics) inside it without resizing.
+const PANEL_HEIGHT := 525.0
 const SCREEN_MARGIN := 16.0
+var _relics_box: VBoxContainer
+var _relics_list: HFlowContainer
 
 func _process(_delta: float) -> void:
 	if visible:
@@ -204,6 +209,8 @@ func _hook_relics() -> void:
 	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
 	if relics != null and not relics.changed.is_connected(_on_live_stat_change):
 		relics.changed.connect(_on_live_stat_change)
+	if relics != null and not relics.changed.is_connected(_refresh_relics):
+		relics.changed.connect(_refresh_relics) # #427 section stays live too
 
 func _build_ui() -> void:
 	var dim := ColorRect.new()
@@ -273,6 +280,60 @@ func _build_ui() -> void:
 	_detail_box.add_child(_upgrade_box)
 	# #417: no "Selected: <spell>" status line; the highlighted slot and the
 	# stat grid title already show the selection.
+	_build_relics_section(vbox)
+
+## #427 (Daniel, 2026-11-09): "on the spell tab add a section for relics on
+## the bottom". Read-only list of the run's owned relics (OwnedRelics.all(),
+## acquisition order), names only; an empty run shows a placeholder line.
+## Fields, interaction, ordering and overflow beyond this are NOT settled
+## design - names wrap in a flow container rather than growing the panel.
+func _build_relics_section(parent: VBoxContainer) -> void:
+	parent.add_child(HSeparator.new())
+	_relics_box = VBoxContainer.new()
+	_relics_box.name = "RelicsBox"
+	_relics_box.add_theme_constant_override("separation", 4)
+	parent.add_child(_relics_box)
+	var header := Label.new()
+	header.name = "RelicsHeader"
+	header.text = "Relics"
+	header.add_theme_font_size_override("font_size", 22)
+	_relics_box.add_child(header)
+	_relics_list = HFlowContainer.new()
+	_relics_list.name = "RelicsList"
+	_relics_list.add_theme_constant_override("h_separation", 16)
+	_relics_list.add_theme_constant_override("v_separation", 4)
+	_relics_box.add_child(_relics_list)
+
+func _refresh_relics() -> void:
+	if not is_instance_valid(_relics_list):
+		return
+	for c in _relics_list.get_children():
+		_relics_list.remove_child(c)
+		c.queue_free()
+	var owned := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+	var relics: Array[Relic] = owned.all() if owned != null else ([] as Array[Relic])
+	if relics.is_empty():
+		var empty := Label.new()
+		empty.name = "RelicsEmpty"
+		empty.text = "No relics yet"
+		empty.add_theme_font_size_override("font_size", 18)
+		empty.modulate = Color(1, 1, 1, 0.6)
+		_relics_list.add_child(empty)
+		return
+	for r in relics:
+		var l := Label.new()
+		l.text = r.display_name if not r.display_name.is_empty() else String(r.id)
+		l.add_theme_font_size_override("font_size", 18)
+		_relics_list.add_child(l)
+
+## Names currently shown in the relics section (harness/read-only helper).
+func relic_names() -> PackedStringArray:
+	var out := PackedStringArray()
+	if is_instance_valid(_relics_list):
+		for c in _relics_list.get_children():
+			if c is Label and c.name != &"RelicsEmpty":
+				out.append((c as Label).text)
+	return out
 
 func _input(event: InputEvent) -> void:
 	# Toggle in _input, BEFORE GUI handling: a focused panel button would
@@ -319,6 +380,7 @@ func _on_live_stat_change(_a = null) -> void:
 		_refresh_stats()
 
 func _refresh() -> void:
+	_refresh_relics()
 	if _caster == null:
 		return
 	_refresh_stats()
