@@ -79,6 +79,12 @@ func spawn_pack() -> Array[Enemy]:
 	if _area == null:
 		return out
 	_prune()
+	# Nightfall restarts the hunt: survivors of a day fight still carry the
+	# wolf_retreat flag order_retreat set at dawn, and the behavior obeys it
+	# whenever it is not engaged - without this clear they would walk home
+	# and despawn on the new night instead of hunting (#476 review, Mitra).
+	for w in pack:
+		w.remove_meta("wolf_retreat")
 	var missing := PACK_SIZE - pack.size()
 	var base_angle := randf() * TAU
 	for i in missing:

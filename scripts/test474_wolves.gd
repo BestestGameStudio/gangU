@@ -15,6 +15,8 @@ extends SceneTree
 ##   (D) daybreak: unengaged wolves retreat into the cave and despawn.
 ##   (E) engaged wolves fight back and do not retreat at daybreak; they
 ##       leave once the fight ends.
+##   (H) regression (#476 review): survivors of a day fight hunt again the
+##       next night - the stale wolf_retreat flag is cleared at nightfall.
 ##   (F) wolves weave around trees on the way to the player (#391 seam).
 ##   (G) pack hunt: one engaged wolf pulls the pack in from beyond its
 ##       own hunt range.
@@ -46,6 +48,7 @@ func _initialize() -> void:
 	await _leg_c_pounce()
 	await _leg_d_daybreak_retreat()
 	await _leg_e_engaged_no_retreat()
+	await _leg_h_next_night_hunt()
 	await _leg_f_tree_weave()
 	await _leg_g_pack_hunt()
 	print("[474] DONE failures=", failures)
@@ -251,6 +254,44 @@ func _leg_e_engaged_no_retreat() -> void:
 			gone = true
 			break
 	_check(gone, "(E) once the fight ends the wolves retreat and despawn")
+	await _teardown(stage)
+
+# --- (H) next night: survivors of a day fight hunt again -------------------------
+
+func _leg_h_next_night_hunt() -> void:
+	# #476 review (Mitra): order_retreat sets wolf_retreat on the live pack
+	# at dawn; a survivor that kept fighting carries the stale flag into the
+	# next night, and the behavior then retreats instead of hunting.
+	var fx := _mk_stage()
+	var stage: Node2D = fx[0]
+	var p := _mk_player(stage, Vector2(400, 0)) # engaged: inside 500 fight range
+	var clock := _mk_clock(0.85) # night 1
+	var cave := _mk_cave(stage, Vector2.ZERO)
+	await _frames(10)
+	_check(cave.alive_count() == 6, "(H) night 1: pack out")
+	clock.time_of_day = 0.4 # daybreak mid-hunt: retreat ordered on the live pack
+	await _frames(30)
+	var flagged := false
+	for w in cave.pack:
+		if w.has_meta("wolf_retreat") and w.get_meta("wolf_retreat"):
+			flagged = true
+	_check(flagged, "(H) daybreak flags the live pack wolf_retreat (fixture)")
+	# The fight runs into the next night; the player then steps out of fight
+	# range but stays inside hunt range.
+	clock.time_of_day = 0.85 # night 2
+	await _frames(5)
+	p.global_position = Vector2(400, 800) # ~800px: inside 1150 hunt, outside 500 fight
+	await _frames(15)
+	var hunting := 0
+	for w in cave.pack:
+		if _state(w) == "HUNT":
+			hunting += 1
+	_check(hunting > 0, "(H) next night: survivors hunt again instead of obeying the stale retreat (hunting %d/%d)" % [hunting, cave.pack.size()])
+	var cleared := true
+	for w in cave.pack:
+		if w.has_meta("wolf_retreat") and w.get_meta("wolf_retreat"):
+			cleared = false
+	_check(cleared, "(H) nightfall clears the stale wolf_retreat flag")
 	await _teardown(stage)
 
 # --- (F) weave around trees -----------------------------------------------------
