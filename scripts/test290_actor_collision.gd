@@ -5,15 +5,12 @@ extends SceneTree
 ## - an enemy chasing a player overlaps it instead of stopping at the hull,
 ## - a moving player passes straight through an idle enemy (no block/push),
 ## - both spawn orders (player first / enemy first) get the exceptions,
-## - production wiring (explicit player_path target) works,
-## - controls: player still blocked by a StaticBody2D, enemies still collide
-##   with each other, contact damage and projectile hits unchanged.
+## - production wiring (explicit player_path target; Player.find fallback) works,
+## - controls: player still blocked by a StaticBody2D, contact damage and
+##   projectile hits unchanged. (e) now asserts #493: enemies pass through
+##   each other (see test493_enemy_overlap.gd).
 
-var failures := 0extends SceneTree
-
-## #290 harness: players and enemies never physically collide.
-
-## Real engine physics (m
+var failures := 0
 
 func _check(cond: bool, name: String) -> void:
 	if not cond:
