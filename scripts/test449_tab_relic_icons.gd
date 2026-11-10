@@ -79,6 +79,25 @@ func _initialize() -> void:
 	await process_frame
 	_check(panel.relic_names() == PackedStringArray(["Moss Charm", "Basalt Idol", "Third Relic"]), "(5) section stays live")
 
+	# (6) ID-only relics (valid: nonempty id, empty display_name) keep their
+	# identity: tooltip first line and relic_names() fall back to String(id),
+	# as the pre-#449 Tab list did - never a blank line.
+	var bare := Relic.new()
+	bare.id = &"probe_relic"
+	var bare_desc := Relic.new()
+	bare_desc.id = &"probe_desc"
+	bare_desc.description = "Probe text."
+	_check(bare.is_valid_definition() and owned.add(bare), "(6) ID-only relic is valid and grantable")
+	owned.add(bare_desc)
+	await process_frame
+	_check(panel.relic_names() == PackedStringArray(["Moss Charm", "Basalt Idol", "Third Relic", "probe_relic", "probe_desc"]), "(6) relic_names() falls back to the id: %s" % [panel.relic_names()])
+	icons = list.find_children("*", "RelicIcon", true, false)
+	if icons.size() == 5:
+		_check((icons[3] as RelicIcon).tooltip_text == "probe_relic", "(6) ID-only tooltip is the id (got '%s')" % (icons[3] as RelicIcon).tooltip_text)
+		_check((icons[4] as RelicIcon).tooltip_text == "probe_desc\nProbe text.", "(6) ID-only tooltip with desc keeps an id first line (got '%s')" % (icons[4] as RelicIcon).tooltip_text)
+	else:
+		_check(false, "(6) five icons after ID-only adds (got %d)" % icons.size())
+
 	print("[449t] failures=%d" % failures)
 	print("[449t] ALL PASS" if failures == 0 else "[449t] FAILURES PRESENT")
 	quit(failures)
