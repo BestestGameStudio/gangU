@@ -18,6 +18,34 @@ extends Node
 ## assigned before tree entry; an optional "route" (#373) is handed to the
 ## behavior after tree entry; other unknown keys are tolerated and ignored.
 
+## Typed construction options shared by independent spawn owners. Tree entry,
+## policy, signals and owner bookkeeping stay with each caller.
+class SpawnOptions extends RefCounted:
+	var wire_enemy: bool = false
+	var player_path: NodePath = NodePath("")
+	var terrain: TerrainMap = null
+	var reward_table: RewardTable = null
+	var definition: EnemyDefinition = null
+	var context: RefCounted = null
+
+## Single construction/wiring seam. Deliberately does not add to the tree:
+## callers preserve their existing immediate/deferred entry and ready order.
+## Non-Enemy fixture bosses retain their original Node/Node2D contract.
+static func spawn(scene: PackedScene, pos: Vector2, opts: SpawnOptions) -> Node:
+	var node := scene.instantiate()
+	if node is Node2D:
+		node.position = pos
+	if node is Enemy:
+		if opts.wire_enemy:
+			node.player_path = opts.player_path
+			node.terrain = opts.terrain
+			node.reward_table = opts.reward_table
+		if opts.definition != null:
+			node.definition = opts.definition
+		if opts.context != null:
+			node.context = opts.context
+	return node
+
 signal spawned(enemy: Enemy, entry: Dictionary)
 signal spawn_died(enemy: Enemy, entry: Dictionary)
 
@@ -80,16 +108,14 @@ func request_spawn_deferred(entry: Dictionary) -> Enemy:
 func _prepare_spawn(entry: Dictionary) -> Enemy:
 	if not should_spawn(entry):
 		return null
-	var enemy_scene := entry["enemy"] as PackedScene
-	var e := enemy_scene.instantiate() as Enemy
-	e.position = entry["position"] as Vector2
-	e.reward_table = entry["reward_table"] as RewardTable
-	# #346: optional per-entry definition (stats + behavior slot), assigned
-	# before tree entry so Enemy._ready applies it.
+	var opts := SpawnOptions.new()
+	opts.wire_enemy = true
+	opts.player_path = player_path
+	opts.terrain = terrain
+	opts.reward_table = entry["reward_table"] as RewardTable
 	if entry.get("definition") is EnemyDefinition:
-		e.definition = entry["definition"]
-	e.player_path = player_path
-	e.terrain = terrain
+		opts.definition = entry["definition"]
+	var e := spawn(entry["enemy"] as PackedScene, entry["position"] as Vector2, opts) as Enemy
 	var idx := _entry_index(entry)
 	if not _alive.has(idx):
 		_alive[idx] = []
