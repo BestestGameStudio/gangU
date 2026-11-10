@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"head_bolt"
 spell_name = "Head Bolt"
 cooldown = 0.0
 damage = 8.0

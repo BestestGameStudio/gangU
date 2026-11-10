@@ -97,7 +97,7 @@ func _initialize() -> void:
 	var frames: SpriteFrames = load("res://resources/sprites/spell_upgrades_frames.tres")
 	_check(frames != null and frames.has_animation(&"spirit_punch") and frames.has_animation(&"spirit_punch_start"),
 		"sheet has spirit_punch_start + spirit_punch anims")
-	_check(Projectile.SPELL_SPRITE_ANIMS.get("Spirit Punch") == &"spirit_punch", "SPELL_SPRITE_ANIMS maps Spirit Punch")
+	_check(Projectile.SPELL_SPRITE_ANIMS.get(&"spirit_punch") == &"spirit_punch", "SPELL_SPRITE_ANIMS maps the spirit_punch id")
 	var p: Projectile = load("res://scenes/projectile.tscn").instantiate()
 	p.setup(_spell, Vector2.RIGHT, null)
 	_area.add_child(p)

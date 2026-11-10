@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"frost_shard"
 spell_name = "Frost Shard"
 cooldown = 0.8
 damage = 8.0

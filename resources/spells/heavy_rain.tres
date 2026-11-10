@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"heavy_rain"
 spell_name = "Heavy Rain"
 icon_upgraded = true
 cooldown = 6.0

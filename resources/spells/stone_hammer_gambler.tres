@@ -102,6 +102,7 @@ entries = Array[ExtResource("3_entry")]([SubResource("e6a"), SubResource("e6b")]
 
 [resource]
 script = ExtResource("1_spell")
+id = &"stone_hammer_gambler"
 spell_name = "Gambler's Hammer"
 icon_upgraded = true
 cooldown = 8.5

@@ -26,35 +26,39 @@ var visual_override: Node2D
 ## the visual_override hook are untouched; unmapped spells look as before.
 const PROJECTILE_SPRITES: SpriteFrames = preload("res://resources/sprites/spell_upgrades_frames.tres")
 ## Each spell (base or upgrade result) flies its own sheet row (#289): a
-## one-shot "<anim>_start" spawn-in, then the looping "<anim>" flight.
+## one-shot "<anim>_start" spawn-in, then the looping "<anim>" flight. Keyed
+## by Spell.id; spells without an entry keep the code-drawn visuals.
 const SPELL_SPRITE_ANIMS: Dictionary = {
-	"Fire Ball": &"fire_ball",
-	"Fire Ball Split": &"fire_ball_split",
-	"Fire Ball Split Heavy": &"fire_ball_split_heavy",
-	"Fire Ball Split Wide": &"fire_ball_split_wide",
-	"Fire Ball Beam": &"fire_ball_beam",
-	"Fire Ball Beam Heavy": &"fire_ball_beam_heavy",
-	"Fire Ball Beam Homing": &"fire_ball_beam_homing",
-	"Fire Ball Beam Long": &"fire_ball_beam_long",
-	"Fire Ball Beam Piercing": &"fire_ball_beam_piercing",
-	"Mana Shot": &"mana_shot",
-	"Mana Volley": &"mana_volley",
-	"Mana Lance": &"mana_lance",
-	"Placeholder Bolt": &"placeholder_bolt",
-	"Bolt Flurry": &"bolt_flurry",
-	"Heavy Bolt": &"bolt_heavy",
-	"Spirit Punch": &"spirit_punch",
+	&"fire_ball": &"fire_ball",
+	&"fire_ball_split": &"fire_ball_split",
+	&"fire_ball_split_heavy": &"fire_ball_split_heavy",
+	&"fire_ball_split_wide": &"fire_ball_split_wide",
+	&"fire_ball_beam": &"fire_ball_beam",
+	&"fire_ball_beam_heavy": &"fire_ball_beam_heavy",
+	&"fire_ball_beam_homing": &"fire_ball_beam_homing",
+	&"fire_ball_beam_long": &"fire_ball_beam_long",
+	&"fire_ball_beam_piercing": &"fire_ball_beam_piercing",
+	&"mana_shot": &"mana_shot",
+	&"mana_shot_volley": &"mana_volley",
+	&"mana_shot_lance": &"mana_lance",
+	&"placeholder_bolt": &"placeholder_bolt",
+	&"bolt_flurry": &"bolt_flurry",
+	&"bolt_heavy": &"bolt_heavy",
+	&"spirit_punch": &"spirit_punch",
+	&"spirit_punch_bubble": &"spirit_punch",
+	&"spirit_punch_burst": &"spirit_punch",
+	&"spirit_punch_launch": &"spirit_punch",
 	## #331: the whole Water Ball tree flies the one code-drawn droplet row.
-	"Water Ball": &"water_ball",
-	"Guided Water Ball": &"water_ball",
-	"Seeking Water Ball": &"water_ball",
-	"Tidal Seeker": &"water_ball",
-	"Water Splash": &"water_ball",
-	"Water Barrage": &"water_ball",
-	"Heavy Rain": &"water_ball",
-	"Water Bubble": &"water_ball",
-	"Surging Bubble": &"water_ball",
-	"Big Ball": &"water_ball",
+	&"water_ball": &"water_ball",
+	&"water_ball_guided": &"water_ball",
+	&"water_ball_seeking": &"water_ball",
+	&"water_ball_tidal": &"water_ball",
+	&"water_splash": &"water_ball",
+	&"water_barrage": &"water_ball",
+	&"heavy_rain": &"water_ball",
+	&"water_bubble": &"water_ball",
+	&"surging_bubble": &"water_ball",
+	&"big_ball": &"water_ball",
 }
 ## Cell art is 64 px wide at scale 1; radius / 10 draws each projectile a little
 ## larger than its hit circle so it reads clearly. Clamped (art only, never the
@@ -274,7 +278,7 @@ func _wire_glow_and_trail() -> void:
 ## animation instead. The root already faces the flight direction and the art
 ## is authored pointing +X, so no extra rotation is needed.
 func _wire_sprite() -> void:
-	var anim: StringName = SPELL_SPRITE_ANIMS.get(spell.spell_name, &"")
+	var anim: StringName = SPELL_SPRITE_ANIMS.get(spell.id, &"")
 	if anim == &"":
 		return
 	_sprite = AnimatedSprite2D.new()

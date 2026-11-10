@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"water_ball_tidal"
 spell_name = "Tidal Seeker"
 icon_upgraded = true
 cooldown = 1.0

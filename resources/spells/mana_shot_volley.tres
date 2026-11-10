@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"mana_shot_volley"
 icon_frames = ExtResource("2_frames")
 icon_prefix = &"mana"
 icon_upgraded = true

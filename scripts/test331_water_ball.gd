@@ -111,7 +111,7 @@ func _check_defaults() -> void:
 	for n in ["water_ball", "water_ball_guided", "water_ball_seeking", "water_ball_tidal", "water_splash", "water_barrage", "heavy_rain", "water_bubble", "surging_bubble", "big_ball"]:
 		var sp := _spell(n)
 		_check(sp.tags.has(SpellTags.WATER) and SpellTags.unknown_tags(sp.tags).is_empty(), "%s carries the water tag" % n)
-		_check(Projectile.SPELL_SPRITE_ANIMS.get(sp.spell_name, &"") == &"water_ball", "%s flies the water_ball sheet row" % n)
+		_check(Projectile.SPELL_SPRITE_ANIMS.get(sp.id, &"") == &"water_ball", "%s flies the water_ball sheet row" % n)
 
 func _check_base() -> void:
 	var base := _spell("water_ball")

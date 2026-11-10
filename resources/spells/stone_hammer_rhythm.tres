@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"stone_hammer_rhythm"
 spell_name = "Rhythm Hammer"
 icon_upgraded = true
 cooldown = 8.5

@@ -5,6 +5,10 @@ class_name Spell
 ## Consumed by: #4 concrete spells, #10 pickups (carry Spell resources),
 ## #11 HUD (name + cooldown state).
 
+## Stable identity, equal to the .tres file stem (e.g. &"mana_shot_volley").
+## Code keys on this, never on spell_name, which is player-facing copy and is
+## shared by several tiers (every Spirit Punch tier is "Spirit Punch").
+@export var id: StringName = &""
 @export var spell_name: String = "Spell"
 ## UI art for spell rows and slots. Null renders an empty placeholder box.
 @export var icon: Texture2D = null

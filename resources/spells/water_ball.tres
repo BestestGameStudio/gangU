@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"water_ball"
 spell_name = "Water Ball"
 cooldown = 0.5
 damage = 12.0

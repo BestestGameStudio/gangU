@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"water_bubble"
 spell_name = "Water Bubble"
 icon_upgraded = true
 cooldown = 7.0

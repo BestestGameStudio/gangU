@@ -141,7 +141,7 @@ func _initialize() -> void:
 		# projectiles, so they have no sheet row (test370 covers their visuals).
 		if result != null and result.hammer_radius > 0.0:
 			continue
-		_check(result != null and Projectile.SPELL_SPRITE_ANIMS.has(result.spell_name), "upgrade %s maps to a sheet animation" % path)
+		_check(result != null and Projectile.SPELL_SPRITE_ANIMS.has(result.id), "upgrade %s maps to a sheet animation" % path)
 		if result != null:
 			_check(result.glow and result.trail_length > 0, "upgrade %s result has a glow and trail" % path)
 			_check(result.glow_tint.a > 0.0, "upgrade %s result sets an art-matched glow tint" % path)

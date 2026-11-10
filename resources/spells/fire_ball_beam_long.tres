@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+id = &"fire_ball_beam_long"
 icon_frames = ExtResource("2_frames")
 icon_prefix = &"fireball"
 icon_upgraded = true
