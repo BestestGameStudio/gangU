@@ -35,6 +35,94 @@ func _move(c: MapCanvas, pos: Vector2, rel: Vector2, mask: int) -> void:
 	ev.button_mask = mask
 	c._gui_input(ev)
 
+## Native routing: events go through root.push_input and the GUI's own hit-test
+## and mouse-focus logic (as in a real session), not straight into _gui_input.
+func _vp_pos(c: MapCanvas, local: Vector2) -> Vector2:
+	return c.get_global_transform_with_canvas() * local
+
+func _vp_button(c: MapCanvas, local: Vector2, b: MouseButton, pressed: bool, mask: int) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = b
+	ev.pressed = pressed
+	ev.button_mask = mask
+	ev.position = _vp_pos(c, local)
+	ev.global_position = ev.position
+	root.push_input(ev, true)
+
+func _vp_motion(c: MapCanvas, from_local: Vector2, to_local: Vector2, mask: int) -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.button_mask = mask
+	ev.position = _vp_pos(c, to_local)
+	ev.global_position = ev.position
+	ev.relative = to_local - from_local
+	root.push_input(ev, true)
+
+## Real key state: Input.parse_input_event updates Input.is_physical_key_pressed.
+func _space(down: bool) -> void:
+	var k := InputEventKey.new()
+	k.physical_keycode = KEY_SPACE
+	k.keycode = KEY_SPACE
+	k.pressed = down
+	Input.parse_input_event(k)
+	Input.flush_buffered_events()
+
+func _native(main: Node, wm: WorldMap, panel: MapPanel, c: MapCanvas) -> void:
+	var id: StringName = wm.area_id
+	panel.open()
+	await _frames()
+	var mid := c.size * 0.5
+	var from := c.center
+	# Middle button, real routing.
+	_vp_button(c, mid, MOUSE_BUTTON_MIDDLE, true, MOUSE_BUTTON_MASK_MIDDLE)
+	_check(c.is_panning(), "native: middle press pans through real GUI routing")
+	_vp_motion(c, mid, mid + Vector2(0, 60), MOUSE_BUTTON_MASK_MIDDLE)
+	_vp_button(c, mid + Vector2(0, 60), MOUSE_BUTTON_MIDDLE, false, 0)
+	_check(c.center.y < from.y and not c.is_panning(), "native: middle drag down moved the view up and released")
+	# Space held for real, then LMB.
+	panel.close()
+	panel.open()
+	await _frames()
+	from = c.center
+	_check(not c._space_down(), "native: Space is not held yet")
+	_space(true)
+	_check(c._space_down() and not c.space_override, "native: a real Space key event is seen as held (no test seam)")
+	_vp_button(c, mid, MOUSE_BUTTON_LEFT, true, MOUSE_BUTTON_MASK_LEFT)
+	_check(c.is_panning(), "native: Space + LMB pans")
+	_vp_motion(c, mid, mid + Vector2(0, 60), MOUSE_BUTTON_MASK_LEFT)
+	_vp_button(c, mid + Vector2(0, 60), MOUSE_BUTTON_LEFT, false, 0)
+	_check(c.center.y < from.y and wm.strokes(id).is_empty(), "native: Space + LMB drag pans and draws no ink")
+	_space(false)
+	_check(not c._space_down(), "native: Space released")
+	# Plain buttons, real routing, Space up.
+	_vp_button(c, mid, MOUSE_BUTTON_LEFT, true, MOUSE_BUTTON_MASK_LEFT)
+	_vp_motion(c, mid, mid + Vector2(25, 0), MOUSE_BUTTON_MASK_LEFT)
+	_vp_button(c, mid + Vector2(25, 0), MOUSE_BUTTON_LEFT, false, 0)
+	_check(wm.strokes(id).size() == 1 and not c.is_panning(), "native: plain LMB still draws")
+	var cc := c.center
+	panel.set_tool(MapCanvas.Tool.MARKER)
+	_vp_button(c, mid + Vector2(80, 40), MOUSE_BUTTON_LEFT, true, MOUSE_BUTTON_MASK_LEFT)
+	_vp_button(c, mid + Vector2(80, 40), MOUSE_BUTTON_LEFT, false, 0)
+	_check(wm.markers(id).size() == 1 and c.center == cc, "native: Marker tool places a marker, no pan")
+	panel.set_tool(MapCanvas.Tool.ERASE)
+	_vp_button(c, mid + Vector2(80, 40), MOUSE_BUTTON_LEFT, true, MOUSE_BUTTON_MASK_LEFT)
+	_vp_button(c, mid + Vector2(80, 40), MOUSE_BUTTON_LEFT, false, 0)
+	_check(wm.markers(id).is_empty() and c.center == cc, "native: Erase tool erases the marker, no pan")
+	panel.set_tool(MapCanvas.Tool.DRAW)
+	_vp_button(c, mid + Vector2(5, 0), MOUSE_BUTTON_RIGHT, true, MOUSE_BUTTON_MASK_RIGHT)
+	_vp_button(c, mid + Vector2(5, 0), MOUSE_BUTTON_RIGHT, false, 0)
+	_check(wm.strokes(id).is_empty() and c.center == cc, "native: RMB erases the stroke, no pan")
+	# LMB fast-travel site pick.
+	var site_pos := c.screen_to_world(mid + Vector2(-100, 30))
+	wm.set_sites(id, {&"dungeon_a": site_pos})
+	wm.cleared_rule = func(_d): return true
+	c.queue_redraw()
+	await _frames()
+	_vp_button(c, mid + Vector2(-100, 30), MOUSE_BUTTON_LEFT, true, MOUSE_BUTTON_MASK_LEFT)
+	_vp_button(c, mid + Vector2(-100, 30), MOUSE_BUTTON_LEFT, false, 0)
+	_check(c.selected_site == &"dungeon_a" and not c.is_panning() and wm.strokes(id).is_empty(), "native: LMB on a cleared site still selects it for fast travel")
+	wm.cleared_rule = Callable()
+	wm.set_sites(id, {})
+
 func _run() -> void:
 	Bestiary.save_path = "user://test435_bestiary.cfg"
 	var main: Node = load("res://scenes/main.tscn").instantiate()
@@ -123,6 +211,8 @@ func _run() -> void:
 	_move(c, mid + Vector2(20, 0), Vector2(20, 0), MOUSE_BUTTON_MASK_RIGHT)
 	_btn(c, mid, MOUSE_BUTTON_RIGHT, false)
 	_check(c.center == cc, "RMB erase does not pan")
+
+	await _native(main, wm, panel, c)
 
 	# Non-overworld areas: no bounds, no panning.
 	panel.close()
