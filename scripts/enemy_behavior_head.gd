@@ -74,32 +74,16 @@ func _init() -> void:
 
 # --- BossBehavior hooks ------------------------------------------------------
 
-func _arrival_color() -> Color:
-	return HEAD_RED
-
-func _has_stun_phase() -> bool:
-	return true
-
-func _first_attack_delay() -> float:
-	return FIRST_ATTACK_DELAY
-
-func _attack_interval() -> float:
-	return ATTACK_INTERVAL
-
-func _enraged_interval() -> float:
-	return ENRAGED_INTERVAL
-
-func _recover_time() -> float:
-	return RECOVER_TIME
-
-func _stun_time() -> float:
-	return STUN_TIME
-
-func _windup_time(which: int) -> float:
-	return WINDUP_TIME[which]
-
-func _windup_anim(which: int) -> StringName:
-	return WINDUP_ANIM[which]
+func _configure() -> void:
+	first_attack_delay = FIRST_ATTACK_DELAY
+	attack_interval = ATTACK_INTERVAL
+	enraged_interval = ENRAGED_INTERVAL
+	recover_time = RECOVER_TIME
+	stun_time = STUN_TIME
+	has_stun_phase = true
+	arrival_color = HEAD_RED
+	windup_times = WINDUP_TIME
+	windup_anims = WINDUP_ANIM
 
 func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	match state:
