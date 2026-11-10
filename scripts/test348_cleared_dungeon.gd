@@ -30,9 +30,14 @@ func _enter(main: Node, gate_name: String) -> void:
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	for n in main.current_area.get_children():
-		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate): # #373: migrants belong to no entrance
+		if n is Enemy and not _roams((n as Enemy)):
 			out.append(n)
 	return out
+
+## #373 migrants and the #478 day bird (spawned at a random angle around
+## the player) belong to no entrance.
+func _roams(e: Enemy) -> bool:
+	return e._behavior is EnemyBehaviorMigrate or e._behavior is EnemyBehaviorBird
 
 func _near(enemies: Array[Enemy], at: Vector2, r: float) -> int:
 	var n := 0
