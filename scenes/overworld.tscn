@@ -1,8 +1,9 @@
-[gd_scene load_steps=21 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=22 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
 [ext_resource type="Script" path="res://scripts/terrain_block_visuals.gd" id="437_blockvis"]
+[ext_resource type="Script" path="res://scripts/day_night_tint.gd" id="448_tint"]
 [ext_resource type="Script" path="res://scripts/entrance_guards.gd" id="346_guards"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://scenes/gate.tscn" id="346_gate"]
 [ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://scenes/dungeon_a.tscn" id="346_dna"]
@@ -35,6 +36,9 @@ cell_size = 32
 [node name="BlockVisuals" type="Node2D" parent="."]
 script = ExtResource("437_blockvis")
 map_path = NodePath("../Terrain")
+
+[node name="DayNightTint" type="CanvasModulate" parent="."]
+script = ExtResource("448_tint")
 
 [node name="TitleLayer" type="CanvasLayer" parent="."]
 layer = 2

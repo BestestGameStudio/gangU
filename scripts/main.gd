@@ -23,6 +23,9 @@ func _ready() -> void:
 	grid.name = "BackgroundGrid"
 	add_child(grid)
 	move_child(grid, 0)
+	# #448: the day/night clock is parked on the tree root (not under Main or
+	# any area) so it keeps running through area swaps and scene reloads.
+	DayNightClock.ensure(get_tree())
 	var rm := RunManager.new()
 	rm.name = "RunManager"
 	rm.player = $Player
