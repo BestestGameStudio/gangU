@@ -447,12 +447,17 @@ func _check_tree() -> void:
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
 	for id in ["water_guided", "water_seeking", "water_tidal", "water_splash", "water_barrage", "water_heavy_rain", "water_bubble", "water_surging_bubble", "water_big_ball"]:
 		_check(main_src.contains("upgrades/%s.tres" % id), "main.gd registers %s" % id)
-	var table: RewardTable = load("res://resources/rewards/demo_table.tres")
-	var found := false
-	for entry in table.entries:
-		if entry.spell != null and entry.spell.spell_name == "Water Ball":
-			found = true
-	_check(found, "demo loot table can drop Water Ball")
+	# #465 (Daniel, 2026-11-09: regular mobs drop currency only): the
+	# production mob table no longer carries spells, so the Water Ball
+	# reward wiring is pinned with an in-code fixture entry.
+	var table := RewardTable.new()
+	var wb_entry := RewardEntry.new()
+	wb_entry.kind = RewardEntry.Kind.SPELL
+	wb_entry.spell = load("res://resources/spells/water_ball.tres")
+	wb_entry.weight = 1.0
+	var wb_entries: Array[RewardEntry] = [wb_entry]
+	table.entries = wb_entries
+	_check(table.roll([]) == wb_entry and wb_entry.spell.spell_name == "Water Ball", "fixture reward table rolls the Water Ball spell entry")
 
 ## Mitra on #339: each row is ONE route. Picking Steer closes Splash and
 ## Bubble for good, even when a second Water Ball is looted afterwards.

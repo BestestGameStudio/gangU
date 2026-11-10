@@ -53,7 +53,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			engaged = true
 		if engaged and not was_engaged:
 			engaged_from = enemy.global_position
-		if engaged and _leash_anchor().distance_to(target_pos) > _leash_radius():
+		if engaged and _leash_anchor().distance_to(target_pos) > _leash_radius(enemy):
 			engaged = false
 	else:
 		engaged = false
@@ -70,8 +70,9 @@ func _leash_anchor() -> Vector2:
 ## The give-up distance. A stationary guard keeps LEASH_RADIUS; #414
 ## (Daniel, 2026-11-09: "Make the chase distance larger") lets moving
 ## roles override this - the patroller chases much farther before giving
-## up.
-func _leash_radius() -> float:
+## up, and #463 farther still for the basic mustache men. Takes the enemy
+## so overrides can pick the radius per enemy type.
+func _leash_radius(_enemy: Enemy) -> float:
 	return LEASH_RADIUS
 
 ## What the enemy does while not engaged. A guard walks back to its post.
