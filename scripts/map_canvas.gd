@@ -54,6 +54,16 @@ var selected_site: StringName = &""
 ## beyond `pan_bounds` (set by the panel for the overworld; an empty rect
 ## means no panning). Test seam: `space_override` stands in for the key.
 var pan_bounds: Rect2 = Rect2()
+## (#440 review) The land outline itself. The view is kept fully inside this
+## polygon where that is possible at the current zoom, so a corner of the
+## bounding rect (which lies outside the irregular outline) is never reached.
+## Empty = rect-only clamping.
+var pan_outline: PackedVector2Array = PackedVector2Array():
+	set(v):
+		pan_outline = v
+		_anchor_key = Vector3.ZERO
+var _anchor_key := Vector3.ZERO
+var _anchor := Vector2.INF
 var space_override := false
 var _panning := false
 
@@ -115,8 +125,55 @@ func is_panning() -> bool:
 func _space_down() -> bool:
 	return space_override or Input.is_physical_key_pressed(KEY_SPACE)
 
+## True when the whole view, centered on `c`, lies inside `pan_outline`.
+func view_inside_outline(c: Vector2) -> bool:
+	if pan_outline.size() < 3:
+		return true
+	var half := size * 0.5 / map_scale
+	var r := PackedVector2Array([
+		c + Vector2(-half.x, -half.y), c + Vector2(half.x, -half.y),
+		c + Vector2(half.x, half.y), c + Vector2(-half.x, half.y)])
+	return Geometry2D.clip_polygons(r, pan_outline).is_empty()
+
+## A view center whose whole view fits inside the outline, or Vector2.INF when
+## the outline is too small for the view at this zoom. Cached per zoom/size.
+func _fit_anchor() -> Vector2:
+	var key := Vector3(map_scale, size.x, size.y)
+	if key == _anchor_key:
+		return _anchor
+	_anchor_key = key
+	var cen := Vector2.ZERO
+	for p in pan_outline:
+		cen += p
+	cen /= pan_outline.size()
+	_anchor = Vector2.INF
+	if view_inside_outline(cen):
+		_anchor = cen
+		return _anchor
+	var best := INF
+	var step := 60.0
+	var y := pan_bounds.position.y
+	while y <= pan_bounds.end.y:
+		var x := pan_bounds.position.x
+		while x <= pan_bounds.end.x:
+			var q := Vector2(x, y)
+			var d := q.distance_squared_to(cen)
+			if d < best and view_inside_outline(q):
+				best = d
+				_anchor = q
+			x += step
+		y += step
+	return _anchor
+
+## True when some view center fits the whole view inside the outline.
+func outline_fits_view() -> bool:
+	return pan_outline.size() >= 3 and _fit_anchor() != Vector2.INF
+
 ## Moves `center` to `c`, kept inside `pan_bounds` (an axis smaller than the
 ## view stays centered on the bounds). Without bounds the center is as given.
+## With an outline, the view is kept fully inside it: a center that would
+## expose outside-the-outline space is pulled toward a fitting center until the
+## view fits. If no center fits at this zoom, only the rect clamp applies.
 func clamp_center(c: Vector2) -> Vector2:
 	if pan_bounds.size.x <= 0.0 or pan_bounds.size.y <= 0.0:
 		return c
@@ -126,7 +183,20 @@ func clamp_center(c: Vector2) -> Vector2:
 	var out := c
 	out.x = pan_bounds.get_center().x if lo.x > hi.x else clampf(c.x, lo.x, hi.x)
 	out.y = pan_bounds.get_center().y if lo.y > hi.y else clampf(c.y, lo.y, hi.y)
-	return out
+	if pan_outline.size() < 3 or view_inside_outline(out):
+		return out
+	var a := _fit_anchor()
+	if a == Vector2.INF:
+		return out
+	var t_lo := 0.0 # anchor itself fits
+	var t_hi := 1.0
+	for i in 22:
+		var t := (t_lo + t_hi) * 0.5
+		if view_inside_outline(a.lerp(out, t)):
+			t_lo = t
+		else:
+			t_hi = t
+	return a.lerp(out, t_lo)
 
 func _start_drag(button: MouseButton) -> void:
 	_drag_button = button
