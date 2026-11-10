@@ -9,7 +9,7 @@ extends Area2D
 ##
 ## Freeze contract: any body or area inside the bubble that implements
 ## set_frozen(frozen: bool) is frozen while inside and unfrozen on exit or
-## when the bubble ends. The player (ActorCollision.PLAYER_GROUP) is never
+## when the bubble ends. The player (PhysicsLayers.PLAYER_GROUP) is never
 ## frozen. Actors without set_frozen are unaffected.
 
 signal ended
@@ -62,6 +62,8 @@ static func spawn(parent: Node, anchor: Vector2, p_radius: float, p_duration: fl
 
 func _ready() -> void:
 	add_to_group(&"freeze_bubbles")
+	collision_layer = 0 # #515: the bubble is only a detector
+	collision_mask = PhysicsLayers.FREEZE_MASK
 	_collision = CollisionShape2D.new()
 	_shape = CircleShape2D.new()
 	_shape.radius = 0.0
@@ -96,7 +98,7 @@ func _ready() -> void:
 	# the rim as well. Raise the player above the veil while any bubble is
 	# active; restored when the last bubble releases (meta guards
 	# overlapping bubbles).
-	var player := get_tree().get_first_node_in_group(ActorCollision.PLAYER_GROUP) as CanvasItem
+	var player := get_tree().get_first_node_in_group(PhysicsLayers.PLAYER_GROUP) as CanvasItem
 	if player != null:
 		if not player.has_meta(&"freeze_bubble_z"):
 			player.set_meta(&"freeze_bubble_z", player.z_index)
@@ -193,7 +195,7 @@ func _on_node_exited(node: Node) -> void:
 
 
 func _try_freeze(node: Node) -> void:
-	if node.is_in_group(ActorCollision.PLAYER_GROUP):
+	if node.is_in_group(PhysicsLayers.PLAYER_GROUP):
 		return
 	if not node.has_method(&"set_frozen"):
 		return
