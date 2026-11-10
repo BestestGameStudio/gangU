@@ -80,7 +80,7 @@ static func player_entries(player: Player) -> Array:
 
 ## The hammer route state applies to every Stone Hammer form (hammer_radius).
 static func is_hammer(spell: Spell) -> bool:
-	return spell != null and spell.hammer_radius > 0.0
+	return spell != null and spell.cast_mode() == Spell.CastMode.HAMMER
 
 static func spell_entries(spell: Spell, player: Player, caster: SpellCaster) -> Array:
 	var out: Array = []
