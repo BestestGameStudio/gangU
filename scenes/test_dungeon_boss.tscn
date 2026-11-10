@@ -13,7 +13,7 @@ offset_right = 1152.0
 offset_bottom = 648.0
 color = Color(0.14, 0.09, 0.12, 1)
 
-[node name="Player" parent="." instance=ExtResource("3") groups=["player"]]
+[node name="Player" parent="." instance=ExtResource("3")]
 position = Vector2(576, 560)
 
 [node name="Boss" parent="." instance=ExtResource("4") groups=["boss"]]

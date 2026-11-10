@@ -1,12 +1,12 @@
 class_name BestiaryPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#325) Read-only hub bestiary panel. Hidden by default; the hub
 ## BestiaryStation opens it on walk-up and closes it on walk-away (the
 ## SpellDirectoryPanel idiom). Lists every enemy type in Bestiary's
 ## cross-run record: encountered types show their idle sprite, name and
 ## encounter count; catalogued types not met yet show a dark silhouette and
-## "???". Code-built UI in the shared UiStyle look; joins "modal_ui" while
-## visible so the caster skips casting on panel clicks.
+## "???". Code-built UI in the shared UiStyle look; a ModalPanel, so no
+## casting while open.
 
 const ROW_PAD := 6.0
 const ICON_SIZE := 40.0
@@ -25,12 +25,10 @@ func _ready() -> void:
 
 func open() -> void:
 	_render()
-	visible = true
-	add_to_group("modal_ui")
+	_set_shown(true)
 
 func close() -> void:
-	visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
 
 ## Re-render if an encounter was recorded while the panel is open.
 func _process(_delta: float) -> void:

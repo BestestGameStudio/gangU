@@ -72,9 +72,9 @@ func _process(_delta: float) -> bool:
 	return false
 
 func _run() -> void:
-	var dir_node := scene.current_area.get_node_or_null("SpellDirectory") as SpellDirectory
+	var dir_node := scene.current_area.get_node_or_null("SpellDirectory") as PanelStation
 	_check(dir_node != null, "hub has a spell directory location")
-	var directory: Array[SpellDirectory] = [dir_node]
+	var directory: Array[PanelStation] = [dir_node]
 	var unlocked_before := caster.get_unlocked().duplicate()
 	var slots_before := caster.get_slots().duplicate()
 	directory[0]._on_body_entered(p)

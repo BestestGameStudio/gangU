@@ -14,7 +14,7 @@ var failures := 0
 var check_count := 0
 var caster: SpellCaster
 var panel: SpellDirectoryPanel
-var directory: SpellDirectory
+var directory: PanelStation
 var fireball: Spell = preload("res://resources/spells/fire_ball.tres")
 var mana: Spell = preload("res://resources/spells/mana_shot.tres")
 var bolt: Spell = preload("res://resources/spells/placeholder_bolt.tres")
@@ -46,7 +46,6 @@ func _make_player() -> Player:
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	root.add_child(p)
 	return p
 

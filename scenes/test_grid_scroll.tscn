@@ -8,7 +8,7 @@
 
 [node name="BackgroundGrid" parent="." instance=ExtResource("1")]
 
-[node name="Player" parent="." instance=ExtResource("2") groups=["player"]]
+[node name="Player" parent="." instance=ExtResource("2")]
 position = Vector2(576, 324)
 
 [node name="FollowCamera" type="Camera2D" parent="."]

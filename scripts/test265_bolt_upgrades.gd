@@ -158,10 +158,13 @@ func _process(delta: float) -> bool:
 			else:
 				print("[265] heavy cast spawns a single piercing bolt on its own 1.0s cycle OK")
 			print("[265] ", "PASS" if ok else "FAIL")
+			quit(0 if ok else 1)
 			return true
 		_:
+			quit(0 if ok else 1)
 			return true
 	if t > 30.0:
-		print("[265] FAIL timeout in phase ", phase)
+		print("[265] FAIL timeout in phase ", phase); ok = false
+		quit(0 if ok else 1)
 		return true
 	return false

@@ -95,10 +95,10 @@ var _vis_base: Vector2 = Vector2.ONE
 var _sprite: AnimatedSprite2D = null
 var _sprite_base: Vector2 = Vector2.ONE
 
-## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
-## positive, _physics_process skips movement/steer/sweep AND the
-## distance-based lifetime, so a frozen punch simply waits.
-var _freeze_count := 0
+## #305: Signature freeze. While held, _physics_process skips
+## movement/steer/sweep AND the distance-based lifetime, so a frozen punch
+## simply waits.
+var freeze := FreezeHold.new()
 var _spawn_claim_pending := true
 
 ## #331 Water Ball steer branch. cursor_provider returns the world point the
@@ -110,22 +110,8 @@ var _chase_t := 0.0
 ## caps them (0 = unlimited). Guided tier 1 turns once, then casts normally.
 var _redirect_count := 0
 
-## #305: Signature freeze contract. Claims are reference-counted so
-## overlapping bubbles freeze and release independently.
 func set_frozen(frozen: bool) -> void:
-	var was := _freeze_count
-	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
-	if _sprite != null:
-		if _freeze_count > 0 and was == 0:
-			# The AnimatedSprite2D advances on its own internal processing
-			# (start animation re-plays into the loop via animation_finished),
-			# independent of the gated _physics_process: pause() alone does
-			# not hold. Stop its processing too.
-			_sprite.pause()
-			_sprite.process_mode = Node.PROCESS_MODE_DISABLED
-		elif _freeze_count == 0 and was > 0:
-			_sprite.process_mode = Node.PROCESS_MODE_INHERIT
-			_sprite.play()
+	freeze.apply(frozen, _sprite)
 
 ## #263: glow halo + fading trail (opt-in per spell, visuals only).
 const GLOW_RADIUS_MULT: float = 2.2 ## halo radius vs. the sprite's visual radius
@@ -316,7 +302,7 @@ func _physics_process(delta: float) -> void:
 		_spawn_claim_pending = false
 		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
-	if _freeze_count > 0:
+	if freeze.is_frozen():
 		return
 	# #37: a HOMING-tagged spell steers BEFORE moving - toward the nearest
 	# living enemy within HOMING_RANGE, retargeted every frame, capped at

@@ -20,7 +20,7 @@ func _ready() -> void:
 		get_tree().create_timer(30.0).timeout.connect(func(): get_tree().quit())
 
 func _cast() -> void:
-	var p = get_tree().get_first_node_in_group("player")
+	var p = Player.find(get_tree())
 	if p == null or p.get("hp") <= 0:
 		return
 	var proj := TestProjectileScene.instantiate()

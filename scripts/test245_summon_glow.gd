@@ -15,7 +15,6 @@ func _initialize() -> void:
 	var p: Player = load("res://scenes/player.tscn").instantiate()
 	stage.add_child(p)
 	p.position = Vector2(100, 100)
-	check(not p.is_in_group("player"), "production Player is ungrouped; fixture does not add a group")
 	var manager := SummonManager.new()
 	manager.caster_path = NodePath("../Player/SpellCaster")
 	stage.add_child(manager)
@@ -49,7 +48,7 @@ func _initialize() -> void:
 	check(not ally._has_player_glow(), "unowned summon has no halo")
 	var other := Node2D.new()
 	stage.add_child(other)
-	other.add_to_group("player")
+	other.add_to_group(ActorCollision.PLAYER_GROUP)
 	ally.player = other
 	check(not ally._has_player_glow(), "nonPlayer even in player group has no halo")
 	ally.player = p

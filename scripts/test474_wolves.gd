@@ -73,6 +73,7 @@ func _mk_stage(with_map: bool = false) -> Array:
 func _mk_player(stage: Node2D, pos: Vector2) -> Player:
 	var p: Player = _player_scene.instantiate()
 	p.name = "Player"
+	p.max_hp = 1000 # #493 stacked pounces must not end the behavior fixtures early.
 	p.collision_layer = 0
 	p.collision_mask = 0
 	p.set_process(false)

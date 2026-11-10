@@ -66,7 +66,6 @@ func _container(p_def: ContainerDefinition, pos: Vector2) -> DestroyableContaine
 
 func _player(stage: Node2D) -> Player:
 	var p: Player = preload("res://scenes/player.tscn").instantiate()
-	p.add_to_group("player")
 	stage.add_child(p)
 	p.global_position = Vector2(2000, 2000) ## far from every hit line
 	return p
