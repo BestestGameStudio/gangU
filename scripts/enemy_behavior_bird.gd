@@ -14,9 +14,9 @@ extends EnemyBehavior
 ##
 ## Per-enemy instance (the Enemy instantiates its own behavior from the
 ## definition slot, #99). The owning OverworldBird node drives day/night
-## through enemy metadata:
-##   "bird_manager"  OverworldBird - bookkeeping + absorb callback
-##   "bird_leave"    bool          - nightfall: fly off and despawn
+## through the typed Enemy.context (BirdContext):
+##   manager OverworldBird - bookkeeping + absorb callback
+##   leave   bool          - nightfall: fly off and despawn
 ##
 ## Flight model: the Enemy body stays on the GROUND plane (its position is
 ## the shadow); altitude is purely visual (Sprite raised, shadow faded).
@@ -282,13 +282,14 @@ func _in_open_space(enemy: Enemy, player) -> bool:
 	return not enemy.terrain.is_low_cover_cell(enemy.terrain.world_to_cell(player.global_position))
 
 func _leaving(enemy: Enemy) -> bool:
-	return enemy.has_meta("bird_leave") and enemy.get_meta("bird_leave")
+	var c := enemy.context as BirdContext
+	return c != null and c.leave
 
 func _manager(enemy: Enemy) -> Object:
-	if not enemy.has_meta("bird_manager"):
+	var c := enemy.context as BirdContext
+	if c == null:
 		return null
-	var mgr: Object = enemy.get_meta("bird_manager")
-	return mgr if mgr != null and is_instance_valid(mgr) else null
+	return c.manager if c.manager != null and is_instance_valid(c.manager) else null
 
 ## Harness introspection: state name for test assertions.
 func state_name() -> String:

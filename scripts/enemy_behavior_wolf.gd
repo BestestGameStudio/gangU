@@ -11,11 +11,11 @@ extends EnemyBehavior
 ## Per-enemy instance (the Enemy instantiates its own behavior from the
 ## definition slot, #99). Movement weaves around trees through the shared
 ## TerrainPath helper (#391), same as the chase/contact behavior. The
-## owning WolfCave drives the day/night state through enemy metadata:
-##   "wolf_anchor"  Vector2  - the cave mouth (spawn/prowl/retreat point)
-##   "wolf_cave"    WolfCave - pack bookkeeping + absorb callback
-##   "wolf_index"   int      - slot in the pack (flanking offset)
-##   "wolf_retreat" bool     - daybreak: go home unless engaged
+## owning WolfCave drives the day/night state through the typed Enemy.context (WolfContext):
+##   anchor  Vector2  - the cave mouth (spawn/prowl/retreat point)
+##   cave    WolfCave - pack bookkeeping + absorb callback
+##   index   int      - slot in the pack (flanking offset)
+##   retreat bool     - daybreak: go home unless engaged
 ## Damage, speed and ranges ride the enemy's stats (its EnemyDefinition);
 ## only the pounce deals damage - wolves have no plain contact hit.
 
@@ -86,7 +86,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 
 	# Daybreak order from the cave: go home unless in a fight.
 	if state != RETREAT and state != TELEGRAPH and state != POUNCE \
-			and enemy.has_meta("wolf_retreat") and enemy.get_meta("wolf_retreat") and not engaged:
+			and _ctx(enemy) != null and _ctx(enemy).retreat and not engaged:
 		state = RETREAT
 
 	match state:
@@ -207,19 +207,21 @@ func _pack_alert(enemy: Enemy, dist: float) -> bool:
 	var cave := _cave_of(enemy)
 	return cave != null and cave.has_method("pack_alert_active") and cave.pack_alert_active()
 
-## Meta reads are has_meta-guarded: in 4.5 even the two-arg get_meta
-## ERR_PRINTs on a missing key, and fixture wolves carry no cave meta.
+## The cave's typed context; fixture wolves carry none.
+func _ctx(enemy: Enemy) -> WolfContext:
+	return enemy.context as WolfContext
+
 func _cave_of(enemy: Enemy) -> Object:
-	if not enemy.has_meta("wolf_cave"):
-		return null
-	var cave: Object = enemy.get_meta("wolf_cave")
-	return cave if cave != null and is_instance_valid(cave) else null
+	var c := _ctx(enemy)
+	return c.cave if c != null and c.cave != null and is_instance_valid(c.cave) else null
 
 func _anchor_of(enemy: Enemy) -> Vector2:
-	return enemy.get_meta("wolf_anchor") if enemy.has_meta("wolf_anchor") else enemy.global_position
+	var c := _ctx(enemy)
+	return c.anchor if c != null and c.has_anchor else enemy.global_position
 
 func _index_of(enemy: Enemy) -> int:
-	return enemy.get_meta("wolf_index") if enemy.has_meta("wolf_index") else 0
+	var c := _ctx(enemy)
+	return c.index if c != null else 0
 
 ## Harness introspection: state name for test assertions.
 func state_name() -> String:
