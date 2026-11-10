@@ -48,7 +48,29 @@ static func load_master_volume(path: String = SETTINGS_PATH) -> float:
 	var cfg := ConfigFile.new()
 	if cfg.load(path) != OK:
 		return DEFAULT_MASTER
-	return clampf(float(cfg.get_value(SECTION, KEY_MASTER, DEFAULT_MASTER)), 0.0, 1.0)
+	# Coerce like the pre-typing float() loader: legacy/hand-edited configs
+	# can hold string, int or bool values (see bestiary.gd for why narrowed).
+	var raw: Variant = cfg.get_value(SECTION, KEY_MASTER, DEFAULT_MASTER)
+	var saved: float
+	if raw is float:
+		saved = raw
+	elif raw is int:
+		var i: int = raw
+		saved = float(i)
+	elif raw is bool:
+		var b: bool = raw
+		saved = float(b)
+	elif raw is String:
+		var s: String = raw
+		saved = s.to_float()
+	elif raw is StringName:
+		var sn: StringName = raw
+		saved = String(sn).to_float()
+	else:
+		# float() rejected non-scalar values with a hard script error;
+		# keep rejecting instead of silently forcing a wrong volume.
+		saved = raw + 0.0
+	return clampf(saved, 0.0, 1.0)
 
 static func save_master_volume(v: float, path: String = SETTINGS_PATH) -> void:
 	var cfg := ConfigFile.new()
@@ -91,7 +113,7 @@ func _other_modal_open() -> bool:
 	return false
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.is_echo()):
+	if not (event is InputEventKey and (event as InputEventKey).pressed and not event.is_echo()):
 		return
 	if (event as InputEventKey).keycode != KEY_ESCAPE:
 		return

@@ -20,9 +20,9 @@ var _ratio: float = 1.0
 var _lag: float = 1.0
 
 func _ready() -> void:
-	var body := get_parent()
+	var body: Node = get_parent()
 	if body != null and body.has_signal("health_changed"):
-		body.health_changed.connect(_on_health_changed)
+		body.connect("health_changed", _on_health_changed)
 
 func _on_health_changed(current: int, max_hp: int) -> void:
 	_ratio = clampf(float(current) / float(maxi(max_hp, 1)), 0.0, 1.0)

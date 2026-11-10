@@ -55,13 +55,16 @@ class StatCell extends PanelContainer:
 		value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(value_label)
-		mouse_entered.connect(func(): add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_SELECTED, 4.0, -1.0, true)))
-		mouse_exited.connect(func(): add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_DIM, 4.0)))
+		mouse_entered.connect(func() -> void: add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_SELECTED, 4.0, -1.0, true)))
+		mouse_exited.connect(func() -> void: add_theme_stylebox_override("panel", UiStyle.row(UiStyle.B_DIM, 4.0)))
 
 	func set_entry(e: Dictionary) -> void:
-		value_label.text = String(e.get("value", ""))
-		title = String(e.get("title", ""))
-		details = String(e.get("details", ""))
+		var v: String = e.get("value", "")
+		var t: String = e.get("title", "")
+		var d: String = e.get("details", "")
+		value_label.text = v
+		title = t
+		details = d
 		# Plain tooltip_text both enables Godot's hover tooltip and keeps the
 		# details readable by accessibility/tests; the look comes from below.
 		tooltip_text = title + "\n" + details
@@ -138,7 +141,7 @@ func _init() -> void:
 func set_entries(p_title: String, entries: Array) -> void:
 	_header.text = p_title
 	var ids: Array[StringName] = []
-	for e in entries:
+	for e: Dictionary in entries:
 		ids.append(e["id"])
 	if ids != _ids:
 		for c in _grid.get_children():
@@ -148,7 +151,8 @@ func set_entries(p_title: String, entries: Array) -> void:
 			_grid.add_child(StatCell.new(id))
 		_ids = ids
 	for i in entries.size():
-		(_grid.get_child(i) as StatCell).set_entry(entries[i])
+		var entry: Dictionary = entries[i]
+		(_grid.get_child(i) as StatCell).set_entry(entry)
 
 ## Description belongs to the selected spell, never a stat cell or tooltip.
 ## Calling this repeatedly leaves live/hovered stat cells untouched.
