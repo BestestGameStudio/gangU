@@ -79,7 +79,7 @@ The HUD connects to explicit player/caster signals, renders nothing it cannot so
 *Where:* `scripts/hud.gd`.
 
 ### D17. Area enemies are scene data, mounted generically
-Each area's enemies live in its own `SpawnData` child (`AreaSpawnData`) and Main's generic mounter (`_mount_area_spawns`, #100) spawns them on every swap; no area-name checks or hardcoded positions in code. Overworld guards and roamers use the same entry format (D21). Current content: DungeonA - 3 plain enemies, 2 splitting slimes (#392) and a Fishy (#464); DungeonB - 3 plain enemies and a Fishy, then the Warlord; DungeonC/D - no mobs; DungeonE/Maze - no SpawnData (waves come from DEFENSE). Enemy stats are PLACEHOLDER.
+Each area's enemies live in its own `SpawnData` child (`AreaSpawnData`) and Main's generic mounter (`_mount_area_spawns`, #100) spawns them on every swap; no area-name checks or hardcoded positions in code. Overworld guards and roamers use the same entry format (D21). Current content: DungeonA - 3 plain enemies, 2 splitting slimes (#392) and 2 Fishies (#464, #522); DungeonB - 3 plain enemies and 2 Fishies, then the Warlord; DungeonC/D - no mobs; DungeonE/Maze - no SpawnData (waves come from DEFENSE). Enemy stats are PLACEHOLDER.
 *Where:* `scripts/area_spawn_data.gd`, `scripts/main.gd` (`_mount_area_spawns`), `scenes/dungeon_*.tscn` (`SpawnData`).
 
 ### D18. Projectiles duplicate their collision shape per instance
