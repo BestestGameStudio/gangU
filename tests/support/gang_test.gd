@@ -11,6 +11,8 @@ extends SceneTree
 ##   exit 1 - a check failed, an engine/script error fired, or run()
 ##            finished without recording a single check;
 ##   exit 2 - the watchdog fired (harness truly hung).
+## The watchdog runs on wall clock (ignore_time_scale): a harness that
+## sets Engine.time_scale = 0 still exits 2 after watchdog_seconds().
 ## Runners treat "exit 0 before the timeout" as PASS - no output parsing.
 ## (GDScript parse errors in a harness exit 1 natively under -s.)
 ##
@@ -141,7 +143,7 @@ func _on_engine_error() -> void:
 	engine_errors += 1
 
 func _arm_watchdog() -> void:
-	await create_timer(watchdog_seconds()).timeout
+	await create_timer(watchdog_seconds(), true, false, true).timeout
 	if not _finished:
 		_timed_out = true
 		finish()
