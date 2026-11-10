@@ -132,6 +132,11 @@ func _process(_d: float) -> bool:
 			main.enter_overworld()
 			for e in get_nodes_in_group("enemies"):
 				e.free()
+			# #446: production gates are spread across the field, off screen
+			# from the spawn. This harness measures label placement, so the
+			# two gates go back to their pre-#446 spots beside the spawn.
+			(main.current_area.get_node("GateNormal") as Node2D).position = Vector2(300, 380)
+			(main.current_area.get_node("GateRed") as Node2D).position = Vector2(852, 380)
 			_cam_stable = 0
 			_cam_last = Vector2.INF
 			_stage = 3
