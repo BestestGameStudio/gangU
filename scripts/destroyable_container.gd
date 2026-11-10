@@ -78,7 +78,7 @@ func _spawn_reward_drop() -> void:
 		table = definition.reward_table
 	if table == null:
 		return
-	var pool := get_tree().get_first_node_in_group("reward_pool") as RewardPool
+	var pool := Run.reward_pool()
 	var granted: Array = pool.granted() if pool != null else []
 	var entry := table.roll(granted)
 	if entry == null:

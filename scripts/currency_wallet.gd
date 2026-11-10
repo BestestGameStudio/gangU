@@ -11,8 +11,12 @@ signal balance_changed(new_balance: int)
 
 var _balance := 0
 
-func _ready() -> void:
-	add_to_group("currency_wallet")
+## (#520) Reached through Run.wallet(), not a group lookup.
+func _enter_tree() -> void:
+	Run.register(self)
+
+func _exit_tree() -> void:
+	Run.unregister(self)
 
 func balance() -> int:
 	return _balance

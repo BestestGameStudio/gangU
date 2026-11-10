@@ -159,7 +159,7 @@ static func attacker_modifiers_for(p_source: Node, p_spell: Spell) -> DamageModi
 	var mods := p_source.get(&"damage_modifiers") as DamageModifiers
 	var relics: OwnedRelics = null
 	if p_source is Player and p_source.is_inside_tree():
-		relics = p_source.get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+		relics = Run.relics()
 	if relics != null:
 		var relic_mods := relics.modifiers_for(p_spell)
 		if not relic_mods.is_empty():

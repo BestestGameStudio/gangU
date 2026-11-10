@@ -469,7 +469,7 @@ func dash_charges() -> int:
 ## live (the OwnedRelics apply seam), so a relic gained mid-run counts at
 ## once and nothing goes stale. No OwnedRelics mounted = base charges.
 func dash_max_charges() -> int:
-	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics if is_inside_tree() else null
+	var relics := Run.relics() if is_inside_tree() else null
 	var extra := 0
 	if relics != null:
 		extra = int(relics.scalar_total(DASH_CHARGES_KEY))
