@@ -289,7 +289,8 @@ func _build_ui() -> void:
 
 ## #427 (Daniel, 2026-11-09): "on the spell tab add a section for relics on
 ## the bottom". Read-only list of the run's owned relics (OwnedRelics.all(),
-## acquisition order), names only; an empty run shows a placeholder line.
+## acquisition order); an empty run shows a placeholder line.
+## #449: icon only (shared placeholder), name + description on hover.
 ## Fields, interaction, ordering and overflow beyond this are NOT settled
 ## design - names wrap in a flow container rather than growing the panel.
 func _build_relics_section(parent: VBoxContainer) -> void:
@@ -325,19 +326,22 @@ func _refresh_relics() -> void:
 		empty.modulate = Color(1, 1, 1, 0.6)
 		_relics_list.add_child(empty)
 		return
+	# #449 (Daniel, 2026-11-09): icon only - one shared code-drawn
+	# placeholder for every relic; the name and description live in the
+	# icon's hover tooltip ("Icon only name and desc on hover").
 	for r in relics:
-		var l := Label.new()
-		l.text = r.display_name if not r.display_name.is_empty() else String(r.id)
-		l.add_theme_font_size_override("font_size", 18)
-		_relics_list.add_child(l)
+		var icon := RelicIcon.new()
+		icon.show_relic(r)
+		_relics_list.add_child(icon)
 
 ## Names currently shown in the relics section (harness/read-only helper).
+## #449: relics render as RelicIcon - the name is the tooltip's first line.
 func relic_names() -> PackedStringArray:
 	var out := PackedStringArray()
 	if is_instance_valid(_relics_list):
 		for c in _relics_list.get_children():
-			if c is Label and c.name != &"RelicsEmpty":
-				out.append((c as Label).text)
+			if c is RelicIcon:
+				out.append((c as RelicIcon).tooltip_text.get_slice("\n", 0))
 	return out
 
 func _input(event: InputEvent) -> void:

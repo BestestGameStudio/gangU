@@ -20,12 +20,25 @@ func _init(side: float = UiStyle.ICON_SIZE) -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	tooltip_text = "Relic"
 
+## Identity line (tooltip first line) shared by the shop and the Tab menu:
+## the display name, else the stable id (an ID-only relic is a valid,
+## grantable, stockable definition - the pre-#449 Tab list showed
+## String(id) for it), else the generic "Relic".
+static func identity(relic: Relic) -> String:
+	if relic == null:
+		return "Relic"
+	if relic.display_name != "":
+		return relic.display_name
+	if relic.id != &"":
+		return String(relic.id)
+	return "Relic"
+
 func show_relic(relic: Relic) -> void:
 	_relic = relic
 	if relic == null:
 		tooltip_text = "Relic"
 		return
-	tooltip_text = relic.display_name
+	tooltip_text = identity(relic)
 	if relic.description != "":
 		tooltip_text += "\n" + relic.description
 
