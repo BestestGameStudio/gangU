@@ -91,6 +91,49 @@ func _run() -> void:
 				if got != want:
 					_fails += 1
 		map.queue_free()
+	# Box above MAX_BOX_CELLS: the sparse fallback must equal the reference too,
+	# with obstacles around the start (detours inside the expansion cap).
+	var big_fails := 0
+	for m in 4:
+		var bmap := TerrainMap.new()
+		root.add_child(bmap)
+		var bcells := {}
+		for x in range(-30, 120):
+			for y in range(-30, 120):
+				if rng.randf() < 0.22:
+					bcells[Vector2i(x, y)] = types[rng.randi() % types.size()]
+		bmap.set_cells(bcells)
+		for i in 3:
+			var ba := Vector2(rng.randf_range(0, 40), rng.randf_range(0, 40)) * bmap.cell_size
+			var bb := ba + Vector2(rng.randf_range(600, 900), rng.randf_range(-400, 400)) * bmap.cell_size
+			for sw in [false, true]:
+				var bgot: Array[Vector2i] = TerrainPath.new()._find_path(bmap, ba, bb, sw)
+				var bwant: Array[Vector2i] = _ref_path(bmap, ba, bb, sw)
+				_total += 1
+				if not bgot.is_empty():
+					_nonempty += 1
+				if bgot != bwant:
+					big_fails += 1
+		bmap.queue_free()
+	print("[511] large-box searches differing from the reference: %d" % big_fails)
+	_fails += big_fails
+	# Far endpoints: the search box is clamped (MAX_SPAN), so this must return
+	# promptly with a bounded path toward the goal instead of allocating a
+	# 10,000 x 10,000 box.
+	var far_map := TerrainMap.new()
+	root.add_child(far_map)
+	var far_a := Vector2(0, 0)
+	var far_b := Vector2(10000, 10000) * far_map.cell_size
+	var t0 := Time.get_ticks_msec()
+	var far_path: Array[Vector2i] = TerrainPath.new()._find_path(far_map, far_a, far_b, false)
+	var far_ms := Time.get_ticks_msec() - t0
+	var far_ok := not far_path.is_empty() and far_path.size() <= TerrainPath.MAX_EXPANSIONS + 2 and far_ms < 2000
+	var back_path: Array[Vector2i] = TerrainPath.new()._find_path(far_map, far_b, far_a, false)
+	far_ok = far_ok and not back_path.is_empty()
+	print("[511] far endpoints: %d cells, %d ms, back %d" % [far_path.size(), far_ms, back_path.size()])
+	if not far_ok:
+		_fails += 1
+	far_map.queue_free()
 	print("[511] %d searches (%d with a route), %d differ from the reference" % [_total, _nonempty, _fails])
 	print("[511] RESULT: ", "ALL PASS" if _fails == 0 and _nonempty > 100 else "FAIL")
 	quit(0 if _fails == 0 and _nonempty > 100 else 1)
