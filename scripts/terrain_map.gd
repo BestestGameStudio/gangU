@@ -30,6 +30,10 @@ extends Node2D
 ## restyle built-in ones. Every property lookup here goes through it, so
 ## movement, navigation and generation all see the palette's categories.
 
+## Any write that changed `cell`'s type (set_cell, set_cells, clear_cell,
+## and so destroy_cell / interact_cell), emitted after the presentation is
+## updated.
+signal cell_changed(cell: Vector2i, old_type: StringName, new_type: StringName)
 signal cell_destroyed(cell: Vector2i, old_type: StringName, new_type: StringName)
 ## #167: a spell element interaction (TerrainInteractions rule `rule_id`)
 ## changed `cell` from old_type to new_type.
@@ -75,6 +79,21 @@ var _atlas_source: TileSetAtlasSource = null
 @export var fixed_layout: TerrainFixedLayout = null
 
 var _cells: Dictionary = {} ## Vector2i -> StringName, non-default cells only
+## Per-type property cache (palette-aware), filled on first use and dropped
+## when the palette changes. Hot queries read the flag bits so they never
+## allocate; _type_props holds read-only property sets for internal reads.
+const _WALKABLE := 1
+const _SWIMMABLE := 2
+const _FALLING := 4
+const _BLOCKS_PROJECTILES := 8
+const _CONCEALS := 16
+## Bumped on every write to the cell store or the palette; lets readers
+## (TerrainPath) reuse an answer computed on an unchanged map.
+var revision: int = 0
+var _bounds: Rect2i = Rect2i()
+var _bounds_stale: bool = false
+var _type_flags: Dictionary = {} ## StringName -> int (_WALKABLE | ...)
+var _type_props: Dictionary = {} ## StringName -> read-only Dictionary
 ## #407: solid circles that stop projectiles (overworld trees). World-space
 ## Vector3(x, y, radius). Kept apart from the cell store: OBSTACLE cells
 ## (dungeon borders, maze walls) keep letting shots through as before.
@@ -105,40 +124,63 @@ func _ready() -> void:
 func set_cell(cell: Vector2i, type: StringName) -> bool:
 	if not is_valid_type(type):
 		return false
-	if type == TerrainTypes.GROUND:
-		_cells.erase(cell)
-	else:
-		_cells[cell] = type
-	_rebuild_presentation()
+	var before := art_bounds()
+	var old := tile_type_at_cell(cell)
+	_write(cell, type)
+	_repaint([cell], before)
+	if old != type:
+		cell_changed.emit(cell, old, type)
 	return true
 
 ## Bulk write (Vector2i -> StringName). All-or-nothing: any unregistered
-## type refuses the whole batch with no change. Presentation rebuilds once,
-## since a per-cell set_cell rebuild makes filling a map quadratic.
+## type refuses the whole batch with no change. Presentation updates once
+## for the whole batch.
 func set_cells(cells: Dictionary) -> bool:
 	for type: StringName in cells.values():
 		if not is_valid_type(type):
 			return false
+	var before := art_bounds()
+	var old := {}
 	for cell: Vector2i in cells:
-		var type: StringName = cells[cell]
-		if type == TerrainTypes.GROUND:
-			_cells.erase(cell)
-		else:
-			_cells[cell] = type
-	_rebuild_presentation()
+		old[cell] = tile_type_at_cell(cell)
+		_write(cell, cells[cell])
+	_repaint(cells.keys(), before)
+	for cell: Vector2i in cells:
+		if old[cell] != cells[cell]:
+			cell_changed.emit(cell, old[cell], cells[cell])
 	return true
 
 ## Restores a cell to the flat-world default (GROUND).
 func clear_cell(cell: Vector2i) -> void:
-	_cells.erase(cell)
-	_rebuild_presentation()
+	var before := art_bounds()
+	var old := tile_type_at_cell(cell)
+	_write(cell, TerrainTypes.GROUND)
+	_repaint([cell], before)
+	if old != TerrainTypes.GROUND:
+		cell_changed.emit(cell, old, TerrainTypes.GROUND)
+
+## The one store write: the sparse entry, the revision and the cached
+## bounding box of assigned cells.
+func _write(cell: Vector2i, type: StringName) -> void:
+	revision += 1
+	if type != TerrainTypes.GROUND:
+		_cells[cell] = type
+		if not _bounds_stale:
+			_bounds = Rect2i(cell, Vector2i.ONE) if _cells.size() == 1 else _bounds.merge(Rect2i(cell, Vector2i.ONE))
+		return
+	if not _cells.erase(cell) or _bounds_stale:
+		return
+	if _cells.is_empty():
+		_bounds = Rect2i()
+	elif cell.x == _bounds.position.x or cell.y == _bounds.position.y or cell.x == _bounds.end.x - 1 or cell.y == _bounds.end.y - 1:
+		_bounds_stale = true
 
 ## The single entry point every damage source calls when it hits terrain.
 ## A destroyable cell becomes its registry destroyed_into type; anything
 ## else is left untouched. Returns true iff the cell changed.
 func destroy_cell(cell: Vector2i) -> bool:
 	var old_type := tile_type_at_cell(cell)
-	var old_props := type_properties(old_type)
+	var old_props := _props_of(old_type)
 	if not old_props["destroyable"]:
 		return false
 	var new_type: StringName = old_props["destroyed_into"]
@@ -156,7 +198,7 @@ func destroy_at(world_pos: Vector2) -> bool:
 ## hits `cell`, or null. Matched by element tag only, through the
 ## palette-aware properties (TerrainInteractions owns the rule list).
 func interaction_for_cell(cell: Vector2i, spell_tags: Array) -> TerrainInteraction:
-	var tile_tags: Array = type_properties(tile_type_at_cell(cell))["element_tags"]
+	var tile_tags: Array = _props_of(tile_type_at_cell(cell))["element_tags"]
 	var rule := TerrainInteractions.find(spell_tags, tile_tags, interaction_rules)
 	if rule == null or not is_valid_type(rule.result_type):
 		return null
@@ -231,7 +273,7 @@ func lob_blocked(from: Vector2, to: Vector2) -> bool:
 		var cell := world_to_cell(from.lerp(to, float(i) / float(samples)))
 		if cell == start:
 			continue
-		if type_properties(tile_type_at_cell(cell))["blocks_projectiles"] and not is_low_cover_cell(cell):
+		if blocks_projectiles_at_cell(cell) and not is_low_cover_cell(cell):
 			return true
 	return false
 
@@ -250,7 +292,11 @@ func tile_type_at(world_pos: Vector2) -> StringName:
 	return tile_type_at_cell(world_to_cell(world_pos))
 
 func is_walkable_at_cell(cell: Vector2i) -> bool:
-	return type_properties(tile_type_at_cell(cell))["walkable"]
+	return _cell_flags(cell) & _WALKABLE != 0
+
+func is_walkable_type(type: StringName) -> bool:
+	var f: Variant = _type_flags.get(type)
+	return (f if f != null else _cache_type(type)) & _WALKABLE != 0
 
 func is_walkable_at(world_pos: Vector2) -> bool:
 	return is_walkable_at_cell(world_to_cell(world_pos))
@@ -258,11 +304,34 @@ func is_walkable_at(world_pos: Vector2) -> bool:
 ## #461: true when the cell at world_pos hides whoever stands there (tall
 ## grass). Palette-aware like every other property lookup.
 func conceals_at(world_pos: Vector2) -> bool:
-	return type_properties(tile_type_at(world_pos)).get("conceals", false)
+	return _cell_flags(world_to_cell(world_pos)) & _CONCEALS != 0
 
 ## #266: the cell's TerrainTypes.Movement category.
 func movement_at_cell(cell: Vector2i) -> TerrainTypes.Movement:
-	return type_properties(tile_type_at_cell(cell))["movement"]
+	return _props_of(tile_type_at_cell(cell))["movement"]
+
+## True iff a mover may stand in `cell` (the TerrainMotion rule): never a
+## FALLING cell, otherwise walkable, or swimmable for a mover that swims.
+func can_enter_cell(cell: Vector2i, can_swim: bool) -> bool:
+	var f := _cell_flags(cell)
+	if f & _FALLING:
+		return false
+	return f & _WALKABLE != 0 or (can_swim and f & _SWIMMABLE != 0)
+
+## A cell no mover can enter: FALLING, or neither walkable nor swimmable.
+func is_hard_obstacle_cell(cell: Vector2i) -> bool:
+	var f := _cell_flags(cell)
+	return f & _FALLING != 0 or f & (_WALKABLE | _SWIMMABLE) == 0
+
+## #433: solid terrain that stops projectiles.
+func blocks_projectiles_at_cell(cell: Vector2i) -> bool:
+	return _cell_flags(cell) & _BLOCKS_PROJECTILES != 0
+
+func speed_multiplier_at_cell(cell: Vector2i) -> float:
+	return _props_of(tile_type_at_cell(cell))["speed_multiplier"]
+
+func friction_at_cell(cell: Vector2i) -> float:
+	return _props_of(tile_type_at_cell(cell))["friction"]
 
 func movement_at(world_pos: Vector2) -> TerrainTypes.Movement:
 	return movement_at_cell(world_to_cell(world_pos))
@@ -273,7 +342,38 @@ func is_valid_type(type: StringName) -> bool:
 
 ## Properties of `type` on this map (palette-aware, fresh copy).
 func type_properties(type: StringName) -> Dictionary:
-	return palette.properties(type) if palette != null else TerrainTypes.properties(type)
+	return _props_of(type).duplicate(true)
+
+func _props_of(type: StringName) -> Dictionary:
+	var props: Variant = _type_props.get(type)
+	if props == null:
+		_cache_type(type)
+		props = _type_props[type]
+	return props
+
+func _cell_flags(cell: Vector2i) -> int:
+	var type: StringName = _cells.get(cell, TerrainTypes.GROUND)
+	var f: Variant = _type_flags.get(type)
+	return f if f != null else _cache_type(type)
+
+func _cache_type(type: StringName) -> int:
+	var props := palette.properties(type) if palette != null else TerrainTypes.properties(type)
+	var f := 0
+	if props["walkable"]:
+		f |= _WALKABLE
+	if props["swimmable"]:
+		f |= _SWIMMABLE
+	if props["movement"] == TerrainTypes.Movement.FALLING:
+		f |= _FALLING
+	if props["blocks_projectiles"]:
+		f |= _BLOCKS_PROJECTILES
+	if props.get("conceals", false):
+		f |= _CONCEALS
+	(props["element_tags"] as Array).make_read_only()
+	props.make_read_only()
+	_type_props[type] = props
+	_type_flags[type] = f
+	return f
 
 ## type + full properties at a world position, in one call. The returned
 ## Dictionary is a fresh copy (registry-safe).
@@ -298,6 +398,9 @@ func _set_season(value: TerrainSeason.Season) -> void:
 
 func _set_palette(value: TerrainPalette) -> void:
 	palette = value
+	_type_flags.clear()
+	_type_props.clear()
+	revision += 1
 	if palette != null:
 		var errors := palette.validate()
 		if not errors.is_empty():
@@ -388,15 +491,52 @@ func _rebuild_presentation() -> void:
 	_obstacle_layer.clear()
 	var types := _atlas_types()
 	for cell: Vector2i in _cells:
-		var type: StringName = _cells[cell]
-		var col := Vector2i(types.find(type), 0)
-		if col.x < 0:
-			continue # palette swapped away from this type: no look to draw
-		if type_properties(type)["walkable"]:
-			_ground_layer.set_cell(cell, 0, col)
-		else:
-			_obstacle_layer.set_cell(cell, 0, col)
+		_draw_swatch(cell, _cells[cell], types)
 	_rebuild_art()
+
+func _draw_swatch(cell: Vector2i, type: StringName, types: Array[StringName]) -> void:
+	var col := Vector2i(types.find(type), 0)
+	if col.x < 0:
+		return # palette swapped away from this type: no look to draw
+	if _props_of(type)["walkable"]:
+		_ground_layer.set_cell(cell, 0, col)
+	else:
+		_obstacle_layer.set_cell(cell, 0, col)
+
+## Updates the presentation after `changed` cells were written: their color
+## swatches, and the art of each one and its 4 neighbours (an autotile piece
+## depends on its 4 neighbours). Same result as _rebuild_presentation; that
+## full rebuild still runs when the art bounds moved (every floor in the
+## box changes) or the batch covers most of the box.
+func _repaint(changed: Array, bounds_before: Rect2i) -> void:
+	if _ground_layer == null:
+		return
+	var bounds := art_bounds()
+	if bounds != bounds_before or changed.size() * 5 >= bounds.get_area():
+		_rebuild_presentation()
+		return
+	var types := _atlas_types()
+	for cell: Vector2i in changed:
+		_ground_layer.erase_cell(cell)
+		_obstacle_layer.erase_cell(cell)
+		if _cells.has(cell):
+			_draw_swatch(cell, _cells[cell], types)
+	if not art_enabled or not is_visible_in_tree():
+		_rebuild_art()
+		return
+	var dirty := {}
+	for cell: Vector2i in changed:
+		for c: Vector2i in [cell, cell + Vector2i.UP, cell + Vector2i.RIGHT, cell + Vector2i.DOWN, cell + Vector2i.LEFT]:
+			if bounds.has_point(c):
+				dirty[c] = true
+	var same_in_bounds := func(n: Vector2i, art: StringName) -> bool:
+		return not bounds.has_point(n) or art_at_cell(n) == art
+	for c: Vector2i in dirty:
+		_art_floor.erase_cell(c)
+		_art_walls.erase_cell(c)
+		_art_objects.erase_cell(c)
+		var art := art_at_cell(c)
+		_draw_art(c, art, same_in_bounds.bind(art))
 
 ## The TerrainArt id drawing `cell` (&"" = color swatch).
 func art_at_cell(cell: Vector2i) -> StringName:
@@ -407,15 +547,16 @@ func art_at_cell(cell: Vector2i) -> StringName:
 ## Cells the art covers: the bounding box of every assigned cell (empty
 ## for a flat map, which keeps showing the scene background).
 func art_bounds() -> Rect2i:
-	var first := true
-	var r := Rect2i()
-	for cell: Vector2i in _cells:
-		if first:
-			r = Rect2i(cell, Vector2i.ONE)
-			first = false
-		else:
-			r = r.merge(Rect2i(cell, Vector2i.ONE))
-	return r
+	if _bounds_stale:
+		_bounds_stale = false
+		var first := true
+		for cell: Vector2i in _cells:
+			if first:
+				_bounds = Rect2i(cell, Vector2i.ONE)
+				first = false
+			else:
+				_bounds = _bounds.merge(Rect2i(cell, Vector2i.ONE))
+	return _bounds
 
 func _rebuild_art() -> void:
 	if _art_floor == null:
@@ -433,18 +574,22 @@ func _rebuild_art() -> void:
 			arts[c] = art_at_cell(c)
 	for c: Vector2i in arts:
 		var art: StringName = arts[c]
-		match TerrainArt.kind(art):
-			TerrainArt.Kind.FLOOR:
-				_set_floor(c, art)
-			TerrainArt.Kind.OBJECT:
-				_set_floor(c, TerrainArt.floor_under(art))
-				_art_objects.set_cell(c, TerrainArt.OBJECTS_SOURCE, Vector2i(TerrainArt.variant(c, 2), TerrainArt.row(art)))
-			TerrainArt.Kind.AUTOTILE:
-				# Off-bounds neighbours connect, so a map's outer ring
-				# shows no rim on its outside.
-				var m := TerrainArt.mask(c, func(n: Vector2i) -> bool: return arts.get(n, art) == art)
-				var alt := TerrainArt.variant(c, 3, 2)
-				_art_walls.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(m, TerrainArt.row(art) + alt))
+		_draw_art(c, art, func(n: Vector2i) -> bool: return arts.get(n, art) == art)
+
+## Draws `art` at `c`. `same` answers whether a neighbour connects to an
+## autotile piece; off-bounds neighbours connect, so a map's outer ring
+## shows no rim on its outside.
+func _draw_art(c: Vector2i, art: StringName, same: Callable) -> void:
+	match TerrainArt.kind(art):
+		TerrainArt.Kind.FLOOR:
+			_set_floor(c, art)
+		TerrainArt.Kind.OBJECT:
+			_set_floor(c, TerrainArt.floor_under(art))
+			_art_objects.set_cell(c, TerrainArt.OBJECTS_SOURCE, Vector2i(TerrainArt.variant(c, 2), TerrainArt.row(art)))
+		TerrainArt.Kind.AUTOTILE:
+			var m := TerrainArt.mask(c, same)
+			var alt := TerrainArt.variant(c, 3, 2)
+			_art_walls.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(m, TerrainArt.row(art) + alt))
 
 func _set_floor(c: Vector2i, art: StringName) -> void:
 	var col := 0 if TerrainArt.SETS[art].get("animated", false) else TerrainArt.variant(c, 1)

@@ -5,8 +5,8 @@ extends Node2D
 ## atlas keeps ownership of cell data and walkability; this node only mirrors
 ## BLOCK cells with an AnimatedSprite2D: the rock wall's "intact" frame while
 ## the block stands, the "create" build-up when a block appears (spell cast,
-## demo placement or debug write - any new BLOCK cell is caught by a per-frame
-## diff of the map's sparse store) and the crack-and-collapse "destroy"
+## demo placement or debug write - any write that makes a cell BLOCK, reported
+## by the map's cell_changed signal) and the crack-and-collapse "destroy"
 ## one-shot when the map reports the cell destroyed. Presentation only: no
 ## placement, damage or walkability behavior lives here, so refused casts,
 ## one-hit destroy and movement rules are exactly #216/#169's.
@@ -33,19 +33,16 @@ func _ready() -> void:
 		_map = get_parent() as TerrainMap
 	if _map == null:
 		push_warning("TerrainBlockVisuals: no TerrainMap at map_path or as parent; idling")
-		set_physics_process(false)
 		return
 	_map.cell_destroyed.connect(_on_cell_destroyed)
+	_map.cell_changed.connect(_on_cell_changed)
 	for cell: Vector2i in _map.assigned_cells():
 		if _map.tile_type_at_cell(cell) == TerrainTypes.BLOCK:
 			_spawn(cell, false)
 
-func _physics_process(_delta: float) -> void:
-	if _map == null:
-		return
-	for cell: Vector2i in _map.assigned_cells():
-		if _map.tile_type_at_cell(cell) == TerrainTypes.BLOCK and not _standing.has(cell):
-			_spawn(cell, true)
+func _on_cell_changed(cell: Vector2i, _old_type: StringName, new_type: StringName) -> void:
+	if new_type == TerrainTypes.BLOCK and not _standing.has(cell):
+		_spawn(cell, true)
 
 ## One wall sprite at `cell`; fresh placements play the build-up first.
 func _spawn(cell: Vector2i, play_create: bool) -> void:
