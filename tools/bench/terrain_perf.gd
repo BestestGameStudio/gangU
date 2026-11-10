@@ -297,6 +297,13 @@ func _dump_changes(m: TerrainMap, nav: FlowNav) -> void:
 			var parts := PackedStringArray()
 			for k in keys:
 				parts.append("%s=%d" % [k, f[k]])
+			var fresh := FlowNav.new()
+			fresh.bounds = nav.bounds
+			fresh.max_cells = nav.max_cells
+			fresh.map = m
 			_emit("flowstep %d n=%d %s" % [step, f.size(), " ".join(parts).md5_text()])
+			_emit("flowfresh %d %s" % [step, fresh.field(goal) == f])
+			fresh.map = null
+			fresh.free()
 	m.season = TerrainSeason.Season.WINTER
 	_dump_layers("%s winter" % m.name, m)

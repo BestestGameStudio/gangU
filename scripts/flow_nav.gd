@@ -9,8 +9,11 @@ extends Node
 ## TerrainNav, so it never asks for a diagonal the #328 corner rule would
 ## refuse), shared by every enemy heading to that cell. A static goal such
 ## as the DefenseCore costs one BFS for the whole mission; a moving goal
-## (the player) costs one BFS each time it enters a new cell. Fields are
-## dropped whenever the map changes a cell.
+## (the player) costs one BFS each time it enters a new cell; the cache keeps
+## the MAX_FIELDS most recently used goals. When the map changes a cell, only
+## the fields that cell can affect are dropped: a cell that stops being
+## passable matters to fields that reach it, one that becomes passable to
+## fields that reach a neighbour of it (or have it as their goal).
 ##
 ## Steering: from cell A the mover aims at the centre of the neighbour cell
 ## B one step closer to the goal. Two edge-adjacent cells form a rectangle,
@@ -19,7 +22,7 @@ extends Node
 ## target position instead.
 
 const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-## Old fields kept for moving goals before the cache is flushed.
+## Fields kept; the least recently used one is dropped to make room.
 const MAX_FIELDS := 8
 var map: TerrainMap = null:
 	set = set_map
@@ -29,23 +32,21 @@ var bounds: Rect2i = Rect2i()
 var max_cells: int = 65536
 
 var _fields: Dictionary = {} ## goal cell -> {cell: steps to goal}
+var _recent: Array[Vector2i] = [] ## cached goals, least recently used first
 var builds: int = 0 ## BFS runs so far (harness introspection)
 
 func set_map(value: TerrainMap) -> void:
-	if map != null and is_instance_valid(map):
-		if map.cell_destroyed.is_connected(_on_cell_changed):
-			map.cell_destroyed.disconnect(_on_cell_changed)
-		if map.cell_interacted.is_connected(_on_cell_interacted):
-			map.cell_interacted.disconnect(_on_cell_interacted)
+	if map != null and is_instance_valid(map) and map.cell_changed.is_connected(_on_cell_changed):
+		map.cell_changed.disconnect(_on_cell_changed)
 	map = value
-	_fields.clear()
+	invalidate()
 	if map != null:
-		map.cell_destroyed.connect(_on_cell_changed)
-		map.cell_interacted.connect(_on_cell_interacted)
+		map.cell_changed.connect(_on_cell_changed)
 
-## Call after writing cells without the destroy/interact signals.
+## Drops every cached field (e.g. after changing `bounds`).
 func invalidate() -> void:
 	_fields.clear()
+	_recent.clear()
 
 ## Where a mover at `from` should head next to reach `to`. Falls back to `to`
 ## itself (the old straight chase) when there is no map, the mover is off
@@ -110,9 +111,12 @@ func path(cell: Vector2i, goal: Vector2i) -> Array[Vector2i]:
 ## The BFS distance field toward `goal` (cached).
 func field(goal: Vector2i) -> Dictionary:
 	if _fields.has(goal):
+		if _recent[-1] != goal:
+			_recent.erase(goal)
+			_recent.append(goal)
 		return _fields[goal]
 	if _fields.size() >= MAX_FIELDS:
-		_fields.clear()
+		_fields.erase(_recent.pop_front())
 	var dist := {}
 	if map != null and passable(goal):
 		dist[goal] = 0
@@ -129,6 +133,7 @@ func field(goal: Vector2i) -> Dictionary:
 				dist[n] = nd
 				queue.append(n)
 	_fields[goal] = dist
+	_recent.append(goal)
 	builds += 1
 	return dist
 
@@ -139,8 +144,19 @@ func passable(cell: Vector2i) -> bool:
 		return false
 	return map.is_walkable_at_cell(cell)
 
-func _on_cell_changed(_cell: Vector2i, _old: StringName, _new: StringName) -> void:
-	_fields.clear()
-
-func _on_cell_interacted(_cell: Vector2i, _old: StringName, _new: StringName, _rule: StringName) -> void:
-	_fields.clear()
+func _on_cell_changed(cell: Vector2i, old_type: StringName, new_type: StringName) -> void:
+	if bounds.size != Vector2i.ZERO and not bounds.has_point(cell):
+		return
+	var was := map.is_walkable_type(old_type)
+	if was == map.is_walkable_type(new_type):
+		return
+	for goal: Vector2i in _recent.duplicate():
+		var dist: Dictionary = _fields[goal]
+		var hit := dist.has(cell)
+		if not was:
+			hit = goal == cell
+			for d in DIRS:
+				hit = hit or dist.has(cell + d)
+		if hit:
+			_fields.erase(goal)
+			_recent.erase(goal)

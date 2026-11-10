@@ -30,6 +30,10 @@ extends Node2D
 ## restyle built-in ones. Every property lookup here goes through it, so
 ## movement, navigation and generation all see the palette's categories.
 
+## Any write that changed `cell`'s type (set_cell, set_cells, clear_cell,
+## and so destroy_cell / interact_cell), emitted after the presentation is
+## updated.
+signal cell_changed(cell: Vector2i, old_type: StringName, new_type: StringName)
 signal cell_destroyed(cell: Vector2i, old_type: StringName, new_type: StringName)
 ## #167: a spell element interaction (TerrainInteractions rule `rule_id`)
 ## changed `cell` from old_type to new_type.
@@ -121,8 +125,11 @@ func set_cell(cell: Vector2i, type: StringName) -> bool:
 	if not is_valid_type(type):
 		return false
 	var before := art_bounds()
+	var old := tile_type_at_cell(cell)
 	_write(cell, type)
 	_repaint([cell], before)
+	if old != type:
+		cell_changed.emit(cell, old, type)
 	return true
 
 ## Bulk write (Vector2i -> StringName). All-or-nothing: any unregistered
@@ -133,16 +140,24 @@ func set_cells(cells: Dictionary) -> bool:
 		if not is_valid_type(type):
 			return false
 	var before := art_bounds()
+	var old := {}
 	for cell: Vector2i in cells:
+		old[cell] = tile_type_at_cell(cell)
 		_write(cell, cells[cell])
 	_repaint(cells.keys(), before)
+	for cell: Vector2i in cells:
+		if old[cell] != cells[cell]:
+			cell_changed.emit(cell, old[cell], cells[cell])
 	return true
 
 ## Restores a cell to the flat-world default (GROUND).
 func clear_cell(cell: Vector2i) -> void:
 	var before := art_bounds()
+	var old := tile_type_at_cell(cell)
 	_write(cell, TerrainTypes.GROUND)
 	_repaint([cell], before)
+	if old != TerrainTypes.GROUND:
+		cell_changed.emit(cell, old, TerrainTypes.GROUND)
 
 ## The one store write: the sparse entry, the revision and the cached
 ## bounding box of assigned cells.
@@ -278,6 +293,10 @@ func tile_type_at(world_pos: Vector2) -> StringName:
 
 func is_walkable_at_cell(cell: Vector2i) -> bool:
 	return _cell_flags(cell) & _WALKABLE != 0
+
+func is_walkable_type(type: StringName) -> bool:
+	var f: Variant = _type_flags.get(type)
+	return (f if f != null else _cache_type(type)) & _WALKABLE != 0
 
 func is_walkable_at(world_pos: Vector2) -> bool:
 	return is_walkable_at_cell(world_to_cell(world_pos))
