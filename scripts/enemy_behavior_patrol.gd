@@ -24,11 +24,22 @@ const PAUSE := 0.8
 ## #414: the patroller give-up distance (Daniel-approved; the guard's
 ## post leash stays 520).
 const PATROL_LEASH_RADIUS := 900.0
+## #463 (Daniel, 2026-11-09: "increase the chase radius of the mustache
+## men so that they continue chasing the player while they're still
+## visible on screen"; bigger fixed number; basic mustache men only): the
+## give-up distance for the basic mustache men - the Mustache Warrior
+## scene (scenes/enemy.tscn), the patroller that opts into cover_seek
+## (#406). 1350 px clears the 1152x648 viewport diagonal (~1322), so an
+## engaged mustache man keeps chasing while the player is still on
+## screen. Other patrollers (the slime) keep PATROL_LEASH_RADIUS.
+const MUSTACHE_LEASH_RADIUS := 1350.0
 
 var waypoint := 0
 var _pause := 0.0
 
-func _leash_radius() -> float:
+func _leash_radius(enemy: Enemy) -> float:
+	if enemy.cover_seek:
+		return MUSTACHE_LEASH_RADIUS
 	return PATROL_LEASH_RADIUS
 
 func _leash_anchor() -> Vector2:
