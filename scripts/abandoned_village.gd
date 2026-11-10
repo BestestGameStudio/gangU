@@ -64,8 +64,23 @@ func _ready() -> void:
 func should_fire(body: Node2D) -> bool:
 	if not super.should_fire(body):
 		return false
-	var host := get_parent().get_parent()
-	return not host.has_method("location_event_fire_count") or host.location_event_fire_count(id()) == 0
+	var history := _run_history()
+	return history == null or history.location_event_fire_count(id()) == 0
+
+## #512: the run-scoped fire history lives on Main's AreaLoader (the node
+## that receives `triggered`). Walk up to the first ancestor that either keeps
+## the history itself or has an AreaLoader child. A bare village outside a
+## Main (unit fixtures) has no history and fires once per instance.
+func _run_history() -> Node:
+	var n := get_parent()
+	while n != null:
+		if n.has_method("location_event_fire_count"):
+			return n
+		var loader := n.get_node_or_null("AreaLoader")
+		if loader != null and loader.has_method("location_event_fire_count"):
+			return loader
+		n = n.get_parent()
+	return null
 
 ## Called by Ground before tree collision is planted. Only this village's
 ## footprint changes; the road and clearing are free of random decor.

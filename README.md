@@ -17,7 +17,8 @@ Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE
 - `project.godot` - project config and the shared input actions.
 - `export_presets.cfg` - Web export preset (see "Web export" below).
 - `scenes/main.tscn` - main scene (Player + FollowCamera). `scripts/main.gd` mounts every
-  run service in code and swaps areas: hub (`scenes/hub.tscn`) <-> overworld
+  run service in code (#512: `AreaLoader` mounts and swaps areas, `TravelService` owns
+  fast/map travel, `MusicDirector` owns all music): hub (`scenes/hub.tscn`) <-> overworld
   (`scenes/overworld.tscn`) <-> dungeons (`scenes/dungeon_*.tscn`).
 - `scripts/` - GDScript sources, plus `test*.gd` harnesses and `record*.gd` capture drivers.
 - `scenes/test*.tscn` - evidence fixtures for harnesses (never production).
