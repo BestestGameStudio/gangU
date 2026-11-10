@@ -8,8 +8,10 @@ extends SceneTree
 ##              excitable laugh omitted; enemy.tscn carries the voice node;
 ##              per-warrior voice draw is stable and covers both voices.
 ##   idle     - unengaged warrior mutters on the idle timer ONLY while the
-##              player is close (#495: within IDLE_HEAR_RADIUS, beyond
-##              ENGAGE_RADIUS for a plain warrior); a far player pauses the
+##              player is close (#495: within idle_hear_radius, default 300
+##              = on-screen; the leg widens it to 650 to exercise the gate
+##              because a plain warrior within ENGAGE_RADIUS 460 is engaged,
+##              so by default its idle is silent); a far player pauses the
 ##              timer, approaching resumes it with no backlog burst; the
 ##              default gap is long (25-45 s).
 ##   engage   - player inside ENGAGE_RADIUS: exactly one spotted bark on the
@@ -82,8 +84,9 @@ func _unit_leg() -> void:
 	_check("unit: both approved voices appear across 30 warriors", seen.has(&"gravelly") and seen.has(&"excitable"))
 	e.queue_free()
 
-## #495: default player spot for idle fixtures: in the idle band (beyond
-## ENGAGE_RADIUS 460, inside IDLE_HEAR_RADIUS 650) = unengaged but close.
+## #495: spot for idle fixtures: beyond ENGAGE_RADIUS 460 and inside the
+## test-widened idle_hear_radius 650 = unengaged but "close" for the gate.
+const TEST_HEAR := 650.0
 const IDLE_BAND := Vector2(550, 0)
 
 func _make_fixture(with_short_timers: bool = true, player_offset: Vector2 = Vector2(6000, 6000)) -> Dictionary:
@@ -120,8 +123,20 @@ func _teardown(fx: Dictionary) -> void:
 	fx.area.queue_free()
 	await _frames(3)
 
+func _guard_idle_leg() -> void:
+	# Guard/patrol (engaged flag): unaware at 260 px (> AGGRO 220, < 300) so
+	# the DEFAULT radius lets a rare idle cue play; 400 px and 900 px do not.
+	for case in [[Vector2(260, 0), true], [Vector2(400, 0), false], [Vector2(900, 0), false]]:
+		var fx := await _make_fixture(true, case[0])
+		fx.enemy._behavior = EnemyBehaviorGuard.new()
+		await _frames(12)
+		_check("guard idle default radius at %s px: idle=%s" % [case[0].x, case[1]], (fx.voice.last_state == &"idle") == case[1])
+		_check("guard idle at %s px never combat" % case[0].x, fx.voice.last_state != &"combat")
+		await _teardown(fx)
+
 func _idle_leg() -> void:
 	var fx := await _make_fixture(true, IDLE_BAND)
+	fx.voice.idle_hear_radius = TEST_HEAR
 	await _frames(12) # > 0.08s idle timer at process-frame pace
 	_check("idle: unengaged warrior with the player close plays an idle cue", fx.voice.last_state == &"idle")
 	_check("idle: cue is a mutter or hum", [&"idle_mutter", &"idle_hum"].has(fx.voice.last_alias))
@@ -129,6 +144,7 @@ func _idle_leg() -> void:
 	# #495: far player = silence, and the timer does not run.
 	var fx2 := await _make_fixture(true)
 	var mv: MustacheVoice = fx2.voice
+	mv.idle_hear_radius = TEST_HEAR
 	mv._idle_timer = 0.5
 	await _frames(30)
 	_check("idle: player beyond the hear radius -> no idle cue", mv.cues_played == 0)
@@ -139,15 +155,26 @@ func _idle_leg() -> void:
 	_check("idle: approaching resumes the timer and plays the cue", mv.last_state == &"idle")
 	await _teardown(fx2)
 	# Just outside the radius stays silent.
-	var fx3 := await _make_fixture(true, Vector2(MustacheVoice.IDLE_HEAR_RADIUS + 50.0, 0))
+	var fx3 := await _make_fixture(true, Vector2(TEST_HEAR + 50.0, 0))
+	fx3.voice.idle_hear_radius = TEST_HEAR
 	await _frames(20)
 	_check("idle: just beyond IDLE_HEAR_RADIUS -> silent", fx3.voice.cues_played == 0)
 	await _teardown(fx3)
-	# Defaults: rarer than #480's 8-16 s; the band exists.
+	# Defaults: rarer than #480's 8-16 s; "close" is on-screen (camera half
+	# height 324 px at zoom 1, viewport 1152x648), so idle is silent at the
+	# screen edge and beyond, and (below ENGAGE_RADIUS) silent when near too.
 	var d := MustacheVoice.new()
 	_check("idle: default gap is at least 25 s (was 8-16 s)", d.idle_min >= 25.0 and d.idle_max >= d.idle_min)
-	_check("idle: hear radius is beyond the engage radius (a band exists)", MustacheVoice.IDLE_HEAR_RADIUS > MustacheVoice.ENGAGE_RADIUS)
+	_check("idle: default hear radius is on-screen (<= 324 px half-height)", d.idle_hear_radius <= 324.0)
 	d.free()
+	var fx4 := await _make_fixture(true, Vector2(350, 0)) # off the top/bottom edge scale, default radius
+	await _frames(20)
+	_check("idle: default radius, player at 350 px (about the screen edge) -> silent idle", fx4.voice.cues_played == 0 or fx4.voice.last_state != &"idle")
+	await _teardown(fx4)
+	var fx5 := await _make_fixture(true, Vector2(900, 0)) # off-screen
+	await _frames(20)
+	_check("idle: default radius, off-screen player (900 px) -> no cue at all", fx5.voice.cues_played == 0)
+	await _teardown(fx5)
 
 func _engage_leg() -> void:
 	var fx := await _make_fixture()
@@ -230,11 +257,13 @@ func _cap_leg() -> void:
 	MustacheVoice.MAX_SIMULTANEOUS = 1
 	MustacheVoice._active = 0
 	var fx := await _make_fixture(true, IDLE_BAND)
+	fx.voice.idle_hear_radius = TEST_HEAR
 	var e2: Enemy = load("res://scenes/enemy.tscn").instantiate()
 	e2.collision_layer = 0
 	e2.collision_mask = 0
 	e2.player_path = NodePath("../Player")
 	var mv2 := e2.get_node("MustacheVoice") as MustacheVoice
+	mv2.idle_hear_radius = TEST_HEAR
 	mv2.idle_min = 0.05
 	mv2.idle_max = 0.08
 	fx.area.add_child(e2)
@@ -261,6 +290,7 @@ func _warlord_leg() -> void:
 func _run() -> void:
 	await _unit_leg()
 	await _idle_leg()
+	await _guard_idle_leg()
 	await _engage_leg()
 	await _attack_leg()
 	await _hurt_leg()

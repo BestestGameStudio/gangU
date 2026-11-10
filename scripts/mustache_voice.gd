@@ -44,12 +44,20 @@ const PER_CUE_MIXING: bool = false
 ## #495 (Colin, 2026-11-09: "way too much moustache man sounds ... make
 ## their idle sound play less frequently and only when the character is
 ## close"): an unengaged warrior only mutters while the live player is
-## within this distance. The idle timer does not run while the player is
-## farther away, so there is no burst of backlog on approach. NOTE: a plain
-## warrior counts the player inside ENGAGE_RADIUS as engaged (combat cues,
-## not idle), so for it the idle band is ENGAGE_RADIUS..IDLE_HEAR_RADIUS.
-## PLACEHOLDER tuning (author default, human-open).
-const IDLE_HEAR_RADIUS: float = 650.0
+## within this distance, and the idle timer does not run while the player
+## is farther away (no backlog burst on approach). Camera scale: viewport
+## 1152x648, Camera2D zoom 1, so the screen is 576 px half-width and 324 px
+## half-height; 300 px keeps idle on-screen in every direction.
+## NOTE: a plain chase/cover warrior has no unaware state: it counts the
+## player inside ENGAGE_RADIUS (460) as engaged (combat cues, not idle), so
+## with this radius its idle is effectively silent (not enabled here). A
+## guard/patrol warrior uses its own `engaged` flag (aggro 220), so while
+## unaware with the player 220-300 px away it can idle rarely; its combat
+## barks now follow that real awareness instead of 460 px. The user's "only
+## when close" wins over idle variety. Combat, attack,
+## hurt and death cues are untouched. PLACEHOLDER tuning, human-open (a var
+## so tests can widen it to exercise the proximity gate).
+var idle_hear_radius: float = 300.0
 ## Runtime trim on top of the -3 dBFS peak-normalized files.
 const VOLUME_DB: float = -6.0
 ## Random pitch wobble so the single-variant cues do not repeat exactly.
@@ -176,7 +184,7 @@ func _process(delta: float) -> void:
 			_play_ambient(&"combat")
 	else:
 		# #495: the idle timer only runs while the player is close.
-		if _player_within(IDLE_HEAR_RADIUS):
+		if _player_within(idle_hear_radius):
 			_idle_timer -= delta
 		if _idle_timer <= 0.0:
 			_idle_timer = _rng.randf_range(idle_min, idle_max)
@@ -190,8 +198,8 @@ func _player_within(radius: float) -> bool:
 
 func _is_engaged() -> bool:
 	var b: RefCounted = _enemy._behavior
-	if b != null and "engaged" in b and b.engaged:
-		return true
+	if b != null and "engaged" in b:
+		return b.engaged # guard/patrol: the behavior's own flag is authoritative
 	return _player_within(ENGAGE_RADIUS)
 
 func _cue_voice() -> StringName:
