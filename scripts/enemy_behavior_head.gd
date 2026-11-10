@@ -74,6 +74,7 @@ func _init() -> void:
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _configure() -> void:
+	attack_steps = {State.VOLLEY: _dispatch_volley, State.PULSE: _dispatch_pulse}
 	first_attack_delay = FIRST_ATTACK_DELAY
 	attack_interval = ATTACK_INTERVAL
 	enraged_interval = ENRAGED_INTERVAL
@@ -107,17 +108,6 @@ func _configure() -> void:
 	pulse.phase_ring = true
 	pulse.clear_on_start = false
 
-
-func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
-	match state:
-		State.CHASE:
-			_chase(enemy, player, to_player, delta, tele)
-		State.WINDUP:
-			_windup(enemy, to_player, tele)
-		State.VOLLEY:
-			_volley(enemy, to_player)
-		State.PULSE:
-			_pulse(enemy, player, to_player, tele)
 
 func _attack_begin_reset() -> void:
 	_waves_fired = 0
@@ -158,3 +148,6 @@ func _release_ring(enemy: Enemy, player: Player, to_player: Vector2, radius: flo
 ## The wind-up ring shows the outermost ring the pulse will reach.
 func _pulse_radius(enemy: Enemy) -> float:
 	return _ring_radius(enemy)
+
+func _dispatch_pulse(enemy: Enemy, player: Player, to_player: Vector2, _delta: float, tele: BossTelegraph) -> void:
+	_pulse(enemy, player, to_player, tele)
