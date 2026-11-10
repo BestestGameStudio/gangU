@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/dungeon_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+area_name = &"DungeonA"
+id = &"dungeon_a"
+label = "Dungeon A"
+scene = "res://scenes/dungeon_a.tscn"
+default_exit_portal = true
+revive_item = true

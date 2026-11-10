@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/dungeon_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/enemy.tscn" id="2_enemy"]
+[ext_resource type="Resource" path="res://resources/rewards/demo_table.tres" id="3_table"]
+[ext_resource type="PackedScene" path="res://scenes/defense_wave_boss.tscn" id="4_boss"]
+
+[resource]
+script = ExtResource("1_def")
+area_name = &"DungeonE"
+id = &"dungeon_e"
+label = "Defense"
+scene = "res://scenes/dungeon_e.tscn"
+objective_type = 3
+wave_enemy_scene = ExtResource("2_enemy")
+wave_reward_table = ExtResource("3_table")
+wave_boss_scene = ExtResource("4_boss")
+default_exit_portal = true
