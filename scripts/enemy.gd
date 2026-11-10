@@ -55,6 +55,9 @@ var nav: FlowNav = null
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.
 var _behavior: RefCounted
+## #513: typed spawn context (WolfContext, BirdContext) set by the owner that
+## spawns this enemy, before add_child; null for ordinary enemies.
+var context: RefCounted = null
 ## #177: animated art, if this enemy scene carries one (null otherwise).
 @onready var sprite: EnemySprite = get_node_or_null("Sprite") as EnemySprite
 

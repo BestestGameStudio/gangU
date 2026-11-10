@@ -84,7 +84,7 @@ func spawn_pack() -> Array[Enemy]:
 	# whenever it is not engaged - without this clear they would walk home
 	# and despawn on the new night instead of hunting (#476 review, Mitra).
 	for w in pack:
-		w.remove_meta("wolf_retreat")
+		(w.context as WolfContext).retreat = false
 	var missing := PACK_SIZE - pack.size()
 	var base_angle := randf() * TAU
 	for i in missing:
@@ -94,9 +94,12 @@ func spawn_pack() -> Array[Enemy]:
 		wolf.terrain = terrain
 		wolf.reward_table = WOLF_TABLE
 		var mouth := global_position + Vector2.from_angle(base_angle + TAU * i / maxi(missing, 1)) * 44.0
-		wolf.set_meta("wolf_anchor", global_position)
-		wolf.set_meta("wolf_cave", self)
-		wolf.set_meta("wolf_index", idx)
+		var ctx := WolfContext.new()
+		ctx.anchor = global_position
+		ctx.has_anchor = true
+		ctx.cave = self
+		ctx.index = idx
+		wolf.context = ctx
 		_area.add_child(wolf)
 		wolf.global_position = mouth
 		wolf.died.connect(_on_wolf_died.bind(wolf))
@@ -109,7 +112,7 @@ func spawn_pack() -> Array[Enemy]:
 func order_retreat() -> void:
 	_prune()
 	for w in pack:
-		w.set_meta("wolf_retreat", true)
+		(w.context as WolfContext).retreat = true
 
 ## A wolf reached the mouth on retreat: despawn "into the cave".
 func absorb_wolf(wolf: Enemy) -> void:
