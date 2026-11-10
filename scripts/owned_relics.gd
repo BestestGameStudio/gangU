@@ -21,8 +21,12 @@ signal changed
 
 var _owned: Array[Relic] = []
 
-func _ready() -> void:
-	add_to_group("owned_relics")
+## (#520) Reached through Run.relics(), not a group lookup.
+func _enter_tree() -> void:
+	Run.register(self)
+
+func _exit_tree() -> void:
+	Run.unregister(self)
 
 ## The universal duplicate gate. Returns false (and changes nothing) when a
 ## relic with the same logical id is already owned, whatever the source.

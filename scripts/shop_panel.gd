@@ -38,7 +38,7 @@ func _ready() -> void:
 	layer = 3
 	_build_skeleton()
 	_shop = get_tree().get_first_node_in_group("shop") as Shop
-	_wallet = get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
+	_wallet = Run.wallet()
 	if _wallet != null and not _wallet.balance_changed.is_connected(_on_balance_changed):
 		_wallet.balance_changed.connect(_on_balance_changed)
 	if _shop != null:

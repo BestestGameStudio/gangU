@@ -138,17 +138,18 @@ var facing: StringName = &"down"
 @onready var sprite: AnimatedSprite2D = get_node_or_null("WizardSprite")
 
 ## Fallback when a node has no explicit player wiring: the first Player in
-## the tree (every Player joins ActorCollision.PLAYER_GROUP in _ready).
+## the tree (every Player joins PhysicsLayers.PLAYER_GROUP in _ready).
 static func find(tree: SceneTree) -> Player:
-	return tree.get_first_node_in_group(ActorCollision.PLAYER_GROUP) as Player
+	return tree.get_first_node_in_group(PhysicsLayers.PLAYER_GROUP) as Player
 
 func _ready() -> void:
 	base_max_hp = max_hp
 	hp = max_hp
 	damage_rng.randomize()
-	# #290: the ignore is deferred so same-frame enemies are registered.
-	add_to_group(ActorCollision.PLAYER_GROUP)
-	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
+	# #515: players never block enemies (masks, see PhysicsLayers). The
+	# "players" group is bookkeeping only (targeting uses explicit wiring / the
+	# legacy "player" group).
+	add_to_group(PhysicsLayers.PLAYER_GROUP)
 	stats.changed.connect(_on_stat_changed)
 	# #499: every attack/spell cast from inside tall grass reveals the player.
 	var caster := get_node_or_null("SpellCaster") as SpellCaster
@@ -468,7 +469,7 @@ func dash_charges() -> int:
 ## live (the OwnedRelics apply seam), so a relic gained mid-run counts at
 ## once and nothing goes stale. No OwnedRelics mounted = base charges.
 func dash_max_charges() -> int:
-	var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics if is_inside_tree() else null
+	var relics := Run.relics() if is_inside_tree() else null
 	var extra := 0
 	if relics != null:
 		extra = int(relics.scalar_total(DASH_CHARGES_KEY))

@@ -4,8 +4,8 @@ extends Area2D
 ## auto-pick-up (approved by Daniel, 2026-11-07): the entry leaves the reward
 ## pool and, for spells, UNLOCKS on the player's caster for later equip - no
 ## auto-equip. The item route stays UNWIRED until the #54 content decision.
-## Wiring follows the ReviveItem precedent: the pool is found via the
-## "reward_pool" group; the drop itself is area-owned and freed on area swap.
+## The pool, wallet and relics are found through Run (#520); the drop itself
+## is area-owned and freed on area swap.
 
 signal collected(drop: RewardDrop, entry: RewardEntry)
 
@@ -49,7 +49,7 @@ func _ready() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if not (body is Player):
 		return
-	var pool := get_tree().get_first_node_in_group("reward_pool") as RewardPool
+	var pool := Run.reward_pool()
 	if pool != null and not pool.is_eligible(entry):
 		# Already granted this run: consume without re-granting. Inert + log;
 		# FIXTURE PROVISIONAL behavior - production duplicate floor-copy policy
@@ -80,7 +80,7 @@ func _on_body_entered(body: Node2D) -> void:
 		# #128: currency routes to the run wallet mounted on Main. Currency
 		# stays pool-eligible after grant (Daniel, 2026-11-07), so the pool
 		# call above is a no-op for CURRENCY and drops can repeat.
-		var wallet := get_tree().get_first_node_in_group("currency_wallet") as CurrencyWallet
+		var wallet := Run.wallet()
 		if wallet != null:
 			wallet.add(entry.currency_amount)
 		else:
@@ -100,7 +100,7 @@ func _on_body_entered(body: Node2D) -> void:
 		# #426: OwnedRelics.add refuses an already-owned id (a second boss
 		# drop picked up after the first), so the copy is consumed with no
 		# grant and no signal - Daniel's "no duplicates from any source".
-		var relics := get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+		var relics := Run.relics()
 		if relics == null or not relics.add(entry.relic):
 			print("[rewards] relic not granted (already owned or no OwnedRelics) - copy consumed (#426)")
 			queue_free()

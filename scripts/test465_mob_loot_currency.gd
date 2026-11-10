@@ -107,7 +107,7 @@ func _leg_d_end_to_end(table: RewardTable) -> void:
 			break
 		await _frames(1)
 	_check(scene.current_area != null, "(D) Main mounted")
-	var wallet := get_first_node_in_group("currency_wallet") as CurrencyWallet
+	var wallet := Run.wallet()
 	_check(wallet != null, "(D) Main mounts the run wallet")
 	# A real mob carrying the production table dies in the hub area.
 	var enemy: Enemy = (load("res://scenes/enemy.tscn") as PackedScene).instantiate()

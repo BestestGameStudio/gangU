@@ -62,11 +62,11 @@ func _process(delta: float) -> bool:
 			# group, beside the existing mounts.
 			wallet = scene.get_node_or_null("CurrencyWallet") as CurrencyWallet
 			_check(wallet != null, "Main mounts CurrencyWallet")
-			_check(get_nodes_in_group("currency_wallet").size() == 1, "exactly one wallet in currency_wallet group")
+			_check(wallet != null and Run.wallet() == wallet, "Run.wallet() is Main's wallet")
 			_check(scene.get_node_or_null("RewardPool") != null, "RewardPool mount intact")
 			_check(scene.get_node_or_null("ReviveSatchel") != null, "ReviveSatchel mount intact")
-			pool = get_first_node_in_group("reward_pool") as RewardPool
-			_check(pool != null, "reward_pool group resolves")
+			pool = Run.reward_pool()
+			_check(pool != null, "Run.reward_pool() resolves")
 			wallet.balance_changed.connect(func(b): signals_seen.append(b))
 			var caster: Node = p.get_node("SpellCaster")
 			unlocked_before = caster.get_unlocked().size()

@@ -86,6 +86,7 @@ const HOMING_RANGE: float = 400.0 ## steer only toward enemies within this range
 const HOMING_TURN_RATE: float = 6.0 ## max turn in rad/s
 
 ## #109: visual feel (code-drawn, flat geometric - style direction).
+const SWEEP_MAX_RESULTS := 32 ## #515: was 8; a crowd of bodies must not hide a real hit
 const SPIN_RATE: float = 12.0 ## rad/s diamond spin
 const PULSE_RATE: float = 10.0 ## rad/s scale pulse
 const PULSE_AMP: float = 0.15 ## +/-15% scale pulse
@@ -125,11 +126,26 @@ func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
 	direction = p_direction.normalized()
 	source = p_source
+	_set_layers_for(p_source)
 	if p_source != null:
 		_terrain = p_source.get(&"terrain") as TerrainMap
 		_attacker_rng = p_source.get(&"damage_rng") as RandomNumberGenerator
 	_attacker_modifiers = attacker_modifiers_for(p_source, spell)
 	rotation = direction.angle()
+
+## #515: a shot from the Player or a Summon is player-side (layer 5) and
+## only sees world props, enemies and summons; every other shot is
+## enemy-side (layer 6) and also sees the Player. Keeps irrelevant bodies
+## out of the 8-result sweep below.
+func _set_layers_for(p_source: Node2D) -> void:
+	if p_source is Player or p_source is Summon:
+		collision_layer = PhysicsLayers.PLAYER_PROJECTILE
+		collision_mask = PhysicsLayers.PLAYER_SHOT_MASK
+		if p_source is Summon:
+			collision_mask |= PhysicsLayers.PLAYER # legacy: a Summon's shot is absorbed by the Player
+	else:
+		collision_layer = PhysicsLayers.ENEMY_PROJECTILE
+		collision_mask = PhysicsLayers.ENEMY_SHOT_MASK
 
 ## #131 (C4): the attacker modifiers a hit from `p_source` casting `p_spell`
 ## rolls with. Owned relics contribute their tag-matched passive modifiers
@@ -143,7 +159,7 @@ static func attacker_modifiers_for(p_source: Node, p_spell: Spell) -> DamageModi
 	var mods := p_source.get(&"damage_modifiers") as DamageModifiers
 	var relics: OwnedRelics = null
 	if p_source is Player and p_source.is_inside_tree():
-		relics = p_source.get_tree().get_first_node_in_group("owned_relics") as OwnedRelics
+		relics = Run.relics()
 	if relics != null:
 		var relic_mods := relics.modifiers_for(p_spell)
 		if not relic_mods.is_empty():
@@ -563,7 +579,7 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 	params.collide_with_bodies = true
 	params.collide_with_areas = false
 	var space := get_world_2d().direct_space_state
-	var hits: Array[Dictionary] = space.intersect_shape(params, 8)
+	var hits: Array[Dictionary] = space.intersect_shape(params, SWEEP_MAX_RESULTS)
 	var rids: Array[RID] = []
 	for h in hits:
 		rids.append(h.get("rid"))
@@ -573,7 +589,7 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 	var overlapping: Array[RID] = []
 	if not hits.is_empty():
 		params.motion = Vector2.ZERO
-		for h in space.intersect_shape(params, 8):
+		for h in space.intersect_shape(params, SWEEP_MAX_RESULTS):
 			overlapping.append(h.get("rid"))
 		params.motion = motion
 	for idx in hits.size():
