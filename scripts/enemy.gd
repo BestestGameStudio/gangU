@@ -73,15 +73,17 @@ func _ready() -> void:
 	add_to_group("enemies")
 	# #325: note the encounter in the cross-run hub bestiary (keyed by scene).
 	Bestiary.record_enemy(self)
-	# #99: instantiate MY OWN behavior (never a shared Resource). Slot unset
-	# or no definition = the current chase/contact implementation; a slot
-	# script without physics_step falls back to it with a warning.
-	var behavior_script: Script = EnemyBehaviorChaseContact
-	if definition != null and definition.behavior != null:
-		behavior_script = definition.behavior
-	_behavior = behavior_script.new()
+	# Each enemy owns fresh runtime state, whether the definition supplies
+	# an authored Resource prototype or a legacy Script slot.
+	var prototype: Resource = definition.behavior if definition != null else null
+	if prototype is EnemyBehavior:
+		_behavior = prototype.duplicate(true)
+	elif prototype is Script:
+		_behavior = prototype.new()
+	else:
+		_behavior = EnemyBehaviorChaseContact.new()
 	if not _behavior is EnemyBehavior:
-		push_warning("Enemy: definition behavior script is not an EnemyBehavior (needs physics_step(enemy, player, delta)); using the default chase/contact behavior.")
+		push_warning("Enemy: definition behavior is not an EnemyBehavior; using the default chase/contact behavior.")
 		_behavior = EnemyBehaviorChaseContact.new()
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
