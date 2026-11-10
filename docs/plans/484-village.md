@@ -6,6 +6,8 @@ The village is a LocationTrigger carrying an AmbushEvent. Main's existing mounte
 
 Implementer defaults: one attempt per run, 100c bonus, cosmetic/walk-through ruins. Main's existing trigger-fire history prevents farming on area remount; no shared event/host API changes.
 
-No tests created, edited or run. Existing test365 has a known stale assertion that the production overworld places no location triggers; this feature intentionally changes that assumption. Editor import and disclosed recording-only showcases are not regression-suite evidence.
+No new tests created or tests run locally. The existing test365 production-trigger assertion is updated with owner approval. It now expects the abandoned village trigger while still checking that arrival fires no event. Editor import and disclosed recording-only showcases are not regression-suite evidence.
 
 Demo: staged arrival, 10,000 HP, scripted movement; production event/spawn/AI/reward code. The clear beat applies disclosed synthetic damage, not natural combat. Escape beats use normal movement. Independent review and green required CI remain gates.
+
+Sprite revision: original static four-cell prop atlas replaces all house/well/ruin shapes; clearing disk removed. Generated imports with Godot 4.5.1, nearest filtering, reproducible Python generator and SOURCE.md provenance.

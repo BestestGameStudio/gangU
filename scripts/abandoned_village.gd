@@ -10,6 +10,7 @@ const FOREST_RADIUS := 490.0
 const ROAD_HALF_WIDTH := 72.0
 const AMBUSH_COUNT := 30
 const CLEAR_COINS := 100
+const PROPS: Texture2D = preload("res://assets/sprites/village_props.png")
 const ENEMY := preload("res://scenes/enemy.tscn")
 const LOOT := preload("res://resources/rewards/demo_table.tres")
 
@@ -22,6 +23,7 @@ var _rewarded := false
 var _caption: Label
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	z_index = -1
 	trigger_id = &"abandoned_village"
 	var shape := CollisionShape2D.new()
@@ -136,10 +138,8 @@ func _drop_reward() -> void:
 	drop.global_position = global_position
 
 func _draw() -> void:
-	# Faded foundations and broken roofs, open to walk through. Ruins are
-	# deliberately cosmetic: only the surrounding trees block movement.
-	draw_circle(Vector2.ZERO, CLEAR_RADIUS, Color(0.27, 0.29, 0.22, 0.6))
-	# Reuse the terrain atlas for a worn, textured single road.
+	# Static atlas: three collapsed-house variants and one dry well.
+	# Ruins stay cosmetic/walk-through; tree movement is unchanged.
 	for x in range(-9, 9):
 		for y in range(-1, 1):
 			var cell := Vector2i(x, y)
@@ -148,18 +148,7 @@ func _draw() -> void:
 	for side in [-1, 1]:
 		for column in [-1, 0, 1]:
 			var at := Vector2(column * 170, side * 170)
-			draw_rect(Rect2(at - Vector2(52, 38), Vector2(104, 76)), Color(0.22, 0.23, 0.20))
-			draw_rect(Rect2(at - Vector2(52, 38), Vector2(104, 76)), Color(0.45, 0.43, 0.36), false, 7)
-			draw_colored_polygon(PackedVector2Array([at + Vector2(-60, -35), at + Vector2(0, -68), at + Vector2(22, -34), at + Vector2(-10, -12)]), Color(0.28, 0.19, 0.14))
-			for brick in 6:
-				var start := at + Vector2(-50 + brick * 18, 36)
-				draw_line(start, start + Vector2(0, -7), Color(0.25, 0.26, 0.23), 2)
-			# Broken doorway and rubble make the buildings read as abandoned.
-			draw_rect(Rect2(at + Vector2(-10, 30), Vector2(20, 12)), Color(0.22, 0.23, 0.20))
-			for rubble in 4:
-				draw_rect(Rect2(at + Vector2(35 + rubble * 8, 32 + (rubble % 2) * 8), Vector2(8, 6)), Color(0.44, 0.42, 0.35))
-			draw_line(at + Vector2(-42, 12), at + Vector2(20, -20), Color(0.41, 0.29, 0.18), 6)
-			draw_line(at + Vector2(20, 30), at + Vector2(43, 2), Color(0.41, 0.29, 0.18), 5)
-	# An empty well in the square, with room on all sides.
-	draw_circle(Vector2.ZERO, 28, Color(0.44, 0.43, 0.37))
-	draw_circle(Vector2.ZERO, 19, Color(0.10, 0.12, 0.11))
+			var variant := posmod(column + 1 + (1 if side > 0 else 0), 3)
+			draw_texture_rect_region(PROPS, Rect2(at - Vector2(64, 64), Vector2(128, 128)),
+				Rect2(variant * 128, 0, 128, 128))
+	draw_texture_rect_region(PROPS, Rect2(-48, -48, 96, 96), Rect2(384, 0, 128, 128))

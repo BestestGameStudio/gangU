@@ -3,7 +3,7 @@ extends SceneTree
 ##   (A) LocationTrigger policy seam: only an armed trigger and a Player
 ##       body fire it; fire_count counts accepted fires; id() falls back to
 ##       the node name.
-##   (B) production overworld places no trigger yet (content undesigned), so
+##   (B) production overworld places the village trigger away from arrival, so
 ##       entering it fires nothing.
 ##   (C) PRODUCTION flow: an overworld carrying a trigger + AmbushEvent is
 ##       mounted through Main._swap; walking the player into the trigger
@@ -100,13 +100,13 @@ func _flow_legs() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 
-	# (B) production overworld is inert
+	# (B) production village trigger does not fire at the arrival point
 	var heard: Array = []
 	main.location_event_triggered.connect(func(id, _t): heard.append(id))
 	main.enter_overworld()
 	await _frames(3)
 	var placed := get_nodes_in_group("location_triggers").filter(func(n): return main.current_area.is_ancestor_of(n))
-	_check(placed.is_empty(), "(B) the production overworld places no location trigger yet")
+	_check(placed.size() == 1 and placed[0].id() == &"abandoned_village", "(B) production overworld places the abandoned village trigger")
 	_check(main.current_area.get_node_or_null("EventSpawner") == null and heard.is_empty(), "(B) entering it fires no event")
 
 	# (C) overworld with an authored ambush trigger, mounted the production way
