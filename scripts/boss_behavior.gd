@@ -155,11 +155,33 @@ func _windup_time(which: int) -> float:
 func _windup_anim(which: int) -> StringName:
 	return windup_anims[which]
 
-func _show_windup_telegraph(_enemy: Enemy, _which: int, _dur: float, _tele: BossTelegraph) -> void:
-	pass
+func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTelegraph) -> void:
+	var p: AttackPresentation = presentations[which]
+	match p.shape:
+		TelegraphShape.LINE:
+			tele.show_line(_dir, p.length, p.width, dur)
+		TelegraphShape.RING:
+			tele.show_ring(_ring_radius(enemy) if p.phase_ring else p.radius, dur)
+		TelegraphShape.CONE:
+			tele.show_cone(_dir, p.length, deg_to_rad(_volley_spread(enemy)), dur)
 
 ## Counter reset + transition into the attack state once the wind-up ends.
-func _finish_windup(_enemy: Enemy, _tele: BossTelegraph) -> void:
+func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
+	_attack_begin_reset()
+	var p: AttackPresentation = presentations[attack]
+	state = p.next_state
+	_attack_begin_count()
+	enemy.play_action(p.animation, true)
+	if tele != null:
+		if p.start_ring:
+			tele.show_ring(p.radius, p.start_duration, true)
+		elif p.clear_on_start:
+			tele.clear()
+
+func _attack_begin_reset() -> void:
+	pass
+
+func _attack_begin_count() -> void:
 	pass
 
 # --- anti-repeat picker ------------------------------------------------------
@@ -301,3 +323,27 @@ func _ring_release(enemy: Enemy, player: Player, to_player: Vector2, radius: flo
 	if to_player.length() <= radius:
 		player.apply_damage(ring_data.damage)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+
+# --- data-driven attack presentation -----------------------------------------
+enum TelegraphShape { LINE, RING, CONE }
+class AttackPresentation extends RefCounted:
+	var next_state: int
+	var animation: StringName
+	var shape: int
+	var length: float
+	var width: float
+	var radius: float
+	var phase_ring: bool = false
+	var clear_on_start: bool = true
+	var start_ring: bool = false
+	var start_duration: float = 0.0
+
+var presentations: Dictionary = {}
+
+func _present(which: int, next: int, anim: StringName, shape: int) -> AttackPresentation:
+	var p := AttackPresentation.new()
+	p.next_state = next
+	p.animation = anim
+	p.shape = shape
+	presentations[which] = p
+	return p
