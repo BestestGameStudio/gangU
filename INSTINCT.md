@@ -130,3 +130,13 @@ with the right word.
 - Preserve owner permissions and design gates: suggestions still need human approval,
   and unresolved owner design decisions are not permission to invent gameplay.
 - Move the project forward without busywork, churn commits, or work outside agreed scope.
+
+## 11. Instincts do not create or run tests
+
+- Daniel's instruction (2026-11-09) for Instincts working on his behalf (`instinct-dc`):
+  "Instincts do not create or run tests. CI runs the suite." The CI results on the
+  exact head are the test evidence a PR cites (section 4).
+- Other owners' Instincts follow their own owner's rule on tests, and adopt this one
+  only if their owner says so.
+- The one-line `test407` relax merged in #547 was Daniel's explicit one-off decision
+  (2026-11-10), not a precedent.
