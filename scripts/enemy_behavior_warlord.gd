@@ -1,5 +1,5 @@
 class_name EnemyBehaviorWarlord
-extends RefCounted
+extends BossBehavior
 ## #177: Mustache Warlord boss behavior - slotted through the #99 behavior
 ## seam (resources/enemies/mustache_warlord.tres), so the boss is a plain
 ## Enemy (same HP / damage / died() contract) with its own brain.
@@ -16,14 +16,13 @@ extends RefCounted
 ## Enraged at <= 50% HP: shorter gaps, wider double volleys, faster lunges.
 ## The same attack never runs three times in a row (range picks a fallback).
 ##
+## The shared loop skeleton lives in BossBehavior (#513 PART1); this file
+## keeps the Warlord's attack data, timing and attack logic.
+##
 ## Timings and damage are PLACEHOLDER tuning (balance is human-open).
-
-enum State { CHASE, WINDUP, LUNGE, SPIN, VOLLEY, RECOVER }
-enum Attack { LUNGE, SPIN, VOLLEY }
 
 const ORB_SPELL: Spell = preload("res://resources/spells/warlord_orb.tres")
 const PROJECTILE_SCENE: PackedScene = preload("res://scenes/projectile.tscn")
-const CombatEffects = preload("res://scripts/combat_effects.gd")
 
 const FIRST_ATTACK_DELAY: float = 1.2
 const ATTACK_INTERVAL: float = 1.9
@@ -35,7 +34,6 @@ const VOLLEY_RANGE: float = 270.0 ## farther than this -> VOLLEY
 
 const WINDUP_TIME: Dictionary = {Attack.LUNGE: 0.6, Attack.SPIN: 0.5, Attack.VOLLEY: 0.65}
 const WINDUP_ANIM: Dictionary = {Attack.LUNGE: &"windup_lunge", Attack.SPIN: &"windup_spin", Attack.VOLLEY: &"windup_ranged"}
-const LUNGE_LOCK_AT: float = 0.6 ## fraction of the wind-up after which aim locks
 
 const LUNGE_SPEED: float = 560.0
 const LUNGE_SPEED_ENRAGED: float = 700.0
@@ -59,32 +57,32 @@ const VOLLEY_SECOND_WAVE_AT: float = 0.45 ## enraged only
 const VOLLEY_TIME: float = 0.6
 const MUZZLE_OFFSET: float = 34.0
 
-var state: int = State.CHASE
-var attack: int = Attack.LUNGE
-var _t: float = 0.0
-var _attack_timer: float = FIRST_ATTACK_DELAY
-var _contact_timer: float = 0.0
-var _dir: Vector2 = Vector2.RIGHT
 var _hits: int = 0
 var _tick_t: float = 0.0
 var _waves_fired: int = 0
-var _history: Array[int] = []
-var _entered: bool = false
+var _contact_timer: float = 0.0
 
-func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
-	var tele := enemy.get_node_or_null("Telegraph") as BossTelegraph
-	if not _entered:
-		_entered = true
-		# Arrival pop - visual only, same effect family as hits/deaths.
-		CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, Enemy.SPRITE_BURST_COLOR)
-	if player == null or not is_instance_valid(player) or player.hp <= 0:
-		if state != State.CHASE:
-			_enter_chase(enemy, tele)
-		enemy.velocity = Vector2.ZERO
-		enemy.terrain_move_and_slide()
-		return
-	_t += delta
-	var to_player: Vector2 = player.global_position - enemy.global_position
+# --- BossBehavior hooks ------------------------------------------------------
+
+func _first_attack_delay() -> float:
+	return FIRST_ATTACK_DELAY
+
+func _attack_interval() -> float:
+	return ATTACK_INTERVAL
+
+func _enraged_interval() -> float:
+	return ENRAGED_INTERVAL
+
+func _recover_time() -> float:
+	return RECOVER_TIME
+
+func _windup_time(which: int) -> float:
+	return WINDUP_TIME[which]
+
+func _windup_anim(which: int) -> StringName:
+	return WINDUP_ANIM[which]
+
+func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	var dist: float = to_player.length()
 	match state:
 		State.CHASE:
@@ -97,16 +95,38 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 			_spin(enemy, player, to_player, delta, tele)
 		State.VOLLEY:
 			_volley(enemy, to_player, tele)
-		State.RECOVER:
-			enemy.velocity = Vector2.ZERO
-			if _t >= RECOVER_TIME:
-				_enter_chase(enemy, tele)
-	enemy.terrain_move_and_slide()
 
-func is_enraged(enemy: Enemy) -> bool:
-	return enemy.hp * 2 <= enemy.max_hp
+func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTelegraph) -> void:
+	match which:
+		Attack.LUNGE:
+			tele.show_line(_dir, LUNGE_LENGTH, LUNGE_HIT_RANGE * 0.6, dur)
+		Attack.SPIN:
+			tele.show_ring(SPIN_RADIUS, dur)
+		Attack.VOLLEY:
+			tele.show_cone(_dir, 220.0, deg_to_rad(_volley_spread(enemy)), dur)
 
-# --- CHASE -----------------------------------------------------------------
+func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
+	_hits = 0
+	_tick_t = 0.0
+	_waves_fired = 0
+	match attack:
+		Attack.LUNGE:
+			state = State.LUNGE
+			enemy.play_action(&"lunge", true)
+			if tele != null:
+				tele.clear()
+		Attack.SPIN:
+			state = State.SPIN
+			enemy.play_action(&"spin", true)
+			if tele != null:
+				tele.show_ring(SPIN_RADIUS, SPIN_TIME, true)
+		Attack.VOLLEY:
+			state = State.VOLLEY
+			enemy.play_action(&"ranged", true)
+			if tele != null:
+				tele.clear()
+
+# --- CHASE -------------------------------------------------------------------
 
 func _chase(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	var dist: float = to_player.length()
@@ -130,71 +150,9 @@ func _pick_attack(dist: float) -> int:
 	elif dist > VOLLEY_RANGE:
 		pick = Attack.VOLLEY
 		fallback = Attack.LUNGE
-	if _history.size() >= 2 and _history[-1] == pick and _history[-2] == pick:
-		pick = fallback
-	_history.append(pick)
-	if _history.size() > 4:
-		_history.pop_front()
-	return pick
+	return _history_pick(pick, fallback)
 
-# --- WIND-UP (telegraph) ---------------------------------------------------
-
-func _start_windup(enemy: Enemy, which: int, to_player: Vector2, tele: BossTelegraph) -> void:
-	attack = which
-	state = State.WINDUP
-	_t = 0.0
-	_dir = to_player.normalized() if to_player.length_squared() > 0.0 else Vector2.RIGHT
-	enemy.velocity = Vector2.ZERO
-	_face(enemy, _dir.x)
-	enemy.play_action(WINDUP_ANIM[which], true)
-	if enemy.sprite != null:
-		enemy.sprite.set_glow(true)
-	if tele != null:
-		var dur: float = WINDUP_TIME[which]
-		match which:
-			Attack.LUNGE:
-				tele.show_line(_dir, LUNGE_LENGTH, LUNGE_HIT_RANGE * 0.6, dur)
-			Attack.SPIN:
-				tele.show_ring(SPIN_RADIUS, dur)
-			Attack.VOLLEY:
-				tele.show_cone(_dir, 220.0, deg_to_rad(_volley_spread(enemy)), dur)
-
-func _windup(enemy: Enemy, to_player: Vector2, tele: BossTelegraph) -> void:
-	enemy.velocity = Vector2.ZERO
-	var dur: float = WINDUP_TIME[attack]
-	# Track the player early in the wind-up, then lock: the locked tail is
-	# the dodge window.
-	if _t < dur * LUNGE_LOCK_AT and to_player.length_squared() > 0.0:
-		_dir = to_player.normalized()
-		_face(enemy, _dir.x)
-		if tele != null:
-			tele.set_direction(_dir)
-	if _t < dur:
-		return
-	if enemy.sprite != null:
-		enemy.sprite.set_glow(false)
-	_t = 0.0
-	_hits = 0
-	_tick_t = 0.0
-	_waves_fired = 0
-	match attack:
-		Attack.LUNGE:
-			state = State.LUNGE
-			enemy.play_action(&"lunge", true)
-			if tele != null:
-				tele.clear()
-		Attack.SPIN:
-			state = State.SPIN
-			enemy.play_action(&"spin", true)
-			if tele != null:
-				tele.show_ring(SPIN_RADIUS, SPIN_TIME, true)
-		Attack.VOLLEY:
-			state = State.VOLLEY
-			enemy.play_action(&"ranged", true)
-			if tele != null:
-				tele.clear()
-
-# --- ATTACKS ---------------------------------------------------------------
+# --- ATTACKS -----------------------------------------------------------------
 
 func _lunge(enemy: Enemy, player: Player, dist: float, _tele: BossTelegraph) -> void:
 	var spd: float = LUNGE_SPEED_ENRAGED if is_enraged(enemy) else LUNGE_SPEED
@@ -258,23 +216,3 @@ func _volley_shots(enemy: Enemy) -> int:
 
 func _volley_spread(enemy: Enemy) -> float:
 	return VOLLEY_SPREAD_ENRAGED_DEG if is_enraged(enemy) else VOLLEY_SPREAD_DEG
-
-# --- transitions -----------------------------------------------------------
-
-func _enter_recover(enemy: Enemy) -> void:
-	state = State.RECOVER
-	_t = 0.0
-	enemy.velocity = Vector2.ZERO
-	enemy.clear_action()
-
-func _enter_chase(enemy: Enemy, tele: BossTelegraph) -> void:
-	state = State.CHASE
-	_t = 0.0
-	_attack_timer = ENRAGED_INTERVAL if is_enraged(enemy) else ATTACK_INTERVAL
-	enemy.clear_action()
-	if tele != null:
-		tele.clear()
-
-func _face(enemy: Enemy, dir_x: float) -> void:
-	if enemy.sprite != null:
-		enemy.sprite.face(dir_x)
