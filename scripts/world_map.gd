@@ -165,6 +165,15 @@ func pan_bounds() -> Rect2:
 			return r
 	return Rect2()
 
+## (#440 review) The overworld land outline polygon (empty where none).
+func pan_outline() -> PackedVector2Array:
+	if terrain == null or not is_instance_valid(terrain) or terrain.get_parent() == null:
+		return PackedVector2Array()
+	for c in terrain.get_parent().get_children():
+		if c is OverworldGround and not (c as OverworldGround).outline.is_empty():
+			return (c as OverworldGround).outline
+	return PackedVector2Array()
+
 ## Where to center a view of area `id`: the player's last spot there, else
 ## the middle of its marked dungeons, else the origin.
 func view_center(id: StringName) -> Vector2:
