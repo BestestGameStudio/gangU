@@ -71,23 +71,8 @@ func _configure() -> void:
 	recover_time = RECOVER_TIME
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
-	lunge_data = LungeData.new()
-	lunge_data.speed = LUNGE_SPEED
-	lunge_data.enraged_speed = LUNGE_SPEED_ENRAGED
-	lunge_data.duration = LUNGE_TIME
-	lunge_data.hit_range = LUNGE_HIT_RANGE
-	lunge_data.damage = LUNGE_DAMAGE
-	volley_data = VolleyData.new()
-	volley_data.spell = ORB_SPELL
-	volley_data.scene = PROJECTILE_SCENE
-	volley_data.shots = VOLLEY_SHOTS
-	volley_data.enraged_shots = VOLLEY_SHOTS_ENRAGED
-	volley_data.spread = VOLLEY_SPREAD_DEG
-	volley_data.enraged_spread = VOLLEY_SPREAD_ENRAGED_DEG
-	volley_data.fire_at = VOLLEY_FIRE_AT
-	volley_data.second_wave_at = VOLLEY_SECOND_WAVE_AT
-	volley_data.duration = VOLLEY_TIME
-	volley_data.muzzle_offset = MUZZLE_OFFSET
+	lunge_data = load("res://resources/boss_attacks/warlord_lunge.tres")
+	volley_data = load("res://resources/boss_attacks/warlord_volley.tres")
 
 	var lunge := _present(Attack.LUNGE, State.LUNGE, &"lunge", TelegraphShape.LINE)
 	lunge.length = LUNGE_LENGTH
