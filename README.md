@@ -1,8 +1,11 @@
 # gangU
 
 2D top-down arcade shooter (Brawlstars-like). Single-player first, co-op after it works.
-Spells only, no weapons. Solo-Leveling-style gates: a hub with normal gates (retreat anytime)
-and red gates (clear-or-die).
+Spells only, no weapons. Solo-Leveling-style gates: a hub, an overworld full of dungeon
+entrances, normal gates (retreat anytime) and red gates (clear-or-die).
+
+Design decisions and their code locations: [ARCHITECTURE.md](ARCHITECTURE.md).
+Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE.md](CLAUDE.md).
 
 ## Tech
 
@@ -11,25 +14,34 @@ and red gates (clear-or-die).
 
 ## Repo layout
 
-- `project.godot` - project config. Defines the shared input actions (see below).
+- `project.godot` - project config and the shared input actions.
 - `export_presets.cfg` - Web export preset (see "Web export" below).
-- `scenes/main.tscn` - main scene; boots the game. Scene flow (hub <-> dungeon) attaches here.
-- `scripts/` - GDScript sources.
+- `scenes/main.tscn` - main scene (Player + FollowCamera). `scripts/main.gd` mounts every
+  run service in code and swaps areas: hub (`scenes/hub.tscn`) <-> overworld
+  (`scenes/overworld.tscn`) <-> dungeons (`scenes/dungeon_*.tscn`).
+- `scripts/` - GDScript sources, plus `test*.gd` harnesses and `record*.gd` capture drivers.
+- `scenes/test*.tscn` - evidence fixtures for harnesses (never production).
+- `resources/` - data: spells, enemies, rewards, terrain maps and palettes, gate offering.
+- `assets/` - art and audio.
+- `tools/showcase/` - scripted gameplay recordings; `tools/sprites/` - sprite packing tools.
+- `.github/workflows/` - web build/deploy and the Claude agent jobs (ARCHITECTURE.md D20).
 - `build/` - local export output, git-ignored.
 
-## Shared interfaces (depend on these, do not redefine)
+## Controls
 
-**Input actions** (defined in `project.godot`):
+| Input                     | Action                                   |
+|---------------------------|------------------------------------------|
+| W / A / S / D             | Move (`move_up/left/down/right`)         |
+| LMB, RMB, Q, E, R, F      | Cast the spell in slots 1-6              |
+| Space                     | Cast the equipped spell (`cast`)         |
+| Shift                     | Dash (`dash`)                            |
+| Tab                       | Equip / upgrade panel (does not pause)   |
+| M                         | Map                                      |
+| Esc                       | Settings                                 |
 
-| Action    | Keys                    | Consumed by          |
-|-----------|-------------------------|----------------------|
-| `move_up`    | W                   | #2 player controller |
-| `move_down`  | S                   | #2 player controller |
-| `move_left`  | A                   | #2 player controller |
-| `move_right` | D                   | #2 player controller |
-| `cast`       | Space, left mouse button | #3 spell system   |
-
-Manual aim only, no aim assist. Keyboard + mouse, trackpad friendly (no inputs beyond pointer + click).
+The movement, `cast` and `dash` actions live in `project.godot`; the slot keys are registered
+at runtime by `scripts/spell_caster.gd`. Manual aim only, no aim assist; keyboard + mouse,
+trackpad friendly.
 
 **Web export contract:**
 
@@ -46,7 +58,8 @@ Manual aim only, no aim assist. Keyboard + mouse, trackpad friendly (no inputs b
 
 ## Run (editor)
 
-Open the project and press F5. The main scene boots to a "gangU boots OK" screen.
+Open the project and press F5. The game boots into the hub; walk into the gold TRAVEL gate to
+reach the overworld and its dungeon entrances.
 
 ## Web export (headless/CI)
 
@@ -55,6 +68,9 @@ godot --headless --path . --import
 mkdir -p build/web
 godot --headless --path . --export-release "Web" build/web/index.html
 ```
+
+Every push to `main` builds and deploys this to GitHub Pages (`.github/workflows/deploy.yml`);
+pull requests get a build-only run.
 
 ## Web export (editor)
 
@@ -67,22 +83,22 @@ cd build/web && python3 -m http.server 8123
 # open http://localhost:8123/
 ```
 
-The game must load to the boot screen with no console errors.
+The game must load into the hub with no console errors.
 
 ## Testing
 
 Harnesses are `scripts/test*.gd` (`extends SceneTree`) plus `scenes/test*.tscn` fixtures:
 
 ```bash
-godot --headless --path . --script res://scripts/testNNN_topic.gd      # one harness
+timeout 300 godot --headless --path . --script res://scripts/testNNN_topic.gd   # one harness
 GANGU_AUTOTEST=1 godot --headless --path . res://scenes/testNNN_x.tscn --quit-after 2400
 ```
 
-macOS has no `timeout`; wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`. Count `-> FAIL` and `SCRIPT ERROR` lines.
+A pass is exit code 0 (newer harnesses also print `RESULT: ALL PASS`) with no `-> FAIL` or
+`SCRIPT ERROR` lines. macOS has no `timeout`; wrap with `perl -e 'alarm 300; exec @ARGV' godot ...`.
+While iterating, run only the harnesses for the area you touched; run the full set once at the end.
 
 **Known baseline noise (main, 2026-11-08):** a full run of every harness and fixture prints
 about 189-190 `SCRIPT ERROR`s, all one pre-existing "freed player `physics_step`" error from
 the `test_objective_flow` fixture, and `test_run_restart` (the restart guard) fails
-intermittently. Compare your run against this instead of rebuilding a copy of main to
-re-baseline. While iterating, run only the harnesses you touched; run the full suite once at
-the end. Anything beyond this baseline is yours.
+intermittently. Anything beyond this baseline is yours.
