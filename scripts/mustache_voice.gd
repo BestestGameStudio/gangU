@@ -48,10 +48,13 @@ const PER_CUE_MIXING: bool = false
 ## is farther away (no backlog burst on approach). Camera scale: viewport
 ## 1152x648, Camera2D zoom 1, so the screen is 576 px half-width and 324 px
 ## half-height; 300 px keeps idle on-screen in every direction.
-## NOTE: a plain warrior counts the player inside ENGAGE_RADIUS (460) as
-## engaged (combat cues, not idle), so with this radius a standard warrior's
-## idle is effectively silent: the user's "only when close" wins over idle
-## variety, and engagement is deliberately not changed here. Combat, attack,
+## NOTE: a plain chase/cover warrior has no unaware state: it counts the
+## player inside ENGAGE_RADIUS (460) as engaged (combat cues, not idle), so
+## with this radius its idle is effectively silent (not enabled here). A
+## guard/patrol warrior uses its own `engaged` flag (aggro 220), so while
+## unaware with the player 220-300 px away it can idle rarely; its combat
+## barks now follow that real awareness instead of 460 px. The user's "only
+## when close" wins over idle variety. Combat, attack,
 ## hurt and death cues are untouched. PLACEHOLDER tuning, human-open (a var
 ## so tests can widen it to exercise the proximity gate).
 var idle_hear_radius: float = 300.0
@@ -195,8 +198,8 @@ func _player_within(radius: float) -> bool:
 
 func _is_engaged() -> bool:
 	var b: RefCounted = _enemy._behavior
-	if b != null and "engaged" in b and b.engaged:
-		return true
+	if b != null and "engaged" in b:
+		return b.engaged # guard/patrol: the behavior's own flag is authoritative
 	return _player_within(ENGAGE_RADIUS)
 
 func _cue_voice() -> StringName:
