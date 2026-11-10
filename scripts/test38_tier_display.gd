@@ -109,7 +109,8 @@ func _initialize() -> void:
 	for l: Label in hud.find_children("*", "Label", true, false):
 		label_paths.append(str(hud.get_path_to(l)))
 	label_paths.sort()
-	_check(label_paths == ["DefenseWaveBar/Countdown", "Root/HPBar/HPLabel", "Root/ObjectiveLabel", "Root/ShieldBar/ShieldLabel"], "(c) #238+#369+#388 HUD labels are only HP, objective, defense countdown and shield value (got %s)" % [label_paths])
+	# #460 adds the spirit bar's label.
+	_check(label_paths == ["DefenseWaveBar/Countdown", "Root/HPBar/HPLabel", "Root/ObjectiveLabel", "Root/ShieldBar/ShieldLabel", "Root/SpiritBar/SpiritLabel"], "(c) #238+#369+#388+#460 HUD labels are only HP, objective, defense countdown, shield value and spirit (got %s)" % [label_paths])
 	_check(not (hud.get_node("Root/ShieldBar") as Control).visible, "(c) #388 shield bar/label stay hidden with no shield")
 	_check(not (hud.get_node("DefenseWaveBar") as Control).visible, "(c) defense wave bar stays hidden outside defense missions (#369)")
 
