@@ -1,11 +1,14 @@
 extends SceneTree
 ## #264 harness: currency is part of the enemy loot table used by the current
-## dungeons (DungeonA, DungeonB, the generated dungeon). Proves:
+## dungeons (DungeonA, DungeonB, the generated dungeon). #465 (Daniel,
+## 2026-11-09: "remove spells from the regular mob loot tables (they should
+## only drop currency)"; bosses/beasts keep theirs, other sources unchanged)
+## made the regular-mob table currency-ONLY. Proves:
 ##  - the production demo_table.tres carries a CURRENCY entry (positive
-##    placeholder amount, positive weight) alongside its spell entries;
+##    placeholder amount, positive weight) and NO spell entries;
 ##  - every current dungeon's enemies use that table;
-##  - once every spell entry is granted, the table still rolls currency
-##    (currency stays eligible, #128), so enemies keep dropping it;
+##  - the table still rolls currency after grants (currency stays eligible,
+##    #128), so enemies keep dropping it;
 ##  - end to end on Main: a real enemy carrying the production table dies,
 ##    drops currency, walk-over pickup adds the amount to the run wallet, and
 ##    a second kill drops currency again.
@@ -43,10 +46,8 @@ func _static_checks() -> void:
 	_check(currency_entry != null, "demo table carries a CURRENCY entry")
 	_check(currency_entry != null and currency_entry.currency_amount > 0 and currency_entry.weight > 0.0,
 		"currency entry has a positive amount and weight")
-	spell_names.sort()
-	_check(spell_names == ["Placeholder Bolt", "Spirit Punch", "Stone Block", "Stone Hammer", "Summon Ally", "Water Ball"],
-		"spell entries are Placeholder Bolt + Spirit Punch + Summon Ally + Stone Block + Water Ball + Stone Hammer (#305 Spirit Punch, #331 Water Ball, #370 Stone Hammer added as unlockable drops)")
-	_check(table.entries[0].kind == RewardEntry.Kind.SPELL, "entries[0] is still the bolt spell entry")
+	_check(spell_names.is_empty(), "no spell entries: regular mobs drop currency only (#465)")
+	_check(table.entries.size() == 1 and table.entries[0].kind == RewardEntry.Kind.CURRENCY, "the currency entry is the whole table (#465)")
 
 	for path in ["res://scenes/dungeon_a.tscn", "res://scenes/dungeon_b.tscn"]:
 		var area: Node = load(path).instantiate()
@@ -63,15 +64,14 @@ func _static_checks() -> void:
 	var rt: RewardTable = gen.get_script_constant_map().get("REWARD_TABLE")
 	_check(rt != null and rt.resource_path == TABLE_PATH, "generated dungeon enemies use the currency-bearing table")
 
-	var all_spells: Array = []
-	for e in table.entries:
-		if e.kind == RewardEntry.Kind.SPELL:
-			all_spells.append(e)
+	# #465: with a currency-only table every roll is currency; the pool
+	# keeps CURRENCY eligible after grants (#128), so drops repeat (the
+	# second kill below proves it end to end).
 	var only_currency := true
 	for i in 50:
-		if table.roll(all_spells) != currency_entry:
+		if table.roll([]) != currency_entry:
 			only_currency = false
-	_check(only_currency, "with every spell granted, the table still rolls currency")
+	_check(only_currency, "the table always rolls currency")
 
 func _spawn_enemy() -> void:
 	enemy = load("res://scenes/enemy.tscn").instantiate()
@@ -103,11 +103,8 @@ func _process(delta: float) -> bool:
 			_check(pool != null and wallet != null, "Main mounts reward pool and wallet")
 			if pool == null or wallet == null or currency_entry == null:
 				return _finish()
-			# Grant every spell entry so the production table can only roll
-			# currency - deterministic without touching table weights.
-			for e in table.entries:
-				if e.kind == RewardEntry.Kind.SPELL:
-					pool.remove_on_grant(e)
+			# #465: the production table is currency-only, so no grant
+			# priming is needed - every roll is currency already.
 			_spawn_enemy()
 			phase = 1; t = 0
 		1:
