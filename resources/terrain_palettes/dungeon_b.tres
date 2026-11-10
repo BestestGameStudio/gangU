@@ -7,6 +7,7 @@
 script = ExtResource("2_tile")
 id = &"obstacle"
 movement = 1
+art = &"obstacle_brown"
 color = Color(0.25, 0.21, 0.19, 1)
 
 [resource]

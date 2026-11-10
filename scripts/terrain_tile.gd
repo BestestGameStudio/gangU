@@ -18,3 +18,7 @@ extends Resource
 @export var color: Color = Color(0.3, 0.3, 0.35, 1.0)
 ## Optional art; scaled to the map's cell size. Overrides `color`.
 @export var texture: Texture2D = null
+## Terrain art set (a TerrainArt.SETS id, e.g. &"obstacle_slate",
+## &"chasm") that draws this tile. Empty, or an unknown id, keeps the
+## flat `color` / `texture` swatch.
+@export var art: StringName = &""

@@ -322,3 +322,47 @@ style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
 
 - Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
 - Rows: idle x4 (5 fps loop), walk x6 (10 fps loop), hurt x2, attack x3, death x5 (one-shots).
+
+# terrain_tiles.png / terrain_objects.png - terrain art pass
+
+- Source: two AI-generated sheets supplied by the user (Mitravasu) in a
+  Claude Code session, 2026-11-09, committed unchanged under
+  `tools/sprites/sources/` (`.gdignore`d, never imported):
+  `terrain_tiles_sheet.webp` (1066x1476, RGBA) and
+  `terrain_objects_sheet.webp` (1447x1087, RGBA). Not pixel exact: blurred
+  pixel art, cells split by thin transparent gaps, floor cells ~83x85 px,
+  autotile cells ~81x74 px, object cells ~181 px with a faint near-white
+  fringe (alpha 1-95) around every object.
+- Packed by `tools/sprites/pack_terrain_sheets.py` (Pillow + numpy). Grid
+  lines are predicted from the outer bounds, snapped to the local alpha
+  minimum, each cell trimmed to fully opaque rows/cols plus a 2 px (floors)
+  / 4 px (autotiles) inset, then box-resampled.
+- `terrain_tiles.png` (16 x 25 cells of 64 px, opaque):
+  - rows 0-10 floors, cols 0-3 variants: ground, grass spring / summer /
+    autumn / winter, meadow, scree, snow, ice, mud, water (its 4 cols are
+    the animation loop). Each cell's low-frequency lighting (wide blur) was
+    replaced by its row's mean colour so variants mix without a visible
+    grid; the small details are the sheet's.
+  - rows 11-24 autotile sets, 2 rows each (A, B): obstacle slate / brown /
+    purple / green, mountain, cliff, chasm. Column = exposed-side mask
+    (N=1 E=2 S=4 W=8). The sheet's 13 pieces per set turned out to be:
+    full fill, top / bottom / left / right rims, four corner rims, and four
+    alternate corner rims (no inner corners were drawn). Every mask is
+    composed: interior = the fill (lighting flattened; row B mirrored) or,
+    for chasm, the flat pit colour; rims are keyed off the set's
+    background colour and alpha-blended on (corner piece where two
+    adjacent sides are exposed, side piece otherwise). Cliff remap: the
+    sheet's "top" pieces show grass over a dirt face, so they are used for
+    an exposed SOUTH side (a cliff face faces the viewer) and the flipped
+    "bottom" grass lips for the north side.
+- `terrain_objects.png` (8 x 6 cells of 80 px, transparent, drawn centred
+  on a 64 px game cell so canopies overhang slightly): rows tree spring /
+  summer / autumn / winter, pine (4 variants), stone block; cols 0-3 idle
+  variants, cols 4-7 the 4-frame destroy sequence (tree ends on a stump).
+  Alpha below 96 dropped before a premultiplied 2:1 box downsample, then
+  hard alpha (>= 110 opaque) so no white halo remains.
+- The stone-block row is packed but NOT used: `terrain_block.png` (#327)
+  keeps drawing BLOCK because it has the build-up `create` animation the new
+  sheet lacks.
+- Licence: user-supplied project art (same terms as the other supplied
+  sheets).
