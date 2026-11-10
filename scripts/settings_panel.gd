@@ -5,7 +5,7 @@ extends ModalPanel
 ##
 ## - Master volume drives the Master audio bus (bus 0), which every
 ##   AudioStreamPlayer in the game plays on (music, ambience, SFX). The
-##   per-track trims (BossMusic.MUSIC_VOLUME_DB etc.) are untouched; this
+##   per-track trims (MusicDirector.BOSS_VOLUME_DB etc.) are untouched; this
 ##   scales everything on top of them. 0% mutes the bus.
 ## - The value is saved to user://settings.cfg and re-applied on every
 ##   _ready, so it survives the per-run scene reload and game restarts.

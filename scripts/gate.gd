@@ -88,13 +88,17 @@ func _ready() -> void:
 	($ColorRect as ColorRect).color = tint
 	_build_portal(tint)
 
-## #350: the run's Main caches one roll per gate so an offering stays fixed
-## until death; a bare gate outside a Main (unit tests) rolls directly.
+## #350: the run's AreaLoader (a Main child since #512) caches one roll per
+## gate so an offering stays fixed until death; a bare gate outside a Main
+## (unit tests) rolls directly.
 func _offering_host() -> Node:
 	var n := get_parent()
 	while n != null:
 		if n.has_method("offering_type_for"):
 			return n
+		var loader := n.get_node_or_null("AreaLoader")
+		if loader != null and loader.has_method("offering_type_for"):
+			return loader
 		n = n.get_parent()
 	return null
 
