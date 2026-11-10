@@ -21,11 +21,8 @@ extends Resource
 @export var contact_cooldown: float = 0.8
 @export var contact_range: float = 40.0
 @export var reward_table: RewardTable
-## #99 (Foundation E2): behavior slot. Optional Script whose instances
-## extend EnemyBehavior and implement physics_step(enemy: Enemy, player: Player, delta: float)
-## (enemy_behavior_chase_contact.gd documents the current contract).
-## Each Enemy instantiates its OWN behavior instance in _ready, so
-## per-enemy state (contact cooldown) is never shared across enemies.
-## Null = the current chase/contact implementation (unchanged default);
-## a script that is not an EnemyBehavior falls back to it with a warning.
-@export var behavior: Script
+## Optional EnemyBehavior Resource prototype, or legacy Script extending it.
+## Enemy creates its own instance: prototypes duplicate deeply, Script slots
+## instantiate fresh. No runtime state is shared by enemies.
+## Null or unsupported resources use the default chase/contact behavior.
+@export var behavior: Resource
