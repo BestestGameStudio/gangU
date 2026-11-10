@@ -58,6 +58,7 @@ var _screams: int = 0
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _configure() -> void:
+	attack_steps = {State.LUNGE: _dispatch_lunge, State.SCREAM: _dispatch_scream}
 	first_attack_delay = FIRST_ATTACK_DELAY
 	attack_interval = ATTACK_INTERVAL
 	enraged_interval = ENRAGED_INTERVAL
@@ -95,17 +96,6 @@ func _windup_duration() -> float:
 
 func _windup_reset(_which: int) -> void:
 	_lunges = 0
-
-func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
-	match state:
-		State.CHASE:
-			_chase(enemy, player, to_player, delta, tele)
-		State.WINDUP:
-			_windup(enemy, to_player, tele)
-		State.LUNGE:
-			_lunge(enemy, player, to_player, tele)
-		State.SCREAM:
-			_scream(enemy, player, to_player, tele)
 
 func _attack_begin_reset() -> void:
 	_hits = 0
@@ -171,3 +161,9 @@ func _enter_stun(enemy: Enemy, tele: BossTelegraph) -> void:
 	enemy.play_action(&"stun", true)
 	if tele != null:
 		tele.clear()
+
+func _dispatch_lunge(enemy: Enemy, player: Player, to_player: Vector2, _delta: float, tele: BossTelegraph) -> void:
+	_lunge(enemy, player, to_player, tele)
+
+func _dispatch_scream(enemy: Enemy, player: Player, to_player: Vector2, _delta: float, tele: BossTelegraph) -> void:
+	_scream(enemy, player, to_player, tele)

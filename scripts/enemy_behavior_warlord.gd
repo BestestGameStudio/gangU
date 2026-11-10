@@ -62,6 +62,7 @@ var _tick_t: float = 0.0
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _configure() -> void:
+	attack_steps = {State.LUNGE: _dispatch_lunge, State.SPIN: _dispatch_spin, State.VOLLEY: _dispatch_volley}
 	first_attack_delay = FIRST_ATTACK_DELAY
 	attack_interval = ATTACK_INTERVAL
 	enraged_interval = ENRAGED_INTERVAL
@@ -96,20 +97,6 @@ func _configure() -> void:
 	var volley := _present(Attack.VOLLEY, State.VOLLEY, &"ranged", TelegraphShape.CONE)
 	volley.length = 220.0
 
-
-func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
-	var dist: float = to_player.length()
-	match state:
-		State.CHASE:
-			_chase(enemy, player, to_player, delta, tele)
-		State.WINDUP:
-			_windup(enemy, to_player, tele)
-		State.LUNGE:
-			_lunge(enemy, player, dist, tele)
-		State.SPIN:
-			_spin(enemy, player, to_player, delta, tele)
-		State.VOLLEY:
-			_volley(enemy, to_player, tele)
 
 func _attack_begin_reset() -> void:
 	_hits = 0
@@ -157,3 +144,9 @@ func _decorate_volley_projectile(p: Projectile, area: Node) -> void:
 	p.hit.connect(func(_body: Node2D) -> void:
 		if is_instance_valid(p) and is_instance_valid(area):
 			WarlordOrbVisual.spawn_pop(area, p.global_position))
+
+func _dispatch_lunge(enemy: Enemy, player: Player, to_player: Vector2, _delta: float, tele: BossTelegraph) -> void:
+	_lunge(enemy, player, to_player.length(), tele)
+
+func _dispatch_spin(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
+	_spin(enemy, player, to_player, delta, tele)
