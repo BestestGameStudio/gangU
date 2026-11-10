@@ -66,6 +66,13 @@ var _waves_fired: int = 0
 var _pulses: int = 0
 var _contact_timer: float = 0.0
 
+## The Head's pre-#513 initial attack was VOLLEY (Warlord/Beast: LUNGE);
+## restore it for exact initial-state parity. Never read before the first
+## _start_windup overwrites it.
+func _init() -> void:
+	super()
+	attack = Attack.VOLLEY
+
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _arrival_color() -> Color:
