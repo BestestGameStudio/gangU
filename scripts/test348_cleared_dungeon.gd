@@ -30,7 +30,8 @@ func _enter(main: Node, gate_name: String) -> void:
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	for n in main.current_area.get_children():
-		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate): # #373: migrants belong to no entrance
+		# #373: migrants belong to no entrance; #478: nor does the day bird.
+		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate) and not ((n as Enemy)._behavior is EnemyBehaviorBird):
 			out.append(n)
 	return out
 
@@ -74,8 +75,8 @@ func _initialize() -> void:
 	var ow: Node = main.current_area
 	var before := _guards(main)
 	# #414 mix: 5 posted guards + 14 patrollers (Normal 1+3, Red 1+2, Generated/Beast/Boss 1+3 each);
-	# #472 adds 2 camp Fishy (GateRed (2300,-110), GateBoss (1850,-1200)).
-	_check(before.size() == 21, "uncleared: 21 around the 5 entrances, 5 posted guards + 14 patrollers (#414) + 2 camp Fishy (#472) (got %d)" % before.size())
+	# #490: 2 camp Fishy at each of the 5 entrances.
+	_check(before.size() == 29, "uncleared: 29 around the 5 entrances, 5 posted guards + 14 patrollers (#414) + 10 camp Fishy (#490) (got %d)" % before.size())
 	_check(_near(before, ow.get_node("GateNormal").global_position, 200.0) == 4, "uncleared: 4 at the DungeonA entrance (guard, 2 patrols, #414 slime patroller)")
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _clear_dungeon_a(main)
@@ -92,7 +93,7 @@ func _initialize() -> void:
 	var after := _guards(main)
 	_check(_near(after, ow.get_node("GateNormal").global_position, 200.0) == 0, "(B) cleared DungeonA entrance has no guards")
 	_check(_near(after, ow.get_node("GateRed").global_position, 160.0) == 3, "(B) uncleared DungeonB entrance keeps its guards (guard + 2 patrols, #414)")
-	_check(after.size() == 17, "(B) 17 total: 21 minus the whole 4-strong DungeonA group (#414, #472) (got %d)" % after.size())
+	_check(after.size() == 23, "(B) 23 total: 29 minus the whole 6-strong DungeonA group (#414, #490) (got %d)" % after.size())
 
 	# (C) re-entry of the cleared dungeon is a full fresh run.
 	# #400: the entrance gate is closed for the post-clear cooldown; wait it
@@ -105,8 +106,8 @@ func _initialize() -> void:
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var enemies := get_nodes_in_group("enemies").size()
 	_check(area.name == "DungeonA", "(C) re-entry lands in DungeonA")
-	_check(enemies == 6, "(C) re-entry DungeonA has its 6 enemies (3 + 2 slimes #392 + Fishy #472) (got %d)" % enemies)
-	_check(obj != null and obj.progress() == Vector2i(0, 6) and not obj.is_cleared(), "(C) re-entry objective is fresh 0/6 (Fishy, #472)")
+	_check(enemies == 7, "(C) re-entry DungeonA has its 7 enemies (3 + 2 slimes #392 + 2 Fishy #490) (got %d)" % enemies)
+	_check(obj != null and obj.progress() == Vector2i(0, 7) and not obj.is_cleared(), "(C) re-entry objective is fresh 0/7 (2 Fishy, #490)")
 	for _round in 8: # #392: slimes split, keep killing until none remain
 		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
 		if alive.is_empty():
@@ -134,7 +135,7 @@ func _initialize() -> void:
 	_check(fresh.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
 	fresh.enter_overworld()
 	await _frames(3)
-	_check(_guards(fresh).size() == 21, "(E) every entrance is guarded again, all 21 (#414 + #472) (got %d)" % _guards(fresh).size())
+	_check(_guards(fresh).size() == 29, "(E) every entrance is guarded again, all 29 (#414 + #490) (got %d)" % _guards(fresh).size())
 	print("[348] DONE failures=", failures)
 	if failures == 0:
 		print("RESULT: ALL PASS")
