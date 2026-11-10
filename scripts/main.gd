@@ -220,6 +220,9 @@ func _ready() -> void:
 	add_child(map_panel)
 	map_panel.travel_requested.connect(_request_map_travel)
 	_mount_fast_travel() # #349: separate mount after map setup
+	var settings := SettingsPanel.new() # #489: Esc settings (master volume)
+	settings.name = "SettingsPanel"
+	add_child(settings)
 	_load_hub()
 
 var current_area: Node = null
