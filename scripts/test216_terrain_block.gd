@@ -81,13 +81,17 @@ func _initialize() -> void:
 	_check(spell.cooldown == 3.0 and spell.range == 256.0, "placeholder cooldown 3s, range 256px")
 	_check(TerrainTypes.is_destroyable(TerrainTypes.BLOCK) and not TerrainTypes.is_walkable(TerrainTypes.BLOCK), "BLOCK is a destroyable, unwalkable tile")
 	_check(TerrainTypes.destroyed_into(TerrainTypes.BLOCK) == TerrainTypes.GROUND, "BLOCK breaks into GROUND")
-	var table: RewardTable = load("res://resources/rewards/demo_table.tres")
-	var entry: RewardEntry = null
-	for e in table.entries:
-		if e.spell == spell:
-			entry = e
-	_check(entry != null and entry.kind == RewardEntry.Kind.SPELL and entry.weight == 1.0, "demo reward table carries Stone Block (weight 1.0)")
-	_check(table.entries.size() == 7 and table.entries[0].spell.spell_name == "Placeholder Bolt", "existing demo entries preserved, bolt still first (#305 Spirit Punch, #331 Water Ball, #370 Stone Hammer added as unlockable drops)")
+	# #465 (Daniel, 2026-11-09: regular mobs drop currency only): the
+	# production mob table no longer carries spells, so the Stone Block
+	# SPELL reward wiring is pinned with an in-code fixture entry.
+	var table := RewardTable.new()
+	var entry := RewardEntry.new()
+	entry.kind = RewardEntry.Kind.SPELL
+	entry.spell = spell
+	entry.weight = 1.0
+	var fixture_entries: Array[RewardEntry] = [entry]
+	table.entries = fixture_entries
+	_check(table.roll([]) == entry, "fixture reward table rolls the Stone Block spell entry (weight 1.0)")
 
 	# --- pure placement rules ---
 	var m := _new_map(stage)
