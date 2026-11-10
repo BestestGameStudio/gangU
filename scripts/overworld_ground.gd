@@ -21,7 +21,13 @@ class_name OverworldGround
 ## and routes. The arrival clearing and the pad under each gate stay.
 
 const CENTER := Vector2(576, -150)
-const RADII := Vector2(1200, 1050)
+## #436 (Daniel, 2026-11-09: "expand the overworld map" - the world itself,
+## 2x in each direction, same terrain mix for now): doubled from
+## (1200, 1050), quadrupling the explorable area. Gates, spawns and guard
+## posts keep their scene positions; the field grows around them. The
+## decor/patch grids below derive their extents from RADII so the terrain
+## mix covers the whole field at the same density.
+const RADII := Vector2(2400, 2100)
 const OUTLINE_POINTS := 64
 const OUTER_FADE := 160.0
 
@@ -153,8 +159,10 @@ func _build_patches() -> void:
 	patches.clear()
 	patch_colors.clear()
 	var n := 0
-	for gx in range(-6, 7):
-		for gy in range(-6, 6):
+	var gx_n := int(ceil(RADII.x / 190.0)) + 1
+	var gy_n := int(ceil(RADII.y / 190.0)) + 1
+	for gx in range(-gx_n, gx_n + 1):
+		for gy in range(-gy_n, gy_n + 1):
 			var at := CENTER + Vector2(gx * 190.0, gy * 190.0) + Vector2(_hash01(gx, gy, 21) - 0.5, _hash01(gx, gy, 22) - 0.5) * 120.0
 			if not covers(at):
 				continue
@@ -213,8 +221,11 @@ func _clear_spot(p: Vector2) -> bool:
 func _build_decor() -> void:
 	decor.clear()
 	var inner := _blob(-60.0)
-	for gx in range(-12, 13):
-		for gy in range(-11, 9):
+	# +1: the outline's radial wobble bulges up to 6% past RADII.
+	var gx_n := int(ceil(RADII.x / DECOR_STEP)) + 1
+	var gy_n := int(ceil(RADII.y / DECOR_STEP)) + 1
+	for gx in range(-gx_n, gx_n + 1):
+		for gy in range(-gy_n, gy_n + 1):
 			var at := CENTER + Vector2(gx, gy) * DECOR_STEP + Vector2(_hash01(gx, gy, 31) - 0.5, _hash01(gx, gy, 32) - 0.5) * DECOR_STEP * 0.8
 			if _hash01(gx, gy, 33) > 0.42:
 				continue
