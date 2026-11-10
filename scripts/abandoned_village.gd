@@ -10,6 +10,10 @@ const FOREST_RADIUS := 490.0
 const ROAD_HALF_WIDTH := 72.0
 const AMBUSH_COUNT := 30
 const CLEAR_COINS := 100
+## #546: ambushers appear just outside the outer tree ring (trees reach ~506).
+const SPAWN_RADIUS := 540.0
+const HOUSE_HALF := Vector2(58, 54)
+const WELL_HALF := Vector2(40, 46)
 const PROPS: Texture2D = preload("res://assets/sprites/village_props.png")
 const ENEMY := preload("res://scenes/enemy.tscn")
 const LOOT := preload("res://resources/rewards/demo_table.tres")
@@ -36,7 +40,7 @@ func _ready() -> void:
 	ambush.relative_to_trigger = true
 	for i in AMBUSH_COUNT:
 		var angle := TAU * float(i) / AMBUSH_COUNT
-		ambush.entries.append({"position": Vector2.from_angle(angle) * 320.0,
+		ambush.entries.append({"position": Vector2.from_angle(angle) * SPAWN_RADIUS,
 			"enemy": ENEMY, "reward_table": LOOT})
 	ambush.ambush_started.connect(_begin)
 	event = ambush
@@ -76,6 +80,38 @@ func shape_decor(ground: OverworldGround) -> void:
 			if absf(offset.y) < ROAD_HALF_WIDTH + 34.0:
 				continue
 			ground.decor.append({"kind": "tree", "at": position + offset, "r": 26.0})
+
+## #546: whole-footprint solids for the six houses and the well, as
+## OBSTACLE cells plus projectile-blocker circles (same mechanism as trees).
+func footprints() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for side in [-1, 1]:
+		for column in [-1, 0, 1]:
+			var at := position + Vector2(column * 170, side * 170)
+			rects.append(Rect2(at - HOUSE_HALF, HOUSE_HALF * 2.0))
+	rects.append(Rect2(position - WELL_HALF, WELL_HALF * 2.0))
+	return rects
+
+func plant_footprints(map: TerrainMap, cells: Dictionary, blockers: Array[Vector3]) -> void:
+	for r in footprints():
+		var lo := map.world_to_cell(r.position)
+		var hi := map.world_to_cell(r.end)
+		for cx in range(lo.x, hi.x + 1):
+			for cy in range(lo.y, hi.y + 1):
+				var cell := Vector2i(cx, cy)
+				# Any cell whose centre is inside the rect, plus any overlap
+				# by its own square, so the whole footprint is solid.
+				var c := map.cell_to_world(cell)
+				if r.grow(float(map.cell_size) * 0.5).has_point(c):
+					cells[cell] = TerrainTypes.OBSTACLE
+		var step := 36.0
+		var x := r.position.x + 18.0
+		while x < r.end.x + 18.0:
+			var y := r.position.y + 18.0
+			while y < r.end.y + 18.0:
+				blockers.append(Vector3(minf(x, r.end.x - 4.0), minf(y, r.end.y - 4.0), 26.0))
+				y += step
+			x += step
 
 func _begin(context: OverworldEventContext, enemies: Array[Enemy]) -> void:
 	disarm()
@@ -139,7 +175,7 @@ func _drop_reward() -> void:
 
 func _draw() -> void:
 	# Static atlas: three collapsed-house variants and one dry well.
-	# Ruins stay cosmetic/walk-through; tree movement is unchanged.
+	# Houses and the well are solid (#546); see plant_footprints().
 	for x in range(-9, 9):
 		for y in range(-1, 1):
 			var cell := Vector2i(x, y)
