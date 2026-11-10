@@ -443,9 +443,14 @@ func _check_tree() -> void:
 	await _check_one_route()
 	await _check_other_routes()
 	# Production wiring: main.gd registers every Water Ball upgrade.
+	# #512: the rows now live in UpgradeCatalog; Main hands them to SpellProgress.
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
+	var registered: Array[String] = []
+	for row: SpellUpgrade in UpgradeCatalog.all():
+		registered.append(row.resource_path)
+	_check(main_src.contains("UpgradeCatalog.all()"), "main.gd takes its upgrades from UpgradeCatalog")
 	for id in ["water_guided", "water_seeking", "water_tidal", "water_splash", "water_barrage", "water_heavy_rain", "water_bubble", "water_surging_bubble", "water_big_ball"]:
-		_check(main_src.contains("upgrades/%s.tres" % id), "main.gd registers %s" % id)
+		_check(registered.has("res://resources/upgrades/%s.tres" % id), "main.gd registers %s" % id)
 	# #465 (Daniel, 2026-11-09: regular mobs drop currency only): the
 	# production mob table no longer carries spells, so the Water Ball
 	# reward wiring is pinned with an in-code fixture entry.
