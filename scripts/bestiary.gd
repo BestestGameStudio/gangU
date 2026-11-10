@@ -28,6 +28,15 @@ const CATALOG: Array[Dictionary] = [
 		"boss": false,
 	},
 	{
+		# #420: barricade-deploying Moustache variant (its own entry - Daniel:
+		# "it should be a variant and a separate entry in the bestiary").
+		"id": &"mustache_barricader",
+		"name": "Mustache Barricader",
+		"scene": "res://scenes/enemy_barricader.tscn",
+		"frames": "res://resources/sprites/mustache_warrior_frames.tres",
+		"boss": false,
+	},
+	{
 		"id": &"slime",
 		"name": "Slime",
 		"scene": "res://scenes/enemy_slime.tscn",
