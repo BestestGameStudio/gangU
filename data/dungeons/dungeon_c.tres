@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/dungeon_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/head_boss.tscn" id="2_boss"]
+
+[resource]
+script = ExtResource("1_def")
+area_name = &"DungeonC"
+id = &"dungeon_c"
+label = "Dungeon C"
+scene = "res://scenes/dungeon_c.tscn"
+objective_type = 2
+boss_scene = ExtResource("2_boss")
+boss_spawn = Vector2(576, 300)
+boss_theme = true
+default_exit_portal = true
+locks_portal = true
