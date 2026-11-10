@@ -64,6 +64,8 @@ extends RefCounted
 ##           modifies the original "stay behind cover while aimed at").
 ##           With no other cover around it keeps holding and retries one
 ##           period later.
+##           #443: while holding, they lob a low-damage rock at the player
+##           every ROCK_INTERVAL (see the ROCK constants / _tick_rock).
 ##   CHARGE- the per-enemy away-timer runs whenever the mouse is NOT
 ##           pointing their way (in SEEK/DASH/HOLD) and resets the moment
 ##           it points back; at AWAY_CHARGE_TIME the moustache man charges:
@@ -74,7 +76,11 @@ extends RefCounted
 ##           contact ends it. (Unchanged behavior, now pinned by test414.)
 ##   ENGAGED - plain chase/contact (the owner's _chase_step, unchanged).
 ##           If the player disengages beyond RE_ENGAGE_DIST and cover
-##           exists, back to SEEK.
+##           exists, back to SEEK. #469: an ENGAGED that is only the
+##           no-cover fallback re-scans on the repick cadence at ANY range
+##           (post-charge and wedged-hold ENGAGED keep the distance rule),
+##           and within CLOSE_COVER_DIST a starved toward-player tier falls
+##           back to any sheltered cover in range (see _pick_cover).
 ## A destroyed cover is dropped two ways: instantly via the TerrainMap
 ## cell_destroyed/cell_interacted signals (the destroy_cell/interact_cell
 ## paths emit them), and - because raw set_cell/clear_cell emit nothing -
@@ -107,11 +113,33 @@ const STANDOFF: float = 20.0 ## hold distance behind the cover edge (PLACEHOLDER
 const SOLID_RADIUS: float = 24.0 ## assumed blocking radius of a cover-group solid (PLACEHOLDER)
 const ADVANCE_MARGIN: float = 24.0 ## a new cover must get them at least this much closer to the player to be an advance (PLACEHOLDER)
 const FLANK_COS: float = 0.3 ## held cover no longer toward the player past this (PLACEHOLDER)
-const RE_ENGAGE_DIST: float = 280.0 ## disengaged past this, seek cover again (PLACEHOLDER)
+const RE_ENGAGE_DIST: float = 280.0 ## post-charge ENGAGED: disengaged past this, seek cover again (PLACEHOLDER)
+## #469 (Daniel, 2026-11-09: "mustache men sometimes stop seeking cover" -
+## "Walking at you" - "When im close"): within this range of the player,
+## when no cover lies toward the player (the strict tier - nearer than the
+## player and inside COVER_CONE_COS - is geometrically starved up close),
+## any cover in range whose hold point is sheltered from the player
+## qualifies: beside, behind the mob, or just past the player. (PLACEHOLDER)
+const CLOSE_COVER_DIST: float = 256.0
 const REPICK_INTERVAL: float = 0.25 ## cover rescan/invalidation cadence (mirrors TerrainPath.REPLAN_INTERVAL)
 const WAYPOINT_EPS: float = 10.0
 const SHELTER_HALF_WIDTH: float = 8.0 ## sightline must stay blocked this far either side (body width, not a corner graze) (PLACEHOLDER)
 const STALL_TIME: float = 1.0 ## wedged this long on an unreachable hold point: drop the cover and engage (PLACEHOLDER)
+## #443 (Daniel, 2026-11-09: "When hiding behind cover mustache men throw
+## rocks. Rocks go over terrain like barricades and trees"; answers: low
+## damage, only while hiding behind cover, fly toward the player, over low
+## cover only - maze walls and stone blocks still block them).
+## The rock is a LOBBED Projectile (resources/spells/mustache_rock.tres) aimed
+## at the player's position at release; it lands just past that point, so
+## moving dodges it. Thrown only in HOLD, only within ROCK_RANGE, and only
+## when no high cover (TerrainMap.lob_blocked) sits on the line - a man
+## behind a wall does not waste rocks into it.
+const ROCK_SPELL: Spell = preload("res://resources/spells/mustache_rock.tres")
+const PROJECTILE_SCENE: PackedScene = preload("res://scenes/projectile.tscn")
+const ROCK_INTERVAL: float = 1.8 ## seconds between throws while holding (PLACEHOLDER)
+const ROCK_FIRST_DELAY: float = 0.6 ## settle time after reaching cover before the first throw (PLACEHOLDER)
+const ROCK_RANGE: float = 400.0 ## max throw distance to the player (PLACEHOLDER)
+const ROCK_OVERSHOOT: float = 36.0 ## the rock flies this far past the aim point before landing (PLACEHOLDER)
 
 enum State { SEEK, DASH, HOLD, CHARGE, ENGAGED }
 
@@ -130,6 +158,15 @@ var _repick_timer: float = 0.0
 var _stall_timer: float = 0.0
 ## #414: time spent HOLDing the current cover (reset on each new hold).
 var _hold_elapsed: float = 0.0
+## #469: true when ENGAGED came from a charge hit or a wedged hold point
+## (sticky: re-seek only past RE_ENGAGE_DIST, the pre-#469 rule). False
+## for the no-cover fallback, which re-scans on the repick cadence at any
+## range so a close player no longer locks the mob into the plain chase.
+var _engaged_sticky: bool = false
+## #443: countdown to the next rock while holding (reset on each new hold).
+var _rock_timer: float = ROCK_FIRST_DELAY
+## #443: rocks thrown by this enemy (test/debug counter only).
+var rocks_thrown: int = 0
 ## The TerrainMap whose cell_destroyed/cell_interacted signals we listen
 ## to for instant cover invalidation (raw set/clear_cell emit nothing, so
 ## the repick poll below remains the catch-all).
@@ -166,12 +203,40 @@ func physics_step(owner: EnemyBehaviorChaseContact, enemy: Enemy, player, delta:
 			_charge(owner, enemy, player, delta)
 		State.ENGAGED:
 			owner._chase_step(enemy, player, delta)
-			if enemy.global_position.distance_to(player.global_position) > RE_ENGAGE_DIST and _repick_timer <= 0.0:
+			var far: bool = enemy.global_position.distance_to(player.global_position) > RE_ENGAGE_DIST
+			if (far or not _engaged_sticky) and _repick_timer <= 0.0:
 				# Re-seek only when cover actually exists, so cover-less
-				# areas never flip-flop between SEEK and ENGAGED.
+				# areas never flip-flop between SEEK and ENGAGED. #469: the
+				# no-cover fallback re-scans at any range (it used to wait
+				# for RE_ENGAGE_DIST, locking a close mob into the chase).
 				if _pick_cover(enemy, player, false):
+					_engaged_sticky = false
 					_state = State.SEEK
 					_away_timer = 0.0
+
+# --- #420 seams (barricade deployer) ---------------------------------------
+
+## True while a cover is held or being travelled to.
+func has_cover() -> bool:
+	return _has_cover
+
+## True in the states where no cover is in use: looking for one (SEEK
+## without a pick) or plain chase (ENGAGED). CHARGE is a commitment (#414)
+## and is never interrupted.
+func is_uncovered() -> bool:
+	return not _has_cover and (_state == State.SEEK or _state == State.ENGAGED)
+
+## True when at least one viable cover spot toward the player exists
+## (the same candidate filter SEEK picks from).
+func viable_cover_exists(enemy: Enemy, player: Player) -> bool:
+	return not _cover_candidates(enemy, player).is_empty()
+
+## Re-enter SEEK with an immediate rescan (e.g. right after a barricade was
+## deployed, so it is picked up on this mover's next step).
+func seek_now() -> void:
+	_state = State.SEEK
+	_repick_timer = 0.0
+	_away_timer = 0.0
 
 # --- SEEK / DASH ------------------------------------------------------------
 
@@ -182,6 +247,7 @@ func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta
 		if _repick_timer > 0.0 or not _pick_cover(enemy, player, false):
 			# No cover in range: plain chase/contact until the next scan.
 			_state = State.ENGAGED
+			_engaged_sticky = false
 			owner._chase_step(enemy, player, delta)
 			return
 	var speed: float = enemy.speed * (FAST_MULT if fast else 1.0)
@@ -190,6 +256,7 @@ func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta
 		enemy.velocity = Vector2.ZERO
 		_stall_timer = 0.0
 		_hold_elapsed = 0.0 # #414: a fresh hold restarts the relocate clock
+		_rock_timer = ROCK_FIRST_DELAY # #443: settle before the first rock
 	elif enemy.velocity == Vector2.ZERO:
 		# Wedged (unreachable hold point): give up on this cover.
 		_stall_timer += delta
@@ -197,6 +264,9 @@ func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta
 			_stall_timer = 0.0
 			_drop_cover()
 			_state = State.ENGAGED
+			# Sticky: re-scanning at once would re-pick the same unreachable
+			# hold point and wedge again.
+			_engaged_sticky = true
 	else:
 		_stall_timer = 0.0
 
@@ -206,6 +276,7 @@ func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 	enemy.velocity = Vector2.ZERO
 	EnemyBehaviorChaseContact._slide(enemy)
 	_hold_elapsed += delta
+	_tick_rock(enemy, player, delta)
 	if _repick_timer > 0.0:
 		return
 	if not _cover_still_valid(enemy):
@@ -214,6 +285,7 @@ func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 			_state = State.DASH
 		else:
 			_state = State.ENGAGED
+			_engaged_sticky = false
 		return
 	# Shelter is re-checked BEFORE the aim gate: a player who strafes
 	# around the cover while still aiming at the mob must not leave it
@@ -226,6 +298,7 @@ func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 		else:
 			_drop_cover()
 			_state = State.ENGAGED
+			_engaged_sticky = false
 		return
 	# #414 (Daniel, 2026-11-09: "moustache men periodically find nearby
 	# cover if holding cover for over 5s"): held this cover too long -
@@ -244,6 +317,44 @@ func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 	else:
 		_repick_timer = REPICK_INTERVAL
 
+# --- ROCK (#443) ------------------------------------------------------------
+
+## HOLD-only rock clock: ticks from delta inside physics_step, so freeze
+## (#305) and knockback (#331) pause it like the other timers.
+func _tick_rock(enemy: Enemy, player: Player, delta: float) -> void:
+	_rock_timer -= delta
+	if _rock_timer > 0.0:
+		return
+	var dist: float = enemy.global_position.distance_to(player.global_position)
+	if dist > ROCK_RANGE or dist < 1.0:
+		_rock_timer = REPICK_INTERVAL # out of range: re-check soon
+		return
+	if enemy.terrain != null and enemy.terrain.lob_blocked(enemy.global_position, player.global_position):
+		_rock_timer = REPICK_INTERVAL # a wall/stone block in the way: no throw
+		return
+	_rock_timer = ROCK_INTERVAL
+	throw_rock(enemy, player.global_position)
+
+## Spawns one rock from `enemy` toward `target` (the player's position at
+## release). Range is per throw - a duplicate of the shared spell - so the
+## rock lands ROCK_OVERSHOOT past the aim point instead of flying on.
+func throw_rock(enemy: Enemy, target: Vector2) -> Projectile:
+	var area: Node = enemy.get_parent()
+	if area == null:
+		return null
+	var to: Vector2 = target - enemy.global_position
+	var spell: Spell = ROCK_SPELL.duplicate()
+	spell.range = minf(to.length() + ROCK_OVERSHOOT, ROCK_RANGE + ROCK_OVERSHOOT)
+	var p: Projectile = PROJECTILE_SCENE.instantiate()
+	p.setup(spell, to, enemy)
+	p.position = enemy.global_position
+	p.visual_override = RockVisual.new()
+	# D14: never add to the tree synchronously from a physics step.
+	area.call_deferred("add_child", p)
+	enemy.play_action(&"ranged")
+	rocks_thrown += 1
+	return p
+
 # --- CHARGE -----------------------------------------------------------------
 
 func _charge(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta: float) -> void:
@@ -255,6 +366,7 @@ func _charge(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, del
 		owner._contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack")
 		_state = State.ENGAGED
+		_engaged_sticky = true # #469: post-charge ENGAGED keeps the RE_ENGAGE_DIST rule
 
 # --- cover discovery --------------------------------------------------------
 
@@ -264,22 +376,18 @@ func _charge(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, del
 ## currently held cover is skipped so the pick lands somewhere new.
 ## Returns whether a cover is held now.
 func _pick_cover(enemy: Enemy, player: Player, advance_only: bool, exclude_held: bool = false) -> bool:
-	var best: Dictionary = {}
-	var best_dist := INF
-	for c in _cover_candidates(enemy, player):
-		if exclude_held and _has_cover and (c["pos"] as Vector2) == _cover_pos:
-			continue
-		if advance_only and _has_cover:
-			if (c["pos"] as Vector2).distance_to(player.global_position) >= _cover_pos.distance_to(player.global_position) - ADVANCE_MARGIN:
-				continue
-		var d: float = enemy.global_position.distance_to(c["pos"])
-		if d < best_dist:
-			best_dist = d
-			best = c
+	var best: Dictionary = _best_candidate(enemy, player, _cover_candidates(enemy, player, false), advance_only, exclude_held)
+	# #469: up close the strict toward-player tier is starved (cover must be
+	# nearer than the player), so fall back to any sheltered cover in range.
+	var relaxed: bool = best.is_empty() and enemy.global_position.distance_to(player.global_position) <= CLOSE_COVER_DIST
+	if relaxed:
+		best = _best_candidate(enemy, player, _cover_candidates(enemy, player, true), advance_only, exclude_held)
 	_repick_timer = REPICK_INTERVAL
 	if debug_trace:
 		var dbg: Dictionary = {"want": true}
-		_cover_candidates(enemy, player, dbg)
+		_cover_candidates(enemy, player, relaxed, dbg)
+		if relaxed:
+			dbg["relaxed"] = true
 		dbg.erase("want")
 		var sig := str(dbg) + str(best.get("pos", Vector2.INF))
 		if sig != _dbg_last:
@@ -293,6 +401,22 @@ func _pick_cover(enemy: Enemy, player: Player, advance_only: bool, exclude_held:
 	_cover_pos = best["pos"]
 	_hold_pos = best["hold"]
 	return true
+
+## Nearest candidate (to the enemy) passing the advance/exclude filters.
+func _best_candidate(enemy: Enemy, player: Player, candidates: Array[Dictionary], advance_only: bool, exclude_held: bool) -> Dictionary:
+	var best: Dictionary = {}
+	var best_dist := INF
+	for c in candidates:
+		if exclude_held and _has_cover and (c["pos"] as Vector2) == _cover_pos:
+			continue
+		if advance_only and _has_cover:
+			if (c["pos"] as Vector2).distance_to(player.global_position) >= _cover_pos.distance_to(player.global_position) - ADVANCE_MARGIN:
+				continue
+		var d: float = enemy.global_position.distance_to(c["pos"])
+		if d < best_dist:
+			best_dist = d
+			best = c
+	return best
 
 ## The held cover no longer shields the enemy from the player: the cover
 ## left the toward-player cone (FLANK_COS), or - for terrain cover - the
@@ -354,7 +478,10 @@ func _cover_still_valid(enemy: Enemy) -> bool:
 ## provides real shelter: {pos, hold, cell?|node?}. `hold` sits just behind
 ## the cover on the side away from the player, on ground this mover can
 ## enter, and is occluded from the player by blocking material.
-func _cover_candidates(enemy: Enemy, player: Player, dbg: Dictionary = {}) -> Array[Dictionary]:
+## `relaxed` (#469, close range only - see CLOSE_COVER_DIST) drops the
+## toward-player tier rules (nearer than the player, inside the cone); the
+## shelter rules (walkable hold, body-width occlusion) still apply.
+func _cover_candidates(enemy: Enemy, player: Player, relaxed: bool = false, dbg: Dictionary = {}) -> Array[Dictionary]:
 	var want: bool = dbg.get("want", false)
 	var rej := {"blocking_scan": 0, "not_blocking_or_swim": 0, "too_close_or_beyond": 0, "outside_cone": 0, "hold_unwalkable": 0, "not_occluded": 0, "solid_reject": 0}
 	var out: Array[Dictionary] = []
@@ -381,10 +508,10 @@ func _cover_candidates(enemy: Enemy, player: Player, dbg: Dictionary = {}) -> Ar
 				var cpos := map.cell_to_world(cell)
 				var d: Vector2 = cpos - enemy.global_position
 				var dist := d.length()
-				if dist < cs * 0.75 or dist >= dist_p:
+				if dist < cs * 0.75 or (dist >= dist_p and not relaxed):
 					rej["too_close_or_beyond"] += 1
 					continue
-				if d.normalized().dot(dir_p) < COVER_CONE_COS:
+				if not relaxed and d.normalized().dot(dir_p) < COVER_CONE_COS:
 					rej["outside_cone"] += 1
 					continue
 				var hold: Vector2 = cpos + (cpos - player.global_position).normalized() * (cs * 0.5 + STANDOFF)
@@ -408,9 +535,12 @@ func _cover_candidates(enemy: Enemy, player: Player, dbg: Dictionary = {}) -> Ar
 		var spos: Vector2 = solid.global_position
 		var sd: Vector2 = spos - enemy.global_position
 		var sdist := sd.length()
-		if sdist > COVER_SEARCH_RADIUS or sdist < SOLID_RADIUS * 0.5 or sdist >= dist_p:
+		if sdist > COVER_SEARCH_RADIUS or sdist < SOLID_RADIUS * 0.5 or (sdist >= dist_p and not relaxed):
 			continue
-		if sd.normalized().dot(dir_p) < COVER_CONE_COS:
+		if not relaxed and sd.normalized().dot(dir_p) < COVER_CONE_COS:
+			continue
+		# Relaxed: a solid hugging the player can't put a body between them.
+		if relaxed and spos.distance_to(player.global_position) < SOLID_RADIUS + STANDOFF:
 			continue
 		var shold: Vector2 = spos + (spos - player.global_position).normalized() * (SOLID_RADIUS + STANDOFF)
 		if map != null and not _hold_walkable(map, shold, enemy.can_swim):

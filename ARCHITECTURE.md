@@ -107,6 +107,10 @@ Requested by Daniel: grass tiles are walkable, but a character inside the grass 
 
 ---
 
+### D23. Terrain art is a presentation layer over the color tiles
+TerrainMap keeps its colored-square Ground/Obstacle layers as the data mirror harnesses read (`debug_layer_cells`, atlas colors) and draws `TerrainArt` sprites over them (`ArtFloor`, `ArtWalls`, `ArtObjects`, 64 px art scaled to `cell_size`). Every cell in the bounding box of the assigned cells gets a floor (default GROUND included; a hashed one of 4 variants, water an animated tile), wall-like sets (OBSTACLE per-dungeon color, MOUNTAIN, cliff, chasm) pick an autotile piece from an exposed-side mask of their 4 neighbours (off-bounds neighbours connect), and trees/pines are objects over their floor. Grass and trees follow `season`; a destroyed tree plays its 4-frame break one-shot. A type with no art keeps its color swatch: BLOCK (the #327 `TerrainBlockVisuals` sprite), winter WATER, and palette tiles without a `TerrainTile.art` id. A hidden map (the overworld's collision grid) builds no art; the overworld field and tree crowns are drawn by `OverworldGround` from the same atlases. Art is packed by `tools/sprites/pack_terrain_sheets.py`; `test_terrain_art` pins it.
+*Where:* `scripts/terrain_art.gd`, `scripts/terrain_map.gd`, `scripts/overworld_ground.gd`, `resources/terrain_palettes/*.tres`.
+
 ## Provisional harness defaults (merged, explicitly not settled)
 
 - **P1. Duplicate spell pickups are ignored** and **P2. pickups are consumed on grant** (`scripts/spell_pickup.gd`). Both are labeled PROVISIONAL HARNESS DEFAULTS in code: reversible choices made so the #10 stage-1 harness reads clearly. The O2 reward direction (pool removal on pickup, auto-pick-up) supersedes them for production; the merged harness behavior stands until that work lands.

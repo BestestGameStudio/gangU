@@ -1,14 +1,242 @@
-[gd_resource type="Resource" script_class="ShopCatalog" load_steps=4 format=3 uid="uid://bgangurshopcat"]
+[gd_resource type="Resource" script_class="ShopCatalog" load_steps=80 format=3 uid="uid://bgangurshopcat"]
 
 [ext_resource type="Script" path="res://scripts/shop_catalog.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/shop_entry.gd" id="2"]
-[ext_resource type="Spell" uid="uid://bgangu3bolt" path="res://resources/spells/placeholder_bolt.tres" id="3"]
+[ext_resource type="Spell" path="res://resources/spells/big_ball.tres" id="3"]
+[ext_resource type="Spell" uid="uid://bgangu265bf" path="res://resources/spells/bolt_flurry.tres" id="4"]
+[ext_resource type="Spell" uid="uid://bgangu265bh" path="res://resources/spells/bolt_heavy.tres" id="5"]
+[ext_resource type="Spell" uid="uid://bgangu4fire" path="res://resources/spells/fire_ball.tres" id="6"]
+[ext_resource type="Spell" uid="uid://bgangubeam" path="res://resources/spells/fire_ball_beam.tres" id="7"]
+[ext_resource type="Spell" uid="uid://bgangum2bh" path="res://resources/spells/fire_ball_beam_heavy.tres" id="8"]
+[ext_resource type="Spell" uid="uid://bgangum2bhm" path="res://resources/spells/fire_ball_beam_homing.tres" id="9"]
+[ext_resource type="Spell" uid="uid://bgangum2bl" path="res://resources/spells/fire_ball_beam_long.tres" id="10"]
+[ext_resource type="Spell" uid="uid://bgangum2bp" path="res://resources/spells/fire_ball_beam_piercing.tres" id="11"]
+[ext_resource type="Spell" uid="uid://bgangusplit" path="res://resources/spells/fire_ball_split.tres" id="12"]
+[ext_resource type="Spell" uid="uid://bgangum2sh" path="res://resources/spells/fire_ball_split_heavy.tres" id="13"]
+[ext_resource type="Spell" uid="uid://bgangum2sw" path="res://resources/spells/fire_ball_split_wide.tres" id="14"]
+[ext_resource type="Spell" path="res://resources/spells/frost_shard.tres" id="15"]
+[ext_resource type="Spell" path="res://resources/spells/heavy_rain.tres" id="17"]
+[ext_resource type="Spell" uid="uid://bgangu4mana" path="res://resources/spells/mana_shot.tres" id="18"]
+[ext_resource type="Spell" uid="uid://bgangumslnce" path="res://resources/spells/mana_shot_lance.tres" id="19"]
+[ext_resource type="Spell" uid="uid://bgangumsvoly" path="res://resources/spells/mana_shot_volley.tres" id="20"]
+[ext_resource type="Spell" uid="uid://bgangu3bolt" path="res://resources/spells/placeholder_bolt.tres" id="21"]
+[ext_resource type="Spell" path="res://resources/spells/spirit_punch.tres" id="22"]
+[ext_resource type="Spell" path="res://resources/spells/spirit_punch_bubble.tres" id="23"]
+[ext_resource type="Spell" path="res://resources/spells/spirit_punch_burst.tres" id="24"]
+[ext_resource type="Spell" path="res://resources/spells/spirit_punch_launch.tres" id="25"]
+[ext_resource type="Spell" uid="uid://bgangu216blk" path="res://resources/spells/stone_block.tres" id="26"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer.tres" id="27"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer_gambler.tres" id="28"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer_leap.tres" id="29"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer_reaper.tres" id="30"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer_rhythm.tres" id="31"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer_titan.tres" id="32"]
+[ext_resource type="Spell" path="res://resources/spells/stone_hammer_vortex.tres" id="33"]
+[ext_resource type="Spell" uid="uid://bgangu212sum" path="res://resources/spells/summon_ally.tres" id="34"]
+[ext_resource type="Spell" path="res://resources/spells/surging_bubble.tres" id="35"]
+[ext_resource type="Spell" path="res://resources/spells/water_ball.tres" id="37"]
+[ext_resource type="Spell" path="res://resources/spells/water_ball_guided.tres" id="38"]
+[ext_resource type="Spell" path="res://resources/spells/water_ball_seeking.tres" id="39"]
+[ext_resource type="Spell" path="res://resources/spells/water_ball_tidal.tres" id="40"]
+[ext_resource type="Spell" path="res://resources/spells/water_barrage.tres" id="41"]
+[ext_resource type="Spell" path="res://resources/spells/water_bubble.tres" id="42"]
+[ext_resource type="Spell" path="res://resources/spells/water_splash.tres" id="43"]
 
-[sub_resource type="Resource" id="1"]
+[sub_resource type="Resource" id="3"]
 script = ExtResource("2")
 good = ExtResource("3")
 price = 10
 
+[sub_resource type="Resource" id="4"]
+script = ExtResource("2")
+good = ExtResource("4")
+price = 10
+
+[sub_resource type="Resource" id="5"]
+script = ExtResource("2")
+good = ExtResource("5")
+price = 10
+
+[sub_resource type="Resource" id="6"]
+script = ExtResource("2")
+good = ExtResource("6")
+price = 10
+
+[sub_resource type="Resource" id="7"]
+script = ExtResource("2")
+good = ExtResource("7")
+price = 10
+
+[sub_resource type="Resource" id="8"]
+script = ExtResource("2")
+good = ExtResource("8")
+price = 10
+
+[sub_resource type="Resource" id="9"]
+script = ExtResource("2")
+good = ExtResource("9")
+price = 10
+
+[sub_resource type="Resource" id="10"]
+script = ExtResource("2")
+good = ExtResource("10")
+price = 10
+
+[sub_resource type="Resource" id="11"]
+script = ExtResource("2")
+good = ExtResource("11")
+price = 10
+
+[sub_resource type="Resource" id="12"]
+script = ExtResource("2")
+good = ExtResource("12")
+price = 10
+
+[sub_resource type="Resource" id="13"]
+script = ExtResource("2")
+good = ExtResource("13")
+price = 10
+
+[sub_resource type="Resource" id="14"]
+script = ExtResource("2")
+good = ExtResource("14")
+price = 10
+
+[sub_resource type="Resource" id="15"]
+script = ExtResource("2")
+good = ExtResource("15")
+price = 10
+
+[sub_resource type="Resource" id="17"]
+script = ExtResource("2")
+good = ExtResource("17")
+price = 10
+
+[sub_resource type="Resource" id="18"]
+script = ExtResource("2")
+good = ExtResource("18")
+price = 10
+
+[sub_resource type="Resource" id="19"]
+script = ExtResource("2")
+good = ExtResource("19")
+price = 10
+
+[sub_resource type="Resource" id="20"]
+script = ExtResource("2")
+good = ExtResource("20")
+price = 10
+
+[sub_resource type="Resource" id="21"]
+script = ExtResource("2")
+good = ExtResource("21")
+price = 10
+
+[sub_resource type="Resource" id="22"]
+script = ExtResource("2")
+good = ExtResource("22")
+price = 10
+
+[sub_resource type="Resource" id="23"]
+script = ExtResource("2")
+good = ExtResource("23")
+price = 10
+
+[sub_resource type="Resource" id="24"]
+script = ExtResource("2")
+good = ExtResource("24")
+price = 10
+
+[sub_resource type="Resource" id="25"]
+script = ExtResource("2")
+good = ExtResource("25")
+price = 10
+
+[sub_resource type="Resource" id="26"]
+script = ExtResource("2")
+good = ExtResource("26")
+price = 10
+
+[sub_resource type="Resource" id="27"]
+script = ExtResource("2")
+good = ExtResource("27")
+price = 10
+
+[sub_resource type="Resource" id="28"]
+script = ExtResource("2")
+good = ExtResource("28")
+price = 10
+
+[sub_resource type="Resource" id="29"]
+script = ExtResource("2")
+good = ExtResource("29")
+price = 10
+
+[sub_resource type="Resource" id="30"]
+script = ExtResource("2")
+good = ExtResource("30")
+price = 10
+
+[sub_resource type="Resource" id="31"]
+script = ExtResource("2")
+good = ExtResource("31")
+price = 10
+
+[sub_resource type="Resource" id="32"]
+script = ExtResource("2")
+good = ExtResource("32")
+price = 10
+
+[sub_resource type="Resource" id="33"]
+script = ExtResource("2")
+good = ExtResource("33")
+price = 10
+
+[sub_resource type="Resource" id="34"]
+script = ExtResource("2")
+good = ExtResource("34")
+price = 10
+
+[sub_resource type="Resource" id="35"]
+script = ExtResource("2")
+good = ExtResource("35")
+price = 10
+
+[sub_resource type="Resource" id="37"]
+script = ExtResource("2")
+good = ExtResource("37")
+price = 10
+
+[sub_resource type="Resource" id="38"]
+script = ExtResource("2")
+good = ExtResource("38")
+price = 10
+
+[sub_resource type="Resource" id="39"]
+script = ExtResource("2")
+good = ExtResource("39")
+price = 10
+
+[sub_resource type="Resource" id="40"]
+script = ExtResource("2")
+good = ExtResource("40")
+price = 10
+
+[sub_resource type="Resource" id="41"]
+script = ExtResource("2")
+good = ExtResource("41")
+price = 10
+
+[sub_resource type="Resource" id="42"]
+script = ExtResource("2")
+good = ExtResource("42")
+price = 10
+
+[sub_resource type="Resource" id="43"]
+script = ExtResource("2")
+good = ExtResource("43")
+price = 10
+
 [resource]
 script = ExtResource("1")
-entries = Array[ExtResource("2")]([SubResource("1")])
+entries = Array[ExtResource("2")]([SubResource("3"), SubResource("4"), SubResource("5"), SubResource("6"), SubResource("7"), SubResource("8"), SubResource("9"), SubResource("10"), SubResource("11"), SubResource("12"), SubResource("13"), SubResource("14"), SubResource("15"), SubResource("17"), SubResource("18"), SubResource("19"), SubResource("20"), SubResource("21"), SubResource("22"), SubResource("23"), SubResource("24"), SubResource("25"), SubResource("26"), SubResource("27"), SubResource("28"), SubResource("29"), SubResource("30"), SubResource("31"), SubResource("32"), SubResource("33"), SubResource("34"), SubResource("35"), SubResource("37"), SubResource("38"), SubResource("39"), SubResource("40"), SubResource("41"), SubResource("42"), SubResource("43")])

@@ -322,3 +322,124 @@ style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
 
 - Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
 - Rows: idle x4 (5 fps loop), walk x6 (10 fps loop), hurt x2, attack x3, death x5 (one-shots).
+
+# terrain_tiles.png / terrain_objects.png - terrain art pass
+
+- Source: two AI-generated sheets supplied by the user (Mitravasu) in a
+  Claude Code session, 2026-11-09, committed unchanged under
+  `tools/sprites/sources/` (`.gdignore`d, never imported):
+  `terrain_tiles_sheet.webp` (1066x1476, RGBA) and
+  `terrain_objects_sheet.webp` (1447x1087, RGBA). Not pixel exact: blurred
+  pixel art, cells split by thin transparent gaps, floor cells ~83x85 px,
+  autotile cells ~81x74 px, object cells ~181 px with a faint near-white
+  fringe (alpha 1-95) around every object.
+- Packed by `tools/sprites/pack_terrain_sheets.py` (Pillow + numpy). Grid
+  lines are predicted from the outer bounds, snapped to the local alpha
+  minimum, each cell trimmed to fully opaque rows/cols plus a 2 px (floors)
+  / 4 px (autotiles) inset, then box-resampled.
+- `terrain_tiles.png` (16 x 25 cells of 64 px, opaque):
+  - rows 0-10 floors, cols 0-3 variants: ground, grass spring / summer /
+    autumn / winter, meadow, scree, snow, ice, mud, water (its 4 cols are
+    the animation loop). Each cell's low-frequency lighting (wide blur) was
+    replaced by its row's mean colour so variants mix without a visible
+    grid; the small details are the sheet's.
+  - rows 11-24 autotile sets, 2 rows each (A, B): obstacle slate / brown /
+    purple / green, mountain, cliff, chasm. Column = exposed-side mask
+    (N=1 E=2 S=4 W=8). The sheet's 13 pieces per set turned out to be:
+    full fill, top / bottom / left / right rims, four corner rims, and four
+    alternate corner rims (no inner corners were drawn). Every mask is
+    composed: interior = the fill (lighting flattened; row B mirrored) or,
+    for chasm, the flat pit colour; rims are keyed off the set's
+    background colour and alpha-blended on (corner piece where two
+    adjacent sides are exposed, side piece otherwise). Cliff remap: the
+    sheet's "top" pieces show grass over a dirt face, so they are used for
+    an exposed SOUTH side (a cliff face faces the viewer) and the flipped
+    "bottom" grass lips for the north side.
+- `terrain_objects.png` (8 x 6 cells of 80 px, transparent, drawn centred
+  on a 64 px game cell so canopies overhang slightly): rows tree spring /
+  summer / autumn / winter, pine (4 variants), stone block; cols 0-3 idle
+  variants, cols 4-7 the 4-frame destroy sequence (tree ends on a stump).
+  Alpha below 96 dropped before a premultiplied 2:1 box downsample, then
+  hard alpha (>= 110 opaque) so no white halo remains.
+- The stone-block row is packed but NOT used: `terrain_block.png` (#327)
+  keeps drawing BLOCK because it has the build-up `create` animation the new
+  sheet lacks.
+- Licence: user-supplied project art (same terms as the other supplied
+  sheets).
+
+# bird.png - original bird sprite sheet (#478)
+
+Original code-drawn pixel art for gangU (#478). No copied game assets, no
+traced art, no stock files shipped. Daniel: "Make the sprites yourself."
+
+## Design
+- Slate blue-black dive-bomber bird (crow/kite silhouette): orange beak and
+  talons, pale belly, lighter wing highlight, yellow eye. Flat palette, no
+  gradients/glow, fitted to the existing enemy palette idiom.
+- Frame: 32x32 px, feet on y=28, art faces right (EnemySprite flip idiom).
+  Sheet: uniform 6x5 grid (192x160 px), rows = [idle x4 (perched), walk x6
+  (flight flap - the locomotion row), hurt x2, attack x3 (dive tuck, stoop,
+  landing flare), death x5].
+
+## Provenance
+- Author: instinct-dc (Daniel's Instinct), 2026-11-09, pixel-by-pixel via
+  tools/sprites/draw_bird.gd (code-drawn, same generator idiom as
+  tools/sprites/draw_slime.gd / draw_wolf.gd).
+- License for this original asset: CC0 (matches project asset licensing).
+
+# wolf.png - Wolf sheet (#476, art by Mitra's artist)
+
+Hand-drawn 8-direction wolf sheet supplied by Mitra's user in PR #476
+(https://github.com/BestestGameStudio/gangU/pull/476#issuecomment-6758758613),
+replacing the earlier code-drawn placeholder. The source board is presentation
+art (direction headers, row labels, grid lines); the game sheet is packed from
+it by `tools/sprites/pack_alpha_strip.py` with spec
+`tools/sprites/specs/wolf.json` (clip windows drop the grid lines/labels;
+3x premultiplied box downsample), which also writes
+`resources/sprites/wolf_frames.tres`.
+
+- Cell 56x22 (3x downsample), feet baseline at the cell bottom.
+- 8 directions per row: S, SE, E, NE, N, NW, W, SW; EnemySprite plays the
+  `<anim>_<dir>` variant for the body's travel direction (no flip_h).
+- The board's labels claim Idle 4 / Run 6 / Bite 6 frames, but the drawn rows
+  actually count 4 / 5 / 5 - only the drawn frames are packed:
+  idle x4 (5 fps loop), walk x5 (12 fps loop), attack (bite) x5 (10 fps
+  one-shot). `telegraph` holds the bite crouch (frame 0), `pounce` plays the
+  lunge (bite frames 1-4). `hurt` and `death` reuse the idle frame (the sheet
+  has no hurt/death art; the hit flash and corpse fade carry those beats).
+- Base `idle`/`walk`/`attack`/`hurt`/`death`/`telegraph`/`pounce` animations
+  (E-facing) are kept as fallbacks alongside the directional variants.
+
+# wolf_cave.png - original code-drawn wolf den decor (#474)
+
+Original art drawn by `tools/sprites/draw_wolf_cave.gd` (procedural pixel
+drawing, no external assets): one 64x64 sprite, a rocky mound with a dark
+den opening. Caves are decor only (Daniel: "Decor" - not enterable), drawn
+under characters (z -10, above the ground layer).
+
+# fishy.png - Fishy enemy (#464)
+
+Source: the sprite sheet attached to issue #464 by real-human-123 (1536x1024
+RGBA, real transparency; the green glow and grey smoke are partial alpha).
+Extracted with `tools/sprites/pack_alpha_strip.py` + `tools/sprites/specs/fishy.json`
+(alpha_floor 215 drops the glow/smoke and the thin partial-alpha fishing
+lines), downsampled 3x into 64x52 cells, 8 columns, feet on cell row ~51.
+Origins were measured per frame (body centre = green-hair centroid, feet =
+lowest boot pixel). `resources/sprites/fishy_frames.tres` is generated by the
+same command.
+
+- sheet frames 0-2 (board row 6, cols 5-7, front stand) -> `idle` (5 fps loop, 0-1-2-1)
+- frames 3-5 (board rows 1-3, col 1, front view) -> `walk` (8 fps loop, 3-4-5-4)
+- frames 6-10 (board row 4, cols 1-5) -> `cast` wind-up (12 fps, one-shot, held)
+- frame 11 (board row 4, col 6; line cut at the rod tip) -> `cast_hold`
+- frames 12-15 (board row 5, cols 4-7) -> `reel` (10 fps loop)
+- frames 16-19 (board row 6, cols 1-4) -> `retract` (one-shot); 18-19 also `attack`
+- frame 20 (the hook from board row 4, col 6) -> `hook`, drawn at the line tip
+  by `scripts/fishing_line.gd` (cell centre offset (37, 26))
+
+Not drawn on the board, so reused frames: `hurt` = walk frames 5, 4; `death` =
+walk frames 4, 5 (held, then the corpse fades). Not extracted: the other
+turnaround views (board rows 1-3, cols 2-6: side and back), board row 5
+cols 1-3 (side cast / hand close-ups) and the drawn fishing lines (the line is
+drawn in-engine so it can reach the real target). The cast/reel art faces
+RIGHT (EnemySprite flips with flip_h); idle/walk are front views.

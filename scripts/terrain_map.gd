@@ -16,6 +16,16 @@ extends Node2D
 ## a non-walkable type on Obstacle; default GROUND renders as the scene
 ## background (no tile), keeping the sparse store literal.
 ##
+## Terrain art pass: on top of those color layers the map draws sprite art
+## (TerrainArt): every cell inside the bounding box of the assigned cells -
+## default GROUND included - gets a floor tile (a hashed one of 4 variants,
+## water animated), walls / mountains / cliffs / chasms get autotile pieces
+## chosen from their 4 neighbours so runs connect, and trees / pines stand
+## as objects over their floor. Grass and trees follow the season. A type
+## with no art (BLOCK, winter WATER, palette tiles without an `art` id)
+## leaves its color swatch visible. The color layers stay the data mirror
+## harnesses read (debug_layer_cells, atlas colors).
+##
 ## #266: an optional `palette` lets a dungeon add its own tile types and
 ## restyle built-in ones. Every property lookup here goes through it, so
 ## movement, navigation and generation all see the palette's categories.
@@ -72,11 +82,23 @@ var _shot_blockers: Array[Vector3] = []
 var _ground_layer: TileMapLayer = null
 var _obstacle_layer: TileMapLayer = null
 
+## Draw TerrainArt sprites over the color swatches. Off = the first-pass
+## colored squares only.
+@export var art_enabled: bool = true:
+	set(value):
+		art_enabled = value
+		_rebuild_art()
+var _art_floor: TileMapLayer = null
+var _art_walls: TileMapLayer = null
+var _art_objects: TileMapLayer = null
+var _art_fx: Node2D = null
+
 func _ready() -> void:
 	if fixed_layout != null and not fixed_layout.apply(self):
 		push_warning("TerrainFixedLayout '%s' names a tile type this map does not know" % fixed_layout.resource_path)
 	_build_layers()
 	_rebuild_presentation()
+	visibility_changed.connect(_rebuild_art)
 
 ## Assigns a cell. Returns false and changes nothing for an unregistered
 ## type. Assigning GROUND restores the default (erases the sparse entry).
@@ -120,8 +142,10 @@ func destroy_cell(cell: Vector2i) -> bool:
 	if not old_props["destroyable"]:
 		return false
 	var new_type: StringName = old_props["destroyed_into"]
+	var old_art := art_at_cell(cell)
 	if not set_cell(cell, new_type):
 		return false
+	_play_destroy(cell, old_art)
 	cell_destroyed.emit(cell, old_type, new_type)
 	return true
 
@@ -178,6 +202,38 @@ func projectile_block_t(from: Vector2, motion: Vector2) -> float:
 		if t >= 0.0 and (best < 0.0 or t < best):
 			best = t
 	return best
+
+## #443: LOW cover a lobbed shot arcs over (Daniel 2026-11-09: "rocks go
+## over low cover only (barricades, trees). Maze walls and stone blocks
+## still block them"). Low = a TREE cell, or a cell planted under an #407
+## overworld-tree circle (the #391 rule: cell centre inside the canopy, or
+## the tree's own cell). Every other solid cell - OBSTACLE walls, MOUNTAIN,
+## BLOCK stone blocks, palette walls - is high cover.
+func is_low_cover_cell(cell: Vector2i) -> bool:
+	if tile_type_at_cell(cell) == TerrainTypes.TREE:
+		return true
+	if _shot_blockers.is_empty():
+		return false
+	var centre := cell_to_world(cell)
+	for c in _shot_blockers:
+		var at := Vector2(c.x, c.y)
+		if centre.distance_to(at) <= c.z or world_to_cell(at) == cell:
+			return true
+	return false
+
+## #443: true when a lobbed shot from `from` to `to` would be stopped by high
+## cover (a projectile-blocking cell that is not low cover). Half-cell
+## sampling, the starting cell ignored - the Projectile._terrain_events idiom.
+func lob_blocked(from: Vector2, to: Vector2) -> bool:
+	var start := world_to_cell(from)
+	var samples := maxi(1, ceili(from.distance_to(to) / (cell_size * 0.5)))
+	for i in range(1, samples + 1):
+		var cell := world_to_cell(from.lerp(to, float(i) / float(samples)))
+		if cell == start:
+			continue
+		if type_properties(tile_type_at_cell(cell))["blocks_projectiles"] and not is_low_cover_cell(cell):
+			return true
+	return false
 
 ## --- THE lookup seam (downstream consumes only from here) ---
 
@@ -238,6 +294,7 @@ func _set_season(value: TerrainSeason.Season) -> void:
 	season = value
 	if _atlas_source != null:
 		_atlas_source.texture = _atlas_texture()
+		_rebuild_art()
 
 func _set_palette(value: TerrainPalette) -> void:
 	palette = value
@@ -304,6 +361,22 @@ func _build_layers() -> void:
 	_obstacle_layer.name = "Obstacle"
 	_obstacle_layer.tile_set = ts
 	add_child(_obstacle_layer)
+	# Art layers: 64 px TileSet scaled to this map's cell size, drawn over
+	# the color layers (child order).
+	var k := float(cell_size) / float(TerrainArt.CELL)
+	for layer_name in ["ArtFloor", "ArtWalls", "ArtObjects"]:
+		var layer := TileMapLayer.new()
+		layer.name = layer_name
+		layer.tile_set = TerrainArt.tile_set()
+		layer.scale = Vector2(k, k)
+		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if is_equal_approx(k, 1.0) else CanvasItem.TEXTURE_FILTER_LINEAR
+		add_child(layer)
+	_art_floor = get_node("ArtFloor")
+	_art_walls = get_node("ArtWalls")
+	_art_objects = get_node("ArtObjects")
+	_art_fx = Node2D.new()
+	_art_fx.name = "ArtFx"
+	add_child(_art_fx)
 
 func _atlas_column(type: StringName) -> int:
 	return _atlas_types().find(type)
@@ -323,6 +396,87 @@ func _rebuild_presentation() -> void:
 			_ground_layer.set_cell(cell, 0, col)
 		else:
 			_obstacle_layer.set_cell(cell, 0, col)
+	_rebuild_art()
+
+## The TerrainArt id drawing `cell` (&"" = color swatch).
+func art_at_cell(cell: Vector2i) -> StringName:
+	var type := tile_type_at_cell(cell)
+	var t: TerrainTile = palette.tile(type) if palette != null else null
+	return TerrainArt.art_for(type, season, t)
+
+## Cells the art covers: the bounding box of every assigned cell (empty
+## for a flat map, which keeps showing the scene background).
+func art_bounds() -> Rect2i:
+	var first := true
+	var r := Rect2i()
+	for cell: Vector2i in _cells:
+		if first:
+			r = Rect2i(cell, Vector2i.ONE)
+			first = false
+		else:
+			r = r.merge(Rect2i(cell, Vector2i.ONE))
+	return r
+
+func _rebuild_art() -> void:
+	if _art_floor == null:
+		return
+	_art_floor.clear()
+	_art_walls.clear()
+	_art_objects.clear()
+	if not art_enabled or not is_visible_in_tree():
+		return
+	var bounds := art_bounds()
+	var arts := {}
+	for y in range(bounds.position.y, bounds.end.y):
+		for x in range(bounds.position.x, bounds.end.x):
+			var c := Vector2i(x, y)
+			arts[c] = art_at_cell(c)
+	for c: Vector2i in arts:
+		var art: StringName = arts[c]
+		match TerrainArt.kind(art):
+			TerrainArt.Kind.FLOOR:
+				_set_floor(c, art)
+			TerrainArt.Kind.OBJECT:
+				_set_floor(c, TerrainArt.floor_under(art))
+				_art_objects.set_cell(c, TerrainArt.OBJECTS_SOURCE, Vector2i(TerrainArt.variant(c, 2), TerrainArt.row(art)))
+			TerrainArt.Kind.AUTOTILE:
+				# Off-bounds neighbours connect, so a map's outer ring
+				# shows no rim on its outside.
+				var m := TerrainArt.mask(c, func(n: Vector2i) -> bool: return arts.get(n, art) == art)
+				var alt := TerrainArt.variant(c, 3, 2)
+				_art_walls.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(m, TerrainArt.row(art) + alt))
+
+func _set_floor(c: Vector2i, art: StringName) -> void:
+	var col := 0 if TerrainArt.SETS[art].get("animated", false) else TerrainArt.variant(c, 1)
+	_art_floor.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(col, TerrainArt.row(art)))
+
+## Tree / block break: the art's 4-frame destroy one-shot (ends on the
+## stump / rubble), held briefly, then faded out over the new floor.
+func _play_destroy(cell: Vector2i, art: StringName) -> void:
+	if _art_fx == null or not art_enabled or not TerrainArt.has_destroy(art) or not is_inside_tree():
+		return
+	var s := AnimatedSprite2D.new()
+	s.sprite_frames = TerrainArt.destroy_frames(art)
+	s.texture_filter = _art_floor.texture_filter
+	s.position = (Vector2(cell) + Vector2(0.5, 0.5)) * float(cell_size)
+	var k := float(cell_size) / float(TerrainArt.CELL)
+	s.scale = Vector2(k, k)
+	_art_fx.add_child(s)
+	s.play()
+	s.animation_finished.connect(func():
+		var tw := s.create_tween()
+		tw.tween_interval(0.8)
+		tw.tween_property(s, "modulate:a", 0.0, 0.6)
+		tw.tween_callback(s.queue_free))
+
+## Harness introspection for the art layers ("floor", "walls", "objects"):
+## the atlas coords drawn at `cell`, or (-1, -1).
+func debug_art_coords(layer: String, cell: Vector2i) -> Vector2i:
+	var l: TileMapLayer = {"floor": _art_floor, "walls": _art_walls, "objects": _art_objects}.get(layer)
+	return l.get_cell_atlas_coords(cell) if l != null else Vector2i(-1, -1)
+
+func debug_destroy_fx_count() -> int:
+	return _art_fx.get_child_count() if _art_fx != null else 0
 
 ## Test/debug introspection for the presentation legs (harness use; NOT
 ## part of the downstream gameplay contract).

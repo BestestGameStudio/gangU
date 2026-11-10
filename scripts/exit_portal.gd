@@ -23,6 +23,12 @@ extends Area2D
 ## lock/unlock logic, objective wiring, collision shape and label text are
 ## untouched, and the geometry reuses Gate's portal statics (no gate.gd
 ## changes).
+## #447: the same opt-in for the BEAST den's exit portal (beast_portal_look),
+## in purple (Daniel 2026-11-09: "exit portal should look like the other
+## portals, purple", "just copy the other portals", locked state: "use the
+## existing locked portal"). Locked = the same LOCKED_TINT gray look as the
+## red mount; unlocked = EXIT_PURPLE, the tint the flat exit decor has always
+## used. Same idle animation, same step-in behavior - visuals only.
 
 signal entered(portal: ExitPortal)
 
@@ -35,12 +41,17 @@ signal entered(portal: ExitPortal)
 ## #204: opt-in #195 portal look for the RED DungeonB mount only. main.gd
 ## turns this on for area DungeonB; every other mount keeps the flat look.
 @export var red_portal_look: bool = false
+## #447: opt-in portal look for the BEAST den DungeonD mount only (purple).
+@export var beast_portal_look: bool = false
 
 ## #204: locked-state portal tint - the desaturated gray family of the flat
 ## locked tint (0.35,0.35,0.4), so locked and unlocked read as two states of
 ## one portal; the LOCKED text and dimmed (gray-tinted) particles carry the
 ## locked semantics.
 const LOCKED_TINT := Color(0.4, 0.4, 0.45)
+## #447: unlocked tint for the beast den's exit portal - the purple the flat
+## exit decor has always used (0.5, 0.2, 0.8), now in the full portal look.
+const EXIT_PURPLE := Color(0.5, 0.2, 0.8)
 
 var _anim_t := 0.0
 
@@ -80,8 +91,13 @@ func _refresh_visual() -> void:
 	else:
 		tint.color = Color(0.5, 0.2, 0.8)
 		label.text = "EXIT"
+	var look_tint := Color(0, 0, 0, 0)
 	if red_portal_look:
-		_apply_portal_look(LOCKED_TINT if locked else Gate.RED_TINT)
+		look_tint = Gate.RED_TINT
+	elif beast_portal_look:
+		look_tint = EXIT_PURPLE
+	if look_tint.a > 0.0:
+		_apply_portal_look(LOCKED_TINT if locked else look_tint)
 
 ## #204: build the #195 portal look in the given state tint. The flat decor
 ## (ColorRect + ExitArrow) hides but stays in the tree: the ColorRect keeps
@@ -134,7 +150,7 @@ func _apply_portal_look(tint: Color) -> void:
 ## #204: portal idle animation, only while the look is on. Same pulse as the
 ## gate (#195); the locked state's gray tint keeps it visibly dimmed.
 func _process(delta: float) -> void:
-	if not red_portal_look:
+	if not (red_portal_look or beast_portal_look):
 		return
 	_anim_t += delta
 	var pulse := sin(_anim_t * 2.4)

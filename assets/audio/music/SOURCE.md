@@ -26,3 +26,53 @@ files' decoded audio exactly (matching `ffmpeg -f md5` of the decoded PCM).
 
 At runtime `BossMusic.MUSIC_VOLUME_DB` (`scripts/boss_music.gd`) applies a
 further -6 dB. Looping is set in code (`BossMusic.start`), not in the import.
+
+# Overworld soft piano (#487)
+
+`overworld_soft_piano_loop.ogg` is the overworld music Colin approved on
+2026-11-09 (iMessage: "make this the new overworld music and keep the volume
+low"). It replaces the #477 nature ambience, which is removed. The Ogg Vorbis
+(q5, 48 kHz stereo, 81.778 s) is the file delivered with the approved v2 mix,
+unchanged (no trimming, no gain edit). The approved sample was an AAC copy of
+the same mix; the Ogg was encoded by its creator and is not the exact bytes
+Colin heard.
+
+Composition: original melody and arrangement written 2026-11-09 for this game;
+no existing musical work was sampled, quoted or adapted. Sparse, very soft
+piano with long rests, light room reverb, no ambience bed (no wind, water or
+bush rustling).
+
+Piano sound (third party, attribution required): "Salamander Grand Piano V3"
+by Alexander Holm, licensed CC BY 3.0
+(https://creativecommons.org/licenses/by/3.0/). Source:
+https://github.com/sfzinstruments/SalamanderGrandPiano (recording also at
+https://archive.org/details/SalamanderGrandPianoV3). Yamaha C5, only the soft
+sustain layers (v3 to v6 of 16) were used, no hammer, pedal or resonance
+samples. Required credit line: "Piano sound: Salamander Grand Piano V3 by
+Alexander Holm, licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)".
+Add this to any in-game credits screen if one is added.
+
+The track is quiet on purpose. Levels (`ffmpeg -af volumedetect` on the Ogg):
+mean -37.3 dB, peak -15.1 dB. **Do not normalize or loudness-match it up.**
+It starts from silence and fades to silence over the last 4 s, so the loop
+restarts after a short natural pause. `OverworldAmbience`
+(`scripts/overworld_ambience.gd`) plays it at 0 dB, with no trim. Looping is set
+in code, not in the import. The lossless WAV master is not committed.
+
+Checksums of the delivered files: OGG md5 `31a6a511540334b7109de61b73fa2bcc`,
+WAV master md5 `48ebb0b80daedb89edb84f39b1991315`.
+
+# Dungeon music (#471)
+
+`dungeon_battle_loop.ogg` is the default dungeon loop Colin approved on
+2026-11-09 (iMessage: "Make that the default dungeon music"). It is an original
+composition synthesized locally by Instinct (retro square-wave lead with echo,
+saw bass, chiptune drums, quiet low drone; D minor, 140 BPM, 32 bars, 54.857 s,
+44.1 kHz stereo). No samples and no third-party music.
+
+The committed file is the delivered OGG unchanged (no trimming, no gain edit).
+Levels (`ffmpeg -af volumedetect`): mean -14.9 dB, peak -0.1 dB. At runtime
+`DungeonMusic.MUSIC_VOLUME_DB` (`scripts/dungeon_music.gd`, -13 dB) brings it
+near the boss themes' effective level (about -21.5 dB mean, then their -6 dB).
+Looping is set in code (`DungeonMusic.start`), not in the import. The lossless
+WAV master is not committed.

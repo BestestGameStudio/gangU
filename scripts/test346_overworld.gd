@@ -32,6 +32,17 @@ func _enter(main: Node, gate_name: String) -> void:
 
 ## Entrance enemies (gate guards + #373 patrols). #373 migrants belong to
 ## no entrance and are covered by test373_overworld_roles.
+## #478: the overworld's day bird hunts the idle player on its own clock
+## and counts as an area enemy. These flow legs assert #414 entrance
+## guards/patrols only, so the bird and its driver are removed on entry.
+func _remove_bird(main: Node) -> void:
+	var mgr: OverworldBird = main.current_area.get_node_or_null("OverworldBird") as OverworldBird
+	if mgr == null:
+		return
+	if mgr.bird != null and is_instance_valid(mgr.bird):
+		mgr.bird.free()
+	mgr.free()
+
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	for n in main.current_area.get_children():
@@ -127,13 +138,15 @@ func _flow_legs() -> void:
 	_check(main.current_area.name == "Hub", "(C) boots into the hub")
 	await _enter(main, "GateOverworld")
 	var ow: Node = main.current_area
+	_remove_bird(main) # #478: guard/patrol legs only
 	_check(ow.name == "Overworld", "(C) hub GateOverworld -> Overworld (got %s)" % ow.name)
 	_check(p.global_position == (ow.get_node("PlayerSpawn") as Node2D).global_position, "(C) player placed at the overworld PlayerSpawn")
 	var guards := _guards(main)
-	_check(guards.size() == 19, "(C) 19 entrance enemies around the 5 uncleared entrances (#414: 5 guards + 14 patrols, got %d)" % guards.size())
-	_check(guards.all(func(e: Enemy) -> bool: return e._behavior is EnemyBehaviorGuard), "(C) every guard runs the leashed guard behavior")
+	_check(guards.size() == 21, "(C) 21 entrance enemies around the 5 uncleared entrances (#414: 5 guards + 14 patrols, #464: + 2 Fishy, got %d)" % guards.size())
+	_check(guards.all(func(e: Enemy) -> bool: return e._behavior is EnemyBehaviorGuard or e._behavior is EnemyBehaviorFishyGuard), "(C) every guard runs a leashed guard behavior (#464: Fishy runs its post/notice variant)")
+	_check(guards.filter(func(e: Enemy) -> bool: return e._behavior is EnemyBehaviorFishyGuard).size() == 2, "(C) #464: 2 Fishy at the entrances (DungeonB, boss)")
 	_check(_near(guards, ow.get_node("GateNormal").global_position, 160.0) == 4, "(C) 4 enemies posted at the DungeonA entrance (gate guard, 2 moustache patrols, #414 slime patrol)")
-	_check(_near(guards, ow.get_node("GateBoss").global_position, 180.0) == 4, "(C) 4 guards posted at the boss entrance")
+	_check(_near(guards, ow.get_node("GateBoss").global_position, 180.0) == 5, "(C) 5 guards posted at the boss entrance (#464: 4 + Fishy)")
 	_check(_near(guards, ow.get_node("GateBeast").global_position, 180.0) == 4, "(C) 4 guards posted at the Beast entrance (#326)")
 	var posts := {}
 	for e in guards:
@@ -194,8 +207,9 @@ func _flow_legs() -> void:
 	# #378: the exit portal now lands at DungeonA's overworld entrance.
 	_check(main.current_area.name == "Overworld", "(E) the exit portal returns to the overworld")
 	ow = main.current_area
+	_remove_bird(main) # #478
 	guards = _guards(main)
-	_check(guards.size() == 15, "(E) 15 entrance enemies after clearing DungeonA (#414, got %d)" % guards.size())
+	_check(guards.size() == 17, "(E) 17 entrance enemies after clearing DungeonA (#414, #464, got %d)" % guards.size())
 	_check(_near(guards, ow.get_node("GateNormal").global_position, 200.0) == 0, "(E) the cleared DungeonA entrance has no guards")
 	_check(_near(guards, ow.get_node("GateRed").global_position, 160.0) == 3, "(E) the uncleared DungeonB entrance keeps its 3 enemies (#414: guard + 2 patrols)")
 	await _enter(main, "GateHub")
@@ -213,4 +227,5 @@ func _flow_legs() -> void:
 	_check(fresh.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
 	fresh.enter_overworld()
 	await _frames(3)
-	_check(_guards(fresh).size() == 19, "(F) every entrance is guarded again (#414 mix, got %d)" % _guards(fresh).size())
+	_remove_bird(fresh) # #478
+	_check(_guards(fresh).size() == 21, "(F) every entrance is guarded again (#414 mix + #464 Fishy, got %d)" % _guards(fresh).size())

@@ -19,6 +19,10 @@ class_name OverworldGround
 ## computed (`roads`, `road_distance`) because decor placement keeps trees
 ## and rocks off them - dropping that would move trees and change collision
 ## and routes. The arrival clearing and the pad under each gate stay.
+## Terrain art pass: the field is drawn from the TerrainArt grass tiles
+## (hashed variant per 64 px cell, meadow inside the old darker/lighter
+## patches) and each tree crown is a TerrainArt tree sprite sized to its
+## collision circle. Layout, collision and blockers are unchanged.
 
 const CENTER := Vector2(576, -150)
 ## #436 (Daniel, 2026-11-09: "expand the overworld map" - the world itself,
@@ -35,8 +39,13 @@ const ARRIVAL_R := 74.0
 const DECOR_STEP := 120.0
 const ROAD_CLEAR := 70.0
 const GATE_CLEAR := 150.0
+## #446: decor also keeps this far from every entrance-guard post and patrol
+## loop, so a solid tree can never sit on a patrol's beat wherever its gate
+## is placed (gates were spread across the field and their guards moved
+## with them).
+const PATROL_CLEAR := 70.0
 
-const GRASS := Color(0.16, 0.22, 0.17)
+const GRASS := Color(0.33, 0.46, 0.26) ## the grass tiles' mean (soft edge band)
 const GRASS_DARK := Color(0.13, 0.18, 0.14)
 const GRASS_LIGHT := Color(0.19, 0.26, 0.19)
 const ROAD := Color(0.31, 0.27, 0.21)
@@ -55,8 +64,13 @@ var spawn := Vector2(576, 480)
 var landmarks: Array[Vector2] = []
 ## Each road is a polyline from the arrival point to one gate.
 var roads: Array[PackedVector2Array] = []
+## #446: entrance-guard beats (closed loops; a lone post is a 1-point loop).
+var patrols: Array[PackedVector2Array] = []
 var patches: Array[PackedVector2Array] = []
 var patch_colors := PackedColorArray()
+## Patch circles (centre, radius) keyed by their 190 px grid slot, for the
+## meadow lookup while tiling.
+var _patch_slots: Dictionary = {}
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
 var decor: Array[Dictionary] = []
 var _canopy: Node2D
@@ -110,18 +124,25 @@ func _make_canopy() -> Node2D:
 	c.name = "Canopy"
 	c.z_as_relative = false
 	c.z_index = CANOPY_Z
+	c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	c.draw.connect(_draw_canopy.bind(c))
 	add_child(c)
 	return c
 
 func _draw_canopy(c: Node2D) -> void:
+	var row := TerrainArt.row(&"tree_summer") * TerrainArt.OBJ_CELL
 	for d in decor:
 		if d["kind"] != "tree":
 			continue
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
-		c.draw_circle(at, r, TREE)
-		c.draw_circle(at + Vector2(-r * 0.25, -r * 0.3), r * 0.55, TREE_LIGHT)
+		# The sprite's crown is ~70 of its 80 px and centred ~38 px down:
+		# scale it so the crown spans the collision circle (slightly over).
+		var sz := TerrainArt.OBJ_CELL * (2.0 * r * 1.15) / 70.0
+		var col := TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 4)
+		c.draw_texture_rect_region(TerrainArt.OBJECTS,
+			Rect2(at - Vector2(sz * 0.5, sz * 0.47), Vector2(sz, sz)),
+			Rect2(col * TerrainArt.OBJ_CELL, row, TerrainArt.OBJ_CELL, TerrainArt.OBJ_CELL))
 
 ## Harness introspection: the node that draws the tree crowns.
 func canopy() -> Node2D:
@@ -141,6 +162,7 @@ func build_from(area: Node) -> void:
 				landmarks.append((c as Node2D).position)
 	for i in landmarks.size():
 		roads.append(_road(spawn, landmarks[i], i))
+	_collect_patrols(area)
 	_build_patches()
 	_build_decor()
 	_plant_tree_collision(area)
@@ -190,6 +212,7 @@ func _road(from: Vector2, to: Vector2, salt: int) -> PackedVector2Array:
 func _build_patches() -> void:
 	patches.clear()
 	patch_colors.clear()
+	_patch_slots.clear()
 	var n := 0
 	var gx_n := int(ceil(RADII.x / 190.0)) + 1
 	var gy_n := int(ceil(RADII.y / 190.0)) + 1
@@ -204,6 +227,7 @@ func _build_patches() -> void:
 				var a := TAU * i / 10.0
 				poly.append(at + Vector2(cos(a), sin(a) * 0.7) * r * (0.8 + _hash01(n, i, 24) * 0.4))
 			patches.append(poly)
+			_patch_slots[Vector2i(gx, gy)] = Vector3(at.x, at.y, r * 0.9)
 			patch_colors.append(GRASS_DARK if _hash01(gx, gy, 25) < 0.5 else GRASS_LIGHT)
 			n += 1
 
@@ -320,12 +344,43 @@ func _draw_grass_top() -> void:
 func grass_top() -> Node2D:
 	return _grass_top
 
+## #446: reads every EntranceGuards carrier under the area's
+## "EntranceGuards" container: each entry's post plus its patrol route.
+func _collect_patrols(area: Node) -> void:
+	patrols.clear()
+	var holder := area.get_node_or_null("EntranceGuards") if area != null else null
+	if holder == null:
+		return
+	for g in holder.get_children():
+		if not g is AreaSpawnData:
+			continue
+		for entry: Dictionary in (g as AreaSpawnData).entries:
+			var loop := PackedVector2Array([entry.get("position", Vector2.ZERO)])
+			for q in entry.get("route", []):
+				loop.append(q)
+			patrols.append(loop)
+
+## Distance from p to the nearest entrance-guard post or patrol loop.
+func patrol_distance(p: Vector2) -> float:
+	var best := INF
+	for loop in patrols:
+		var n := loop.size()
+		if n == 1:
+			best = minf(best, p.distance_to(loop[0]))
+		for i in n:
+			var a := loop[i]
+			var b := loop[(i + 1) % n]
+			best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b)))
+	return best
+
 func _clear_spot(p: Vector2) -> bool:
 	if p.distance_to(spawn) < GATE_CLEAR:
 		return false
 	for l in landmarks:
 		if p.distance_to(l) < GATE_CLEAR:
 			return false
+	if patrol_distance(p) <= PATROL_CLEAR:
+		return false
 	return road_distance(p) > ROAD_CLEAR
 
 func _build_decor() -> void:
@@ -348,6 +403,36 @@ func _build_decor() -> void:
 			decor.append({"kind": "tree" if tree else "rock", "at": at,
 				"r": (18.0 + _hash01(gx, gy, 35) * 14.0) if tree else (8.0 + _hash01(gx, gy, 35) * 8.0)})
 
+## True when `p` lies in one of the old grass patches (drawn as meadow).
+func _in_patch(p: Vector2) -> bool:
+	var g := Vector2i(((p - CENTER) / 190.0).round())
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			var c: Variant = _patch_slots.get(g + Vector2i(dx, dy))
+			if c != null and p.distance_to(Vector2(c.x, c.y)) <= c.z:
+				return true
+	return false
+
+## The field as TerrainArt floor tiles: every 64 px cell whose centre is
+## inside the outline (grown by half a cell so the tiles reach the edge
+## band), one of 4 hashed grass variants, meadow inside a patch.
+func _draw_grass_tiles() -> void:
+	var cell := float(TerrainArt.CELL)
+	var grown := _blob(cell * 0.5)
+	var lo := Vector2i(((CENTER - RADII * 1.1) / cell).floor())
+	var hi := Vector2i(((CENTER + RADII * 1.1) / cell).ceil())
+	var grass := TerrainArt.row(&"grass_summer") * TerrainArt.CELL
+	var meadow := TerrainArt.row(&"meadow") * TerrainArt.CELL
+	for y in range(lo.y, hi.y + 1):
+		for x in range(lo.x, hi.x + 1):
+			var at := Vector2(x + 0.5, y + 0.5) * cell
+			if not Geometry2D.is_point_in_polygon(at, grown):
+				continue
+			var v := TerrainArt.variant(Vector2i(x, y), 5)
+			var src_y := meadow if _in_patch(at) else grass
+			draw_texture_rect_region(TerrainArt.TILES, Rect2(Vector2(x, y) * cell, Vector2(cell, cell)),
+				Rect2(v * TerrainArt.CELL, src_y, TerrainArt.CELL, TerrainArt.CELL))
+
 func _draw_band(inner: PackedVector2Array, outer: PackedVector2Array, ci: Color, co: Color) -> void:
 	var n := inner.size()
 	for i in n:
@@ -356,9 +441,7 @@ func _draw_band(inner: PackedVector2Array, outer: PackedVector2Array, ci: Color,
 
 func _draw() -> void:
 	_draw_band(outline, _blob(OUTER_FADE), Color(GRASS, 0.85), Color(GRASS, 0.0))
-	draw_colored_polygon(outline, GRASS)
-	for i in patches.size():
-		draw_colored_polygon(patches[i], patch_colors[i])
+	_draw_grass_tiles()
 	_draw_grass_floor() # #461
 	# #419: roads are no longer drawn (cosmetic only). Their polylines are
 	# still laid out in build_from so decor/tree placement - and with it the

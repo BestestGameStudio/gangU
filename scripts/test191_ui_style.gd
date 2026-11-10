@@ -82,7 +82,9 @@ func _initialize() -> void:
 	_check(backdrop != null, "Shop Backdrop is a Panel")
 	_check_panel(backdrop.get_theme_stylebox("panel"), PANEL_BG, "Shop panel")
 	var rows: Array = shop.get_node("Backdrop/Margin/VBox/Rows").get_children()
-	_check(rows.size() == 4, "Shop renders 4 slots (got %d)" % rows.size())
+	# #466: the production stock is Daniel's "3 Random from the pool", so
+	# the panel renders 3 slots now (was 4 under #132's "show 4 slots").
+	_check(rows.size() == 3, "Shop renders 3 slots (got %d)" % rows.size())
 	for r: PanelContainer in rows:
 		_check_row(r.get_theme_stylebox("panel"), B_DIM, 1, "Shop row %s" % r.name)
 	var buy := shop.find_children("BuyButton", "Button", true, false)

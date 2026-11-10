@@ -18,6 +18,9 @@ class_name HUD
 ## Consumed contracts:
 ##   Player: hp, max_hp, health_changed(current, max_hp), died(),
 ##     shield, shield_changed(current) (#388).
+##   SpiritMeter (Player child, #460): spirit, max_spirit, is_full(),
+##     is_channelling(), channel_fraction(), spirit_changed, channel_progress,
+##     channel_ended.
 ##   SpellCaster: get_slots(), cooldown_remaining(spell), polled every frame.
 ##   Spell: cooldown.
 ##   SpellProgress (discovered by name): can_upgrade(spell), get_tier(spell).
@@ -43,9 +46,15 @@ const HP_FILL_CAP := 44.0 # transparent padding + the fill's tapered tip
 ## always shows the exact number. Hidden while the shield is 0.
 const SHIELD_WHITE := Color(1.0, 1.0, 1.0, 1.0)
 const SHIELD_TRACK := Color(0.08, 0.08, 0.1, 0.75)
-
+## #460: spirit bar under the shield bar. Teal while filling, bright mint
+## once full (ready to heal), and it shows the H channel progress while the
+## heal is being held.
+const SPIRIT_FILLING := Color(0.3, 0.65, 0.85, 1.0)
+const SPIRIT_READY := Color(0.55, 1.0, 0.75, 1.0)
+const SPIRIT_TRACK := Color(0.06, 0.1, 0.14, 0.75)
 var _player: Player
 var _caster: SpellCaster
+var _spirit: SpiritMeter
 var _slot_icons: Array[SpellIcon] = []
 
 var _objective: DungeonObjective
@@ -61,12 +70,15 @@ var _progress_elapsed := 0.0
 @onready var _hp_bar: ProgressBar = $Root/HPBar
 @onready var _shield_bar: ProgressBar = $Root/ShieldBar
 @onready var _shield_label: Label = $Root/ShieldBar/ShieldLabel
+@onready var _spirit_bar: ProgressBar = $Root/SpiritBar
+@onready var _spirit_label: Label = $Root/SpiritBar/SpiritLabel
 @onready var _spell_grid: GridContainer = $Root/SpellGrid
 @onready var _objective_label: Label = $Root/ObjectiveLabel
 ## #369: top-center defense wave bar; mounted with the discovered objective.
 @onready var _defense_bar: DefenseWaveBar = $DefenseWaveBar
 
 func _ready() -> void:
+	_spirit_bar.visible = false
 	_hp_bar.add_theme_stylebox_override("background", _hp_bar_style(HP_TRACK_TEXTURE, HP_TRACK_CAP))
 	_hp_bar.add_theme_stylebox_override("fill", _hp_bar_style(HP_FILL_TEXTURE, HP_FILL_CAP))
 	_shield_bar.add_theme_stylebox_override("background", _flat_style(SHIELD_TRACK))
@@ -83,6 +95,15 @@ func _ready() -> void:
 	_player.died.connect(_on_player_died)
 	_player.shield_changed.connect(_on_shield_changed)
 	_on_health_changed(_player.hp, _player.max_hp)
+	_spirit_bar.add_theme_stylebox_override("background", _flat_style(SPIRIT_TRACK))
+	_spirit_bar.add_theme_stylebox_override("fill", _flat_style(SPIRIT_FILLING))
+	_spirit = _player.get_node_or_null("SpiritMeter") as SpiritMeter
+	_spirit_bar.visible = _spirit != null
+	if _spirit != null:
+		_spirit.spirit_changed.connect(_refresh_spirit.unbind(2))
+		_spirit.channel_progress.connect(_refresh_spirit.unbind(1))
+		_spirit.channel_ended.connect(_refresh_spirit.unbind(1))
+		_refresh_spirit()
 	if _caster != null:
 		_build_slot_grid()
 
@@ -166,6 +187,23 @@ func _on_shield_changed(current: int) -> void:
 	_shield_bar.max_value = bar_scale
 	_shield_bar.value = mini(current, bar_scale)
 	_shield_label.text = str(current)
+
+## #460: spirit bar. Shows the spirit fill, or the channel progress while H
+## is held; the label says when the heal is ready.
+func _refresh_spirit() -> void:
+	if not is_instance_valid(_spirit):
+		return
+	var fill := _spirit_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	_spirit_bar.max_value = 1.0
+	_spirit_bar.step = 0.0
+	if _spirit.is_channelling():
+		_spirit_bar.value = _spirit.channel_fraction()
+		_spirit_label.text = "HEALING..."
+	else:
+		_spirit_bar.value = _spirit.spirit / maxf(_spirit.max_spirit, 0.001)
+		_spirit_label.text = "SPIRIT READY - HOLD H TO HEAL" if _spirit.is_full() else "SPIRIT"
+	if fill != null:
+		fill.bg_color = SPIRIT_READY if (_spirit.is_full() or _spirit.is_channelling()) else SPIRIT_FILLING
 
 func _on_player_died() -> void:
 	# Run restart is #6's job; the HUD only reflects the death state.

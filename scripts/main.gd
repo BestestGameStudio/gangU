@@ -23,6 +23,9 @@ func _ready() -> void:
 	grid.name = "BackgroundGrid"
 	add_child(grid)
 	move_child(grid, 0)
+	# #448: the day/night clock is parked on the tree root (not under Main or
+	# any area) so it keeps running through area swaps and scene reloads.
+	DayNightClock.ensure(get_tree())
 	var rm := RunManager.new()
 	rm.name = "RunManager"
 	rm.player = $Player
@@ -36,6 +39,11 @@ func _ready() -> void:
 	boss_music = BossMusic.new()
 	boss_music.name = "BossMusic"
 	add_child(boss_music)
+	## #471: default dungeon music, started by _swap in dungeon areas; yields to
+	## the boss theme above. Freed with Main on a death restart.
+	dungeon_music = DungeonMusic.new()
+	dungeon_music.name = "DungeonMusic"
+	add_child(dungeon_music)
 	## (#238) starting_spells fill the slots in order at boot, so the HUD grid
 	## and the Tab panel start from the same seeded loadout. _ready runs once
 	## per run (a death restart reloads this scene); hub returns never reseed.
@@ -217,6 +225,7 @@ func _ready() -> void:
 var current_area: Node = null
 ## #359: boss theme player (RED dungeon bosses, Head, Beast).
 var boss_music: BossMusic = null
+var dungeon_music: DungeonMusic = null # #471
 ## (#132) The mounted hub shop, kept so a dungeon victory can trigger its
 ## FREE stock refresh + paid-price reset from _on_objective_completed.
 var _shop: Shop = null
@@ -322,6 +331,11 @@ func _swap(area: Node) -> void:
 		boss_music.stop_music() # #359: the boss theme never outlives its dungeon
 	current_area = area
 	add_child(current_area)
+	if dungeon_music:
+		if DungeonMusic.is_dungeon_area(current_area):
+			dungeon_music.start() # #471: fresh loop on every dungeon entry
+		else:
+			dungeon_music.stop_music() # hub / overworld stay silent
 	for g: Gate in get_tree().get_nodes_in_group("gates"):
 		if not g.entered.is_connected(_on_gate_entered):
 			g.entered.connect(_on_gate_entered)
@@ -552,6 +566,8 @@ func _on_boss_spawned(boss: Node) -> void:
 	# and the boss arenas (Head, Beast). A NORMAL-rolled dungeon's boss is silent.
 	if boss_music and current_area and _boss_theme_area(current_area):
 		boss_music.start()
+		if dungeon_music:
+			dungeon_music.yield_to_boss() # #471: the boss theme takes over
 
 ## #359: areas whose boss fight plays the boss theme.
 const BOSS_THEME_ARENAS: Array[StringName] = [&"DungeonC", &"DungeonD"]
@@ -574,6 +590,8 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 		_shop.on_dungeon_victory()
 	if boss_music:
 		boss_music.fade_out() # #359: boss down, theme fades
+	if dungeon_music:
+		dungeon_music.resume_after_boss() # #471: the dungeon loop fades back in
 
 ## #9 production exit portal: normal-gate DungeonA mounts it UNLOCKED (retreat
 ## anytime, objective not required). Returns (#378: to the dungeon's overworld
@@ -605,6 +623,7 @@ func _mount_exit_portal(area: Node) -> void:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
 	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
+	portal.beast_portal_look = area.name == &"DungeonD"  # #447: the Beast den's exit portal gets the portal look in purple
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 

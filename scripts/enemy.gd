@@ -237,6 +237,26 @@ func seen_by_player() -> bool:
 		return true
 	return TallGrass.can_see(sight_map(), _player.global_position, global_position)
 
+## #464: rally call. Another enemy (the Fishy, when it hooks the player)
+## can ask nearby allies to drop what they are doing and converge on the
+## target for `duration` seconds. Generic, type-free seam: behaviors read
+## is_rallied() - the chase/contact cover machine skips cover and the
+## overworld guard roles engage - and the chase moves RALLY_SPEED_MULT
+## faster while it lasts. Enemies that never get rallied are unchanged.
+const RALLY_SPEED_MULT := 1.35 ## PLACEHOLDER balance
+var _rally_left := 0.0
+
+func rally(duration: float) -> void:
+	if hp > 0:
+		_rally_left = maxf(_rally_left, duration)
+
+func is_rallied() -> bool:
+	return _rally_left > 0.0
+
+## Chase speed with the rally bonus applied (plain speed when not rallied).
+func chase_speed() -> float:
+	return speed * (RALLY_SPEED_MULT if is_rallied() else 1.0)
+
 ## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
 ## positive, the behavior physics_step (which accumulates ALL behavior
 ## clocks from delta) never runs, so the whole enemy freezes.
@@ -272,6 +292,7 @@ func _physics_process(delta: float) -> void:
 			bubble.claim(self)
 	if _freeze_count > 0:
 		return
+	_rally_left = maxf(_rally_left - delta, 0.0)
 	# #331: a strong knockback owns the body until it decays below
 	# KNOCKBACK_CONTROL, so the push reads; the behavior resumes after.
 	if _knockback.length() > KNOCKBACK_CONTROL:
