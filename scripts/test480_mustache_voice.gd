@@ -7,7 +7,11 @@ extends SceneTree
 ##   unit     - mapping covers all 5 states for both voices; OGG, non-loop;
 ##              excitable laugh omitted; enemy.tscn carries the voice node;
 ##              per-warrior voice draw is stable and covers both voices.
-##   idle     - unengaged warrior mutters on the idle timer.
+##   idle     - unengaged warrior mutters on the idle timer ONLY while the
+##              player is close (#495: within IDLE_HEAR_RADIUS, beyond
+##              ENGAGE_RADIUS for a plain warrior); a far player pauses the
+##              timer, approaching resumes it with no backlog burst; the
+##              default gap is long (25-45 s).
 ##   engage   - player inside ENGAGE_RADIUS: exactly one spotted bark on the
 ##              rising edge, then combat chatter; re-engage barks again.
 ##   attack   - play_action("attack") starts an attacking cue.
@@ -78,7 +82,11 @@ func _unit_leg() -> void:
 	_check("unit: both approved voices appear across 30 warriors", seen.has(&"gravelly") and seen.has(&"excitable"))
 	e.queue_free()
 
-func _make_fixture(with_short_timers: bool = true) -> Dictionary:
+## #495: default player spot for idle fixtures: in the idle band (beyond
+## ENGAGE_RADIUS 460, inside IDLE_HEAR_RADIUS 650) = unengaged but close.
+const IDLE_BAND := Vector2(550, 0)
+
+func _make_fixture(with_short_timers: bool = true, player_offset: Vector2 = Vector2(6000, 6000)) -> Dictionary:
 	# Bare-area fixture after the record463 idiom: real player.tscn and
 	# enemy.tscn, collisions off, explicit player_path wiring.
 	var area := Node2D.new()
@@ -88,7 +96,7 @@ func _make_fixture(with_short_timers: bool = true) -> Dictionary:
 	p.collision_layer = 0
 	p.collision_mask = 0
 	area.add_child(p)
-	p.global_position = Vector2(6000, 6000) # parked far away
+	p.global_position = Vector2(6000, 6000) # parked far away (re-placed below)
 	p.set_physics_process(false)
 	var e: Enemy = load("res://scenes/enemy.tscn").instantiate()
 	e.collision_layer = 0
@@ -102,6 +110,8 @@ func _make_fixture(with_short_timers: bool = true) -> Dictionary:
 		mv.chatter_max = 0.08
 	area.add_child(e)
 	e.global_position = Vector2(500, 560)
+	if player_offset != Vector2(6000, 6000):
+		p.global_position = e.global_position + player_offset
 	return {"area": area, "player": p, "enemy": e, "voice": mv}
 
 func _teardown(fx: Dictionary) -> void:
@@ -111,11 +121,33 @@ func _teardown(fx: Dictionary) -> void:
 	await _frames(3)
 
 func _idle_leg() -> void:
-	var fx := await _make_fixture()
+	var fx := await _make_fixture(true, IDLE_BAND)
 	await _frames(12) # > 0.08s idle timer at process-frame pace
-	_check("idle: unengaged warrior plays an idle cue", fx.voice.last_state == &"idle")
+	_check("idle: unengaged warrior with the player close plays an idle cue", fx.voice.last_state == &"idle")
 	_check("idle: cue is a mutter or hum", [&"idle_mutter", &"idle_hum"].has(fx.voice.last_alias))
 	await _teardown(fx)
+	# #495: far player = silence, and the timer does not run.
+	var fx2 := await _make_fixture(true)
+	var mv: MustacheVoice = fx2.voice
+	mv._idle_timer = 0.5
+	await _frames(30)
+	_check("idle: player beyond the hear radius -> no idle cue", mv.cues_played == 0)
+	_check("idle: the idle timer does not tick while the player is far", is_equal_approx(mv._idle_timer, 0.5))
+	fx2.player.global_position = fx2.enemy.global_position + IDLE_BAND
+	mv._idle_timer = 0.05
+	await _frames(12)
+	_check("idle: approaching resumes the timer and plays the cue", mv.last_state == &"idle")
+	await _teardown(fx2)
+	# Just outside the radius stays silent.
+	var fx3 := await _make_fixture(true, Vector2(MustacheVoice.IDLE_HEAR_RADIUS + 50.0, 0))
+	await _frames(20)
+	_check("idle: just beyond IDLE_HEAR_RADIUS -> silent", fx3.voice.cues_played == 0)
+	await _teardown(fx3)
+	# Defaults: rarer than #480's 8-16 s; the band exists.
+	var d := MustacheVoice.new()
+	_check("idle: default gap is at least 25 s (was 8-16 s)", d.idle_min >= 25.0 and d.idle_max >= d.idle_min)
+	_check("idle: hear radius is beyond the engage radius (a band exists)", MustacheVoice.IDLE_HEAR_RADIUS > MustacheVoice.ENGAGE_RADIUS)
+	d.free()
 
 func _engage_leg() -> void:
 	var fx := await _make_fixture()
@@ -197,7 +229,7 @@ func _death_leg() -> void:
 func _cap_leg() -> void:
 	MustacheVoice.MAX_SIMULTANEOUS = 1
 	MustacheVoice._active = 0
-	var fx := await _make_fixture()
+	var fx := await _make_fixture(true, IDLE_BAND)
 	var e2: Enemy = load("res://scenes/enemy.tscn").instantiate()
 	e2.collision_layer = 0
 	e2.collision_mask = 0
