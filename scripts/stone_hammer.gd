@@ -215,6 +215,12 @@ func _land() -> void:
 				continue
 			if (e as Node2D).global_position.distance_to(target) <= shockwave_radius() + HIT_PAD:
 				_deal(e, spell.hammer_shockwave_damage, mods)
+	# #420: barricades take any player-sourced damage. Slam radius only; not
+	# counted as hits/kills, so the Rhythm/dice bookkeeping is unchanged.
+	if Barricade.is_player_side(OnHit.live(source)):
+		for b in get_tree().get_nodes_in_group(&"barricades"):
+			if is_instance_valid(b) and (b as Node2D).global_position.distance_to(target) <= radius + HIT_PAD:
+				_deal(b, spell.damage, mods)
 	if caster != null and is_instance_valid(caster):
 		var res: Dictionary = caster.hammer_state.register_strike(spell, hits, kills)
 		if int(res["tone_step"]) > 0:

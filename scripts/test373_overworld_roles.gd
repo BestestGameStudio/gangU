@@ -69,6 +69,8 @@ func _def_role(entry: Dictionary) -> String:
 		return "migrant"
 	if d.behavior == EnemyBehaviorGuard:
 		return "guard"
+	if d.behavior == EnemyBehaviorFishyGuard:
+		return "fishy" # #464: holds its post like a guard, casts from range
 	return "other"
 
 func _initialize() -> void:
@@ -96,6 +98,8 @@ func _scene_legs() -> void:
 			if role == "guard":
 				guards += 1
 				_check(not entry.has("route"), "(A) %s gate guard has no route" % g.name)
+			elif role == "fishy":
+				_check(not entry.has("route"), "(A) %s Fishy (#464) holds a post, no route" % g.name)
 			elif role == "patrol":
 				var r: Array = entry.get("route", [])
 				if r.size() < 3 or (r[0] as Vector2) != entry["position"]:

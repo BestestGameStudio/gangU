@@ -117,6 +117,7 @@ func _run_legs() -> void:
 	catalog.entries = entries
 
 	shop = Shop.new()
+	shop.stock_size = 4 # #132 slot mechanics pinned at 4; #466's production default is 3
 	shop.setup(catalog)
 	shop.stock_refreshed.connect(func(): refreshes_seen += 1)
 	root.add_child(shop) # _ready draws the initial stock
@@ -218,6 +219,7 @@ func _run_legs() -> void:
 	lone_spell.spell_name = "Lone Harness Spell"
 	var lone_entry := _entry(lone_spell, 10)
 	solo_catalog.entries = [lone_entry]
+	solo.stock_size = 4 # pinned at the #132 slot count, not the #466 default
 	solo.setup(solo_catalog)
 	root.add_child(solo)
 	_check(solo.stock_entries() == [lone_entry], "single-good catalog stocks its one good")
