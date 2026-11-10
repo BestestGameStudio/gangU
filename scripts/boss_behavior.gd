@@ -120,8 +120,11 @@ func _chase(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele
 		_start_windup(enemy, _pick_attack(dist), to_player, tele)
 
 ## Per-boss: which attack to start at this distance.
-func _pick_attack(_dist: float) -> int:
-	return Attack.LUNGE
+func _pick_attack(dist: float) -> int:
+	for rule in attack_ranges:
+		if (dist > rule.threshold if rule.above else dist < rule.threshold):
+			return _history_pick(rule.pick, rule.fallback)
+	return _history_pick(default_attack, default_fallback)
 
 # --- WIND-UP (telegraph) -----------------------------------------------------
 
@@ -360,3 +363,22 @@ func _present(which: int, next: int, anim: StringName, shape: int) -> AttackPres
 	p.shape = shape
 	presentations[which] = p
 	return p
+
+# --- ordered distance-based attack selection ---------------------------------
+class AttackRange extends RefCounted:
+	var threshold: float
+	var above: bool
+	var pick: int
+	var fallback: int
+
+var attack_ranges: Array[AttackRange] = []
+var default_attack: int = Attack.LUNGE
+var default_fallback: int = Attack.VOLLEY
+
+func _range(threshold: float, above: bool, pick: int, fallback: int) -> void:
+	var rule := AttackRange.new()
+	rule.threshold = threshold
+	rule.above = above
+	rule.pick = pick
+	rule.fallback = fallback
+	attack_ranges.append(rule)

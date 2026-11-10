@@ -74,6 +74,9 @@ func _init() -> void:
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _configure() -> void:
+	default_attack = Attack.VOLLEY
+	default_fallback = Attack.PULSE
+	_range(PULSE_RANGE, false, Attack.PULSE, Attack.VOLLEY)
 	attack_steps = {State.VOLLEY: _dispatch_volley, State.PULSE: _dispatch_pulse}
 	first_attack_delay = FIRST_ATTACK_DELAY
 	attack_interval = ATTACK_INTERVAL
@@ -115,10 +118,6 @@ func _attack_begin_reset() -> void:
 
 # --- CHASE -------------------------------------------------------------------
 
-func _pick_attack(dist: float) -> int:
-	var pick: int = Attack.PULSE if dist < PULSE_RANGE else Attack.VOLLEY
-	var fallback: int = Attack.VOLLEY if pick == Attack.PULSE else Attack.PULSE
-	return _history_pick(pick, fallback)
 
 # --- ATTACKS -----------------------------------------------------------------
 

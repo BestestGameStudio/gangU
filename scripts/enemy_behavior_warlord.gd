@@ -62,6 +62,8 @@ var _tick_t: float = 0.0
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _configure() -> void:
+	_range(SPIN_RANGE, false, Attack.SPIN, Attack.LUNGE)
+	_range(VOLLEY_RANGE, true, Attack.VOLLEY, Attack.LUNGE)
 	attack_steps = {State.LUNGE: _dispatch_lunge, State.SPIN: _dispatch_spin, State.VOLLEY: _dispatch_volley}
 	first_attack_delay = FIRST_ATTACK_DELAY
 	attack_interval = ATTACK_INTERVAL
@@ -105,16 +107,6 @@ func _attack_begin_reset() -> void:
 
 # --- CHASE -------------------------------------------------------------------
 
-func _pick_attack(dist: float) -> int:
-	var pick: int = Attack.LUNGE
-	var fallback: int = Attack.VOLLEY
-	if dist < SPIN_RANGE:
-		pick = Attack.SPIN
-		fallback = Attack.LUNGE
-	elif dist > VOLLEY_RANGE:
-		pick = Attack.VOLLEY
-		fallback = Attack.LUNGE
-	return _history_pick(pick, fallback)
 
 # --- ATTACKS -----------------------------------------------------------------
 
