@@ -36,6 +36,15 @@ const SEARCH_MARGIN: int = 16
 var _path: Array[Vector2i] = []
 var _path_index: int = 0
 var _replan_timer: float = 0.0
+## #494: number of A* searches this mover has run (test hook / profiling).
+var plans: int = 0
+## #494: per-call cache of terrain type -> movement flags, so a search does
+## not copy the registry's properties Dictionary for every cell it touches.
+## Cleared at the start of each steer() so a palette change never goes stale.
+var _flag_cache := {}
+const F_WALK := 1
+const F_SWIM := 2
+const F_FALL := 4
 
 ## The resolved velocity toward `dest`. `desired` is the direct velocity the
 ## mover wants (used verbatim when no grid is wired or the line is clear);
@@ -43,6 +52,7 @@ var _replan_timer: float = 0.0
 ## physics step: the replan clock accumulates from delta here.
 func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, dest: Vector2, speed: float, delta: float, can_swim: bool = false, detour_unwalkable: bool = false) -> Vector2:
 	_replan_timer = maxf(0.0, _replan_timer - delta)
+	_flag_cache.clear()
 	if map == null:
 		return desired
 	if desired == Vector2.ZERO:
@@ -51,7 +61,10 @@ func steer(map: TerrainMap, pos: Vector2, previous: Vector2, desired: Vector2, d
 		_path = []
 		_replan_timer = REPLAN_INTERVAL
 		return TerrainMotion.resolve(map, pos, previous, desired, delta, can_swim)
-	if _replan_timer <= 0.0 or _path.is_empty():
+	# #494: replan on the timer only. An unreachable target leaves the path
+	# empty, and replanning "because empty" ran a full bounded A* EVERY frame.
+	if _replan_timer <= 0.0:
+		plans += 1
 		_path = _find_path(map, pos, dest, can_swim)
 		_path_index = 0
 		_replan_timer = REPLAN_INTERVAL
@@ -82,17 +95,35 @@ func _line_routable(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool 
 			return false
 	return true
 
+## Movement flags of the cell's terrain type (F_WALK | F_SWIM | F_FALL),
+## cached per steer() call by type.
+func _flags(map: TerrainMap, cell: Vector2i) -> int:
+	var type := map.tile_type_at_cell(cell)
+	var f: Variant = _flag_cache.get(type)
+	if f == null:
+		var props := map.type_properties(type)
+		var v := 0
+		if props["walkable"]:
+			v |= F_WALK
+		if props["swimmable"]:
+			v |= F_SWIM
+		if props.get("movement", TerrainTypes.Movement.BLOCKING) == TerrainTypes.Movement.FALLING:
+			v |= F_FALL
+		_flag_cache[type] = v
+		return v
+	return f
+
 ## A cell no mover can enter: BLOCKING and not swimmable, or FALLING.
 func _hard_obstacle(map: TerrainMap, cell: Vector2i) -> bool:
-	var props := map.type_properties(map.tile_type_at_cell(cell))
-	if props.get("movement", TerrainTypes.Movement.BLOCKING) == TerrainTypes.Movement.FALLING:
+	var f := _flags(map, cell)
+	if f & F_FALL:
 		return true
-	return not props["walkable"] and not props["swimmable"]
+	return not (f & F_WALK) and not (f & F_SWIM)
 
 ## A cell THIS mover may be routed through (can_swim-aware).
 func _passable(map: TerrainMap, cell: Vector2i, can_swim: bool) -> bool:
-	var props := map.type_properties(map.tile_type_at_cell(cell))
-	return props["walkable"] or (props["swimmable"] and can_swim)
+	var f := _flags(map, cell)
+	return (f & F_WALK) != 0 or ((f & F_SWIM) != 0 and can_swim)
 
 ## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
 ## cutting between blocked cells). Returns the cell path EXCLUDING the start
@@ -106,14 +137,28 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 		return []
 	var min_c := Vector2i(mini(start.x, goal.x) - SEARCH_MARGIN, mini(start.y, goal.y) - SEARCH_MARGIN)
 	var max_c := Vector2i(maxi(start.x, goal.x) + SEARCH_MARGIN, maxi(start.y, goal.y) + SEARCH_MARGIN)
-	var open: Array[Vector2i] = [start]
+	# #494: binary-heap open set. Entries order by (f, seq); seq is the
+	# cell's first-insertion order, which reproduces the old linear scan's
+	# "first lowest f in the open list" tie-break exactly. Improved cells are
+	# re-pushed under the same seq; stale entries are skipped on pop.
+	_hf = PackedFloat64Array()
+	_hs = PackedInt64Array()
+	_hc = []
+	var seqs := {start: 0}
+	var next_seq := 1
 	var came := {}
 	var g := {start: 0.0}
+	_heap_push(_h(start, goal), 0, start)
 	var best := start
 	var best_h := _h(start, goal)
 	var expansions := 0
-	while not open.is_empty() and expansions < MAX_EXPANSIONS:
-		var current := _pop_lowest_f(open, g, goal)
+	while _hc.size() > 0 and expansions < MAX_EXPANSIONS:
+		var top_f := _hf[0]
+		var top_s := _hs[0]
+		var current := _heap_pop()
+		if seqs.get(current, -1) != top_s or top_f > g.get(current, INF) + _h(current, goal):
+			continue # stale entry
+		seqs.erase(current)
 		if _passable(map, current, can_swim) and _h(current, goal) < best_h:
 			best = current
 			best_h = _h(current, goal)
@@ -121,7 +166,7 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 			best = current
 			break
 		expansions += 1
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+		for d in DIRS:
 			var next: Vector2i = current + d
 			if next.x < min_c.x or next.y < min_c.y or next.x > max_c.x or next.y > max_c.y:
 				continue
@@ -131,8 +176,10 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 			if ng < g.get(next, INF):
 				g[next] = ng
 				came[next] = current
-				if not open.has(next):
-					open.append(next)
+				if not seqs.has(next):
+					seqs[next] = next_seq
+					next_seq += 1
+				_heap_push(ng + _h(next, goal), seqs[next], next)
 	if best == start:
 		return []
 	var rev: Array[Vector2i] = [best]
@@ -143,17 +190,61 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 			rev.push_front(c)
 	return rev
 
-func _pop_lowest_f(open: Array[Vector2i], g: Dictionary, goal: Vector2i) -> Vector2i:
-	var best_i := 0
-	var best_f := INF
-	for i in open.size():
-		var f: float = g.get(open[i], INF) + _h(open[i], goal)
-		if f < best_f:
-			best_f = f
-			best_i = i
-	var cell := open[best_i]
-	open.remove_at(best_i)
-	return cell
+const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+var _hf := PackedFloat64Array()
+var _hs := PackedInt64Array()
+var _hc: Array[Vector2i] = []
+
+func _heap_less(f1: float, s1: int, f2: float, s2: int) -> bool:
+	return f1 < f2 or (f1 == f2 and s1 < s2)
+
+func _heap_push(f: float, s: int, c: Vector2i) -> void:
+	var i := _hc.size()
+	_hf.append(f)
+	_hs.append(s)
+	_hc.append(c)
+	while i > 0:
+		var p := (i - 1) >> 1
+		if not _heap_less(_hf[i], _hs[i], _hf[p], _hs[p]):
+			break
+		_heap_swap(i, p)
+		i = p
+
+func _heap_pop() -> Vector2i:
+	var top := _hc[0]
+	var last := _hc.size() - 1
+	_heap_swap(0, last)
+	_hf.remove_at(last)
+	_hs.remove_at(last)
+	_hc.remove_at(last)
+	var n := last
+	var i := 0
+	while true:
+		var l := 2 * i + 1
+		var r := l + 1
+		var m := i
+		if l < n and _heap_less(_hf[l], _hs[l], _hf[m], _hs[m]):
+			m = l
+		if r < n and _heap_less(_hf[r], _hs[r], _hf[m], _hs[m]):
+			m = r
+		if m == i:
+			break
+		_heap_swap(i, m)
+		i = m
+	return top
+
+func _heap_swap(a: int, b: int) -> void:
+	if a == b:
+		return
+	var tf := _hf[a]
+	_hf[a] = _hf[b]
+	_hf[b] = tf
+	var ts := _hs[a]
+	_hs[a] = _hs[b]
+	_hs[b] = ts
+	var tc := _hc[a]
+	_hc[a] = _hc[b]
+	_hc[b] = tc
 
 func _h(a: Vector2i, b: Vector2i) -> float:
 	return absf(a.x - b.x) + absf(a.y - b.y)
