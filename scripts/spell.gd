@@ -173,15 +173,18 @@ class_name Spell
 @export var hammer_dice_every: int = 0
 @export var hammer_dice_tables: Array[RewardTable] = []
 
-## #514: the cast shape, inferred in ONE place from which optional fields are
-## set (it used to be re-derived by an if/elif chain in SpellCaster,
-## SpellDescription and StatSheet). Precedence is the old chain's: hammer,
-## shield, rain, splash, then plain projectile. NONE: no projectile shape
-## (a bubble-only or terrain/summon cast). An explicit exported mode is a
-## later step; this keeps behavior identical for every existing .tres.
-enum CastMode { NONE, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE }
+## #514: authored spells choose their cast shape explicitly in resource data.
+## Keep the existing numeric values stable for consumers of CastMode.
+## LEGACY_INFERRED supports code-built Spell specs during caller migration;
+## every authored spell resource sets a concrete mode instead.
+enum CastMode { LEGACY_INFERRED = -1, NONE = 0, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE }
+
+@export var mode: CastMode = CastMode.LEGACY_INFERRED
 
 func cast_mode() -> CastMode:
+	if mode != CastMode.LEGACY_INFERRED:
+		return mode
+	# Compatibility for code-built specs only: preserve the old precedence.
 	if hammer_radius > 0.0:
 		return CastMode.HAMMER
 	if shield_radius > 0.0:

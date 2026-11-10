@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 5
 spell_name = "Warlord Orb"
 cooldown = 0.0
 damage = 8.0

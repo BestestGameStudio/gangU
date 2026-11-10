@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 0
 spell_name = "Summon Ally"
 cooldown = 5.0
 projectile_count = 0

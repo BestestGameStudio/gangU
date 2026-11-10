@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 5
 spell_name = "Spirit Punch"
 cooldown = 0.8
 damage = 30.0

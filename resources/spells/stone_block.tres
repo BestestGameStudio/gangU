@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_spell")
+mode = 0
 spell_name = "Stone Block"
 cooldown = 3.0
 damage = 0.0
