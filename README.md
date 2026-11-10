@@ -24,7 +24,7 @@ Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE
 - `resources/` - data: spells, enemies, rewards, terrain maps and palettes, gate offering.
 - `assets/` - art and audio.
 - `tools/showcase/` - scripted gameplay recordings; `tools/sprites/` - sprite packing tools.
-- `.github/workflows/` - web build/deploy and the Claude agent jobs (ARCHITECTURE.md D20).
+- `.github/workflows/` - web build/deploy, the test gate and the Claude agent jobs (ARCHITECTURE.md D20).
 - `build/` - local export output, git-ignored.
 
 ## Controls
@@ -88,11 +88,11 @@ The game must load into the hub with no console errors.
 ## Testing
 
 Harnesses are `scripts/test*.gd` scripts that `extend SceneTree`, plus the fixture scenes listed in
-`SCENE_TESTS` in `tools/run_tests.gd`. A harness passes when its process exits 0.
+`SCENE_TESTS` in `tools/run_tests.gd`. A harness passes when its process exits 0 with no script diagnostics.
 
 Run them with the runner. It runs each harness in its own `--headless --fixed-fps 60` process, in
 parallel, with a per-test timeout, then prints a summary. It exits 1 if any harness fails, times out
-or fails to load:
+or reports a script error or fails to load:
 
 ```bash
 godot --headless --path . --script res://tools/run_tests.gd -- terrain mustache   # name filters (substring, any match)
