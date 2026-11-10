@@ -156,7 +156,7 @@ func _engage_leg() -> void:
 	await _frames(6)
 	var idle_cues := mv.cues_played
 	fx.player.global_position = e.global_position + Vector2(200, 0) # inside 460
-	await _frames(6)
+	await _frames(2) # < chatter_min (0.05 s): the bark is still the latest cue
 	_check("engage: player close plays the spotted bark once", mv.last_state == &"combat" and mv.last_alias == &"combat_spotted")
 	var after_spot := mv.cues_played
 	await _frames(4)
@@ -167,7 +167,7 @@ func _engage_leg() -> void:
 	fx.player.global_position = e.global_position + Vector2(2000, 0)
 	await _frames(6)
 	fx.player.global_position = e.global_position + Vector2(200, 0)
-	await _frames(6)
+	await _frames(2)
 	_check("engage: re-engage barks again", mv.last_alias == &"combat_spotted")
 	_check("engage: idle timer did not fire while engaged", mv.cues_played >= idle_cues)
 	await _teardown(fx)
