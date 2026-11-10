@@ -169,7 +169,8 @@ func _initialize() -> void:
 	_check(uh != null and uh.text == "Upgrades", "(4) Upgrades header on selection")
 	var ub := upgrade_box.find_children("*", "UpgradeCard", true, false)[0] as UpgradeCard
 	_check(ub != null and ub.name_label.text == "Path One", "(4) upgrade path button (got '%s')" % (ub.name_label.text if ub != null else "null"))
-	_check(_border_of(ub) == C_UPGRADE, "(4) upgrade button amber")
+	# #451: card border is the target tier's rank color; a tier-less path reads as Base (silver).
+	_check(_border_of(ub) == UiStyle.RANK_COLORS[0], "(4) tier-less upgrade card has the Base rank border")
 
 	# (5) rearrange flow end-to-end (#441: hold-and-drag only; the drag
 	# lands in _rearrange_slots): drag AlphaBolt from slot 1 to slot 3.

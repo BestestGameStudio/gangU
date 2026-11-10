@@ -61,6 +61,9 @@ func _run() -> void:
 	_check(in_new_ring > in_old, "new ring is populated at the old density (%d new-ring vs %d old-field items)" % [in_new_ring, in_old])
 	# existing world untouched: every decor item inside the OLD inner blob
 	# keeps its exact kind, position and size (hash pinned from main).
+	# #446 re-pinned: spreading the gates out moved their roads, pads and
+	# guard beats (decor clear zones), so the old-field decor changed with
+	# them by design.
 	var poly := PackedVector2Array()
 	for i in 64:
 		var a := TAU * i / 64.0
@@ -71,7 +74,7 @@ func _run() -> void:
 		if Geometry2D.is_point_in_polygon(d["at"], poly):
 			lines.append("%s %s %s" % [d["kind"], d["at"], d["r"]])
 	lines.sort()
-	_check("\n".join(lines).md5_text() == "3bd6588285fee186c069c9711cde5ea0", "old-field decor identical to main (%d items, hash-pinned)" % lines.size())
+	_check("\n".join(lines).md5_text() == "102c8692992e1f144aeccb49bf63f7e4", "old-field decor identical to main (%d items, hash-pinned)" % lines.size())
 
 	# clear zones hold across the whole field
 	var clear_ok := true

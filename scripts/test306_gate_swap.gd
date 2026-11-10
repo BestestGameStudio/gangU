@@ -65,6 +65,10 @@ func _run() -> void:
 	# transport, so the gate is pinned NORMAL after its own _ready roll.
 	if gate != null:
 		gate.gate_type = Gate.GateType.NORMAL
+		# #446: the production gate now sits far west of the arrival point;
+		# this driver tests transport, not layout, so it walks into the
+		# gate at its pre-#446 spot next to the spawn.
+		gate.position = Vector2(300, 380)
 	_check("Overworld has production NORMAL gate with a target", gate != null and gate.gate_type == Gate.GateType.NORMAL and gate.target_dungeon != null)
 	if gate == null or gate.target_dungeon == null:
 		await _finish()

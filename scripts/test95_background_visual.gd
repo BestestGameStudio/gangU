@@ -90,8 +90,9 @@ func _initialize() -> void:
 	_check(hub.get_node("PlayerSpawn").position == Vector2(576, 480), "hub PlayerSpawn untouched")
 	# #346: the dungeon gates moved to the overworld at the same coordinates.
 	var ow: Node2D = load("res://scenes/overworld.tscn").instantiate()
-	_check(ow.get_node("GateNormal").position == Vector2(300, 380), "overworld GateNormal at the old hub spot")
-	_check(ow.get_node("GateRed").position == Vector2(852, 380), "overworld GateRed at the old hub spot")
+	# #446: spread out across the expanded field (hand-placed, west / east).
+	_check(ow.get_node("GateNormal").position == Vector2(-1100, 50), "overworld GateNormal at its #446 spot")
+	_check(ow.get_node("GateRed").position == Vector2(2252, 50), "overworld GateRed at its #446 spot")
 	ow.free()
 
 	# ---- DUNGEONS ----

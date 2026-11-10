@@ -35,6 +35,11 @@ const ARRIVAL_R := 74.0
 const DECOR_STEP := 120.0
 const ROAD_CLEAR := 70.0
 const GATE_CLEAR := 150.0
+## #446: decor also keeps this far from every entrance-guard post and patrol
+## loop, so a solid tree can never sit on a patrol's beat wherever its gate
+## is placed (gates were spread across the field and their guards moved
+## with them).
+const PATROL_CLEAR := 70.0
 
 const GRASS := Color(0.16, 0.22, 0.17)
 const GRASS_DARK := Color(0.13, 0.18, 0.14)
@@ -55,6 +60,8 @@ var spawn := Vector2(576, 480)
 var landmarks: Array[Vector2] = []
 ## Each road is a polyline from the arrival point to one gate.
 var roads: Array[PackedVector2Array] = []
+## #446: entrance-guard beats (closed loops; a lone post is a 1-point loop).
+var patrols: Array[PackedVector2Array] = []
 var patches: Array[PackedVector2Array] = []
 var patch_colors := PackedColorArray()
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
@@ -111,6 +118,7 @@ func build_from(area: Node) -> void:
 				landmarks.append((c as Node2D).position)
 	for i in landmarks.size():
 		roads.append(_road(spawn, landmarks[i], i))
+	_collect_patrols(area)
 	_build_patches()
 	_build_decor()
 	_plant_tree_collision(area)
@@ -210,12 +218,43 @@ func _plant_tree_collision(area: Node) -> void:
 	map.set_cells(cells)
 	map.set_projectile_blockers(blockers)
 
+## #446: reads every EntranceGuards carrier under the area's
+## "EntranceGuards" container: each entry's post plus its patrol route.
+func _collect_patrols(area: Node) -> void:
+	patrols.clear()
+	var holder := area.get_node_or_null("EntranceGuards") if area != null else null
+	if holder == null:
+		return
+	for g in holder.get_children():
+		if not g is AreaSpawnData:
+			continue
+		for entry: Dictionary in (g as AreaSpawnData).entries:
+			var loop := PackedVector2Array([entry.get("position", Vector2.ZERO)])
+			for q in entry.get("route", []):
+				loop.append(q)
+			patrols.append(loop)
+
+## Distance from p to the nearest entrance-guard post or patrol loop.
+func patrol_distance(p: Vector2) -> float:
+	var best := INF
+	for loop in patrols:
+		var n := loop.size()
+		if n == 1:
+			best = minf(best, p.distance_to(loop[0]))
+		for i in n:
+			var a := loop[i]
+			var b := loop[(i + 1) % n]
+			best = minf(best, p.distance_to(Geometry2D.get_closest_point_to_segment(p, a, b)))
+	return best
+
 func _clear_spot(p: Vector2) -> bool:
 	if p.distance_to(spawn) < GATE_CLEAR:
 		return false
 	for l in landmarks:
 		if p.distance_to(l) < GATE_CLEAR:
 			return false
+	if patrol_distance(p) <= PATROL_CLEAR:
+		return false
 	return road_distance(p) > ROAD_CLEAR
 
 func _build_decor() -> void:

@@ -132,8 +132,7 @@ func _pin_icon(b: Button, left: float) -> SpellIcon:
 ## nothing). Reads the path's own tier when the provider exposes one;
 ## providers without a tier field degrade to no suffix. Display-only.
 func _tier_suffix(path) -> String:
-	var tier: Variant = path.get("tier") if path is Resource else null
-	match int(tier) if tier != null else 0:
+	match _path_tier(path):
 		1:
 			return " [S]"
 		2:
@@ -141,6 +140,12 @@ func _tier_suffix(path) -> String:
 		3:
 			return " [G]"
 	return ""
+
+## Tier the path upgrades INTO (0 Base .. 3 Signature); 0 when the provider
+## exposes no tier. Shared by the [S]/[M]/[G] suffix and the #451 card border.
+func _path_tier(path) -> int:
+	var tier: Variant = path.get("tier") if path is Resource else null
+	return clampi(int(tier), 0, UiStyle.RANK_COLORS.size() - 1) if tier != null else 0
 
 ## #255: rank border tier for an owned spell (Base when the provider has no
 ## tier accessor); empty slots show none.
@@ -437,6 +442,8 @@ func _refresh() -> void:
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
 			b.setup(path.display_name + _tier_suffix(path), description, needs_token)
+			# #451: border in the color of the tier this upgrade leads into.
+			b.set_border_color(UiStyle.RANK_COLORS[_path_tier(path)])
 			var pid = path.id
 			if needs_token:
 				b.pressed.connect(func(): _on_token_upgrade_pressed(pid))

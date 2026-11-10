@@ -178,6 +178,38 @@ func projectile_block_t(from: Vector2, motion: Vector2) -> float:
 			best = t
 	return best
 
+## #443: LOW cover a lobbed shot arcs over (Daniel 2026-11-09: "rocks go
+## over low cover only (barricades, trees). Maze walls and stone blocks
+## still block them"). Low = a TREE cell, or a cell planted under an #407
+## overworld-tree circle (the #391 rule: cell centre inside the canopy, or
+## the tree's own cell). Every other solid cell - OBSTACLE walls, MOUNTAIN,
+## BLOCK stone blocks, palette walls - is high cover.
+func is_low_cover_cell(cell: Vector2i) -> bool:
+	if tile_type_at_cell(cell) == TerrainTypes.TREE:
+		return true
+	if _shot_blockers.is_empty():
+		return false
+	var centre := cell_to_world(cell)
+	for c in _shot_blockers:
+		var at := Vector2(c.x, c.y)
+		if centre.distance_to(at) <= c.z or world_to_cell(at) == cell:
+			return true
+	return false
+
+## #443: true when a lobbed shot from `from` to `to` would be stopped by high
+## cover (a projectile-blocking cell that is not low cover). Half-cell
+## sampling, the starting cell ignored - the Projectile._terrain_events idiom.
+func lob_blocked(from: Vector2, to: Vector2) -> bool:
+	var start := world_to_cell(from)
+	var samples := maxi(1, ceili(from.distance_to(to) / (cell_size * 0.5)))
+	for i in range(1, samples + 1):
+		var cell := world_to_cell(from.lerp(to, float(i) / float(samples)))
+		if cell == start:
+			continue
+		if type_properties(tile_type_at_cell(cell))["blocks_projectiles"] and not is_low_cover_cell(cell):
+			return true
+	return false
+
 ## --- THE lookup seam (downstream consumes only from here) ---
 
 func world_to_cell(world_pos: Vector2) -> Vector2i:
