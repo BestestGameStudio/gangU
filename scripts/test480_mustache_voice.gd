@@ -87,7 +87,7 @@ func _unit_leg() -> void:
 const IDLE_BAND := Vector2(550, 0)
 
 func _make_fixture(with_short_timers: bool = true, player_offset: Vector2 = Vector2(6000, 6000)) -> Dictionary:
-	# Bare-area fixture after the record463 idiom: real player.tscn and
+	# Bare-area fixture: real player.tscn and
 	# enemy.tscn, collisions off, explicit player_path wiring.
 	var area := Node2D.new()
 	root.add_child(area)
