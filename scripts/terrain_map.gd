@@ -83,6 +83,9 @@ const _SWIMMABLE := 2
 const _FALLING := 4
 const _BLOCKS_PROJECTILES := 8
 const _CONCEALS := 16
+## Bumped on every write to the cell store or the palette; lets readers
+## (TerrainPath) reuse an answer computed on an unchanged map.
+var revision: int = 0
 var _type_flags: Dictionary = {} ## StringName -> int (_WALKABLE | ...)
 var _type_props: Dictionary = {} ## StringName -> read-only Dictionary
 ## #407: solid circles that stop projectiles (overworld trees). World-space
@@ -119,6 +122,7 @@ func set_cell(cell: Vector2i, type: StringName) -> bool:
 		_cells.erase(cell)
 	else:
 		_cells[cell] = type
+	revision += 1
 	_rebuild_presentation()
 	return true
 
@@ -135,12 +139,14 @@ func set_cells(cells: Dictionary) -> bool:
 			_cells.erase(cell)
 		else:
 			_cells[cell] = type
+	revision += 1
 	_rebuild_presentation()
 	return true
 
 ## Restores a cell to the flat-world default (GROUND).
 func clear_cell(cell: Vector2i) -> void:
 	_cells.erase(cell)
+	revision += 1
 	_rebuild_presentation()
 
 ## The single entry point every damage source calls when it hits terrain.
@@ -364,6 +370,7 @@ func _set_palette(value: TerrainPalette) -> void:
 	palette = value
 	_type_flags.clear()
 	_type_props.clear()
+	revision += 1
 	if palette != null:
 		var errors := palette.validate()
 		if not errors.is_empty():

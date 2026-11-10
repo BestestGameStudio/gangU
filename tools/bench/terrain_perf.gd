@@ -111,11 +111,11 @@ func _bench() -> void:
 		times.sort()
 		print("BENCH A* blocked pairs<=12 (run %d) n=%d p50 %.1f us p90 %.1f us max %.1f us total %.1f ms" % [run, times.size(), times[times.size() / 2], times[int(times.size() * 0.9)], times[-1], _sum(times) / 1000.0])
 	var far := p + Vector2(32 * 40, 32 * 10)
-	_t("TerrainPath._find_path far goal (cap)", 5, func(): return tp._find_path(map, p, far, false))
-	_t("TerrainPath.steer unreachable target", 50, func():
-		var s := TerrainPath.new()
-		for i in 15:
-			s.steer(map, p, Vector2.ZERO, Vector2(100, 0), far, 100.0, 1.0 / 60.0))
+	_t("TerrainPath._find_path far goal (cap)", 5, func(): return TerrainPath.new()._find_path(map, p, far, false))
+	var parked := TerrainPath.new()
+	_t("steer: 1 s (60 frames) parked, far target", 3, func():
+		for f in 60:
+			parked.steer(map, p, Vector2.ZERO, (far - p).normalized() * 100.0, far, 100.0, 1.0 / 60.0))
 	var ty := map.tile_type_at_cell(some_cell)
 	_t("TerrainMap.set_cell overworld", 5, func(): return map.set_cell(some_cell, ty))
 	var mcells := mmap.assigned_cells()

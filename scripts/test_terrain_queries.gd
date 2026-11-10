@@ -42,8 +42,38 @@ func _initialize() -> void:
 	var b := m.type_properties(TerrainTypes.WATER)
 	_check(not b["walkable"] and not (b["element_tags"] as Array).has(&"lava") and not m.is_walkable_at_cell(_cell_of(m, TerrainTypes.WATER)), "type_properties is a writable copy; mutating it changes nothing")
 	m.free()
+	_path_memo_leg()
 	print("[queries] ", "RESULT: ALL PASS" if failures == 0 else "RESULT: %d FAILED" % failures)
 	quit(1 if failures > 0 else 0)
+
+## TerrainPath reuses its last answer only for the same query on an
+## unchanged map: a cell write or palette swap forces a fresh search.
+func _path_memo_leg() -> void:
+	var m := TerrainMap.new()
+	m.cell_size = 32
+	root.add_child(m)
+	var wall := {}
+	for y in range(-6, 7):
+		wall[Vector2i(0, y)] = TerrainTypes.OBSTACLE
+	m.set_cells(wall)
+	var from := m.cell_to_world(Vector2i(-3, 0))
+	var to := m.cell_to_world(Vector2i(3, 0))
+	var tp := TerrainPath.new()
+	var first := tp._find_path(m, from, to)
+	first.clear()
+	var again := tp._find_path(m, from, to)
+	_check(again.size() > 7 and again == TerrainPath.new()._find_path(m, from, to), "repeat query returns the same detour as a fresh search, as a copy (%d cells)" % again.size())
+	m.set_cell(Vector2i(0, 0), TerrainTypes.GROUND)
+	var opened := tp._find_path(m, from, to)
+	_check(opened == TerrainPath.new()._find_path(m, from, to) and opened.size() == 6, "a cell write invalidates the reused answer (%d cells after opening the wall)" % opened.size())
+	var pits := TerrainPalette.new()
+	var pit := TerrainTile.new()
+	pit.id = TerrainTypes.GROUND
+	pit.movement = F
+	pits.tiles = [pit]
+	m.palette = pits
+	_check(tp._find_path(m, from, to).is_empty(), "a palette swap invalidates the reused answer (ground made a pit: no route)")
+	m.free()
 
 func _cell_of(m: TerrainMap, type: StringName) -> Vector2i:
 	var c := Vector2i(100, 100)
