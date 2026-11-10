@@ -8,6 +8,7 @@ var description_label: Label
 var action_label: Label
 var splash: Control
 var _content: VBoxContainer
+var border_color: Color = UiStyle.B_ACCENT
 
 class PlaceholderSplash extends Control:
 	var tint := Color(0.95, 0.75, 0.25)
@@ -73,6 +74,12 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 	splash.queue_redraw()
 	tooltip_text = "%s\n%s\n%s" % [upgrade_name, description, action_label.text]
 	call_deferred("_fit_content")
+
+## #451: restyle the card border (Daniel: the color of the tier the card
+## upgrades into, from UiStyle.RANK_COLORS). Default stays B_ACCENT.
+func set_border_color(color: Color) -> void:
+	border_color = color
+	UiStyle.style_button(self, color, 10)
 
 func _process(_delta: float) -> void:
 	_fit_content()
