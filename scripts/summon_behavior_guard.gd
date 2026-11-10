@@ -69,6 +69,7 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 				OnHit.report(summon, null, target, hit, OnHit.DELIVERY_CONTACT, receipt) # #390
 				_contact_timer = def.contact_cooldown
 		summon.move_and_slide()
+		_hit_blocking_barricade(summon, def)
 		return
 	# (b) RETURN - no live enemies: follow a too-far player.
 	if player != null and is_instance_valid(player):
@@ -80,6 +81,24 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 	# (c) Hold position.
 	summon.velocity = Vector2.ZERO
 	summon.move_and_slide()
+
+## #420: a player-owned summon pressed against a barricade on its way to an
+## enemy hits the barricade with its contact attack (barricades take any
+## player-sourced damage). Shares the contact cooldown with enemy hits.
+func _hit_blocking_barricade(summon: Summon, def) -> void:
+	if _contact_timer > 0.0 or not Barricade.is_player_side(summon):
+		return
+	for i in summon.get_slide_collision_count():
+		var b := summon.get_slide_collision(i).get_collider() as Barricade
+		if b == null or not is_instance_valid(b) or b.hp <= 0:
+			continue
+		var hit := DamageCalc.compute(def.contact_damage, summon.damage_modifiers, null, summon.damage_rng)
+		var receipt := OnHit.begin(b)
+		b.apply_damage(hit.amount, hit.crit_tier)
+		OnHit.end(receipt, b)
+		OnHit.report(summon, null, b, hit, OnHit.DELIVERY_CONTACT, receipt)
+		_contact_timer = def.contact_cooldown
+		return
 
 # #280: no range gate - the nearest live enemy anywhere is the target.
 func _nearest_enemy(summon: Summon) -> Enemy:

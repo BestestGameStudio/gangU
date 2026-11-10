@@ -194,6 +194,30 @@ func physics_step(owner: EnemyBehaviorChaseContact, enemy: Enemy, player, delta:
 					_state = State.SEEK
 					_away_timer = 0.0
 
+# --- #420 seams (barricade deployer) ---------------------------------------
+
+## True while a cover is held or being travelled to.
+func has_cover() -> bool:
+	return _has_cover
+
+## True in the states where no cover is in use: looking for one (SEEK
+## without a pick) or plain chase (ENGAGED). CHARGE is a commitment (#414)
+## and is never interrupted.
+func is_uncovered() -> bool:
+	return not _has_cover and (_state == State.SEEK or _state == State.ENGAGED)
+
+## True when at least one viable cover spot toward the player exists
+## (the same candidate filter SEEK picks from).
+func viable_cover_exists(enemy: Enemy, player: Player) -> bool:
+	return not _cover_candidates(enemy, player).is_empty()
+
+## Re-enter SEEK with an immediate rescan (e.g. right after a barricade was
+## deployed, so it is picked up on this mover's next step).
+func seek_now() -> void:
+	_state = State.SEEK
+	_repick_timer = 0.0
+	_away_timer = 0.0
+
 # --- SEEK / DASH ------------------------------------------------------------
 
 func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta: float, fast: bool) -> void:
