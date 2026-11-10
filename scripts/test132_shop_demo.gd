@@ -31,7 +31,6 @@ func _ready() -> void:
 	_caster = SpellCaster.new()
 	_caster.name = "SpellCaster"
 	player.add_child(_caster)
-	player.add_to_group("player")
 	add_child(player)
 
 	var bag := Consumables.new()

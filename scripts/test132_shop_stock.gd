@@ -42,7 +42,6 @@ func _make_player() -> Player:
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	root.add_child(p)
 	return p
 

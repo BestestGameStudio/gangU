@@ -22,7 +22,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _on_body_entered(body: Node) -> void:
-	if body.is_in_group("player"):
+	if body is Player:
 		return
 	if body.has_method("apply_damage"):
 		body.apply_damage(damage)

@@ -74,7 +74,7 @@ func _process(delta: float) -> bool:
 				_check("sprite: NoseEdge dart accent hidden once sprite exists", not nose.visible)
 				if sprite == null:
 					print("[89] DONE fails=", fails)
-					quit()
+					quit(1 if fails > 0 else 0)
 					return true
 				var sf := sprite.sprite_frames
 				var frames_ok: bool = sf != null and sf.get_animation_names().size() == 8
@@ -194,5 +194,5 @@ func _process(delta: float) -> bool:
 				if fails == 0:
 					print("[89] ALL PASS")
 				print("[89] DONE fails=", fails)
-				quit()
+				quit(1 if fails > 0 else 0)
 	return false

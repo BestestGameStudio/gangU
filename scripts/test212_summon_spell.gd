@@ -39,7 +39,6 @@ func _initialize() -> void:
 
 	# --- production composition: real player scene + manager wiring ---
 	var player: Player = load("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	stage.add_child(player)
 	player.global_position = Vector2(600, 600)
 	var manager := SummonManager.new()

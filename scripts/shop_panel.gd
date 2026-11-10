@@ -1,5 +1,5 @@
 class_name ShopPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#129, foundation C2) Shop choice panel. Hidden by default; the hub
 ## vendor opens it on walk-up and closes it on walk-away (Daniel,
 ## 2026-11-07). Shows the shop's STOCK: a spell the player already owns
@@ -15,8 +15,7 @@ extends CanvasLayer
 ## price resets arrive live through Shop.stock_refreshed.
 ##
 ## UI is code-built; the look comes from UiStyle.
-## While visible the panel joins "modal_ui" so the caster skips casting on
-## panel clicks (EquipPanel idiom). Found via the "shop_panel" group.
+## ModalPanel: no casting while open. Found via the "shop_panel" group.
 
 const ROW_PAD := 6.0
 const OUT_OF_STOCK_TEXT := "OUT OF STOCK"
@@ -51,12 +50,10 @@ func _ready() -> void:
 
 func open() -> void:
 	_render()
-	visible = true
-	add_to_group("modal_ui") # caster cast-guard hook (EquipPanel idiom)
+	_set_shown(true)
 
 func close() -> void:
-	visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
 
 func _build_skeleton() -> void:
 	var backdrop := Panel.new()

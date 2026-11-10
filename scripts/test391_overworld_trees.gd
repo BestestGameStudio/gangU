@@ -114,7 +114,6 @@ func _initialize() -> void:
 
 	# --- (C) enemy pathfinding around a tree ---
 	var player: Player = load("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	area.add_child(player)
 	player.global_position = t + Vector2(0, 120)
 	var enemy: Enemy = load("res://scenes/enemy.tscn").instantiate()

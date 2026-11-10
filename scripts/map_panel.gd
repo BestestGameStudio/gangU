@@ -1,5 +1,5 @@
 class_name MapPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#347) The map, toggled with M (Esc also closes). Shows a WorldMap's
 ## explored terrain for the current area, centered on the player when it
 ## opens, and lets the player draw on it and place their own markers.
@@ -8,8 +8,8 @@ extends CanvasLayer
 ##   - Tools: Draw (freehand ink), Marker (pick one of four symbols, click to
 ##     place), Erase (click/drag removes nearby marks). RMB erases with any
 ##     tool. Limits live on WorldMap (provisional caps).
-##   - Does NOT pause (EquipPanel/Tab idiom). While open it joins "modal_ui"
-##     so map clicks never cast spells.
+##   - Does NOT pause (EquipPanel/Tab idiom). A ModalPanel, so map clicks
+##     never cast spells.
 ## Everything shown comes from WorldMap; this panel never looks at gates,
 ## portals or enemies (details are player-marked only, #347 settled).
 ##
@@ -82,16 +82,14 @@ func open() -> void:
 		return
 	_set_view(&"")
 	canvas.cancel_interaction() # never resume a drag from a previous opening
-	visible = true
-	add_to_group("modal_ui")
+	_set_shown(true)
 	_refresh()
 
 func close() -> void:
 	# The hidden canvas never sees a release that happens while closed, so
 	# drop the drag here (PR #355 review: ghost stroke on reopen).
 	canvas.cancel_interaction()
-	visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
 
 func set_tool(t: MapCanvas.Tool) -> void:
 	canvas.tool = t

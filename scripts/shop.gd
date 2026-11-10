@@ -48,7 +48,7 @@ signal purchased(entry: ShopEntry)
 signal stock_refreshed()
 
 ## Explicit wiring convention (matches SpellProgress/HUD): set before tree
-## entry; the "player" group fallback applies otherwise.
+## entry; the Player.find fallback applies otherwise.
 @export var caster_path: NodePath
 ## #131: optional explicit provider; lazy resolution supports later mount.
 @export var owned_relics_path: NodePath
@@ -79,7 +79,7 @@ func _ready() -> void:
 	if caster_path != NodePath(""):
 		_caster = get_node_or_null(caster_path) as SpellCaster
 	if _caster == null:
-		var player := get_tree().get_first_node_in_group("player")
+		var player := Player.find(get_tree())
 		if player != null:
 			_caster = player.get_node_or_null("SpellCaster") as SpellCaster
 	if refresh_schedule == null:
@@ -157,6 +157,10 @@ func on_dungeon_victory() -> void:
 ## boss spells (head_bolt, warlord_orb - Daniel 2026-11-09: "Do not keep
 ## enemy spells"), so each stock is Daniel's "3 Random from the pool";
 ## ownership exclusion still applies per-draw.
+## (#496, Colin 2026-11-10) NARROWED: only BASE spells are sold. Any spell
+## that is a SpellUpgrade result_spell (resources/upgrades/*.tres, e.g.
+## Heavy Rain) is an upgraded variant earned through use and is left out
+## of the catalog; test496/test466/test129 enforce this from upgrade data.
 func _reroll_stock() -> void:
 	var pool := offerable_entries()
 	pool.shuffle()

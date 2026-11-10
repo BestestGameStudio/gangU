@@ -57,10 +57,13 @@ func _process(delta: float) -> bool:
 					else:
 						print("[FAN] real projectiles diverge in flight OK (spread ", snappedf(spread, 0.1), " deg)")
 				print("[FAN] ", "PASS" if ok else "FAIL")
+				quit(0 if ok else 1)
 				return true
 		_:
+			quit(0 if ok else 1)
 			return true
 	if t > 4.0:
-		print("[FAN] FAIL timeout")
+		print("[FAN] FAIL timeout"); ok = false
+		quit(0 if ok else 1)
 		return true
 	return false

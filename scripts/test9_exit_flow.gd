@@ -19,6 +19,12 @@ var t := 0.0
 var fixture: Node
 var fixture_portal: ExitPortal
 var fixture_entered := false
+var fails := 0
+
+func _verdict(ok: bool) -> String:
+	if not ok:
+		fails += 1
+	return "PASS" if ok else "FAIL"
 
 func _initialize() -> void:
 	scene = load("res://scenes/main.tscn").instantiate()
@@ -52,14 +58,14 @@ func _process(delta: float) -> bool:
 				var obj = area.get_node_or_null("DungeonObjective")
 				print("[9] PROD after NORMAL gate area=", area.name, " portal=", portal != null,
 					" locked=", portal.locked if portal else "?", " objective=", obj.progress() if obj else "?",
-					" -> ", "PASS" if area.name == "DungeonA" and portal and not portal.locked and obj and obj.progress() == Vector2i(0, 6) else "FAIL") # 3 + 2 slimes + #464 Fishy
+					" -> ", _verdict(area.name == "DungeonA" and portal and not portal.locked and obj and obj.progress() == Vector2i(0, 7))) # 3 + 2 slimes + 2 Fishy (#490)
 				portal._on_body_entered(p)
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
 				print("[9] PROD normal retreat area=", scene.current_area.name, " hp=", p.hp,
 					" same_caster=", p.get_node("SpellCaster") == caster,
-					" -> ", "PASS" if scene.current_area.name == "Overworld" and p.hp == 42 and p.get_node("SpellCaster") == caster else "FAIL")
+					" -> ", _verdict(scene.current_area.name == "Overworld" and p.hp == 42 and p.get_node("SpellCaster") == caster))
 				# --- labeled FIXTURE: red lock-in regression (not production config) ---
 				# #378: the retreat landed in the guarded overworld; the fixture's
 				# objective counts the global "enemies" group, so park in the hub.
@@ -76,11 +82,11 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				var obj = fixture.get_node_or_null("DungeonObjective")
 				print("[9] FIXTURE red lock-in: portal locked=", fixture_portal.locked, " objective=", obj.progress() if obj else "?",
-					" -> ", "PASS" if fixture_portal.locked and obj and obj.progress() == Vector2i(0, 3) else "FAIL")
+					" -> ", _verdict(fixture_portal.locked and obj and obj.progress() == Vector2i(0, 3)))
 				var fp: Player = fixture.get_node_or_null("Player")
 				if fp:
 					fixture_portal._on_body_entered(fp) # must be ignored while locked
-				print("[9] FIXTURE locked entry ignored -> ", "PASS" if not fixture_entered else "FAIL")
+				print("[9] FIXTURE locked entry ignored -> ", _verdict(not fixture_entered))
 				for e in fixture.get_tree().get_nodes_in_group("enemies"):
 					e.apply_damage(999) # synthetic fixture kills
 				phase = 4; t = 0
@@ -88,11 +94,11 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				var obj = fixture.get_node("DungeonObjective")
 				print("[9] FIXTURE cleared=", obj.is_cleared(), " portal locked=", fixture_portal.locked,
-					" -> ", "PASS" if obj.is_cleared() and not fixture_portal.locked else "FAIL")
+					" -> ", _verdict(obj.is_cleared() and not fixture_portal.locked))
 				var fp: Player = fixture.get_node_or_null("Player")
 				if fp:
 					fixture_portal._on_body_entered(fp)
-				print("[9] FIXTURE unlocked entry emits -> ", "PASS" if fixture_entered else "FAIL")
+				print("[9] FIXTURE unlocked entry emits -> ", _verdict(fixture_entered))
 				fixture.queue_free()
 				# back to production: death restarts the run
 				p.apply_damage(999)
@@ -103,7 +109,7 @@ func _process(delta: float) -> bool:
 				p = scene.get_node("Player")
 				caster = p.get_node("SpellCaster")
 				print("[9] PROD death restart area=", scene.current_area.name, " hp=", p.hp,
-					" -> ", "PASS" if scene.current_area.name == "Hub" and p.hp == 100 else "FAIL")
+					" -> ", _verdict(scene.current_area.name == "Hub" and p.hp == 100))
 				_enter_gate("GateRed", Gate.GateType.RED) # #350 pin
 				phase = 6; t = 0
 		6:
@@ -114,7 +120,7 @@ func _process(delta: float) -> bool:
 				# so its portal is LOCKED (D12 clear-or-die) until the Warlord dies.
 				print("[9] PROD after RED gate area=", area.name, " portal=", portal != null,
 					" locked=", portal.locked if portal else "?",
-					" -> ", "PASS" if area.name == "DungeonB" and portal and portal.locked else "FAIL")
+					" -> ", _verdict(area.name == "DungeonB" and portal and portal.locked))
 				if portal:
 					portal._on_body_entered(p) # must be ignored while locked
 				for e in get_nodes_in_group("enemies"):
@@ -122,14 +128,14 @@ func _process(delta: float) -> bool:
 				phase = 61; t = 0
 		61:
 			if t > 0.3:
-				print("[9] PROD red locked entry ignored -> ", "PASS" if scene.current_area.name == "DungeonB" else "FAIL")
+				print("[9] PROD red locked entry ignored -> ", _verdict(scene.current_area.name == "DungeonB"))
 				for b in get_nodes_in_group("boss"):
 					b.apply_damage(9999) # synthetic Warlord kill
 				phase = 62; t = 0
 		62:
 			if t > 0.3:
 				var portal2: ExitPortal = scene.current_area.get_node_or_null("ExitPortal")
-				print("[9] PROD red cleared -> portal unlocked -> ", "PASS" if portal2 and not portal2.locked else "FAIL")
+				print("[9] PROD red cleared -> portal unlocked -> ", _verdict(portal2 and not portal2.locked))
 				if portal2:
 					portal2._on_body_entered(p)
 				phase = 7; t = 0
@@ -137,7 +143,7 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				print("[9] PROD red retreat area=", scene.current_area.name, " hp=", p.hp,
 					" same_caster=", p.get_node("SpellCaster") == caster,
-					" -> ", "PASS" if scene.current_area.name == "Overworld" and p.hp == 100 and p.get_node("SpellCaster") == caster else "FAIL")
-				print("[9] DONE")
-				quit()
+					" -> ", _verdict(scene.current_area.name == "Overworld" and p.hp == 100 and p.get_node("SpellCaster") == caster))
+				print("[9] DONE fails=", fails)
+				quit(1 if fails > 0 else 0)
 	return false

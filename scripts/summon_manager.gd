@@ -15,7 +15,7 @@ signal spawn_refused(definition: SummonDefinition)
 signal summoned(summon: Summon)
 
 ## Explicit wiring convention (matches Shop/SpellProgress): set before tree
-## entry; the "player" group fallback applies otherwise.
+## entry; the Player.find fallback applies otherwise.
 @export var caster_path: NodePath
 ## Shared cap across ALL sources (Daniel, 2026-11-08). Human-tunable data,
 ## not a constant.
@@ -30,7 +30,7 @@ func _ready() -> void:
 	if caster_path != NodePath(""):
 		_caster = get_node_or_null(caster_path) as SpellCaster
 	if _caster == null:
-		var player := get_tree().get_first_node_in_group("player")
+		var player := Player.find(get_tree())
 		if player != null:
 			_caster = player.get_node_or_null("SpellCaster") as SpellCaster
 	if _caster != null:

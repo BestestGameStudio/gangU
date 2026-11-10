@@ -11,6 +11,7 @@ extends SceneTree
 
 class StubPlayer extends Player:
 	func _ready() -> void:
+		add_to_group(ActorCollision.PLAYER_GROUP)
 		hp = 100
 		max_hp = 100
 	func _process(_delta: float) -> void:
@@ -68,7 +69,6 @@ func _labels_without_suffix(hud: HUD) -> bool:
 func _initialize() -> void:
 	var hud_scene: PackedScene = load("res://scenes/hud.tscn")
 	var player := StubPlayer.new()
-	player.add_to_group("player")
 	root.add_child(player)
 	var caster := StubCaster.new()
 	caster.name = "SpellCaster"

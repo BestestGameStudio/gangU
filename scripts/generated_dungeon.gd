@@ -4,6 +4,9 @@ extends Node2D
 ## Main reads SpawnData only after add_child, so _ready fills it in time.
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemy.tscn")
+const FISHY_SCENE: PackedScene = preload("res://scenes/enemy_fishy.tscn")
+## #490: one waypoint in FISHY_EVERY gets a Fishy instead of a warrior.
+const FISHY_EVERY := 3
 const REWARD_TABLE: RewardTable = preload("res://resources/rewards/demo_table.tres")
 ## Waypoints closer than this (Chebyshev cells) to the spawn get no enemy,
 ## so arriving players are not attacked before they can move.
@@ -33,9 +36,12 @@ func _ready() -> void:
 		var from_spawn := (wp - spawn).abs()
 		if wp == exit or maxi(from_spawn.x, from_spawn.y) < MIN_ENEMY_SPAWN_DISTANCE:
 			continue
+		# #490: enemies 2, 5, 8, ... are Fishy: about one Fishy for every two
+		# Mustache Warriors (2 of the usual 5, where "every third" gives 1).
+		var fishy := entries.size() % FISHY_EVERY == 1
 		entries.append({
 			"position": to_local(_terrain.cell_to_world(wp)),
-			"enemy": ENEMY_SCENE,
+			"enemy": FISHY_SCENE if fishy else ENEMY_SCENE,
 			"reward_table": REWARD_TABLE,
 		})
 	_spawn_data.entries = entries

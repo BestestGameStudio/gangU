@@ -34,7 +34,6 @@ func _initialize() -> void:
 
 	var def: SummonDefinition = load("res://resources/summons/ally.tres")
 	var player: Player = load("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	stage.add_child(player)
 	player.global_position = Vector2(1000, 1000)
 	player.set_process(false)

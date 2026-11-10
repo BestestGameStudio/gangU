@@ -33,8 +33,8 @@ Area swaps reposition the existing Player at the area's `PlayerSpawn`; HP, spell
 *Where:* `scripts/main.gd` (`_swap`, `_on_gate_entered`, `_on_exit_portal_entered`).
 
 ### D6. Explicit wiring beats group lookups in production
-The production Player is in **no group**. Cross-node references are exported NodePaths (`player_path`, `objective_path`) set **before** the node enters the tree, resolved in `_ready`. Group lookup remains only as a fallback so older test fixtures keep working; ReviveSatchel has no fallback at all (accepted #6/#12 contract - a missing `player_path` is an error, not a silent idle).
-*Where:* `scripts/main.gd`, `scripts/hud.gd`, `scripts/enemy.gd`, `scripts/run_manager.gd`, `scripts/revive_satchel.gd`; gap history in #34.
+Cross-node references are exported NodePaths (`player_path`, `objective_path`) set **before** the node enters the tree, resolved in `_ready`. Every Player joins the `players` group (`ActorCollision.PLAYER_GROUP`) in `_ready`; when a node has no explicit wiring (test fixtures), `Player.find(tree)` is the one fallback lookup. There is no other player group. ReviveSatchel has no fallback at all (accepted #6/#12 contract - a missing `player_path` is an error, not a silent idle).
+*Where:* `scripts/player.gd` (`find`), `scripts/main.gd`, `scripts/hud.gd`, `scripts/enemy.gd`, `scripts/run_manager.gd`, `scripts/revive_satchel.gd`; gap history in #34.
 
 ### D7. Single HP mutation entry points
 `Player.apply_damage()` / `Player.heal()` and `Enemy.apply_damage()` are the only places HP changes. Each clamps and emits `health_changed`; `died()` fires exactly once at HP 0. `heal()` works from HP 0 (the revive path).

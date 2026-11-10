@@ -37,27 +37,10 @@ var _t := 0.0
 var _landed := false
 var _ring_t := 0.0
 var _ball: AnimatedSprite2D
-var _freeze_count := 0
+var freeze := FreezeHold.new()
 
-## Freeze contract: balanced claims from FreezeBubble.
 func set_frozen(frozen: bool) -> void:
-	var was := _freeze_count
-	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
-	if _ball == null or not is_instance_valid(_ball):
-		return
-	if _freeze_count > 0 and was == 0:
-		# pause() alone does not hold an AnimatedSprite2D; stop its processing.
-		_ball.pause()
-		_ball.process_mode = Node.PROCESS_MODE_DISABLED
-	elif _freeze_count == 0 and was > 0:
-		_ball.process_mode = Node.PROCESS_MODE_INHERIT
-		_ball.play()
-
-func is_frozen() -> bool:
-	return _freeze_count > 0
-
-func freeze_count() -> int:
-	return _freeze_count
+	freeze.apply(frozen, _ball)
 
 ## Ask every live bubble to claim me (shared with WaterRain).
 static func claim_by_bubbles(node: Node2D) -> void:
@@ -95,7 +78,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	claim_by_bubbles(self)
-	if _freeze_count > 0:
+	if freeze.is_frozen():
 		return
 	if _landed:
 		_ring_t += delta

@@ -137,16 +137,23 @@ var facing: StringName = &"down"
 ## bare player.tscn instances (test arenas), which keep the legacy Body dart.
 @onready var sprite: AnimatedSprite2D = get_node_or_null("WizardSprite")
 
+## Fallback when a node has no explicit player wiring: the first Player in
+## the tree (every Player joins ActorCollision.PLAYER_GROUP in _ready).
+static func find(tree: SceneTree) -> Player:
+	return tree.get_first_node_in_group(ActorCollision.PLAYER_GROUP) as Player
+
 func _ready() -> void:
 	base_max_hp = max_hp
 	hp = max_hp
 	damage_rng.randomize()
-	# #290: players never physically block or push enemies. The "players"
-	# group is collision-only (targeting still uses explicit wiring / the
-	# legacy "player" group); deferred so same-frame enemies are registered.
+	# #290: the ignore is deferred so same-frame enemies are registered.
 	add_to_group(ActorCollision.PLAYER_GROUP)
 	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
 	stats.changed.connect(_on_stat_changed)
+	# #499: every attack/spell cast from inside tall grass reveals the player.
+	var caster := get_node_or_null("SpellCaster") as SpellCaster
+	if caster != null:
+		caster.spell_cast.connect(_on_spell_cast_reveal)
 	if sprite != null:
 		# Legacy dart hull + its nose accent both retire when the wizard art
 		# carries the player visual; the AimIndicator is aim, not hull, and
@@ -391,8 +398,31 @@ const CONCEALED_ALPHA := 0.55
 func is_concealed() -> bool:
 	return TallGrass.conceals_at(terrain, global_position)
 
+## #499 (Colin): attacking while in tall grass reveals the player's position
+## to every enemy, regardless of range, bosses included. Every attack or spell
+## cast counts; the reveal lasts until the player leaves the grass. Enemies
+## then run their normal logic (Enemy.sees treats a revealed player as seen).
+var _grass_revealed := false
+
+func _on_spell_cast_reveal(_spell: Spell) -> void:
+	if is_concealed():
+		_grass_revealed = true
+
+## True while the player is in tall grass AND has attacked since entering it.
+## Leaving the grass clears the reveal (checked here too, so a reader never
+## sees a stale flag between frames).
+func is_grass_revealed() -> bool:
+	if _grass_revealed and not is_concealed():
+		_grass_revealed = false
+	return _grass_revealed
+
+## Hidden from enemies outside the grass: concealed and not revealed.
+func is_hidden_in_grass() -> bool:
+	return is_concealed() and not is_grass_revealed()
+
 func _process(_delta: float) -> void:
-	modulate.a = CONCEALED_ALPHA if is_concealed() else 1.0
+	# #499: a revealed player is drawn opaque again - they can be seen.
+	modulate.a = CONCEALED_ALPHA if is_hidden_in_grass() else 1.0
 	# Face the mouse cursor; manual aim only.
 	var aim_dir := global_position.direction_to(get_global_mouse_position())
 	if aim_dir.length_squared() > 0.0:

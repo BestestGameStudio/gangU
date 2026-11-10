@@ -41,6 +41,16 @@ func _role(e: Enemy) -> String:
 		return "guard"
 	return "other"
 
+## #461: the overworld's hashed tall-grass patches hide the player, which
+## also drops aggro. Leash legs measure distance only, so they stand the
+## player on open ground at that distance.
+func _open_ground(viewer: Enemy, from: Vector2, dist: float) -> Vector2:
+	for i in 16:
+		var at := from + Vector2.DOWN.rotated(TAU * i / 16.0) * dist
+		if not TallGrass.conceals_at(viewer.sight_map(), at):
+			return at
+	return from + Vector2.DOWN * dist
+
 ## #478: the overworld's day bird dives an idle player in the open on its
 ## own clock. These flow legs assert #414 guard/patrol/migrant roles only,
 ## so the bird and its driver are removed on entry.
@@ -221,10 +231,10 @@ func _flow_legs() -> void:
 	p.global_position = pt.global_position + Vector2(0, -120)
 	await _frames(20)
 	_check(pb.engaged, "(E) a patrol engages a player inside its aggro radius")
-	p.global_position = pb.engaged_from + Vector2(0, 700)
+	p.global_position = _open_ground(pt, pb.engaged_from, 700.0)
 	await _frames(30)
 	_check(pb.engaged, "(E) #414: still chasing at 700px (past the old 520 leash)")
-	p.global_position = pb.engaged_from + Vector2(0, 1400)
+	p.global_position = _open_ground(pt, pb.engaged_from, 1400.0)
 	await _frames(4)
 	_check(not pb.engaged, "(E) the patrol gives up past its 900px chase distance")
 	var wp_before := pb.waypoint
