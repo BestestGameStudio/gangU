@@ -10,6 +10,7 @@
 radius = 13.0
 
 [node name="Bird" type="CharacterBody2D"]
+z_index = 1
 script = ExtResource("1")
 definition = ExtResource("4_def")
 
