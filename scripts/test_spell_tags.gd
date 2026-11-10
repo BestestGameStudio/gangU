@@ -50,4 +50,5 @@ func _initialize() -> void:
 	print("[TAGS] ", "PASS" if ok else "FAIL")
 
 func _process(_delta: float) -> bool:
+	quit(0 if ok else 1)
 	return true

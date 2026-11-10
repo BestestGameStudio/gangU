@@ -71,18 +71,21 @@ The game must load to the boot screen with no console errors.
 
 ## Testing
 
-Harnesses are `scripts/test*.gd` (`extends SceneTree`) plus `scenes/test*.tscn` fixtures:
+Harnesses are `scripts/test*.gd` scripts that `extend SceneTree`, plus the fixture scenes listed in
+`SCENE_TESTS` in `tools/run_tests.gd`. A harness passes when its process exits 0.
+
+Run them with the runner. It runs each harness in its own `--headless --fixed-fps 60` process, in
+parallel, with a per-test timeout, then prints a summary. It exits 1 if any harness fails, times out
+or fails to load:
 
 ```bash
-godot --headless --path . --script res://scripts/testNNN_topic.gd      # one harness
-GANGU_AUTOTEST=1 godot --headless --path . res://scenes/testNNN_x.tscn --quit-after 2400
+godot --headless --path . --script res://tools/run_tests.gd -- terrain mustache   # name filters (substring, any match)
+godot --headless --path . --script res://tools/run_tests.gd -- test348 -j 4 --timeout 120
+godot --headless --path . --script res://tools/run_tests.gd -- --list            # show what would run
 ```
 
-macOS has no `timeout`; wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`. Count `-> FAIL` and `SCRIPT ERROR` lines.
-
-**Known baseline noise (main, 2026-11-08):** a full run of every harness and fixture prints
-about 189-190 `SCRIPT ERROR`s, all one pre-existing "freed player `physics_step`" error from
-the `test_objective_flow` fixture, and `test_run_restart` (the restart guard) fails
-intermittently. Compare your run against this instead of rebuilding a copy of main to
-re-baseline. While iterating, run only the harnesses you touched; run the full suite once at
-the end. Anything beyond this baseline is yours.
+- While iterating locally, pass a filter for the area you changed. The `Tests` workflow
+  (`.github/workflows/tests.yml`) runs the whole suite on every pull request and on every push to `main`.
+- Debug maps, demo drivers and movie drivers (the `extends Node2D` scripts behind `scenes/test*.tscn`,
+  plus `test245_visual` and `test290_visual`) are not harnesses, and the runner skips them.
+- One harness by hand: `godot --headless --fixed-fps 60 --path . --script res://scripts/testNNN_topic.gd`.

@@ -127,11 +127,13 @@ func _process(delta: float) -> bool:
 			if t > 0.3:
 				_check("locked: entry blocked (no entered signal)", not entered_emitted)
 				_check("locked: still in DungeonB", scene.current_area.name == "DungeonB")
-				# DungeonB mounts 3 spawned mobs (#177) gating the warlord boss.
-				# Kill them via the public damage path - a shortcut, not
-				# natural combat; the boss then spawns (deferred add).
+				# DungeonB mounts its SpawnData mobs (#177, #472 Fishy) gating the
+				# warlord boss. Kill them via the public damage path - a shortcut,
+				# not natural combat; the boss then spawns (deferred add).
 				var mobs := get_nodes_in_group("enemies")
-				_check("DungeonB mounts its 3 objective mobs", mobs.size() == 3)
+				var spawn_entries: int = scene.current_area.get_node("SpawnData").entries.size()
+				_check("DungeonB mounts one objective mob per SpawnData entry (got %d of %d)" % [mobs.size(), spawn_entries],
+					spawn_entries > 0 and mobs.size() == spawn_entries)
 				for e in mobs:
 					e.apply_damage(999999)
 				phase = 3; t = 0
@@ -166,5 +168,5 @@ func _finish() -> bool:
 	if fails == 0:
 		print("[204] ALL PASS")
 	print("[204] DONE fails=", fails)
-	quit()
+	quit(1 if fails > 0 else 0)
 	return true
