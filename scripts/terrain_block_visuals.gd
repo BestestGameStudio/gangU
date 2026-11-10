@@ -10,17 +10,29 @@ extends Node2D
 ## one-shot when the map reports the cell destroyed. Presentation only: no
 ## placement, damage or walkability behavior lives here, so refused casts,
 ## one-hit destroy and movement rules are exactly #216/#169's.
+## #437 (Daniel, 2026-11-09: stone-block terrain invisible in the
+## overworld): the map may also be named by `map_path` instead of being
+## this node's parent, so an area whose Terrain node is hidden (the
+## overworld's collision-only grid, #391) can still show the block - a
+## child of an invisible node never renders.
 
 const FRAMES: SpriteFrames = preload("res://resources/sprites/terrain_block_frames.tres")
 const CELL_PX := 64.0 ## art cell edge; scaled to the map's cell_size
+
+## #437: optional path to the TerrainMap to mirror. Empty = the parent,
+## the original dungeon wiring.
+@export var map_path: NodePath
 
 var _map: TerrainMap = null
 var _standing: Dictionary = {} ## Vector2i -> AnimatedSprite2D (create or intact)
 
 func _ready() -> void:
-	_map = get_parent() as TerrainMap
+	if map_path != NodePath(""):
+		_map = get_node_or_null(map_path) as TerrainMap
 	if _map == null:
-		push_warning("TerrainBlockVisuals: parent is not a TerrainMap; idling")
+		_map = get_parent() as TerrainMap
+	if _map == null:
+		push_warning("TerrainBlockVisuals: no TerrainMap at map_path or as parent; idling")
 		set_physics_process(false)
 		return
 	_map.cell_destroyed.connect(_on_cell_destroyed)
