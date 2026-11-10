@@ -63,7 +63,7 @@ func _init() -> void:
 	action_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
 	action_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_content.add_child(action_label)
-	for child in find_children("*", "Control", true, false):
+	for child: Control in find_children("*", "Control", true, false):
 		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func setup(upgrade_name: String, description: String, use_token: bool, tint: Color = UiStyle.B_ACCENT) -> void:
