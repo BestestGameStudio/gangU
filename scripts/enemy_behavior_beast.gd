@@ -55,7 +55,6 @@ const SCREAM_TIME: float = 0.55
 var _hits: int = 0
 var _lunges: int = 0
 var _screams: int = 0
-var _contact_timer: float = 0.0
 
 # --- BossBehavior hooks ------------------------------------------------------
 
@@ -128,19 +127,6 @@ func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
 			enemy.play_action(&"aoe", true)
 
 # --- CHASE -------------------------------------------------------------------
-
-func _chase(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
-	var dist: float = to_player.length()
-	enemy.velocity = to_player.normalized() * enemy.speed if dist > 8.0 else Vector2.ZERO
-	_contact_timer = maxf(0.0, _contact_timer - delta)
-	if dist <= enemy.contact_range and _contact_timer <= 0.0:
-		player.apply_damage(enemy.contact_damage)
-		_contact_timer = enemy.contact_cooldown
-		_face(enemy, to_player.x)
-		enemy.play_action(&"attack")
-	_attack_timer -= delta
-	if _attack_timer <= 0.0:
-		_start_windup(enemy, _pick_attack(dist), to_player, tele)
 
 func _pick_attack(dist: float) -> int:
 	var pick: int = Attack.SCREAM if dist < SCREAM_RANGE else Attack.LUNGE
