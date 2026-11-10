@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://bgangu5enemy"]
+[gd_scene load_steps=6 format=3 uid="uid://bgangu5enemy"]
 
 [ext_resource type="Script" path="res://scripts/enemy.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/enemy_sprite.gd" id="2_sprite"]
 [ext_resource type="SpriteFrames" uid="uid://bgangu177mwframes" path="res://resources/sprites/mustache_warrior_frames.tres" id="3_frames"]
+[ext_resource type="Script" path="res://scripts/mustache_voice.gd" id="4_voice"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 13.0
@@ -25,3 +26,8 @@ script = ExtResource("2_sprite")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("1")
+
+[node name="MustacheVoice" type="Node2D" parent="."]
+script = ExtResource("4_voice")
+
+[node name="Player" type="AudioStreamPlayer2D" parent="MustacheVoice"]
