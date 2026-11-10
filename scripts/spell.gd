@@ -193,3 +193,10 @@ func cast_mode() -> CastMode:
 	if projectile_count > 0:
 		return CastMode.PROJECTILE
 	return CastMode.NONE
+
+## #514: the spell's stable identity: its .tres file name (fire_ball,
+## water_ball_guided, ...). Display names are not unique (all Spirit Punch
+## tiers share one), so code that needs "which spell" keys on this. Empty for a
+## Spell built in code with no resource file.
+func id() -> StringName:
+	return StringName(resource_path.get_file().get_basename())
