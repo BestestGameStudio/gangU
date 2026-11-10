@@ -123,6 +123,17 @@ func _teardown(fx: Dictionary) -> void:
 	fx.area.queue_free()
 	await _frames(3)
 
+func _guard_idle_leg() -> void:
+	# Guard/patrol (engaged flag): unaware at 260 px (> AGGRO 220, < 300) so
+	# the DEFAULT radius lets a rare idle cue play; 400 px and 900 px do not.
+	for case in [[Vector2(260, 0), true], [Vector2(400, 0), false], [Vector2(900, 0), false]]:
+		var fx := await _make_fixture(true, case[0])
+		fx.enemy._behavior = EnemyBehaviorGuard.new()
+		await _frames(12)
+		_check("guard idle default radius at %s px: idle=%s" % [case[0].x, case[1]], (fx.voice.last_state == &"idle") == case[1])
+		_check("guard idle at %s px never combat" % case[0].x, fx.voice.last_state != &"combat")
+		await _teardown(fx)
+
 func _idle_leg() -> void:
 	var fx := await _make_fixture(true, IDLE_BAND)
 	fx.voice.idle_hear_radius = TEST_HEAR
@@ -279,6 +290,7 @@ func _warlord_leg() -> void:
 func _run() -> void:
 	await _unit_leg()
 	await _idle_leg()
+	await _guard_idle_leg()
 	await _engage_leg()
 	await _attack_leg()
 	await _hurt_leg()
