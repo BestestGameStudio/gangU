@@ -88,30 +88,8 @@ func _ready() -> void:
 		_player = Player.find(get_tree())
 	if _player == null:
 		push_warning("Enemy: no player target (no player_path and no Player in the tree); standing idle.")
-	# #290: never physically block or push players (deferred so a Player added
-	# in the same frame has registered its group first).
-	_ignore_player_bodies.call_deferred()
-
-## #290: collision exceptions with every Player (plus the resolved target).
-## #279: also every Summon - enemies spawn continuously, so the late side
-## pairs itself here (summon.gd covers the cast-time direction).
-## #493: also every other enemy (bosses included) - enemies pass through and
-## stack on each other. The newcomer pairs with everyone already present, so
-## every pair is covered whatever the spawn order. Walls/terrain unchanged.
-func _ignore_player_bodies() -> void:
-	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
-	ActorCollision.ignore_group(self, &"summons")
-	ActorCollision.ignore_group(self, ActorCollision.ENEMY_GROUP)
-	if _player != null and is_instance_valid(_player):
-		ActorCollision.ignore_pair(self, _player)
-
-## #301: unpair on exit - a freed body otherwise leaves a stale entry in
-## peers' collision exception lists, and the engine logs
-## "Parameter \"body\" is null" the next time a peer reads its list.
-func _exit_tree() -> void:
-	for e in get_collision_exceptions():
-		if is_instance_valid(e):
-			e.remove_collision_exception_with(self)
+	# #515: players never block enemies (or each other) - layers/masks in the
+	# scene, see PhysicsLayers.
 
 ## #109: hit feedback - brief over-bright flash so a registered hit is
 ## visible even when the enemy survives (25 dmg vs 30 hp). Additive only.

@@ -66,18 +66,20 @@ func _initialize() -> void:
 	root.add_child(_root_node)
 
 	_enemy = MockFreezableBody.new()
-	_enemy.add_to_group(ActorCollision.ENEMY_GROUP)
+	_enemy.collision_layer = PhysicsLayers.ENEMY # #515: bubbles detect by layer
+	_enemy.add_to_group(PhysicsLayers.ENEMY_GROUP)
 	_enemy.add_child(_circle(8.0))
 	_root_node.add_child(_enemy)
 	_enemy.global_position = Vector2(100, 0)
 
 	_projectile = MockFreezableArea.new()
+	_projectile.collision_layer = PhysicsLayers.ENEMY_PROJECTILE
 	_projectile.add_child(_circle(4.0))
 	_root_node.add_child(_projectile)
 	_projectile.global_position = Vector2(50, 50)
 
 	_player = CharacterBody2D.new()
-	_player.add_to_group(ActorCollision.PLAYER_GROUP)
+	_player.add_to_group(PhysicsLayers.PLAYER_GROUP)
 	_player.add_child(_circle(8.0))
 	_root_node.add_child(_player)
 	_player.global_position = Vector2(0, 80)
@@ -105,6 +107,7 @@ func _physics_process(_delta: float) -> bool:
 				_check(_player.z_index > 100, "player raised above the veil while a bubble is active (stays colored inside)")
 				# deferred spawn: new projectile appears inside mid-life
 				_late_projectile = MockFreezableArea.new()
+				_late_projectile.collision_layer = PhysicsLayers.ENEMY_PROJECTILE
 				_late_projectile.add_child(_circle(4.0))
 				_root_node.add_child(_late_projectile)
 				_late_projectile.global_position = Vector2(-40, -40)

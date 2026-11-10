@@ -116,7 +116,7 @@ func _run() -> void:
 	_check(caster.get_unlocked().size() == n and not caster.get_unlocked().has(other), "reward drop of base after upgrade grants nothing")
 
 	# Fresh run (new caster) acquires normally.
-	player.remove_from_group(ActorCollision.PLAYER_GROUP)
+	player.remove_from_group(PhysicsLayers.PLAYER_GROUP)
 	var p2 := _make_player()
 	caster.unlock_spell(other)
 	_check(caster.get_unlocked().has(other), "fresh run caster acquires the spell again")

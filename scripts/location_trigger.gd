@@ -34,6 +34,8 @@ var fire_count := 0
 
 func _ready() -> void:
 	add_to_group("location_triggers")
+	collision_layer = PhysicsLayers.PICKUP # #515: sees only the Player
+	collision_mask = PhysicsLayers.TRIGGER_MASK
 	body_entered.connect(_on_body_entered)
 
 func id() -> StringName:

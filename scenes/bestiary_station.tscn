@@ -6,6 +6,8 @@
 size = Vector2(56, 56)
 
 [node name="BestiaryStation" type="Area2D"]
+collision_layer = 64
+collision_mask = 2
 script = ExtResource("1")
 panel_group = &"bestiary_panel"
 

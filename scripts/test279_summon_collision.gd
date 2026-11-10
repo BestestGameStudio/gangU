@@ -16,6 +16,11 @@ func _check(cond: bool, name: String) -> void:
 		failures += 1
 	print("[279] ", name, " -> ", "PASS" if cond else "FAIL")
 
+## #515: "passes through" = neither body's mask contains the other's layer
+## (replaces the old ActorCollision per-pair exceptions).
+func _passes_through(a: CollisionObject2D, b: CollisionObject2D) -> bool:
+	return (a.collision_mask & b.collision_layer) == 0 and (b.collision_mask & a.collision_layer) == 0
+
 func _frames(n: int) -> void:
 	for i in n:
 		await physics_frame
@@ -51,7 +56,7 @@ func _initialize() -> void:
 	ally.max_hp = 100000 # survives the enemy's return contact damage; a
 	ally.hp = 100000 # death would free the body mid-test (harness hygiene)
 	await _frames(2)
-	_check(ally.get_collision_exceptions().has(player) and player.get_collision_exceptions().has(ally), "summon<->player exception wired both directions")
+	_check(_passes_through(ally, player), "summon<->player layers/masks leave each other out")
 	await _frames(28)
 	_check(player.global_position.distance_to(Vector2(1000, 1000)) < 1.0, "summon cast onto the player: player never displaced")
 
@@ -66,7 +71,7 @@ func _initialize() -> void:
 	enemy.max_hp = 100000 # survives the contact-damage leg; a death would
 	enemy.hp = 100000 # free the body mid-test (harness hygiene, not scope)
 	await _frames(30)
-	_check(enemy.get_collision_exceptions().has(ally), "late-spawned enemy paired itself with the existing summon")
+	_check(_passes_through(enemy, ally), "late-spawned enemy passes through the existing summon")
 	_check(ally.global_position.distance_to(hold) < 8.0, "enemy on top of a holding summon: summon not displaced")
 	# The enemy chases the player THROUGH the summon's body: reach the
 	# player-adjacent ally without shoving it aside.
@@ -88,8 +93,8 @@ func _initialize() -> void:
 	stage.add_child(box)
 	box.global_position = Vector2(2000, 2000)
 	await _frames(10)
-	_check(not s1.get_collision_exceptions().has(s2), "summon-summon blocking preserved (no exception)")
-	_check(not s1.get_collision_exceptions().has(box), "summon-container blocking preserved (no exception)")
+	_check(not _passes_through(s1, s2), "summon-summon blocking preserved")
+	_check(not _passes_through(s1, box), "summon-container blocking preserved")
 	_check(s1.global_position.distance_to(box.global_position) > 4.0, "container body still pushes the summon out of its shape")
 	s1.global_position = Vector2(6000, 6400)
 	s2.global_position = Vector2(6000, 6800)
@@ -100,7 +105,7 @@ func _initialize() -> void:
 	player.global_position = Vector2(3000, 3000)
 	var s3: Summon = manager.request_spawn(def, Vector2(3400, 3000))
 	await _frames(2)
-	_check(player.get_collision_exceptions().has(s3), "control fixture: s3 is collision-excepted with the player")
+	_check(_passes_through(player, s3), "control fixture: s3 passes through the player")
 	var spell := Spell.new()
 	spell.spell_name = "Fixture Bolt"
 	spell.damage = 7.0
