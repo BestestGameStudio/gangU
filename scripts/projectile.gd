@@ -416,11 +416,33 @@ func _can_hit(body: Node2D) -> bool:
 		return not _hit_times.has(body) or _life_t - _hit_times[body] >= spell.rehit_delay
 	return not _hit_bodies.has(body)
 
+## #443: true for a LOBBED-tagged shot (mustache-man rocks). Read once
+## the spell is set; see SpellTags.LOBBED.
+var lobbed: bool:
+	get:
+		return spell != null and spell.tags.has(SpellTags.LOBBED)
+
+## #443: bodies a lobbed shot sails over instead of hitting: low cover
+## solids (the "cover" group - containers today, #420 barricades later) and,
+## for an enemy thrower, other enemies (a rock never lands on an ally).
+func _lobs_over(body: Node2D) -> bool:
+	if not lobbed:
+		return false
+	if body.is_in_group(&"cover"):
+		return true
+	return body is Enemy and is_instance_valid(source) and source is Enemy
+
+## #443: how far along its range this shot is (0..1) - drives the rock's arc.
+func travel_fraction() -> float:
+	return clampf(_traveled / spell.range, 0.0, 1.0) if spell != null and spell.range > 0.0 else 0.0
+
 func _on_body_entered(body: Node2D) -> void:
 	if is_queued_for_deletion():
 		return # #216 review: a shot already spent (e.g. on a block) hits nothing more
 	if body == source:
 		return
+	if _lobs_over(body):
+		return # #443: a lobbed rock flies over low cover and the thrower's allies
 	if not _can_hit(body):
 		return # #37: piercing re-contact never double-hits the same body
 	# #282: player-side spells IGNORE friendly summons - they neither damage
@@ -495,6 +517,17 @@ func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 		if seen.has(cell):
 			continue
 		seen[cell] = true
+		# #443: a lobbed shot arcs over low cover (trees, tree-canopy cells):
+		# no destroy, no interaction, no block. High cover falls through to
+		# the ordinary rules below and still stops it.
+		if lobbed and _terrain.is_low_cover_cell(cell):
+			continue
+		# #443 review: a stone BLOCK is high cover - a lobbed rock stops at its
+		# face and leaves it intact (Daniel: "stone blocks still block them"),
+		# instead of the #216 destroy-on-contact rule other shots follow.
+		if lobbed and TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+			events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell, "blocker": true})
+			continue
 		# #167: an element interaction (e.g. cold + water -> ice) takes
 		# priority over destruction for the same cell.
 		var interacts := _terrain.interaction_for_cell(cell, spell.tags) != null
@@ -556,7 +589,7 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 		params.motion = motion
 	for idx in hits.size():
 		var b: Node2D = hits[idx].get("collider")
-		if b == null or b == source or not _can_hit(b):
+		if b == null or b == source or not _can_hit(b) or _lobs_over(b):
 			continue
 		if overlapping.has(rids[idx]):
 			events.append({"t": 0.0, "body": b})
@@ -588,7 +621,9 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 	# #407/#433: solid cover (overworld trees, solid terrain cells). Stops
 	# EVERY shot - piercing and pierce_hits included - and is never damaged.
 	# A body reached first (or at the same t) still takes its hit.
-	if _terrain != null and is_instance_valid(_terrain):
+	# #443: those circles are all tree canopies (low cover): a lobbed shot
+	# arcs over them.
+	if _terrain != null and is_instance_valid(_terrain) and not lobbed:
 		var bt := _terrain.projectile_block_t(from, motion)
 		if bt >= 0.0:
 			events.append({"t": bt, "blocker": true})
