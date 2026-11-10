@@ -102,8 +102,10 @@ func _initialize() -> void:
 	_check(EquipPanel.PANEL_HEIGHT < 620.0, "(1) fixed height trimmed from 620 (now %.0f)" % EquipPanel.PANEL_HEIGHT)
 	var plate_r := panel._plate.get_global_rect()
 	_check(is_equal_approx(plate_r.size.y, EquipPanel.PANEL_HEIGHT), "(1) plate is exactly the trimmed height")
-	var last_slot_bottom := panel._slot_buttons[5].get_global_rect().end.y
-	_check(plate_r.end.y - last_slot_bottom < 120.0, "(1) slack below the spell slots < 120px (was ~330; now %.0f)" % (plate_r.end.y - last_slot_bottom))
+	# #427 rebase: the space below the slots is now the relics section, not
+	# empty slack, so the hug check measures against the menu's last block.
+	var last_block_bottom := panel._relics_box.get_global_rect().end.y
+	_check(plate_r.end.y - last_block_bottom < 120.0, "(1) slack below the relics section < 120px (was ~330; now %.0f)" % (plate_r.end.y - last_block_bottom))
 	# Viewport fit is pinned on the real scene by test416 (this stub
 	# harness's CenterContainer lags the root.size override, which is a
 	# harness quirk, not panel behavior).

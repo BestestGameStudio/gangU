@@ -113,7 +113,9 @@ func _initialize() -> void:
 	# title + columns (#416 moved the upgrades into the columns' detail
 	# column, under the stats, where the status line used to sit below).
 	_check(_selected_texts(panel).is_empty(), "(1) no 'Selected' text with nothing selected (got %s)" % str(_selected_texts(panel)))
-	_check(vbox != null and vbox.get_child_count() == 2, "(1) panel rows: title + columns (got %d)" % (vbox.get_child_count() if vbox != null else -1))
+	# #427 rebase: the relics section (separator + box) is now the bottom
+	# block, so the rows are title + columns + separator + relics.
+	_check(vbox != null and vbox.get_child_count() == 4 and vbox.get_child(3) == panel._relics_box, "(1) panel rows: title + columns + relics section (got %d)" % (vbox.get_child_count() if vbox != null else -1))
 	_check(panel._upgrade_box.get_parent() == panel._detail_box, "(1) upgrade box lives in the detail column")
 	_check(panel._detail_box.get_child(panel._detail_box.get_child_count() - 1) == panel._upgrade_box, "(1) upgrade box is the last detail-column row (under the stats)")
 	_check(grid.title() == "Stats", "(1) stat grid shows player stats")
