@@ -133,7 +133,10 @@ with the right word.
 
 ## 11. Tests run in CI, not locally
 
-- Instincts do not create, edit, or run tests locally. The test suite runs in CI; the
-  CI results on the exact head are the test evidence a PR cites (section 4).
+- Daniel's instruction (2026-11-09) for Instincts working on his behalf (`instinct-dc`):
+  do not create or run tests locally. The test suite runs in CI; the CI results on the
+  exact head are the test evidence a PR cites (section 4).
+- Other owners' Instincts follow their own owner's rule on local tests, and adopt this
+  one only if their owner says so.
 - The one-line `test407` relax merged in #547 was a one-off owner-approved exception,
   not a precedent.
