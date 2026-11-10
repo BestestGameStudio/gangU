@@ -78,6 +78,10 @@ godot --headless --path . --script res://scripts/testNNN_topic.gd      # one har
 GANGU_AUTOTEST=1 godot --headless --path . res://scenes/testNNN_x.tscn --quit-after 2400
 ```
 
+Every `.gd` script needs its `.gd.uid` committed next to it (generate it with Godot 4.5.1, e.g.
+`godot --headless --path . --import`). `scripts/test519_uid_files.gd` fails on a tracked `.gd`
+without a tracked `.uid`, or on an orphan `.uid`.
+
 macOS has no `timeout`; wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`. Count `-> FAIL` and `SCRIPT ERROR` lines.
 
 **Known baseline noise (main, 2026-11-08):** a full run of every harness and fixture prints
