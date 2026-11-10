@@ -56,6 +56,7 @@ func _make_wallet(start: int) -> CurrencyWallet:
 
 func _make_shop(entries: Array[ShopEntry]) -> Shop:
 	shop = Shop.new()
+	shop.stock_size = 4 # these panel legs cover the #132 4-slot mechanics; #466's production default is 3
 	var catalog := ShopCatalog.new()
 	catalog.entries = entries
 	shop.setup(catalog)
@@ -98,11 +99,25 @@ func _process(_delta: float) -> bool:
 	return false
 
 func _run_legs() -> void:
-	## 1. Placeholder catalog DATA leg.
+	## 1. Catalog DATA leg (#466): every spell in the game is in the pool at
+	## a flat 10c - one entry per resources/spells/*.tres, no dupes.
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
-	_check(demo.entries.size() == 1, "demo catalog has one entry")
-	_check(demo.entries[0].good is Spell and demo.entries[0].good.spell_name == "Placeholder Bolt", "entry good is Placeholder Bolt spell")
-	_check(demo.entries[0].price == 10, "entry placeholder price 10")
+	var spell_files: Array[String] = []
+	for f in DirAccess.open("res://resources/spells").get_files():
+		if f.ends_with(".tres"):
+			spell_files.append(f)
+	_check(demo.entries.size() == spell_files.size(), "catalog holds every spell resource (%d)" % spell_files.size())
+	var seen: Array[Resource] = []
+	var all_spells_flat10 := true
+	var bolt_found := false
+	for e in demo.entries:
+		if not (e.good is Spell) or e.price != 10 or seen.has(e.good):
+			all_spells_flat10 = false
+		seen.append(e.good)
+		if e.good is Spell and e.good.spell_name == "Placeholder Bolt":
+			bolt_found = true
+	_check(all_spells_flat10, "every entry is a distinct Spell at the flat price 10")
+	_check(bolt_found, "Placeholder Bolt stays in the pool")
 
 	## Shared fixture: player+caster, wallet(10), shop [fire_ball, bolt].
 	var p := _make_player()

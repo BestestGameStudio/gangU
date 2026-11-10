@@ -78,6 +78,7 @@ func _build_shop(entries: Array[ShopEntry]) -> void:
 	if shop != null:
 		shop.free()
 	shop = Shop.new()
+	shop.stock_size = 4 # #132/#428 slot mechanics pinned at 4; #466's production default is 3
 	var catalog := ShopCatalog.new()
 	catalog.entries = entries
 	shop.setup(catalog)
