@@ -6,8 +6,9 @@ extends SceneTree
 ## - a moving player passes straight through an idle enemy (no block/push),
 ## - both spawn orders (player first / enemy first) get the exceptions,
 ## - production wiring (player in NO "player" group, player_path target) works,
-## - controls: player still blocked by a StaticBody2D, enemies still collide
-##   with each other, contact damage and projectile hits unchanged.
+## - controls: player still blocked by a StaticBody2D, contact damage and
+##   projectile hits unchanged. (e) now asserts #493: enemies pass through
+##   each other (see test493_enemy_overlap.gd).
 
 var failures := 0
 
@@ -117,16 +118,16 @@ func _initialize() -> void:
 	wall.queue_free()
 	await _frames(2)
 
-	# --- (e) control: enemies still collide with each other ---
+	# --- (e) #493 supersedes the old control: enemies pass through each other ---
 	var p5 := _player(stage, Vector2(3000, 3000))
 	var ea := _enemy(stage, Vector2(1500, 1500))
 	var eb := _enemy(stage, Vector2(1600, 1500))
 	await _frames(2)
 	ea.set_physics_process(false)
 	eb.set_physics_process(false)
-	_check(not ea.get_collision_exceptions().has(eb), "no exception between two enemies")
+	_check(ea.get_collision_exceptions().has(eb), "#493: exception between two enemies")
 	var hits5 := await _drive(ea, Vector2(200, 0), 40, eb)
-	_check(hits5 > 0 and ea.global_position.x < 1600.0 - 20.0, "enemy still blocked by another enemy (x=%.1f)" % ea.global_position.x)
+	_check(hits5 == 0 and ea.global_position.x > 1600.0, "#493: enemy passes through another enemy (x=%.1f)" % ea.global_position.x)
 	ea.queue_free()
 	eb.queue_free()
 	p5.queue_free()
