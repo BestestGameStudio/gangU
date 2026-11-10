@@ -2,7 +2,7 @@ extends SceneTree
 ## #350 headless driver: a dungeon offering's NORMAL/RED type is decided by
 ## chance (no rank system), and the existing semantics follow the rolled type.
 ## #346: the offering gates live in the overworld, so each leg enters it via
-## main.enter_overworld() before touching gates;
+## main.area_loader.enter_overworld() before touching gates;
 ## NORMAL allows retreat, RED locks the player in until the objective clears.
 ## The production distribution is 50/50 (Colin, 2026-11-08), rolled once per
 ## run per gate and fixed until death. Legs:
@@ -46,9 +46,9 @@ func _shutdown(main: Node) -> void:
 
 ## #346: dungeon gates (and their #350 offerings) live in the overworld.
 func _enter_overworld(main: Node) -> Node:
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
-	return main.current_area
+	return main.area_loader.current_area
 
 func _run() -> void:
 	_roll_leg()
@@ -105,8 +105,8 @@ func _prod_leg(offering: GateOffering) -> void:
 	_check("prod: both gates rolled a valid NORMAL/RED type",
 		gn != null and gr != null and gn.gate_type in valid and gr.gate_type in valid)
 	_check("prod: rolls recorded per gate on Main", gn != null and gr != null
-		and main._offering_rolls.get(&"GateNormal") == gn.gate_type
-		and main._offering_rolls.get(&"GateRed") == gr.gate_type)
+		and main.area_loader._offering_rolls.get(&"GateNormal") == gn.gate_type
+		and main.area_loader._offering_rolls.get(&"GateRed") == gr.gate_type)
 	var gb := ow.get_node_or_null("GateBoss") as Gate
 	var gg := ow.get_node_or_null("GateGenerated") as Gate
 	_check("prod: boss and generated gates are not chance offerings", gb != null and gb.offering == null and gg != null and gg.offering == null)
@@ -139,14 +139,14 @@ func _red_leg() -> void:
 	var main := await _boot()
 	await _enter_overworld(main)
 	var p: Player = main.get_node("Player")
-	var gate := main.current_area.get_node_or_null("GateNormal") as Gate
+	var gate := main.area_loader.current_area.get_node_or_null("GateNormal") as Gate
 	_check("red: GateNormal rolled RED", gate != null and gate.gate_type == Gate.GateType.RED)
 	_check("red: label/tint show RED", gate != null and (gate.get_node("TypeLabel") as Label).text == "RED"
 		and (gate.get_node("ColorRect") as ColorRect).color == Gate.RED_TINT)
-	_check("red: GateRed rolled RED too", (main.current_area.get_node("GateRed") as Gate).gate_type == Gate.GateType.RED)
+	_check("red: GateRed rolled RED too", (main.area_loader.current_area.get_node("GateRed") as Gate).gate_type == Gate.GateType.RED)
 	gate._on_body_entered(p)
 	await _frames(6)
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	_check("red: entered DungeonA", area.name == &"DungeonA")
 	var portal := area.get_node_or_null("ExitPortal") as ExitPortal
 	_check("red: DungeonA portal LOCKED (lock-in until objective)", portal != null and portal.locked)
@@ -158,7 +158,7 @@ func _red_leg() -> void:
 	portal.entered.connect(func(_x): left[0] = true)
 	portal._on_body_entered(p)
 	await _frames(4)
-	_check("red: retreat blocked while locked", not left[0] and main.current_area == area)
+	_check("red: retreat blocked while locked", not left[0] and main.area_loader.current_area == area)
 	for _round in 8: # #392: slimes split, keep killing until none remain
 		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
 		if alive.is_empty():
@@ -170,19 +170,19 @@ func _red_leg() -> void:
 	_check("red: objective clear unlocks the portal", not portal.locked)
 	portal._on_body_entered(p)
 	await _frames(6)
-	_check("red: exit returns to the overworld entrance after clearing (#378)", left[0] and main.current_area.name == &"Overworld")
+	_check("red: exit returns to the overworld entrance after clearing (#378)", left[0] and main.area_loader.current_area.name == &"Overworld")
 	await _shutdown(main)
 
 func _normal_leg() -> void:
 	var main := await _boot()
 	await _enter_overworld(main)
 	var p: Player = main.get_node("Player")
-	var gate := main.current_area.get_node_or_null("GateRed") as Gate
+	var gate := main.area_loader.current_area.get_node_or_null("GateRed") as Gate
 	_check("normal: GateRed rolled NORMAL", gate != null and gate.gate_type == Gate.GateType.NORMAL)
 	_check("normal: label shows NORMAL", gate != null and (gate.get_node("TypeLabel") as Label).text == "NORMAL")
 	gate._on_body_entered(p)
 	await _frames(6)
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	_check("normal: entered DungeonB", area.name == &"DungeonB")
 	var portal := area.get_node_or_null("ExitPortal") as ExitPortal
 	_check("normal: DungeonB portal UNLOCKED (retreat allowed)", portal != null and not portal.locked)
@@ -190,7 +190,7 @@ func _normal_leg() -> void:
 	if portal != null:
 		portal._on_body_entered(p)
 		await _frames(6)
-		_check("normal: retreat to the overworld entrance before clearing (#378)", main.current_area.name == &"Overworld")
+		_check("normal: retreat to the overworld entrance before clearing (#378)", main.area_loader.current_area.name == &"Overworld")
 	await _shutdown(main)
 
 func _finish() -> void:

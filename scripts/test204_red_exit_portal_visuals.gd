@@ -94,18 +94,18 @@ func _process(delta: float) -> bool:
 		0:
 			if scene.get_node_or_null("Player") != null and t > 0.4:
 				p = scene.get_node("Player")
-				_check("hub boot", scene.current_area.name == "Hub")
+				_check("hub boot", scene.area_loader.current_area.name == "Hub")
 				_check_flat_leg()
-				scene.enter_overworld() # #346: dungeon entrances live in the overworld
-				var red: Gate = scene.current_area.get_node_or_null("GateRed")
+				scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+				var red: Gate = scene.area_loader.current_area.get_node_or_null("GateRed")
 				_check("overworld: red gate present", red != null)
 				red.gate_type = Gate.GateType.RED # #350 pin: offerings roll 50/50 per run (test350 covers the roll)
 				red._on_body_entered(p)
 				phase = 1; t = 0
 		1:
 			if t > 0.5:
-				_check("red-gate entry into DungeonB", scene.current_area.name == "DungeonB")
-				portal = scene.current_area.get_node_or_null("ExitPortal")
+				_check("red-gate entry into DungeonB", scene.area_loader.current_area.name == "DungeonB")
+				portal = scene.area_loader.current_area.get_node_or_null("ExitPortal")
 				_check("portal present", portal != null)
 				if portal == null:
 					return _finish()
@@ -126,12 +126,12 @@ func _process(delta: float) -> bool:
 		2:
 			if t > 0.3:
 				_check("locked: entry blocked (no entered signal)", not entered_emitted)
-				_check("locked: still in DungeonB", scene.current_area.name == "DungeonB")
+				_check("locked: still in DungeonB", scene.area_loader.current_area.name == "DungeonB")
 				# DungeonB mounts its SpawnData mobs (#177, #472 Fishy) gating the
 				# warlord boss. Kill them via the public damage path - a shortcut,
 				# not natural combat; the boss then spawns (deferred add).
 				var mobs := get_nodes_in_group("enemies")
-				var spawn_entries: int = scene.current_area.get_node("SpawnData").entries.size()
+				var spawn_entries: int = scene.area_loader.current_area.get_node("SpawnData").entries.size()
 				_check("DungeonB mounts one objective mob per SpawnData entry (got %d of %d)" % [mobs.size(), spawn_entries],
 					spawn_entries > 0 and mobs.size() == spawn_entries)
 				for e in mobs:

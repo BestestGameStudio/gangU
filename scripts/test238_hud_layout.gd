@@ -182,8 +182,8 @@ func _initialize() -> void:
 	caster.assign_slot(4, seeded_now[1])
 	var player_loadout: Array = caster.get_slots()
 	var objective := hud.get_node("Root/ObjectiveLabel") as Label
-	main.enter_overworld() # #346: dungeon entrances live in the overworld
-	main.current_area.get_node("GateNormal")._on_body_entered(player)
+	main.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+	main.area_loader.current_area.get_node("GateNormal")._on_body_entered(player)
 	var waited := 0
 	while not objective.visible and waited < 1200:
 		await process_frame
@@ -194,7 +194,7 @@ func _initialize() -> void:
 	_check(not objective.get_global_rect().intersects(squares[5].get_global_rect()), "objective row is clear of the grid")
 
 	# A hub return never reseeds over the player's reassignment.
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames(4)
 	_check(caster.get_slots() == player_loadout, "hub return keeps the player's slot reassignment")
 

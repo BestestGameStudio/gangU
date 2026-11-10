@@ -223,9 +223,9 @@ func _leg_production() -> void:
 	await process_frame
 	var p: Player = scene.get_node("Player")
 	for d in DUNGEONS:
-		scene._swap(load(d["scene"]).instantiate())
+		scene.area_loader._swap(load(d["scene"]).instantiate())
 		await _physics(4)
-		var area: Node = scene.current_area
+		var area: Node = scene.area_loader.current_area
 		var tag: String = d["name"]
 		var map := area.get_node_or_null("Terrain") as TerrainMap
 		_check(area.name == tag and map != null and p.terrain == map, "(D) %s mounted: Player walks on its TerrainMap" % tag)

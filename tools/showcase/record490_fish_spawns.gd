@@ -30,9 +30,9 @@ func _initialize() -> void:
 	scene.add_child(focus)
 	cam.target = focus
 	await _frames(10)
-	scene.enter_overworld()
+	scene.area_loader.enter_overworld()
 	await _frames(3)
-	var gate: Gate = scene.current_area.get_node(GATES[mode])
+	var gate: Gate = scene.area_loader.current_area.get_node(GATES[mode])
 	if mode.begins_with("camp_"):
 		_freeze()
 		focus.global_position = gate.global_position + Vector2(0, -40)
@@ -62,13 +62,13 @@ func _initialize() -> void:
 		tag.add_theme_font_size_override("font_size", 14)
 		tag.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5))
 		tag.z_index = 60
-		scene.current_area.add_child(tag)
+		scene.area_loader.current_area.add_child(tag)
 		tag.global_position = (e as Node2D).global_position + Vector2(-22, -58)
 	var layer := CanvasLayer.new()
 	layer.layer = 100
 	scene.add_child(layer)
 	var banner := Label.new()
-	banner.text = "#490 %s (%s): %d Fishy / %d Mustache Warriors in the area (enemies frozen)" % [mode, scene.current_area.name, fish, warriors]
+	banner.text = "#490 %s (%s): %d Fishy / %d Mustache Warriors in the area (enemies frozen)" % [mode, scene.area_loader.current_area.name, fish, warriors]
 	banner.position = Vector2(8, 80)
 	banner.add_theme_font_size_override("font_size", 18)
 	layer.add_child(banner)

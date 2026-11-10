@@ -51,11 +51,11 @@ func _process(delta: float) -> bool:
 	t += delta
 	match phase:
 		0:
-			if old_scene.current_area == null:
+			if old_scene.area_loader.current_area == null:
 				return false
 			# --- world: enter DungeonA (real swap path) ---
-			old_scene._swap(load("res://scenes/dungeon_a.tscn").instantiate())
-			var obj := old_scene.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
+			old_scene.area_loader._swap(load("res://scenes/dungeon_a.tscn").instantiate())
+			var obj := old_scene.area_loader.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
 			_check(obj != null, "setup: DungeonA objective mounted")
 			if obj:
 				obj.objective_completed.connect(func(_id): objective_done = true)
@@ -102,7 +102,7 @@ func _process(delta: float) -> bool:
 				phase = 9
 				return false
 			var s := current_scene
-			if s == null or s == old_scene or not is_instance_valid(s) or s.get("current_area") == null:
+			if s == null or s == old_scene or not is_instance_valid(s) or s.get("area_loader") == null:
 				return false
 			phase = 4; t = 0.0
 		4:
@@ -111,10 +111,10 @@ func _process(delta: float) -> bool:
 			var s := current_scene
 			_check(s != old_scene, "death reloaded the run scene")
 			# world
-			_check(s.current_area.name == &"Hub", "world: fresh run starts in the hub (got %s)" % s.current_area.name)
+			_check(s.area_loader.current_area.name == &"Hub", "world: fresh run starts in the hub (got %s)" % s.area_loader.current_area.name)
 			# dungeon cleared-state: no completed objective carried, DungeonA repopulates
-			s._swap(load("res://scenes/dungeon_a.tscn").instantiate())
-			var obj := s.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
+			s.area_loader._swap(load("res://scenes/dungeon_a.tscn").instantiate())
+			var obj := s.area_loader.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
 			_check(obj != null, "dungeon clear: DungeonA objective re-mounted")
 			_check(get_nodes_in_group("enemies").size() > 0, "dungeon clear: DungeonA enemies respawned (%d)" % get_nodes_in_group("enemies").size())
 			# coins

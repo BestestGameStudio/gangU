@@ -83,16 +83,16 @@ func _leg_production() -> void:
 	current_scene = scene
 	await process_frame
 	var p: Player = scene.get_node("Player")
-	scene.enter_overworld()
+	scene.area_loader.enter_overworld()
 	await process_frame
-	var gate := scene.current_area.get_node_or_null("GateBeast") as Gate
+	var gate := scene.area_loader.current_area.get_node_or_null("GateBeast") as Gate
 	_check(gate != null, "production: GateBeast present in the overworld")
 	if gate == null:
 		return
 	gate._on_body_entered(p)
 	await _physics(4)
-	_check(scene.current_area.name == "DungeonD", "production: GateBeast enters DungeonD")
-	portal = scene.current_area.get_node_or_null("ExitPortal") as ExitPortal
+	_check(scene.area_loader.current_area.name == "DungeonD", "production: GateBeast enters DungeonD")
+	portal = scene.area_loader.current_area.get_node_or_null("ExitPortal") as ExitPortal
 	_check(portal != null, "production: exit portal mounted")
 	if portal == null:
 		return
@@ -128,7 +128,7 @@ func _leg_production() -> void:
 	portal._on_body_entered(p)
 	await _physics(4)
 	_check(entered_emitted[0], "unlock: entry allowed (entered emitted)")
-	_check(scene.current_area.name == "Overworld", "unlock: transport returns to the overworld entrance (#378)")
+	_check(scene.area_loader.current_area.name == "Overworld", "unlock: transport returns to the overworld entrance (#378)")
 	scene.queue_free()
 	current_scene = null
 	await process_frame

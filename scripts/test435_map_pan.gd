@@ -140,7 +140,7 @@ func _run() -> void:
 	root.add_child(main)
 	current_scene = main
 	await _frames()
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames()
 	var wm: WorldMap = main.get_node("WorldMap")
 	var panel: MapPanel = main.get_node("MapPanel")
@@ -235,7 +235,7 @@ func _run() -> void:
 
 	# Non-overworld areas: no bounds, no panning.
 	panel.close()
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames()
 	panel.open()
 	await _frames()

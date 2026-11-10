@@ -22,48 +22,48 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: StringName) -> Node:
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
-	var gate := main.current_area.get_node_or_null(NodePath(gate_name)) as Gate
+	var gate := main.area_loader.current_area.get_node_or_null(NodePath(gate_name)) as Gate
 	_check("%s: overworld has the gate" % gate_name, gate != null)
 	if gate:
 		gate._on_body_entered(main.get_node("Player"))
 	await _frames(6)
-	return main.current_area
+	return main.area_loader.current_area
 
 func _run() -> void:
 	var s := load("res://assets/audio/music/dungeon_battle_loop.ogg")
 	_check("unit: asset is an OGG Vorbis stream", s is AudioStreamOggVorbis)
 	_check("unit: ~54.9 s long", absf(s.get_length() - 54.857) < 0.2)
-	_check("unit: runtime trim is an attenuation", DungeonMusic.MUSIC_VOLUME_DB < 0.0)
+	_check("unit: runtime trim is an attenuation", MusicDirector.DUNGEON_VOLUME_DB < 0.0)
 	var a := Node2D.new(); a.name = &"DungeonA"
 	var h := Node2D.new(); h.name = &"Hub"
 	var o := Node2D.new(); o.name = &"Overworld"
-	_check("unit: Dungeon* areas count", DungeonMusic.is_dungeon_area(a))
-	_check("unit: hub and overworld do not", not DungeonMusic.is_dungeon_area(h) and not DungeonMusic.is_dungeon_area(o))
+	_check("unit: Dungeon* areas count", MusicDirector.is_dungeon_area(a))
+	_check("unit: hub and overworld do not", not MusicDirector.is_dungeon_area(h) and not MusicDirector.is_dungeon_area(o))
 	a.free(); h.free(); o.free()
 
 	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	current_scene = main
 	await _frames(3)
-	var dm: DungeonMusic = main.get_node_or_null("DungeonMusic")
-	var bm: BossMusic = main.get_node_or_null("BossMusic")
-	_check("boot: DungeonMusic mounted, silent", dm != null and not dm.playing)
-	main.enter_overworld()
+	var dm: AudioStreamPlayer = main.music.dungeon
+	var bm: AudioStreamPlayer = main.music.boss
+	_check("boot: dungeon player mounted, silent", dm != null and not dm.playing)
+	main.area_loader.enter_overworld()
 	await _frames(4)
 	_check("overworld: silent", not dm.playing)
 
 	# DungeonA (normal gate): plays, looping, trimmed.
 	var area := await _enter(main, &"GateNormal")
-	_check("GateNormal mounted a dungeon", area != null and DungeonMusic.is_dungeon_area(area))
+	_check("GateNormal mounted a dungeon", area != null and MusicDirector.is_dungeon_area(area))
 	_check("dungeon: loop playing", dm.playing and dm.stream == s)
 	_check("dungeon: loops", (dm.stream as AudioStreamOggVorbis).loop)
-	_check("dungeon: volume trimmed", is_equal_approx(dm.volume_db, DungeonMusic.MUSIC_VOLUME_DB))
+	_check("dungeon: volume trimmed", is_equal_approx(dm.volume_db, MusicDirector.DUNGEON_VOLUME_DB))
 	_check("dungeon: no boss theme", not bm.playing)
 
 	# Back to the overworld: silent. Re-enter: restarts from the top.
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
 	_check("back to overworld: silent", not dm.playing)
 	area = await _enter(main, &"GateNormal")
@@ -71,13 +71,13 @@ func _run() -> void:
 
 	# Every other dungeon entry plays too (all dungeons, Colin 2026-11-09 yes).
 	for g in [&"GateMaze", &"GateGenerated", &"GateRed"]:
-		main.enter_overworld()
+		main.area_loader.enter_overworld()
 		await _frames(4)
 		area = await _enter(main, g)
-		_check("%s: dungeon mounted and loop playing" % g, area != null and DungeonMusic.is_dungeon_area(area) and dm.playing)
+		_check("%s: dungeon mounted and loop playing" % g, area != null and MusicDirector.is_dungeon_area(area) and dm.playing)
 
 	# Boss dungeon (Beast den): boss theme takes over, dungeon loop yields.
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
 	area = await _enter(main, &"GateBeast")
 	_check("Beast den mounted", area != null and area.name == &"DungeonD")
@@ -89,10 +89,10 @@ func _run() -> void:
 	await _frames(FADE_FRAMES)
 	_check("boss down: boss theme stopped", not bm.playing)
 	_check("boss down: dungeon loop resumed", dm.playing and not dm.stream_paused)
-	_check("boss down: volume back to trim", is_equal_approx(dm.volume_db, DungeonMusic.MUSIC_VOLUME_DB))
+	_check("boss down: volume back to trim", is_equal_approx(dm.volume_db, MusicDirector.DUNGEON_VOLUME_DB))
 
 	# Leaving the dungeon silences it.
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
 	_check("leaving: silent", not dm.playing and not dm.stream_paused)
 	main.queue_free()

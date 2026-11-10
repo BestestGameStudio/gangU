@@ -56,7 +56,7 @@ func _process(delta: float) -> bool:
 	t += delta
 	match phase:
 		0:
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			# Mount legs: the production wallet exists exactly once, in its
 			# group, beside the existing mounts.
@@ -118,7 +118,7 @@ func _process(delta: float) -> bool:
 func _spawn_drop(entry: RewardEntry) -> RewardDrop:
 	var drop: RewardDrop = preload("res://scenes/reward_drop.tscn").instantiate()
 	drop.setup(entry)
-	scene.current_area.add_child(drop)
+	scene.area_loader.current_area.add_child(drop)
 	drop.global_position = p.global_position
 	return drop
 

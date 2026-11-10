@@ -97,7 +97,7 @@ func _process(delta: float) -> bool:
 	t += delta
 	match phase:
 		0:
-			if scene.current_area == null or scene.get_node_or_null("EquipPanel") == null:
+			if scene.area_loader.current_area == null or scene.get_node_or_null("EquipPanel") == null:
 				return false
 			prog = scene.get_node("SpellProgress")
 			panel = scene.get_node("EquipPanel")
@@ -105,12 +105,12 @@ func _process(delta: float) -> bool:
 			caster.unlock_spell(base)
 			_check(prog.upgrade_tokens() == 0, "run starts with 0 tokens")
 			_check(not prog.can_upgrade(base) and not prog.can_token_upgrade(base), "base: no upgrade at 0 casts / 0 tokens")
-			scene._swap(load("res://scenes/dungeon_c.tscn").instantiate())
+			scene.area_loader._swap(load("res://scenes/dungeon_c.tscn").instantiate())
 			phase = 1; t = 0
 		1:
 			if t < 0.4:
 				return false
-			for e in scene.current_area.get_children():
+			for e in scene.area_loader.current_area.get_children():
 				if e is Enemy:
 					boss = e
 			_check(boss != null and boss.definition == load("res://resources/enemies/head_boss.tres"), "Head boss spawned in DungeonC")
@@ -124,7 +124,7 @@ func _process(delta: float) -> bool:
 		2:
 			if t < 0.3:
 				return false
-			for c in scene.current_area.get_children():
+			for c in scene.area_loader.current_area.get_children():
 				# #426: a boss may also drop a relic beside the token; pick the token.
 				if c is RewardDrop and c.entry != null and c.entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
 					drop = c

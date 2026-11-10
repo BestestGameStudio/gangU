@@ -27,33 +27,34 @@ func _run() -> void:
 	root.add_child(main)
 	current_scene = main
 	await _frames(4)
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
-	var amb := main.current_area.get_node_or_null("Ambience") as OverworldAmbience
-	_check("overworld mounts the ambience player", amb != null)
+	# #512: the run's MusicDirector (Main/music) plays the piano while the
+	# overworld is the current area; it replaces the scene-mounted player.
+	var amb: AudioStreamPlayer = main.music.overworld
+	_check("the director has an overworld player", amb != null)
 	if amb:
 		_check("overworld: playing", amb.playing)
 		_check("overworld: loops", (amb.stream as AudioStreamOggVorbis).loop)
 		_check("overworld: level untouched (0 dB, no trim)", is_equal_approx(amb.volume_db, 0.0))
 		_check("overworld: plays the committed asset", amb.stream == s)
-	var old := amb
-	var gate := main.current_area.get_node_or_null("GateNormal") as Gate
+	var gate := main.area_loader.current_area.get_node_or_null("GateNormal") as Gate
 	_check("overworld has the normal gate", gate != null)
 	if gate:
 		gate._on_body_entered(main.get_node("Player"))
 	await _frames(6)
-	_check("dungeon: area is a dungeon", String(main.current_area.name).begins_with("Dungeon"))
-	_check("dungeon: no ambience player", main.current_area.get_node_or_null("Ambience") == null)
-	_check("dungeon: overworld ambience freed", old == null or not is_instance_valid(old) or old.is_queued_for_deletion())
+	_check("dungeon: area is a dungeon", String(main.area_loader.current_area.name).begins_with("Dungeon"))
+	_check("dungeon: no scene-mounted ambience player", main.area_loader.current_area.get_node_or_null("Ambience") == null)
+	_check("dungeon: overworld piano stopped", not amb.playing)
 	var found := 0
 	for n in main.find_children("*", "OverworldAmbience", true, false):
 		if not n.is_queued_for_deletion():
 			found += 1
 	_check("dungeon: no live OverworldAmbience anywhere", found == 0)
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(4)
-	var amb2 := main.current_area.get_node_or_null("Ambience") as OverworldAmbience
-	_check("back in the overworld: fresh player, playing from the top", amb2 != null and amb2.playing and amb2.get_playback_position() < 1.0)
+	var amb2: AudioStreamPlayer = main.music.overworld
+	_check("back in the overworld: playing again from the top", amb2 != null and amb2.playing and amb2.get_playback_position() < 1.0)
 	var hub := (load("res://scenes/hub.tscn") as PackedScene).instantiate()
 	_check("hub scene has no ambience player", hub.get_node_or_null("Ambience") == null)
 	hub.free()

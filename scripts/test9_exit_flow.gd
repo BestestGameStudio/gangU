@@ -34,9 +34,9 @@ func _initialize() -> void:
 	caster = p.get_node("SpellCaster")
 
 func _enter_gate(gate_name: String, pin_type: int = -1) -> void:
-	if scene.current_area.get_node_or_null(gate_name) == null:
-		scene.enter_overworld() # #346: dungeon entrances live in the overworld
-	var g: Gate = scene.current_area.get_node(gate_name)
+	if scene.area_loader.current_area.get_node_or_null(gate_name) == null:
+		scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+	var g: Gate = scene.area_loader.current_area.get_node(gate_name)
 	# #350 pin (test350 covers the roll): after the gate's own _ready roll,
 	# before entry, so main.gd's RED lock-in follows the pinned type.
 	if pin_type >= 0:
@@ -53,7 +53,7 @@ func _process(delta: float) -> bool:
 				phase = 1; t = 0
 		1:
 			if t > 0.4:
-				var area = scene.current_area
+				var area = scene.area_loader.current_area
 				var portal: ExitPortal = area.get_node_or_null("ExitPortal")
 				var obj = area.get_node_or_null("DungeonObjective")
 				print("[9] PROD after NORMAL gate area=", area.name, " portal=", portal != null,
@@ -63,13 +63,13 @@ func _process(delta: float) -> bool:
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
-				print("[9] PROD normal retreat area=", scene.current_area.name, " hp=", p.hp,
+				print("[9] PROD normal retreat area=", scene.area_loader.current_area.name, " hp=", p.hp,
 					" same_caster=", p.get_node("SpellCaster") == caster,
-					" -> ", _verdict(scene.current_area.name == "Overworld" and p.hp == 42 and p.get_node("SpellCaster") == caster))
+					" -> ", _verdict(scene.area_loader.current_area.name == "Overworld" and p.hp == 42 and p.get_node("SpellCaster") == caster))
 				# --- labeled FIXTURE: red lock-in regression (not production config) ---
 				# #378: the retreat landed in the guarded overworld; the fixture's
 				# objective counts the global "enemies" group, so park in the hub.
-				scene._load_hub()
+				scene.area_loader._load_hub()
 				fixture =load("res://scenes/test_dungeon_clear.tscn").instantiate()
 				fixture_portal = load("res://scenes/exit_portal.tscn").instantiate()
 				fixture_portal.locked = true
@@ -108,13 +108,13 @@ func _process(delta: float) -> bool:
 				scene = current_scene
 				p = scene.get_node("Player")
 				caster = p.get_node("SpellCaster")
-				print("[9] PROD death restart area=", scene.current_area.name, " hp=", p.hp,
-					" -> ", _verdict(scene.current_area.name == "Hub" and p.hp == 100))
+				print("[9] PROD death restart area=", scene.area_loader.current_area.name, " hp=", p.hp,
+					" -> ", _verdict(scene.area_loader.current_area.name == "Hub" and p.hp == 100))
 				_enter_gate("GateRed", Gate.GateType.RED) # #350 pin
 				phase = 6; t = 0
 		6:
 			if t > 0.4:
-				var area = scene.current_area
+				var area = scene.area_loader.current_area
 				var portal: ExitPortal = area.get_node_or_null("ExitPortal")
 				# #177 / O1 (2026-11-08): DungeonB now has an ELIMINATION objective,
 				# so its portal is LOCKED (D12 clear-or-die) until the Warlord dies.
@@ -128,22 +128,22 @@ func _process(delta: float) -> bool:
 				phase = 61; t = 0
 		61:
 			if t > 0.3:
-				print("[9] PROD red locked entry ignored -> ", _verdict(scene.current_area.name == "DungeonB"))
+				print("[9] PROD red locked entry ignored -> ", _verdict(scene.area_loader.current_area.name == "DungeonB"))
 				for b in get_nodes_in_group("boss"):
 					b.apply_damage(9999) # synthetic Warlord kill
 				phase = 62; t = 0
 		62:
 			if t > 0.3:
-				var portal2: ExitPortal = scene.current_area.get_node_or_null("ExitPortal")
+				var portal2: ExitPortal = scene.area_loader.current_area.get_node_or_null("ExitPortal")
 				print("[9] PROD red cleared -> portal unlocked -> ", _verdict(portal2 and not portal2.locked))
 				if portal2:
 					portal2._on_body_entered(p)
 				phase = 7; t = 0
 		7:
 			if t > 0.4:
-				print("[9] PROD red retreat area=", scene.current_area.name, " hp=", p.hp,
+				print("[9] PROD red retreat area=", scene.area_loader.current_area.name, " hp=", p.hp,
 					" same_caster=", p.get_node("SpellCaster") == caster,
-					" -> ", _verdict(scene.current_area.name == "Overworld" and p.hp == 100 and p.get_node("SpellCaster") == caster))
+					" -> ", _verdict(scene.area_loader.current_area.name == "Overworld" and p.hp == 100 and p.get_node("SpellCaster") == caster))
 				print("[9] DONE fails=", fails)
 				quit(1 if fails > 0 else 0)
 	return false

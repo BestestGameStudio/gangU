@@ -61,7 +61,7 @@ func _process(delta: float) -> bool:
 		0:
 			if scene.get_node_or_null("Player") != null and t > 0.3:
 				p = scene.get_node("Player")
-				_check("hub boot: player present in Hub", scene.current_area.name == "Hub")
+				_check("hub boot: player present in Hub", scene.area_loader.current_area.name == "Hub")
 				var cs: CollisionShape2D = p.get_node("CollisionShape2D")
 				_check("r16: collision circle radius unchanged at 16.0",
 					cs.shape is CircleShape2D and is_equal_approx(cs.shape.radius, 16.0))
@@ -150,14 +150,14 @@ func _process(delta: float) -> bool:
 					absf(wrapf(p.rotation - expected, -PI, PI)) < 0.05)
 				_check("upright: sprite still upright after re-aim",
 					absf(sprite.global_rotation) < 0.001)
-				scene.enter_overworld() # #346: dungeon entrances live in the overworld
-				var g: Gate = scene.current_area.get_node("GateNormal")
+				scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+				var g: Gate = scene.area_loader.current_area.get_node("GateNormal")
 				g._on_body_entered(p)
 				phase = 8; t = 0
 		8:
 			if t > 0.4:
 				_check("dungeon boot: real normal-gate entry into DungeonA",
-					scene.current_area.name == "DungeonA")
+					scene.area_loader.current_area.name == "DungeonA")
 				_check("dungeon: shared player still carries the wizard sprite",
 					p.get_node_or_null("WizardSprite") == sprite)
 				var walk_down := sprite.sprite_frames.get_frame_texture(&"walk_down", 0)

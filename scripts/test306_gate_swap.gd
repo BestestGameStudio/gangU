@@ -37,29 +37,29 @@ func _run() -> void:
 	for i in 3:
 		await physics_frame
 	_player = _main.get_node_or_null("Player") as Player
-	_check("production main boots into Hub", _main.current_area != null and _main.current_area.name == &"Hub")
+	_check("production main boots into Hub", _main.area_loader.current_area != null and _main.area_loader.current_area.name == &"Hub")
 	_check("production Player exists", _player != null)
-	if _player == null or _main.current_area == null or _main.current_area.name != &"Hub":
+	if _player == null or _main.area_loader.current_area == null or _main.area_loader.current_area.name != &"Hub":
 		await _finish()
 		return
 	# #346: the NORMAL gate lives in the overworld. Walk up from the hub
 	# spawn (576,480) into the hub's TRAVEL gate (576,240) with real input.
-	var hub_area: Node = _main.current_area
+	var hub_area: Node = _main.area_loader.current_area
 	var travel := hub_area.get_node_or_null("GateOverworld") as Gate
 	_check("Hub has the TRAVEL gate to the overworld", travel != null and travel.gate_type == Gate.GateType.TRAVEL)
 	Input.action_press(&"move_up")
 	var travel_frames := 0
-	while _main.current_area == hub_area and travel_frames < MAX_ENTRY_FRAMES:
+	while _main.area_loader.current_area == hub_area and travel_frames < MAX_ENTRY_FRAMES:
 		await physics_frame
 		travel_frames += 1
 	_release_movement()
-	_check("walking up through the hub passage reaches the Overworld", _main.current_area != null and _main.current_area.name == &"Overworld")
-	if _main.current_area == null or _main.current_area.name != &"Overworld":
+	_check("walking up through the hub passage reaches the Overworld", _main.area_loader.current_area != null and _main.area_loader.current_area.name == &"Overworld")
+	if _main.area_loader.current_area == null or _main.area_loader.current_area.name != &"Overworld":
 		await _finish()
 		return
-	var ow_spawn := _main.current_area.get_node("PlayerSpawn") as Node2D
+	var ow_spawn := _main.area_loader.current_area.get_node("PlayerSpawn") as Node2D
 	_check("travel lands exactly on the overworld PlayerSpawn", _player.global_position == ow_spawn.global_position)
-	var hub: Node = _main.current_area
+	var hub: Node = _main.area_loader.current_area
 	var gate := hub.get_node_or_null("GateNormal") as Gate
 	# #350 pin (test350 covers the roll): this driver verifies NORMAL-gate
 	# transport, so the gate is pinned NORMAL after its own _ready roll.
@@ -89,13 +89,13 @@ func _run() -> void:
 	Input.action_release(&"move_up")
 	Input.action_press(&"move_left")
 	var entry_frames := 0
-	while _main.current_area == hub and entry_frames < MAX_ENTRY_FRAMES:
+	while _main.area_loader.current_area == hub and entry_frames < MAX_ENTRY_FRAMES:
 		await physics_frame
 		entry_frames += 1
 	_release_movement()
 	_check("real collider emits Gate.entered exactly once", entries[0] == 1)
-	_check("area changes within bounded input frames", _main.current_area != hub and entry_frames < MAX_ENTRY_FRAMES)
-	var area: Node = _main.current_area
+	_check("area changes within bounded input frames", _main.area_loader.current_area != hub and entry_frames < MAX_ENTRY_FRAMES)
+	var area: Node = _main.area_loader.current_area
 	_check("NORMAL gate enters DungeonA", area != null and area.name == &"DungeonA")
 	_check("same persistent Player instance after transport", is_instance_valid(_player) and _main.get_node_or_null("Player") == _player and _player.get_instance_id() == player_id)
 	var spawn := area.get_node_or_null("PlayerSpawn") as Node2D if area != null else null
@@ -105,6 +105,6 @@ func _run() -> void:
 	print("[306] entry_frames=", entry_frames, " area=", area.name if area != null else "null", " position=", _player.global_position)
 	for i in SETTLE_FRAMES:
 		await physics_frame
-	_check("DungeonA remains active after bounded settling", _main.current_area == area and area != hub)
+	_check("DungeonA remains active after bounded settling", _main.area_loader.current_area == area and area != hub)
 	_check("Player remains the original instance after settling", is_instance_valid(_player) and _main.get_node_or_null("Player") == _player and _player.get_instance_id() == player_id)
 	await _finish()

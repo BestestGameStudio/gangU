@@ -73,9 +73,9 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: String) -> void:
-	if main.current_area.get_node_or_null(gate_name) == null:
-		main.enter_overworld() # #346: dungeon entrances live in the overworld
-	var gate: Gate = main.current_area.get_node(gate_name)
+	if main.area_loader.current_area.get_node_or_null(gate_name) == null:
+		main.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 	gate.entered.emit(gate)
 	await _frames(3)
 
@@ -85,16 +85,16 @@ func _main_flow_legs() -> void:
 	current_scene = main
 	await _frames(3)
 	var p: Player = main.get_node("Player")
-	_check(main.current_area.name == "Hub", "boots into the hub")
-	main.enter_overworld() # #346: the generated entrance moved to the overworld
-	var gate: Gate = main.current_area.get_node_or_null("GateGenerated")
+	_check(main.area_loader.current_area.name == "Hub", "boots into the hub")
+	main.area_loader.enter_overworld() # #346: the generated entrance moved to the overworld
+	var gate: Gate = main.area_loader.current_area.get_node_or_null("GateGenerated")
 	_check(gate != null and gate.gate_type == Gate.GateType.NORMAL, "overworld has a NORMAL GateGenerated")
 	_check(gate != null and gate.get_node("TypeLabel").text == "GENERATED", "GateGenerated is labelled GENERATED")
 	# #391: the overworld has its own (tree collision) grid since #391.
-	_check(p.terrain == main.current_area.get_node("Terrain"), "overworld: Player.terrain is the overworld grid")
+	_check(p.terrain == main.area_loader.current_area.get_node("Terrain"), "overworld: Player.terrain is the overworld grid")
 
 	await _enter(main, "GateGenerated")
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	_check(area.name == "DungeonGenerated", "generated gate leads to DungeonGenerated (got %s)" % area.name)
 	var terrain: TerrainMap = area.get_node("Terrain")
 	_check(p.global_position == SPAWN_WORLD, "Player placed at PlayerSpawn %s (got %s)" % [SPAWN_WORLD, p.global_position])
@@ -117,11 +117,11 @@ func _main_flow_legs() -> void:
 
 	portal.entered.emit(portal)
 	await _frames(3)
-	_check(main.current_area.name == "Overworld", "exit portal returns to the overworld entrance (#378)")
-	_check(p.terrain == main.current_area.get_node("Terrain"), "back in the overworld: Player.terrain is the overworld grid again (#391)")
+	_check(main.area_loader.current_area.name == "Overworld", "exit portal returns to the overworld entrance (#378)")
+	_check(p.terrain == main.area_loader.current_area.get_node("Terrain"), "back in the overworld: Player.terrain is the overworld grid again (#391)")
 
 	await _enter(main, "GateNormal")
-	area = main.current_area
+	area = main.area_loader.current_area
 	_check(area.name == "DungeonA", "normal gate still leads to DungeonA")
 	_check(area.get_node_or_null("DungeonObjective") != null, "DungeonA still mounts its objective")
 	var a_portal: ExitPortal = area.get_node_or_null("ExitPortal")

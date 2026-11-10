@@ -45,7 +45,7 @@ func _process(delta: float) -> bool:
 	t += delta
 	match phase:
 		0:
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			var pool := scene.get_node_or_null("RewardPool")
 			var progress := scene.get_node_or_null("SpellProgress")
@@ -116,7 +116,7 @@ func _process(delta: float) -> bool:
 			for pos in [Vector2(250, 280), Vector2(576, 220), Vector2(900, 280)]:
 				carrier.entries.append({"position": pos, "enemy": enemy_scene, "reward_table": demo})
 			area.add_child(carrier)
-			scene._mount_area_spawns(area)
+			scene.area_loader._mount_area_spawns(area)
 			var mounted := 0
 			var tables_ok := true
 			for c in area.get_children():

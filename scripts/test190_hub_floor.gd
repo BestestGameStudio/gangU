@@ -23,7 +23,7 @@ func _floors() -> Array[Node]:
 	return scene.find_children("*", "HubFloor", true, false)
 
 func _check_hub_floor(when: String) -> void:
-	var hub: Node = scene.current_area
+	var hub: Node = scene.area_loader.current_area
 	_check("%s: current area is Hub" % when, hub.name == "Hub")
 	var floor := hub.get_node_or_null("Floor") as HubFloor
 	_check("%s: hub has exactly one HubFloor at Hub/Floor" % when, floor != null and _floors().size() == 1)
@@ -57,17 +57,17 @@ func _process(delta: float) -> bool:
 			if scene.get_node_or_null("Player") != null and t > 0.3:
 				p = scene.get_node("Player")
 				_check_hub_floor("boot")
-				scene.enter_overworld() # #346: dungeon entrances live in the overworld
+				scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
 				_check("overworld: no HubFloor under Main", _floors().size() == 0)
-				var g: Gate = scene.current_area.get_node("GateNormal")
+				var g: Gate = scene.area_loader.current_area.get_node("GateNormal")
 				g._on_body_entered(p)
 				phase = 1; t = 0
 		1:
 			if t > 0.4:
-				_check("dungeon: current area is DungeonA", scene.current_area.name == "DungeonA")
+				_check("dungeon: current area is DungeonA", scene.area_loader.current_area.name == "DungeonA")
 				_check("dungeon: no HubFloor anywhere under Main", _floors().size() == 0)
 				_check("dungeon: global grid still present", scene.get_node_or_null("BackgroundGrid") != null)
-				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
+				var portal: ExitPortal = scene.area_loader.current_area.get_node("ExitPortal")
 				portal.unlock()
 				portal._on_body_entered(p)
 				phase = 2; t = 0
@@ -75,9 +75,9 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				# #378: the exit lands at the DungeonA entrance in the overworld;
 				# the hub is reached through the overworld's GateHub passage.
-				_check("exit: lands in the overworld", scene.current_area.name == "Overworld")
+				_check("exit: lands in the overworld", scene.area_loader.current_area.name == "Overworld")
 				_check("exit: no HubFloor in the overworld", _floors().size() == 0)
-				(scene.current_area.get_node("GateHub") as Gate)._on_body_entered(p)
+				(scene.area_loader.current_area.get_node("GateHub") as Gate)._on_body_entered(p)
 				phase = 3; t = 0
 		3:
 			if t > 0.4:

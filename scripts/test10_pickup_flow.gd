@@ -30,7 +30,7 @@ func _process(delta: float) -> bool:
 					print("[10] FAIL starting spells: ", caster.spells.size()); ok = false
 				var pickup: SpellPickup = load("res://scenes/spell_pickup.tscn").instantiate()
 				pickup.spell_path = "res://resources/spells/placeholder_bolt.tres"
-				scene.current_area.add_child(pickup)
+				scene.area_loader.current_area.add_child(pickup)
 				phase = 1; t = 0
 		1:
 			if t > 0.4:
@@ -38,7 +38,7 @@ func _process(delta: float) -> bool:
 					for c in scene.get_children():
 						if c is HUD:
 							hud = c
-				var pickup: SpellPickup = scene.current_area.get_node("SpellPickup")
+				var pickup: SpellPickup = scene.area_loader.current_area.get_node("SpellPickup")
 				pickup._on_body_entered(p)
 				if caster.spells.size() != 3 or caster.spells[2].spell_name != "Placeholder Bolt":
 					print("[10] FAIL pickup grant: ", caster.spells.size()); ok = false

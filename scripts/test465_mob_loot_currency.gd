@@ -103,10 +103,10 @@ func _leg_d_end_to_end(table: RewardTable) -> void:
 	current_scene = scene
 	p = scene.get_node("Player")
 	for i in 60:
-		if scene.current_area != null:
+		if scene.area_loader.current_area != null:
 			break
 		await _frames(1)
-	_check(scene.current_area != null, "(D) Main mounted")
+	_check(scene.area_loader.current_area != null, "(D) Main mounted")
 	var wallet := Run.wallet()
 	_check(wallet != null, "(D) Main mounts the run wallet")
 	# A real mob carrying the production table dies in the hub area.
@@ -114,7 +114,7 @@ func _leg_d_end_to_end(table: RewardTable) -> void:
 	enemy.position = Vector2(576, 300)
 	enemy.player_path = NodePath("../../Player")
 	enemy.reward_table = table
-	scene.current_area.add_child(enemy)
+	scene.area_loader.current_area.add_child(enemy)
 	await _frames(10)
 	# Park AFTER the settle frames: the hub's deferred player placement runs
 	# during the first frames and would overwrite an earlier park.

@@ -62,7 +62,7 @@ func _sweep_frame() -> void:
 	# gate used). The attach distance is canvas-invariant (gates are static
 	# and the transform is translate-only), so it uses the live label offset.
 	for gname in ["GateNormal", "GateRed"]:
-		var gate: Gate = main.current_area.get_node(gname)
+		var gate: Gate = main.area_loader.current_area.get_node(gname)
 		var lbl: Label = gate.get_node("TypeLabel")
 		if _prev_body.has(gname):
 			var prev: Rect2 = _prev_body[gname]
@@ -91,18 +91,18 @@ func _initialize() -> void:
 
 func _process(_d: float) -> bool:
 	frame += 1
-	if main.current_area != null and main.current_area.name == &"Hub":
+	if main.area_loader.current_area != null and main.area_loader.current_area.name == &"Hub":
 		# #346: the dungeon gates live in the overworld (same layout around
 		# the same spawn). Guards are removed (labels, not combat, are under
 		# test) and the HUB passage stops monitoring: the vertical sweep walks
 		# straight through it at (576, 640).
-		main.enter_overworld()
+		main.area_loader.enter_overworld()
 		for e in get_nodes_in_group("enemies"):
 			e.free()
-		(main.current_area.get_node("GateHub") as Area2D).monitoring = false
+		(main.area_loader.current_area.get_node("GateHub") as Area2D).monitoring = false
 		frame = 1
 		return false
-	if main.current_area == null or main.current_area.get_node_or_null("GateNormal") == null:
+	if main.area_loader.current_area == null or main.area_loader.current_area.get_node_or_null("GateNormal") == null:
 		if frame > 600:
 			print("[106] hub never mounted -> FAIL")
 			quit(1)
