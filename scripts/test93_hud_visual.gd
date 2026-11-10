@@ -64,7 +64,7 @@ const C_RED := Color(0.9, 0.3, 0.25, 1.0)
 func _initialize() -> void:
 	var hud_scene: PackedScene = load("res://scenes/hud.tscn")
 	var player := StubPlayer.new()
-	player.add_to_group(ActorCollision.PLAYER_GROUP)
+	player.add_to_group(PhysicsLayers.PLAYER_GROUP)
 	root.add_child(player)
 	var caster := StubCaster.new()
 	caster.name = "SpellCaster"
@@ -159,7 +159,7 @@ func _initialize() -> void:
 
 	# (g) backward-compat: a caster without the slot override still builds rows.
 	var player2 := StubPlayer.new()
-	player2.add_to_group(ActorCollision.PLAYER_GROUP)
+	player2.add_to_group(PhysicsLayers.PLAYER_GROUP)
 	root.add_child(player2)
 	var caster2 := StubCasterNoSlots.new()
 	caster2.name = "SpellCaster"
