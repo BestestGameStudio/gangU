@@ -47,12 +47,14 @@ func _initialize() -> void:
 		for b in _enemies:
 			if a != b:
 				a.remove_collision_exception_with(b)
+	for e in _enemies:
+		e.collision_mask |= PhysicsLayers.ENEMY # old behavior: enemies block each other
 	_phase = "BEFORE (old): enemies block each other -> ring around the player"
 	await _run_frames(120)
 
 	# Phase 2: shipped #493 behavior.
 	for e in _enemies:
-		ActorCollision.ignore_group(e, ActorCollision.ENEMY_GROUP)
+		e.collision_mask &= ~PhysicsLayers.ENEMY
 		e.global_position = CENTER + (e.global_position - CENTER).normalized() * 220.0
 	_phase = "AFTER (#493): enemies pass through each other -> one stack"
 	await _run_frames(120)
