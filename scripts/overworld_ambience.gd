@@ -1,17 +1,19 @@
 class_name OverworldAmbience
 extends AudioStreamPlayer
-## #477: overworld ambience (Colin 2026-11-09: add the approved nature loop as
-## the overworld sound). Mostly silence, sparse quiet birds and brief leaf
-## rustles. No music, no wind bed, no water or rain, no continuous noise.
+## #487: overworld music (Colin 2026-11-09: very soft piano, kinda Minecraft,
+## keep the volume low; supersedes the #477 nature ambience). One quiet
+## original piano piece, no ambience bed: no wind, water or bush rustling.
 ##
 ## Mounted in overworld.tscn, so it starts when the overworld loads and is
 ## freed with it: silent in the hub and in every dungeon, no change to Main.
+## (The node and class keep their #477 names to keep the scene diff small.)
 ##
-## The loop is already very quiet by design (peak about -13 dBFS, RMS about
-## -44.6 dBFS). The level is kept as approved: no gain trim and no loudness
-## match to the music tracks.
+## The track is already quiet by design (peak -15.1 dBFS, RMS about -37 dBFS)
+## and ends in a 4 s fade to silence, so the loop restarts with a natural
+## pause. The level is kept as approved: no gain trim and no loudness match
+## to the other music tracks.
 
-const TRACK: AudioStream = preload("res://assets/audio/music/overworld_ambience_loop.ogg")
+const TRACK: AudioStream = preload("res://assets/audio/music/overworld_soft_piano_loop.ogg")
 
 func _ready() -> void:
 	var s := TRACK

@@ -1,5 +1,5 @@
 extends SceneTree
-## #477 headless driver: the overworld ambience loop. Plays in the overworld,
+## #477 headless driver (updated for the #487 soft piano track): the overworld music loop. Plays in the overworld,
 ## is absent from the hub and dungeons (it lives in overworld.tscn and goes
 ## with it), loops, and keeps the approved level (no gain trim).
 ## CI has no audio device: these check playback state, not loudness.
@@ -20,9 +20,9 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _run() -> void:
-	var s := load("res://assets/audio/music/overworld_ambience_loop.ogg")
+	var s := load("res://assets/audio/music/overworld_soft_piano_loop.ogg")
 	_check("unit: asset is an OGG Vorbis stream", s is AudioStreamOggVorbis)
-	_check("unit: ~45.7 s long", absf(s.get_length() - 45.714) < 0.2)
+	_check("unit: ~81.8 s long", absf(s.get_length() - 81.778) < 0.2)
 	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	current_scene = main

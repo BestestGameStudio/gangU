@@ -35,6 +35,14 @@ const CATALOG: Array[Dictionary] = [
 		"boss": false,
 	},
 	{
+		# #464: rod-hooking support enemy.
+		"id": &"fishy",
+		"name": "Fishy",
+		"scene": "res://scenes/enemy_fishy.tscn",
+		"frames": "res://resources/sprites/fishy_frames.tres",
+		"boss": false,
+	},
+	{
 		"id": &"mustache_warlord",
 		"name": "Mustache Warlord",
 		"scene": "res://scenes/mustache_warlord.tscn",
