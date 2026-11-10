@@ -41,6 +41,17 @@ func _role(e: Enemy) -> String:
 		return "guard"
 	return "other"
 
+## #478: the overworld's day bird dives an idle player in the open on its
+## own clock. These flow legs assert #414 guard/patrol/migrant roles only,
+## so the bird and its driver are removed on entry.
+func _remove_bird(main: Node) -> void:
+	var mgr: OverworldBird = main.current_area.get_node_or_null("OverworldBird") as OverworldBird
+	if mgr == null:
+		return
+	if mgr.bird != null and is_instance_valid(mgr.bird):
+		mgr.bird.free()
+	mgr.free()
+
 func _by_role(main: Node, role: String) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	for n in main.current_area.get_children():
@@ -135,6 +146,7 @@ func _flow_legs() -> void:
 	var p: Player = main.get_node("Player")
 	await _enter(main, "GateOverworld")
 	var ow: Node2D = main.current_area
+	_remove_bird(main) # #478: role legs only
 	_check(ow.name == "Overworld", "(B) in the overworld")
 	var guards := _by_role(main, "guard")
 	var patrols := _by_role(main, "patrol")

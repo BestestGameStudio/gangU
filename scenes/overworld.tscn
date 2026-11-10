@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=28 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
@@ -26,6 +26,7 @@
 [ext_resource type="PackedScene" path="res://scenes/enemy_fishy.tscn" id="464_fishy"]
 [ext_resource type="Resource" path="res://resources/enemies/overworld_fishy.tres" id="464_fishy_def"]
 [ext_resource type="Script" path="res://scripts/overworld_ambience.gd" id="477_ambience"]
+[ext_resource type="Script" path="res://scripts/overworld_bird.gd" id="478_bird"]
 
 [node name="Overworld" type="Node2D"]
 
@@ -40,6 +41,9 @@ cell_size = 32
 [node name="BlockVisuals" type="Node2D" parent="."]
 script = ExtResource("437_blockvis")
 map_path = NodePath("../Terrain")
+
+[node name="OverworldBird" type="Node" parent="."]
+script = ExtResource("478_bird")
 
 [node name="WolfCaves" type="Node" parent="."]
 script = ExtResource("474_caves")

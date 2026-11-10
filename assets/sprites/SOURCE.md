@@ -323,6 +323,26 @@ style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
 - Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
 - Rows: idle x4 (5 fps loop), walk x6 (10 fps loop), hurt x2, attack x3, death x5 (one-shots).
 
+# bird.png - original bird sprite sheet (#478)
+
+Original code-drawn pixel art for gangU (#478). No copied game assets, no
+traced art, no stock files shipped. Daniel: "Make the sprites yourself."
+
+## Design
+- Slate blue-black dive-bomber bird (crow/kite silhouette): orange beak and
+  talons, pale belly, lighter wing highlight, yellow eye. Flat palette, no
+  gradients/glow, fitted to the existing enemy palette idiom.
+- Frame: 32x32 px, feet on y=28, art faces right (EnemySprite flip idiom).
+  Sheet: uniform 6x5 grid (192x160 px), rows = [idle x4 (perched), walk x6
+  (flight flap - the locomotion row), hurt x2, attack x3 (dive tuck, stoop,
+  landing flare), death x5].
+
+## Provenance
+- Author: instinct-dc (Daniel's Instinct), 2026-11-09, pixel-by-pixel via
+  tools/sprites/draw_bird.gd (code-drawn, same generator idiom as
+  tools/sprites/draw_slime.gd / draw_wolf.gd).
+- License for this original asset: CC0 (matches project asset licensing).
+
 # wolf.png - Wolf sheet (#476, art by Mitra's artist)
 
 Hand-drawn 8-direction wolf sheet supplied by Mitra's user in PR #476
