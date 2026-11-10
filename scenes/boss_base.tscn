@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy_base.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/boss_telegraph.gd" id="2_tele"]
+[ext_resource type="Script" path="res://scripts/boss_health_bar.gd" id="3_bar"]
+
+[node name="BossBase" instance=ExtResource("1_base")]
+
+[node name="Telegraph" type="Node2D" parent="." index="0"]
+script = ExtResource("2_tele")
+
+[node name="HealthBar" type="Node2D" parent="." index="3"]
+script = ExtResource("3_bar")
