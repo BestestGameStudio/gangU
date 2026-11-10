@@ -12,7 +12,7 @@ var wallet: CurrencyWallet
 var caster: SpellCaster
 var shop: Shop
 var panel: ShopPanel
-var vendor: ShopVendor
+var vendor: PanelStation
 var bolt: Spell = preload("res://resources/spells/placeholder_bolt.tres")
 var fireball: Spell = preload("res://resources/spells/fire_ball.tres")
 var purchases_seen: Array = []
