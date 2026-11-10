@@ -172,3 +172,24 @@ class_name Spell
 ## die above the player; face N rolls hammer_dice_tables[N - 1].
 @export var hammer_dice_every: int = 0
 @export var hammer_dice_tables: Array[RewardTable] = []
+
+## #514: the cast shape, inferred in ONE place from which optional fields are
+## set (it used to be re-derived by an if/elif chain in SpellCaster,
+## SpellDescription and StatSheet). Precedence is the old chain's: hammer,
+## shield, rain, splash, then plain projectile. NONE: no projectile shape
+## (a bubble-only or terrain/summon cast). An explicit exported mode is a
+## later step; this keeps behavior identical for every existing .tres.
+enum CastMode { NONE, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE }
+
+func cast_mode() -> CastMode:
+	if hammer_radius > 0.0:
+		return CastMode.HAMMER
+	if shield_radius > 0.0:
+		return CastMode.SHIELD
+	if rain_duration > 0.0:
+		return CastMode.RAIN
+	if splash_radius > 0.0:
+		return CastMode.SPLASH
+	if projectile_count > 0:
+		return CastMode.PROJECTILE
+	return CastMode.NONE

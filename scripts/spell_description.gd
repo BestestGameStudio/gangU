@@ -15,7 +15,8 @@ static func for_spell(s: Spell) -> String:
 		parts.append("Summons an ally to fight for you, subject to the shared summon cap.")
 	if s.freeze_radius > 0.0:
 		parts.append("Creates a freeze bubble where you cast. Enemies, summons and projectiles inside stop; you can still move.")
-	if s.hammer_radius > 0.0:
+	var mode := s.cast_mode()
+	if mode == Spell.CastMode.HAMMER:
 		parts.append("Swings a hammer down at the aim point, damaging enemies around the impact.")
 		if s.hammer_vortex_radius > 0.0:
 			parts.append("Hold to pull enemies into a vortex; release to swing.")
@@ -29,20 +30,20 @@ static func for_spell(s: Spell) -> String:
 			parts.append("Jumping protects you during wind-up; the shockwave hits enemies the hammer missed.")
 		if s.hammer_dice_every > 0:
 			parts.append("Every %d consecutive hits roll a reward die." % s.hammer_dice_every)
-	elif s.shield_radius > 0.0:
+	elif mode == Spell.CastMode.SHIELD:
 		parts.append("Surrounds you with a bubble that damages touching enemies and absorbs enemy shots until it pops or expires.")
 		if s.shield_push_radius > 0.0 and s.shield_push_force > 0.0:
 			parts.append("Pushes nearby enemies away when it ends.")
 		if s.shield_shot != null:
 			parts.append("Cast again while active to fire a Water Ball and shrink the bubble.")
-	elif s.rain_duration > 0.0:
+	elif mode == Spell.CastMode.RAIN:
 		parts.append("Creates a rain zone at the aim point. Falling drops splash nearby enemies on landing.")
-	elif s.splash_radius > 0.0:
+	elif mode == Spell.CastMode.SPLASH:
 		if s.projectile_count > 1:
 			parts.append("Lobs %d water balls around the aim point; each splashes nearby enemies on landing." % s.projectile_count)
 		else:
 			parts.append("Lobs a water ball at the aim point, splashing nearby enemies on landing.")
-	elif s.projectile_count > 0:
+	elif mode == Spell.CastMode.PROJECTILE:
 		if s.launch_speed > 0.0:
 			parts.append("Launches you toward your aim before attacking.")
 		if s.tags.has(SpellTags.MELEE):

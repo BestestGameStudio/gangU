@@ -603,23 +603,25 @@ func _cast_spell(spell: Spell) -> void:
 	var cooldown_base := spell.cooldown
 	# #370 Stone Hammer: an overhead swing at the aim point (clamped to
 	# range). Its cooldown is the Rhythm combo's reduced one when it applies.
-	if spell.hammer_radius > 0.0:
-		cooldown_base = _cast_hammer(spell)
-	elif spell.shield_radius > 0.0:
-		cooldown_base = _cast_shield(spell, dir)
-	elif spell.rain_duration > 0.0:
-		WaterRain.spawn(get_tree().current_scene, spell, get_parent(), _lob_target(spell))
-	elif spell.splash_radius > 0.0:
-		_cast_splash(spell)
-	elif spell.projectile_count > 0 and spell.launch_speed <= 0.0:
-		_spawn_fanout(spell, dir)
-		# #305: a burst re-fires the fan-out burst_count times, one immediately
-		# (above) and the rest at burst_interval spacing, re-aimed at the cursor
-		# like a repeated manual cast (#246). Player-owned caster, so the burst
-		# keeps pace while a freeze bubble holds everything else; one cooldown
-		# and one signal pair per cast stay untouched below.
-		if spell.burst_count > 1:
-			_run_burst(spell, spell.burst_count - 1)
+	match spell.cast_mode():
+		Spell.CastMode.HAMMER:
+			cooldown_base = _cast_hammer(spell)
+		Spell.CastMode.SHIELD:
+			cooldown_base = _cast_shield(spell, dir)
+		Spell.CastMode.RAIN:
+			WaterRain.spawn(get_tree().current_scene, spell, get_parent(), _lob_target(spell))
+		Spell.CastMode.SPLASH:
+			_cast_splash(spell)
+		Spell.CastMode.PROJECTILE:
+			if spell.launch_speed <= 0.0:
+				_spawn_fanout(spell, dir)
+				# #305: a burst re-fires the fan-out burst_count times, one immediately
+				# (above) and the rest at burst_interval spacing, re-aimed at the cursor
+				# like a repeated manual cast (#246). Player-owned caster, so the burst
+				# keeps pace while a freeze bubble holds everything else; one cooldown
+				# and one signal pair per cast stay untouched below.
+				if spell.burst_count > 1:
+					_run_burst(spell, spell.burst_count - 1)
 	# #268: the owning Player's cooldown reduction shortens the cooldown this
 	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
 	_start_cooldown(spell, cooldown_base)
