@@ -130,3 +130,10 @@ with the right word.
 - Preserve owner permissions and design gates: suggestions still need human approval,
   and unresolved owner design decisions are not permission to invent gameplay.
 - Move the project forward without busywork, churn commits, or work outside agreed scope.
+
+## 11. Tests run in CI, not locally
+
+- Instincts do not create, edit, or run tests locally. The test suite runs in CI; the
+  CI results on the exact head are the test evidence a PR cites (section 4).
+- The one-line `test407` relax merged in #547 was a one-off owner-approved exception,
+  not a precedent.
