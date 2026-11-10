@@ -10,7 +10,6 @@ extends SceneTree
 ## - several chasing enemies stack on the same spot,
 ## - every boss scene passes through a regular enemy and vice versa,
 ## - control: an enemy is still blocked by a StaticBody2D wall,
-## - a freed enemy leaves no stale entry in peers' exception lists (#301).
 
 var failures := 0
 
@@ -25,6 +24,11 @@ func _check(cond: bool, name: String) -> void:
 	if not cond:
 		failures += 1
 	print("[493] ", name, " -> ", "PASS" if cond else "FAIL")
+
+## #515: "passes through" = neither body's mask contains the other's layer
+## (replaces the old ActorCollision per-pair exceptions).
+func _passes_through(a: CollisionObject2D, b: CollisionObject2D) -> bool:
+	return (a.collision_mask & b.collision_layer) == 0 and (b.collision_mask & a.collision_layer) == 0
 
 func _frames(n: int) -> void:
 	for i in range(n):
@@ -80,9 +84,9 @@ func _initialize() -> void:
 	var eb := _enemy(stage, Vector2(300, 200))
 	eb.set_physics_process(false)
 	await _frames(2)
-	_check(ea.get_collision_exceptions().has(eb) and eb.get_collision_exceptions().has(ea),
-		"enemy-enemy exceptions added in both directions")
-	_check(ea.get_collision_exceptions().has(player), "#290 player exception still present")
+	_check(_passes_through(ea, eb),
+		"enemy-enemy layers/masks leave each other out")
+	_check(_passes_through(ea, player), "#290 player still passes through enemies")
 
 	# --- (b) driven enemy passes straight through another ---
 	ea.set_physics_process(false)
@@ -121,7 +125,7 @@ func _initialize() -> void:
 		mob.set_physics_process(false)
 		await _frames(2)
 		var name: String = String(path).get_file().get_basename()
-		_check(boss.get_collision_exceptions().has(mob) and mob.get_collision_exceptions().has(boss),
+		_check(_passes_through(boss, mob),
 			"%s: paired with a regular enemy" % name)
 		var start_mob := mob.global_position
 		var h1 := await _drive(boss, Vector2(600, 0), 40, mob) ## 400 px
@@ -156,18 +160,6 @@ func _initialize() -> void:
 	wall.queue_free()
 	await _frames(2)
 
-	# --- (f) enemy death leaves no stale exception on surviving enemies ---
-	var s1 := _enemy(stage, Vector2(4000, 200))
-	var s2 := _enemy(stage, Vector2(4040, 200))
-	await _frames(2)
-	s1.set_physics_process(false)
-	s2.set_physics_process(false)
-	var before := s2.get_collision_exceptions().size()
-	s1.apply_damage(100000)
-	await _frames(4)
-	var after: Array = s2.get_collision_exceptions()
-	_check(after.size() == before - 1 and _all_valid(after), "enemy death: survivor list shrank by one, no stale entries")
-	s2.queue_free()
 	player.queue_free()
 
 	await process_frame
