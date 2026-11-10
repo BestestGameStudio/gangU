@@ -79,7 +79,6 @@ func _process(_delta: float) -> bool:
 	var caster := SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	p.visible = false
 	root.add_child(p)
 

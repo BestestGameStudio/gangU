@@ -209,12 +209,10 @@ func _arena(player_offset: Vector2) -> Array:
 	b.position = Vector2(500, 300)
 	b.collision_layer = 0
 	b.collision_mask = 0
-	p.add_to_group("player")
 	world.add_child(b)
 	return [world, p, b]
 
 func _close(a: Array) -> void:
-	(a[1] as Player).remove_from_group("player")
 	(a[0] as Node).queue_free()
 	await process_frame
 

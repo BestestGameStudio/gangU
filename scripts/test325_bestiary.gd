@@ -61,7 +61,7 @@ func _run() -> void:
 
 	## 2. Hub carries a walk-up station; Main mounts the panel.
 	var hub: Node = preload("res://scenes/hub.tscn").instantiate()
-	var station := hub.get_node_or_null("BestiaryStation") as BestiaryStation
+	var station := hub.get_node_or_null("BestiaryStation") as PanelStation
 	_check(station != null, "hub has a BestiaryStation")
 	hub.free()
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")

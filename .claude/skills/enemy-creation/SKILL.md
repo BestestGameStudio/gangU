@@ -34,7 +34,7 @@ Reference implementations: PR #182 (#177) - common enemy `scenes/enemy.tscn` and
 
 ## Wiring into an area
 - Mobs: the area's `SpawnData` child (`scripts/area_spawn_data.gd`) entries in the area `.tscn` (e.g. `scenes/dungeon_b.tscn`).
-- Objective + boss: `main.gd` `_mount_objective` (mounted AFTER spawns). ELIMINATION: `boss_scene` + `boss_spawn_position`; connect `boss_spawned` and set `boss.player_path = NodePath("../../Player")` before tree entry (production Player is in no group, D6), or the boss stands idle.
+- Objective + boss: `main.gd` `_mount_objective` (mounted AFTER spawns). ELIMINATION: `boss_scene` + `boss_spawn_position`; connect `boss_spawned` and set `boss.player_path = NodePath("../../Player")` before tree entry (D6 explicit wiring; otherwise Enemy falls back to `Player.find`).
 - Portal: `_mount_exit_portal` locks red rooms only when the objective can complete (D12 clear-or-die, #55 no soft-lock).
 - Update docs and comments that described the area's old content (ARCHITECTURE D11/D17/O-entries, `exit_portal.gd`, `hud.gd`, `area_spawn_data.gd`).
 - A brand-new area or gate: follow the dungeon-creation skill's checklist.

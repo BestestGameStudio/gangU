@@ -156,7 +156,7 @@ func _physics_process(_delta: float) -> bool:
 		5:  # frozen before its first physics step: zero movement
 			if _frame >= 12:
 				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "REAL projectile spawned inside (production order) never moves (first-step claim, not scan)")
-				_check(_real_proj._freeze_count == 1, "real projectile claimed exactly once (count=1)")
+				_check(_real_proj.freeze.count == 1, "real projectile claimed exactly once (count=1)")
 				if _real_proj._sprite != null:
 					_check(not _real_proj._sprite.is_playing(), "frozen projectile sprite animation PAUSED")
 					_real_proj_frame0 = _real_proj._sprite.frame
@@ -166,13 +166,13 @@ func _physics_process(_delta: float) -> bool:
 				_frame = 0
 		6:  # overlapping second bubble claims the same projectile once
 			if _frame >= 20:
-				_check(_real_proj._freeze_count == 2, "overlapping bubble also claims it once (count=2)")
+				_check(_real_proj.freeze.count == 2, "overlapping bubble also claims it once (count=2)")
 				_real_bubble._begin_release()
 				_phase = 7
 				_frame = 0
 		7:  # first bubble released; the second still holds the freeze
 			if _frame >= 25:
-				_check(_real_proj._freeze_count == 1, "first release leaves the second claim (count=1)")
+				_check(_real_proj.freeze.count == 1, "first release leaves the second claim (count=1)")
 				_check(_real_proj.global_position.distance_to(_real_spawn_pos) < 0.01, "still frozen while any bubble holds it")
 				if _real_proj._sprite != null:
 					_check(_real_proj._sprite.frame == _real_proj_frame0 and is_equal_approx(_real_proj._sprite.frame_progress, _real_proj_progress0), "projectile sprite frame held across the whole freeze")
@@ -189,7 +189,7 @@ func _physics_process(_delta: float) -> bool:
 					_check(true, "projectile resumes moving after final release")
 					_spawn_real_enemy_phase()
 				elif _real_proj.global_position.distance_to(_real_spawn_pos) > 10.0:
-					_check(_real_proj._freeze_count == 0, "claims balanced after both bubbles end (count=0)")
+					_check(_real_proj.freeze.count == 0, "claims balanced after both bubbles end (count=0)")
 					_check(true, "projectile resumes moving after final release")
 					if _real_proj._sprite != null:
 						_check(_real_proj._sprite.is_playing(), "released projectile sprite animation RESUMED")
@@ -201,7 +201,7 @@ func _physics_process(_delta: float) -> bool:
 		11: # REAL enemy, production spawn order, inside a fresh bubble: claimed
 			# on its first physics step, zero motion, walk animation PAUSED.
 			if _frame >= 15:
-				_check(_real_enemy._freeze_count == 1, "real enemy claimed on its first physics step (count=1)")
+				_check(_real_enemy.freeze.count == 1, "real enemy claimed on its first physics step (count=1)")
 				_check(_real_enemy.global_position.distance_to(_real_enemy_spawn) < 0.01, "real enemy spawned inside (production order) never moves")
 				if _real_enemy.sprite != null and _real_enemy_sprite_played:
 					_check(not _real_enemy.sprite.is_playing(), "frozen enemy sprite animation PAUSED")
@@ -210,7 +210,7 @@ func _physics_process(_delta: float) -> bool:
 				_frame = 0
 		12: # released: behavior and animation resume
 			if _frame >= 10:
-				_check(_real_enemy._freeze_count == 0, "enemy released (count=0)")
+				_check(_real_enemy.freeze.count == 0, "enemy released (count=0)")
 				if _real_enemy.sprite != null and _real_enemy_sprite_played:
 					_check(_real_enemy.sprite.is_playing(), "released enemy sprite animation RESUMED")
 				print("---\n%d checks, %d failures" % [_checks, _failures])

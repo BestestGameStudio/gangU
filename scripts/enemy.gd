@@ -23,10 +23,8 @@ signal health_changed(current: int, max_hp: int)
 ## enemy_behavior_cover.gd). Data per scene: the Mustache Warrior scene
 ## (scenes/enemy.tscn) sets it; the Warlord boss and other types do not.
 @export var cover_seek: bool = false
-## #34: explicit target wiring FIRST - the production main.tscn Player is in no
-## group, matching the RunManager/ReviveSatchel/HUD explicit-wiring convention.
-## The "player" group lookup remains as a fallback so existing test scenes
-## (which put the Player in the group) keep working unchanged.
+## #34: explicit target wiring FIRST (production always sets it); unset falls
+## back to Player.find.
 @export var player_path: NodePath
 ## (A, #59) Reward drop: on death, roll this table and spawn the drop at my
 ## position. ADDITIVE hook only - no table assigned means no drop. Table
@@ -85,11 +83,11 @@ func _ready() -> void:
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 		if _player == null:
-			push_warning("Enemy: player_path did not resolve to a Player; falling back to the 'player' group.")
+			push_warning("Enemy: player_path did not resolve to a Player; falling back to Player.find.")
 	if _player == null:
-		_player = get_tree().get_first_node_in_group("player")
+		_player = Player.find(get_tree())
 	if _player == null:
-		push_warning("Enemy: no player target (no player_path and no 'player' group member); standing idle.")
+		push_warning("Enemy: no player target (no player_path and no Player in the tree); standing idle.")
 	# #290: never physically block or push players (deferred so a Player added
 	# in the same frame has registered its group first).
 	_ignore_player_bodies.call_deferred()
@@ -257,27 +255,14 @@ func is_rallied() -> bool:
 func chase_speed() -> float:
 	return speed * (RALLY_SPEED_MULT if is_rallied() else 1.0)
 
-## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
-## positive, the behavior physics_step (which accumulates ALL behavior
-## clocks from delta) never runs, so the whole enemy freezes.
-var _freeze_count := 0
+## #305: Signature freeze. While held, the behavior physics_step (which
+## accumulates ALL behavior clocks from delta) never runs, and the sprite
+## pauses - a frozen enemy must LOOK frozen.
+var freeze := FreezeHold.new()
 var _spawn_claim_pending := true
 
-## #305: Signature freeze contract. Claims are reference-counted so
-## overlapping bubbles freeze and release independently. The animated
-## sprite pauses while held - a frozen enemy must LOOK frozen.
 func set_frozen(frozen: bool) -> void:
-	var was := _freeze_count
-	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
-	if sprite != null:
-		if _freeze_count > 0 and was == 0:
-			# pause() alone does not hold: the sprite driver's _process
-			# replays locomotion every frame. Stop its processing too.
-			sprite.pause()
-			sprite.process_mode = Node.PROCESS_MODE_DISABLED
-		elif _freeze_count == 0 and was > 0:
-			sprite.process_mode = Node.PROCESS_MODE_INHERIT
-			sprite.play()
+	freeze.apply(frozen, sprite)
 
 func _physics_process(delta: float) -> void:
 	if _spawn_claim_pending:
@@ -290,7 +275,7 @@ func _physics_process(delta: float) -> void:
 		_spawn_claim_pending = false
 		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
-	if _freeze_count > 0:
+	if freeze.is_frozen():
 		return
 	_rally_left = maxf(_rally_left - delta, 0.0)
 	# #331: a strong knockback owns the body until it decays below

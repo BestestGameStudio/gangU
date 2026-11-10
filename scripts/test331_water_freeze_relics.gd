@@ -105,7 +105,6 @@ func _initialize() -> void:
 	root.add_child(_area)
 	current_scene = _area
 	_player = load("res://scenes/player.tscn").instantiate()
-	_player.add_to_group("player")
 	_area.add_child(_player)
 	_player.global_position = Vector2(400, 300)
 	_player.set_physics_process(false)
@@ -132,14 +131,14 @@ func _check_reproduction() -> void:
 	await _frames(3)
 	var b := _bubble(Vector2(550, 300), 350.0, 5.0)
 	await _wait(0.4) # expand (0.25 s) + margin
-	_check(e._freeze_count == 1, "repro: enemy claimed once (%d)" % e._freeze_count)
-	_check(lob.freeze_count() == 1, "repro: lob claimed once (%d)" % lob.freeze_count())
-	_check(rain.freeze_count() == 1, "repro: rain zone claimed once (%d)" % rain.freeze_count())
+	_check(e.freeze.count == 1, "repro: enemy claimed once (%d)" % e.freeze.count)
+	_check(lob.freeze.count == 1, "repro: lob claimed once (%d)" % lob.freeze.count)
+	_check(rain.freeze.count == 1, "repro: rain zone claimed once (%d)" % rain.freeze.count)
 	var drops := _drops()
 	drops.erase(lob)
 	var all_one := true
 	for d in drops:
-		all_one = all_one and d.freeze_count() == 1
+		all_one = all_one and d.freeze.count == 1
 	_check(all_one, "repro: every existing rain drop claimed once (%d drops)" % drops.size())
 	_check(lob._ball.process_mode == Node.PROCESS_MODE_DISABLED, "repro: lob sprite animation held")
 	var pos := lob.global_position
@@ -158,14 +157,14 @@ func _check_reproduction() -> void:
 	for i in drops.size():
 		held = held and is_instance_valid(drops[i]) and drops[i]._t == drop_t[i]
 	_check(held, "repro: existing drops held mid-fall")
-	_check(lob.freeze_count() == 1 and rain.freeze_count() == 1, "repro: per-frame claim requests never double the claim")
+	_check(lob.freeze.count == 1 and rain.freeze.count == 1, "repro: per-frame claim requests never double the claim")
 	_check(e.hp == hp0, "repro: no damage while frozen")
 	await _wait_release(b)
 	await _frames(1)
-	_check(lob.freeze_count() == 0 and rain.freeze_count() == 0 and e._freeze_count == 0, "repro: all claims released to 0")
+	_check(lob.freeze.count == 0 and rain.freeze.count == 0 and e.freeze.count == 0, "repro: all claims released to 0")
 	var leaked := false
 	for d in drops:
-		if is_instance_valid(d) and d.freeze_count() != 0:
+		if is_instance_valid(d) and d.freeze.count != 0:
 			leaked = true
 	_check(not leaked, "repro: drop claims released to 0")
 	_check(lob._ball.process_mode == Node.PROCESS_MODE_INHERIT, "repro: lob sprite animation resumed")
@@ -186,16 +185,16 @@ func _check_spawned_inside() -> void:
 	var rain := WaterRain.spawn(_area, _spell("heavy_rain"), _player, Vector2(650, 300))
 	var drop := WaterSplash.spawn(_area, _spell("heavy_rain"), _player, Vector2(620, 320), Vector2(620, 320), 140.0, 0.3)
 	await _frames(1)
-	_check(lob.freeze_count() == 1, "inside: new lob claimed on first step")
-	_check(rain.freeze_count() == 1, "inside: new rain zone claimed on first step")
-	_check(drop.freeze_count() == 1, "inside: new drop claimed on first step")
+	_check(lob.freeze.count == 1, "inside: new lob claimed on first step")
+	_check(rain.freeze.count == 1, "inside: new rain zone claimed on first step")
+	_check(drop.freeze.count == 1, "inside: new drop claimed on first step")
 	await _frames(20)
 	_check(lob.global_position == Vector2(500, 300) and lob._t == 0.0, "inside: lob never moved")
 	_check(rain.drops == 0 and rain._elapsed == 0.0, "inside: rain never ticked")
 	_check(drop._t == 0.0 and not drop._landed, "inside: drop never fell")
 	await _wait_release(b)
 	await _frames(1)
-	_check(lob.freeze_count() == 0 and rain.freeze_count() == 0 and drop.freeze_count() == 0, "inside: claims released")
+	_check(lob.freeze.count == 0 and rain.freeze.count == 0 and drop.freeze.count == 0, "inside: claims released")
 	await _wait(0.4)
 	_check(lob._t > 0.0 and rain.drops > 0 and (not is_instance_valid(drop) or drop._landed), "inside: all resume after release")
 	await _clear()
@@ -209,16 +208,16 @@ func _check_overlap() -> void:
 	var lob := WaterSplash.spawn(_area, _spell("water_splash"), _player, Vector2(550, 300), Vector2(700, 300), 70.0, 1.0)
 	var rain := WaterRain.spawn(_area, _spell("heavy_rain"), _player, Vector2(600, 300))
 	await _frames(2)
-	_check(lob.freeze_count() == 2 and rain.freeze_count() == 2, "overlap: two bubbles hold two claims (%d, %d)" % [lob.freeze_count(), rain.freeze_count()])
+	_check(lob.freeze.count == 2 and rain.freeze.count == 2, "overlap: two bubbles hold two claims (%d, %d)" % [lob.freeze.count, rain.freeze.count])
 	await _wait_release(b1)
 	await _frames(3)
-	_check(lob.freeze_count() == 1 and rain.freeze_count() == 1, "overlap: first release leaves one claim")
+	_check(lob.freeze.count == 1 and rain.freeze.count == 1, "overlap: first release leaves one claim")
 	var pos := lob.global_position
 	await _frames(10)
 	_check(lob.global_position == pos and rain.drops == 0, "overlap: still held by the second bubble")
 	await _wait_release(b2)
 	await _frames(3)
-	_check(lob.freeze_count() == 0 and rain.freeze_count() == 0, "overlap: second release clears the claims")
+	_check(lob.freeze.count == 0 and rain.freeze.count == 0, "overlap: second release clears the claims")
 	await _frames(10)
 	_check(lob.global_position != pos and rain.drops > 0, "overlap: all resume")
 	await _clear()

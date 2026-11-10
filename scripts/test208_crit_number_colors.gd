@@ -94,7 +94,6 @@ func _initialize() -> void:
 
 	# --- real engine projectile hits carry the rolled tier ---
 	var player: Player = preload("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	stage.add_child(player)
 	player.global_position = Vector2(2000, 2000)
 	await _frames(2)

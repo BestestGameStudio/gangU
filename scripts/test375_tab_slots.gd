@@ -13,7 +13,7 @@ extends SceneTree
 
 class StubPlayer extends Player:
 	func _ready() -> void:
-		pass # skip gameplay wiring
+		add_to_group(ActorCollision.PLAYER_GROUP)
 	func _process(_delta: float) -> void:
 		pass
 	func _init() -> void:
@@ -86,7 +86,6 @@ func _border_of(b: Button) -> Color:
 
 func _initialize() -> void:
 	var player := StubPlayer.new()
-	player.add_to_group("player")
 	root.add_child(player)
 	var caster := StubCaster.new()
 	caster.name = "SpellCaster"

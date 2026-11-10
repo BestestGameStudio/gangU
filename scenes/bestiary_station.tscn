@@ -1,12 +1,13 @@
 [gd_scene load_steps=3 format=3 uid="uid://bgangu325sta"]
 
-[ext_resource type="Script" path="res://scripts/bestiary_station.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/panel_station.gd" id="1"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(56, 56)
 
-[node name="BestiaryStation" type="Area2D" groups=["bestiary_stations"]]
+[node name="BestiaryStation" type="Area2D"]
 script = ExtResource("1")
+panel_group = &"bestiary_panel"
 
 [node name="Marker" type="Polygon2D" parent="."]
 color = Color(0.88, 0.32, 0.28, 0.85)

@@ -77,7 +77,6 @@ func _mk_player(stage: Node2D, pos: Vector2, physics: bool = false) -> Player:
 	p.name = "Player"
 	p.collision_layer = 0
 	p.collision_mask = 0
-	p.add_to_group("player")
 	p.set_process(false)
 	stage.add_child(p)
 	p.global_position = pos

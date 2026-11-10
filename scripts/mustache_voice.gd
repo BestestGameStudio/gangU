@@ -160,7 +160,7 @@ func _process(delta: float) -> void:
 	if _enemy == null or not is_instance_valid(_enemy) or _enemy.hp <= 0:
 		return
 	# Frozen warriors keep their voices frozen too (#305 symmetry).
-	if _enemy._freeze_count > 0:
+	if _enemy.freeze.is_frozen():
 		return
 	_hurt_cooldown = maxf(0.0, _hurt_cooldown - delta)
 	# Attack cues follow the Sprite's one-shot actions (the visual swing

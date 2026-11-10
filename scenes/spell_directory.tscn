@@ -1,12 +1,14 @@
 [gd_scene load_steps=3 format=3 uid="uid://bgangu218dir"]
 
-[ext_resource type="Script" path="res://scripts/spell_directory.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/panel_station.gd" id="1"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(56, 56)
 
-[node name="SpellDirectory" type="Area2D" groups=["spell_directories"]]
+[node name="SpellDirectory" type="Area2D"]
 script = ExtResource("1")
+panel_group = &"spell_directory_panel"
+pass_caster = true
 
 [node name="Marker" type="Polygon2D" parent="."]
 color = Color(0.95, 0.75, 0.25, 0.85)

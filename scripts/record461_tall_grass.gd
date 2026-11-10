@@ -36,7 +36,6 @@ func _initialize() -> void:
 
 	_p = load("res://scenes/player.tscn").instantiate()
 	_p.name = "Player"
-	_p.add_to_group("player")
 	area.add_child(_p)
 	_p.terrain = _map
 	_p.set_physics_process(false)
