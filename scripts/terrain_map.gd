@@ -50,6 +50,7 @@ const TYPE_COLORS: Dictionary = {
 	TerrainTypes.WATER: Color(0.15, 0.4, 0.8, 1.0),
 	TerrainTypes.MOUNTAIN: Color(0.5, 0.5, 0.52, 1.0),
 	TerrainTypes.BLOCK: Color(0.7, 0.56, 0.34, 1.0), ## #216 placeholder sandstone
+	TerrainTypes.TALL_GRASS: Color(0.24, 0.48, 0.2, 1.0), ## #461 placeholder
 }
 ## Fallback swatch for a registered type with no listed color.
 const DEFAULT_TILE_COLOR: Color = Color(0.3, 0.3, 0.35, 1.0)
@@ -253,6 +254,11 @@ func is_walkable_at_cell(cell: Vector2i) -> bool:
 
 func is_walkable_at(world_pos: Vector2) -> bool:
 	return is_walkable_at_cell(world_to_cell(world_pos))
+
+## #461: true when the cell at world_pos hides whoever stands there (tall
+## grass). Palette-aware like every other property lookup.
+func conceals_at(world_pos: Vector2) -> bool:
+	return type_properties(tile_type_at(world_pos)).get("conceals", false)
 
 ## #266: the cell's TerrainTypes.Movement category.
 func movement_at_cell(cell: Vector2i) -> TerrainTypes.Movement:

@@ -108,6 +108,9 @@ func _nearest_enemy(summon: Summon) -> Enemy:
 		var enemy := e as Enemy
 		if enemy == null or enemy.hp <= 0:
 			continue
+		# #461: an enemy hidden in tall grass is not a target.
+		if not TallGrass.can_see(summon.terrain, summon.global_position, enemy.global_position):
+			continue
 		var d := summon.global_position.distance_squared_to(enemy.global_position)
 		if d < best_d:
 			best_d = d

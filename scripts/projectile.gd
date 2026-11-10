@@ -390,6 +390,9 @@ func _steer(delta: float) -> void:
 			# back to it can never damage it again (once-per-body guard), so
 			# homing+piercing continues to the next target instead of orbiting.
 			continue
+		# #461: homing never locks onto an enemy hidden in tall grass.
+		if not TallGrass.can_see(_terrain, global_position, e.global_position):
+			continue
 		var d2: float = global_position.distance_squared_to(e.global_position)
 		if d2 <= best_d2:
 			best_d2 = d2

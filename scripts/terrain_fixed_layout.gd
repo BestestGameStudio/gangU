@@ -12,8 +12,10 @@ extends Resource
 ## Default legend:
 ##   '#' obstacle (wall)   'T' tree      'M' mountain   'B' block (destroyable)
 ##   '~' water             'g' grass     'm' mud        's' snow     'i' ice
+##   'w' tall grass (#461, conceals)
 
 const DEFAULT_LEGEND: Dictionary = {
+	"w": TerrainTypes.TALL_GRASS,
 	"#": TerrainTypes.OBSTACLE,
 	"T": TerrainTypes.TREE,
 	"M": TerrainTypes.MOUNTAIN,

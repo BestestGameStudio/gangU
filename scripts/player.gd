@@ -384,7 +384,15 @@ func displace(offset: Vector2) -> Vector2:
 	global_position = TerrainMotion.clamp_displacement(terrain, from, from + offset, can_swim)
 	return global_position - from
 
+## #461: while standing in tall grass the player is hidden from anyone
+## outside it; the body is drawn translucent so the player can tell.
+const CONCEALED_ALPHA := 0.55
+
+func is_concealed() -> bool:
+	return TallGrass.conceals_at(terrain, global_position)
+
 func _process(_delta: float) -> void:
+	modulate.a = CONCEALED_ALPHA if is_concealed() else 1.0
 	# Face the mouse cursor; manual aim only.
 	var aim_dir := global_position.direction_to(get_global_mouse_position())
 	if aim_dir.length_squared() > 0.0:

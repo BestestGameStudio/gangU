@@ -167,6 +167,7 @@ func clear_action() -> void:
 		sprite.clear_action()
 
 func _process(delta: float) -> void:
+	visible = seen_by_player() # #461 tall grass
 	if _flash_t > 0.0:
 		_flash_t -= delta
 		if _flash_t <= 0.0:
@@ -194,6 +195,8 @@ func _resolve_target() -> Node2D:
 				continue
 			if summon.definition != null and not summon.definition.enemy_targetable:
 				continue
+			if not sees(summon): # #461: a summon hidden in tall grass
+				continue
 			var d := global_position.distance_squared_to(summon.global_position)
 			# #212: local taunt - a definition with taunt_range > 0 only draws
 			# enemies within that radius; 0.0 keeps the #209 global semantics.
@@ -206,9 +209,33 @@ func _resolve_target() -> Node2D:
 			return best
 		if objective_target != null and is_instance_valid(objective_target) and objective_target.hp > 0:
 			var player_alive := _player != null and is_instance_valid(_player) and _player.hp > 0
-			if not (player_alive and global_position.distance_to(_player.global_position) <= objective_aggro_range):
+			if not (player_alive and sees(_player) and global_position.distance_to(_player.global_position) <= objective_aggro_range):
 				return objective_target
+	# #461: a player hidden in tall grass is no target at all - every behavior
+	# already treats a null target as "no player" (idle / guards go home).
+	if _player != null and is_instance_valid(_player) and not sees(_player):
+		return null
 	return _player
+
+## #461: the tall-grass sight rule (TallGrass.can_see) from where I stand.
+## The area's grid is mine, or the player's when I was mounted without one.
+func sight_map() -> TerrainMap:
+	if terrain != null and is_instance_valid(terrain):
+		return terrain
+	if _player != null and is_instance_valid(_player):
+		return _player.terrain
+	return null
+
+func sees(other: Node2D) -> bool:
+	return TallGrass.can_see(sight_map(), global_position, other.global_position)
+
+## #461: whether the player can currently see me. Drives my drawing: an enemy
+## hidden in tall grass is not drawn until the player is in the grass with
+## it, close by. Gameplay (hits, damage) is unaffected - only sight.
+func seen_by_player() -> bool:
+	if _player == null or not is_instance_valid(_player):
+		return true
+	return TallGrass.can_see(sight_map(), _player.global_position, global_position)
 
 ## #464: rally call. Another enemy (the Fishy, when it hooks the player)
 ## can ask nearby allies to drop what they are doing and converge on the

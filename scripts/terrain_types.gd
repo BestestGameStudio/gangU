@@ -52,9 +52,15 @@ const MOUNTAIN: StringName = &"mountain"
 ## only the terrain-block spell places it. Destroyable into GROUND
 ## (PLACEHOLDER: the block does not remember the tile it was placed on).
 const BLOCK: StringName = &"block"
+## #461: tall grass. Walkable like GRASS, but "conceals": a character
+## standing in it can only be seen by a character that is also in tall
+## grass and close by (TallGrass.can_see owns the rule). Seeing OUT of the
+## grass is unrestricted.
+const TALL_GRASS: StringName = &"tall_grass"
 
-## Placeable type vocabulary.
-const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE, MUD, WATER, MOUNTAIN, BLOCK]
+## Placeable type vocabulary. New types are appended so existing atlas
+## columns stay where they are.
+const ALL: Array[StringName] = [GROUND, OBSTACLE, GRASS, TREE, SNOW, ICE, MUD, WATER, MOUNTAIN, BLOCK, TALL_GRASS]
 
 ## type -> properties. Data only; no behavior lives here.
 const DEFS: Dictionary = {
@@ -148,6 +154,16 @@ const DEFS: Dictionary = {
 		"destroyed_into": GROUND,
 		"element_tags": [],
 	},
+	TALL_GRASS: {
+		"movement": Movement.WALKABLE,
+		"speed_multiplier": 1.0,
+		"friction": 1.0,
+		"swimmable": false,
+		"destroyable": false,
+		"destroyed_into": &"",
+		"element_tags": [],
+		"conceals": true,
+	},
 }
 
 ## Safe fallback for an UNREGISTERED type id: never walkable, never a speed
@@ -182,7 +198,14 @@ static func properties(type: StringName) -> Dictionary:
 		# FALLING pit is not swimmable but is also not BLOCKING, so it
 		# stays fly-over.
 		"blocks_projectiles": src["movement"] == Movement.BLOCKING and not src["swimmable"],
+		# #461: hides whoever stands in it (TallGrass). Optional key: only
+		# TALL_GRASS sets it.
+		"conceals": src.get("conceals", false),
 	}
+
+## #461: true for tile types that hide a character standing in them.
+static func conceals(type: StringName) -> bool:
+	return properties(type)["conceals"]
 
 static func is_walkable(type: StringName) -> bool:
 	return properties(type)["walkable"]
