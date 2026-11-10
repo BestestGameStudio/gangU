@@ -500,9 +500,14 @@ func _check_tree() -> void:
 	_check(not rp.apply_upgrade(base, &"hammer_reaper"), "route: Reaper refused after Rhythm")
 	holder.queue_free()
 	await physics_frame
+	# #512: the rows now live in UpgradeCatalog; Main hands them to SpellProgress.
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
+	var registered: Array[String] = []
+	for row: SpellUpgrade in UpgradeCatalog.all():
+		registered.append(row.resource_path)
+	_check(main_src.contains("UpgradeCatalog.all()"), "main.gd takes its upgrades from UpgradeCatalog")
 	for id in IDS:
-		_check(main_src.contains("upgrades/%s.tres" % id), "main.gd registers %s" % id)
+		_check(registered.has("res://resources/upgrades/%s.tres" % id), "main.gd registers %s" % id)
 	# #465 (Daniel, 2026-11-09: regular mobs drop currency only): the
 	# production mob table no longer carries spells, so the Stone Hammer
 	# reward wiring is pinned with an in-code fixture entry.
