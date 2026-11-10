@@ -9,7 +9,7 @@ extends SceneTree
 
 class StubPlayer extends Player:
 	func _ready() -> void:
-		add_to_group(ActorCollision.PLAYER_GROUP)
+		add_to_group(PhysicsLayers.PLAYER_GROUP)
 	func _process(_delta: float) -> void:
 		pass
 	func _init() -> void:
