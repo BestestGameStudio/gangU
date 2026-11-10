@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harnesses:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      # Pinned to the Godot version in project.godot (4.5.1-stable), as deploy.yml.
+      image: barichello/godot-ci:4.5.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Import project
+        run: timeout 600 godot --headless --path . --import
+      - name: Run harnesses
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tools/run_tests.gd -- -j 4 | tee run_tests.log
+          grep -q '^RESULT: ALL PASS$' run_tests.log
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-tests-log
+          path: run_tests.log
