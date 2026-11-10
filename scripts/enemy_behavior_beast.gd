@@ -58,6 +58,9 @@ var _screams: int = 0
 # --- BossBehavior hooks ------------------------------------------------------
 
 func _configure() -> void:
+	default_attack = Attack.LUNGE
+	default_fallback = Attack.SCREAM
+	_range(SCREAM_RANGE, false, Attack.SCREAM, Attack.LUNGE)
 	attack_steps = {State.LUNGE: _dispatch_lunge, State.SCREAM: _dispatch_scream}
 	first_attack_delay = FIRST_ATTACK_DELAY
 	attack_interval = ATTACK_INTERVAL
@@ -108,10 +111,6 @@ func _attack_begin_count() -> void:
 
 # --- CHASE -------------------------------------------------------------------
 
-func _pick_attack(dist: float) -> int:
-	var pick: int = Attack.SCREAM if dist < SCREAM_RANGE else Attack.LUNGE
-	var fallback: int = Attack.LUNGE if pick == Attack.SCREAM else Attack.SCREAM
-	return _history_pick(pick, fallback)
 
 # --- ATTACKS -----------------------------------------------------------------
 
