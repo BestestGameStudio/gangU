@@ -84,8 +84,8 @@ func _init() -> void:
 	_check(beast._lunges == 0, "beast wind-up reset clears lunge chain")
 
 	# (7) stun-phase opt-in
-	_check(head._has_stun_phase() and beast._has_stun_phase(), "head and beast stun once")
-	_check(not warlord._has_stun_phase(), "warlord has no stun phase")
+	_check(head.has_stun_phase and beast.has_stun_phase, "head and beast stun once")
+	_check(not warlord.has_stun_phase, "warlord has no stun phase")
 
 	print("[513] DONE failures=", failures)
 	quit(1 if failures > 0 else 0)
