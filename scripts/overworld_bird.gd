@@ -78,13 +78,15 @@ func spawn_bird() -> Enemy:
 		# Fixtures that mount the overworld without a player get no bird
 		# (an Enemy without a target just idles and warns on _ready).
 		return null
-	var b: Enemy = BIRD_SCENE.instantiate()
-	b.player_path = player_path
-	b.terrain = terrain
-	b.reward_table = BIRD_TABLE
 	var ctx := BirdContext.new()
 	ctx.manager = self
-	b.context = ctx
+	var opts := EnemySpawner.SpawnOptions.new()
+	opts.wire_enemy = true
+	opts.player_path = player_path
+	opts.terrain = terrain
+	opts.reward_table = BIRD_TABLE
+	opts.context = ctx
+	var b := EnemySpawner.spawn(BIRD_SCENE, Vector2.ZERO, opts) as Enemy
 	_area.add_child(b)
 	# Arrive already circling: start one orbit-radius out at full height.
 	b.global_position = p.global_position + Vector2.from_angle(_rng.randf() * TAU) * EnemyBehaviorBird.CIRCLE_RADIUS

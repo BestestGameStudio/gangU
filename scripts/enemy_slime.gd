@@ -101,10 +101,13 @@ func _split() -> void:
 		if spawner != null:
 			child = spawner.request_spawn_deferred(entry)
 		else:
-			child = scene.instantiate() as Enemy
-			child.position = local
-			child.definition = entry["definition"]
-			child.reward_table = reward_table
+			var opts := EnemySpawner.SpawnOptions.new()
+			opts.wire_enemy = true
+			opts.player_path = player_path
+			opts.terrain = terrain
+			opts.reward_table = reward_table
+			opts.definition = entry["definition"]
+			child = EnemySpawner.spawn(scene, local, opts) as Enemy
 			area.call_deferred("add_child", child)
 		if child == null:
 			continue # spawn policy refused this child; it never exists

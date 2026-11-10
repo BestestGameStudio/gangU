@@ -161,9 +161,7 @@ func _spawn_boss() -> void:
 	if boss_scene == null:
 		push_error("DungeonObjective: ELIMINATION boss_scene is not set; the objective can never complete.")
 		return
-	var boss := boss_scene.instantiate()
-	if boss is Node2D:
-		boss.global_position = boss_spawn_position
+	var boss := EnemySpawner.spawn(boss_scene, boss_spawn_position, EnemySpawner.SpawnOptions.new())
 	# #396: a boss moves on its area's terrain like the mobs do (spawned
 	# mobs get it from EnemySpawner); no Terrain node = flat, as before.
 	if boss is Enemy and get_parent() != null:
