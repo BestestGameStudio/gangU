@@ -7,6 +7,8 @@ extends SceneTree
 ##      again (both in grass, close by) and the player turns translucent.
 ##   3. the open-field enemy's AI is switched on: it has no target (the
 ##      player is hidden in the grass), so it does not come after them.
+##   4. the grass enemy's AI is switched on: both are in the grass and close,
+##      so it sees the player and chases / hits them.
 ## Run under xvfb with --write-movie; quits itself.
 
 var _p: Player
@@ -78,11 +80,18 @@ func _initialize() -> void:
 	_open.set_physics_process(true)
 	await _run_frames(90)
 	print("[rec461] open enemy at ", _open.global_position, " target ", _open._resolve_target())
+
+	_phase = "4. grass enemy AI running: both in grass, close -> it sees and chases the player"
+	var hp0 := _p.hp
+	_hidden.set_physics_process(true)
+	await _run_frames(90)
+	print("[rec461] grass enemy at ", _hidden.global_position, " target ", _hidden._resolve_target(), " player hp ", hp0, " -> ", _p.hp)
 	quit(0)
 
 func _run_frames(n: int) -> void:
 	for i in n:
 		await physics_frame
-		_label.text = "#461: tall grass\n%s\nhidden enemy drawn: %s | player concealed: %s | open enemy target: %s" % [
-			_phase, _hidden.visible, _p.is_concealed(), "player" if _open._resolve_target() != null else "none"]
+		_label.text = "#461: tall grass\n%s\nhidden enemy drawn: %s | player concealed: %s | open enemy target: %s\ngrass enemy target: %s | player hp: %d" % [
+			_phase, _hidden.visible, _p.is_concealed(), "player" if _open._resolve_target() != null else "none",
+			"player" if _hidden._resolve_target() != null else "none", _p.hp]
 		await process_frame

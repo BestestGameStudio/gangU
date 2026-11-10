@@ -11,6 +11,8 @@ extends SceneTree
 ##       does not close in) and picks them up again once they step out.
 ##   (D) an enemy in the grass sees a player in the grass close by, and sees
 ##       a player outside the grass; a player in the grass far away is hidden.
+##   (D2) both in the grass and close: a chaser closes in and lands contact
+##       hits, and a guard aggros (PR #468 review).
 ##   (E) drawing: an enemy hidden in the grass is not drawn for a player
 ##       outside it, and is drawn once the player is in the grass beside it.
 ##       The player is drawn translucent while concealed.
@@ -136,6 +138,29 @@ func _enemy_legs() -> void:
 	p.global_position = Vector2(400, 300)
 	await _frames(1)
 	_check(e2._resolve_target() == p, "D: enemy in grass sees a player outside")
+
+	# --- (D2) both in the grass, close: the enemy really acts on it ---
+	# (Daniel, PR #468: "make sure that enemies can still see the player when
+	# they're both in the grass and within a certain distance".)
+	var chaser := _enemy(Vector2(1000, 450), m)
+	p.global_position = Vector2(1000 + TallGrass.SIGHT_RADIUS - 16.0, 450)
+	var hp0 := p.hp
+	var gap0 := chaser.global_position.distance_to(p.global_position)
+	await _frames(20)
+	_check(chaser._resolve_target() == p, "D2: chaser in grass keeps the player in grass as its target")
+	_check(chaser.global_position.distance_to(p.global_position) < gap0 - 10.0, "D2: chaser in grass closes in on a player in grass close by")
+	await _frames(60)
+	_check(p.hp < hp0, "D2: chaser in grass lands contact hits on the player in grass")
+	chaser.queue_free()
+	p.hp = hp0
+	var gguard := _enemy(Vector2(1000, 150), m, load("res://resources/enemies/overworld_guard.tres") as EnemyDefinition)
+	p.global_position = Vector2(1000 + TallGrass.SIGHT_RADIUS - 16.0, 150)
+	await _frames(3)
+	var gb := gguard._behavior as EnemyBehaviorGuard
+	_check(gb != null and gb.engaged, "D2: guard in grass aggros on a player in grass close by")
+	gguard.queue_free()
+	p.global_position = Vector2(400, 300) # back outside for (E)
+	await _frames(1)
 
 	# --- (E) drawing ---
 	await process_frame
