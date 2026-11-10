@@ -64,6 +64,8 @@ extends RefCounted
 ##           modifies the original "stay behind cover while aimed at").
 ##           With no other cover around it keeps holding and retries one
 ##           period later.
+##           #443: while holding, they lob a low-damage rock at the player
+##           every ROCK_INTERVAL (see the ROCK constants / _tick_rock).
 ##   CHARGE- the per-enemy away-timer runs whenever the mouse is NOT
 ##           pointing their way (in SEEK/DASH/HOLD) and resets the moment
 ##           it points back; at AWAY_CHARGE_TIME the moustache man charges:
@@ -112,6 +114,21 @@ const REPICK_INTERVAL: float = 0.25 ## cover rescan/invalidation cadence (mirror
 const WAYPOINT_EPS: float = 10.0
 const SHELTER_HALF_WIDTH: float = 8.0 ## sightline must stay blocked this far either side (body width, not a corner graze) (PLACEHOLDER)
 const STALL_TIME: float = 1.0 ## wedged this long on an unreachable hold point: drop the cover and engage (PLACEHOLDER)
+## #443 (Daniel, 2026-11-09: "When hiding behind cover mustache men throw
+## rocks. Rocks go over terrain like barricades and trees"; answers: low
+## damage, only while hiding behind cover, fly toward the player, over low
+## cover only - maze walls and stone blocks still block them).
+## The rock is a LOBBED Projectile (resources/spells/mustache_rock.tres) aimed
+## at the player's position at release; it lands just past that point, so
+## moving dodges it. Thrown only in HOLD, only within ROCK_RANGE, and only
+## when no high cover (TerrainMap.lob_blocked) sits on the line - a man
+## behind a wall does not waste rocks into it.
+const ROCK_SPELL: Spell = preload("res://resources/spells/mustache_rock.tres")
+const PROJECTILE_SCENE: PackedScene = preload("res://scenes/projectile.tscn")
+const ROCK_INTERVAL: float = 1.8 ## seconds between throws while holding (PLACEHOLDER)
+const ROCK_FIRST_DELAY: float = 0.6 ## settle time after reaching cover before the first throw (PLACEHOLDER)
+const ROCK_RANGE: float = 400.0 ## max throw distance to the player (PLACEHOLDER)
+const ROCK_OVERSHOOT: float = 36.0 ## the rock flies this far past the aim point before landing (PLACEHOLDER)
 
 enum State { SEEK, DASH, HOLD, CHARGE, ENGAGED }
 
@@ -130,6 +147,10 @@ var _repick_timer: float = 0.0
 var _stall_timer: float = 0.0
 ## #414: time spent HOLDing the current cover (reset on each new hold).
 var _hold_elapsed: float = 0.0
+## #443: countdown to the next rock while holding (reset on each new hold).
+var _rock_timer: float = ROCK_FIRST_DELAY
+## #443: rocks thrown by this enemy (test/debug counter only).
+var rocks_thrown: int = 0
 ## The TerrainMap whose cell_destroyed/cell_interacted signals we listen
 ## to for instant cover invalidation (raw set/clear_cell emit nothing, so
 ## the repick poll below remains the catch-all).
@@ -190,6 +211,7 @@ func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta
 		enemy.velocity = Vector2.ZERO
 		_stall_timer = 0.0
 		_hold_elapsed = 0.0 # #414: a fresh hold restarts the relocate clock
+		_rock_timer = ROCK_FIRST_DELAY # #443: settle before the first rock
 	elif enemy.velocity == Vector2.ZERO:
 		# Wedged (unreachable hold point): give up on this cover.
 		_stall_timer += delta
@@ -206,6 +228,7 @@ func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 	enemy.velocity = Vector2.ZERO
 	EnemyBehaviorChaseContact._slide(enemy)
 	_hold_elapsed += delta
+	_tick_rock(enemy, player, delta)
 	if _repick_timer > 0.0:
 		return
 	if not _cover_still_valid(enemy):
@@ -243,6 +266,44 @@ func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 		_state = State.DASH
 	else:
 		_repick_timer = REPICK_INTERVAL
+
+# --- ROCK (#443) ------------------------------------------------------------
+
+## HOLD-only rock clock: ticks from delta inside physics_step, so freeze
+## (#305) and knockback (#331) pause it like the other timers.
+func _tick_rock(enemy: Enemy, player: Player, delta: float) -> void:
+	_rock_timer -= delta
+	if _rock_timer > 0.0:
+		return
+	var dist: float = enemy.global_position.distance_to(player.global_position)
+	if dist > ROCK_RANGE or dist < 1.0:
+		_rock_timer = REPICK_INTERVAL # out of range: re-check soon
+		return
+	if enemy.terrain != null and enemy.terrain.lob_blocked(enemy.global_position, player.global_position):
+		_rock_timer = REPICK_INTERVAL # a wall/stone block in the way: no throw
+		return
+	_rock_timer = ROCK_INTERVAL
+	throw_rock(enemy, player.global_position)
+
+## Spawns one rock from `enemy` toward `target` (the player's position at
+## release). Range is per throw - a duplicate of the shared spell - so the
+## rock lands ROCK_OVERSHOOT past the aim point instead of flying on.
+func throw_rock(enemy: Enemy, target: Vector2) -> Projectile:
+	var area: Node = enemy.get_parent()
+	if area == null:
+		return null
+	var to: Vector2 = target - enemy.global_position
+	var spell: Spell = ROCK_SPELL.duplicate()
+	spell.range = minf(to.length() + ROCK_OVERSHOOT, ROCK_RANGE + ROCK_OVERSHOOT)
+	var p: Projectile = PROJECTILE_SCENE.instantiate()
+	p.setup(spell, to, enemy)
+	p.position = enemy.global_position
+	p.visual_override = RockVisual.new()
+	# D14: never add to the tree synchronously from a physics step.
+	area.call_deferred("add_child", p)
+	enemy.play_action(&"ranged")
+	rocks_thrown += 1
+	return p
 
 # --- CHARGE -----------------------------------------------------------------
 

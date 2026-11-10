@@ -20,8 +20,12 @@ const COLD: StringName = &"cold"
 const WATER: StringName = &"water"
 ## #370: element tag for the Stone Hammer tree. Metadata only today.
 const EARTH: StringName = &"earth"
+## #443: behavior-keyed, read by Projectile. A lobbed shot arcs over LOW
+## cover (trees, cover-group solids such as crates and the #420 barricade)
+## while high cover - walls, mountains, stone blocks - still stops it.
+const LOBBED: StringName = &"lobbed"
 
-const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD, WATER, EARTH]
+const ALL: Array[StringName] = [PROJECTILE, AOE, MELEE, BURN, MANA, PIERCING, HOMING, COLD, WATER, EARTH, LOBBED]
 
 static func is_valid(tag: StringName) -> bool:
 	return ALL.has(tag)
