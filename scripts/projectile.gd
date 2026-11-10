@@ -56,6 +56,40 @@ const SPELL_SPRITE_ANIMS: Dictionary = {
 	"Surging Bubble": &"water_ball",
 	"Big Ball": &"water_ball",
 }
+## #514: the same table keyed by Spell.id() (the .tres file name), so renaming
+## a spell's display name never changes its art. Generated from the name table
+## above and the shipped .tres files; test514_spell_id pins that they agree.
+const SPELL_SPRITE_ANIMS_BY_ID: Dictionary = {
+	&"big_ball": &"water_ball",
+	&"bolt_flurry": &"bolt_flurry",
+	&"bolt_heavy": &"bolt_heavy",
+	&"fire_ball": &"fire_ball",
+	&"fire_ball_beam": &"fire_ball_beam",
+	&"fire_ball_beam_heavy": &"fire_ball_beam_heavy",
+	&"fire_ball_beam_homing": &"fire_ball_beam_homing",
+	&"fire_ball_beam_long": &"fire_ball_beam_long",
+	&"fire_ball_beam_piercing": &"fire_ball_beam_piercing",
+	&"fire_ball_split": &"fire_ball_split",
+	&"fire_ball_split_heavy": &"fire_ball_split_heavy",
+	&"fire_ball_split_wide": &"fire_ball_split_wide",
+	&"heavy_rain": &"water_ball",
+	&"mana_shot": &"mana_shot",
+	&"mana_shot_lance": &"mana_lance",
+	&"mana_shot_volley": &"mana_volley",
+	&"placeholder_bolt": &"placeholder_bolt",
+	&"spirit_punch": &"spirit_punch",
+	&"spirit_punch_bubble": &"spirit_punch",
+	&"spirit_punch_burst": &"spirit_punch",
+	&"spirit_punch_launch": &"spirit_punch",
+	&"surging_bubble": &"water_ball",
+	&"water_ball": &"water_ball",
+	&"water_ball_guided": &"water_ball",
+	&"water_ball_seeking": &"water_ball",
+	&"water_ball_tidal": &"water_ball",
+	&"water_barrage": &"water_ball",
+	&"water_bubble": &"water_ball",
+	&"water_splash": &"water_ball",
+}
 ## Cell art is 64 px wide at scale 1; radius / 10 draws each projectile a little
 ## larger than its hit circle so it reads clearly. Clamped (art only, never the
 ## hitbox) so the smallest shots stay visible and the largest stay in proportion.
@@ -284,11 +318,21 @@ func _wire_glow_and_trail() -> void:
 		add_child(_glow)
 		move_child(_glow, 0)
 
+## #514: the flight-sprite row for a spell: by Spell.id() first, then by display
+## name for spells built in code (no resource file, so no id).
+static func sprite_anim_for(s: Spell) -> StringName:
+	if s == null:
+		return &""
+	var by_id: Variant = SPELL_SPRITE_ANIMS_BY_ID.get(s.id())
+	if by_id != null:
+		return by_id
+	return SPELL_SPRITE_ANIMS.get(s.spell_name, &"")
+
 ## #210: hide the code-drawn visuals and fly the mapped supplied-art
 ## animation instead. The root already faces the flight direction and the art
 ## is authored pointing +X, so no extra rotation is needed.
 func _wire_sprite() -> void:
-	var anim: StringName = SPELL_SPRITE_ANIMS.get(spell.spell_name, &"")
+	var anim: StringName = sprite_anim_for(spell)
 	if anim == &"":
 		return
 	_sprite = AnimatedSprite2D.new()
