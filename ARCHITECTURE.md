@@ -87,12 +87,12 @@ Each area's enemies live in its own `SpawnData` child (`AreaSpawnData`) and Main
 *Where:* `scripts/projectile.gd`.
 
 ### D19. Evidence standard for gameplay PRs
-Mechanics land with headless SceneTree harnesses (`scripts/test*.gd`, `scenes/test*.tscn` fixtures) plus, for player-visible claims, rendered evidence of the pushed head (browser recording, or CI screenshots/clips). Fixture scenes are labeled fixtures, never production.
-*Where:* `scripts/test*.gd`, `scenes/test*.tscn`, `.claude/skills/ci-runner`.
+Mechanics land with headless SceneTree harness drivers plus, for player-visible claims, a browser recording of the exact pushed head with zero console errors, made with real input (synthetic `apply_damage` calls are a named headless complement only). Fixture scenes are labeled evidence fixtures, never described as production.
+*Where:* `scripts/test*.gd`, `scenes/test*.tscn`.
 
-### D20. CI/CD: one build workflow; only main deploys
-`deploy.yml` exports the web build in a pinned `barichello/godot-ci:4.5.1` container using the image's checksum-verified nothreads templates. PRs get build-only runs; GitHub Pages deploys only on main pushes. Concurrency is per ref (`pages-${{ github.ref }}`, no cancel) so PR activity cannot cancel a main deploy (#52). `claude.yml` (the `@claude` / `claude`-label agent job) and `claude-code-review.yml` (automatic PR review) are agent workflows, not build gates. No workflow runs the test harnesses yet; they are run locally or by the agent job.
-*Where:* `.github/workflows/deploy.yml`, `.github/workflows/claude.yml`, `.github/workflows/claude-code-review.yml`.
+### D20. CI/CD: web build and test gate; only main deploys
+`deploy.yml` exports the web build in a pinned `barichello/godot-ci:4.5.1` container using the image's checksum-verified nothreads templates. PRs get build-only runs; GitHub Pages deploys only on main pushes. Concurrency is per ref (`pages-${{ github.ref }}`, no cancel) so PR activity cannot cancel a main deploy (#52). `claude.yml` (the `@claude` / `claude`-label agent job) and `claude-code-review.yml` (automatic PR review) are agent workflows, not build gates. `tests.yml` runs `tools/run_tests.gd` on pull requests and main pushes with pinned Godot 4.5.1; it fails on failed, timed-out, unloadable or script-error harnesses.
+*Where:* `.github/workflows/deploy.yml`, `.github/workflows/tests.yml`, `tools/run_tests.gd`, `.github/workflows/claude.yml`, `.github/workflows/claude-code-review.yml`.
 
 ### D21. Overworld between the hub and the dungeons (#346)
 Hub (services: shop, spell directory, bestiary, fast travel) -> TRAVEL gate `GateOverworld` -> `scenes/overworld.tscn`, which holds every dungeon entrance (GateNormal, GateRed, GateGenerated, GateBoss, GateBeast, GateDefense, GateMaze) and `GateHub` back. Each guarded entrance has an `EntranceGuards` carrier (AreaSpawnData + `dungeon_id`); Main mounts only the sets whose dungeon is uncleared this run (`cleared_dungeons`, filled from `objective_completed`). Behaviors: one posted guard per entrance (`EnemyBehaviorGuard`, leashed chase), patrols on closed routes (`EnemyBehaviorPatrol`, 900 px leash, returns to its route, #414) and overworld-wide `Roamers` migrants (`EnemyBehaviorMigrate`, never suppressed). Routes are an optional `"route"` entry key. Route shapes, counts, speeds and leash radii are provisional.
