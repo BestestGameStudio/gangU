@@ -181,7 +181,7 @@ func _production() -> void:
 	_check(wm.markers(&"Hub").is_empty() and wm.strokes(&"Hub").is_empty(), "hub gates are not auto-marked")
 
 	# Draw a freehand loop around the overworld gate.
-	var gate := (_main.current_area.get_node("GateOverworld") as Node2D).global_position
+	var gate := (_main.area_loader.current_area.get_node("GateOverworld") as Node2D).global_position
 	panel.set_tool(MapCanvas.Tool.DRAW)
 	var center := c.world_to_screen(gate)
 	_click(c, center + Vector2(40, 0), MOUSE_BUTTON_LEFT, true)
@@ -196,17 +196,17 @@ func _production() -> void:
 	# Markers: X on the overworld gate, star on the shop, triangle on the spawn.
 	panel.set_symbol(WorldMap.Symbol.CROSS)
 	_check(c.tool == MapCanvas.Tool.MARKER, "picking a symbol selects the Marker tool")
-	_click(c, c.world_to_screen((_main.current_area.get_node("GateOverworld") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
+	_click(c, c.world_to_screen((_main.area_loader.current_area.get_node("GateOverworld") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
 	_click(c, Vector2.ZERO, MOUSE_BUTTON_LEFT, false)
 	panel.set_symbol(WorldMap.Symbol.STAR)
-	_click(c, c.world_to_screen((_main.current_area.get_node("ShopVendor") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
+	_click(c, c.world_to_screen((_main.area_loader.current_area.get_node("ShopVendor") as Node2D).global_position), MOUSE_BUTTON_LEFT, true)
 	_click(c, Vector2.ZERO, MOUSE_BUTTON_LEFT, false)
 	panel.set_symbol(WorldMap.Symbol.TRIANGLE)
 	var tri_pos := c.world_to_screen(Vector2(576, 600))
 	_click(c, tri_pos, MOUSE_BUTTON_LEFT, true)
 	_click(c, tri_pos, MOUSE_BUTTON_LEFT, false)
 	_check(wm.markers(&"Hub").size() == 3, "LMB with Marker places symbol markers")
-	var oworld := (_main.current_area.get_node("GateOverworld") as Node2D).global_position
+	var oworld := (_main.area_loader.current_area.get_node("GateOverworld") as Node2D).global_position
 	_check((wm.markers(&"Hub")[0]["pos"] as Vector2).distance_to(oworld) < 1.0 and wm.markers(&"Hub")[0]["symbol"] == WorldMap.Symbol.CROSS, "marker stored at the clicked world position with its symbol")
 	await _shot("347_map_player_marks")
 
@@ -225,10 +225,10 @@ func _production() -> void:
 	_press_key(KEY_M)
 	await process_frame
 	_check(not panel.visible and not panel.is_in_group("modal_ui"), "M closes the map")
-	_main._swap(preload("res://scenes/dungeon_a.tscn").instantiate())
+	_main.area_loader._swap(preload("res://scenes/dungeon_a.tscn").instantiate())
 	await physics_frame
 	_check(wm.area_id == &"DungeonA" and wm.markers(&"DungeonA").is_empty(), "dungeon has its own empty map")
-	_main._swap(preload("res://scenes/hub.tscn").instantiate())
+	_main.area_loader._swap(preload("res://scenes/hub.tscn").instantiate())
 	await physics_frame
 	_check(wm.area_id == &"Hub" and wm.markers(&"Hub").size() == 2 and wm.explored_cells(&"Hub").size() > 0, "hub marks + exploration survive leaving and returning")
 	panel.open()
@@ -342,14 +342,14 @@ func _routed_interaction(wm: WorldMap, panel: MapPanel) -> void:
 	_vp_button(c, Vector2(150, 400), MOUSE_BUTTON_LEFT, true, L)
 	await process_frame
 	_check(wm.strokes(&"Hub").size() == hub_s + 1 and c.is_interacting(), "area-change: stroke started in Hub")
-	_main._swap(preload("res://scenes/dungeon_a.tscn").instantiate())
+	_main.area_loader._swap(preload("res://scenes/dungeon_a.tscn").instantiate())
 	await physics_frame
 	_check(wm.area_id == &"DungeonA" and not c.is_interacting(), "area swap mid-drag drops the drag state")
 	_vp_motion(c, Vector2(150, 400), Vector2(300, 420), L)
 	await process_frame
 	_check(_stroke_len(wm, &"Hub", hub_s) == 1 and wm.strokes(&"DungeonA").is_empty(), "held motion after the swap draws in neither area")
 	_vp_button(c, Vector2(300, 420), MOUSE_BUTTON_LEFT, false, 0)
-	_main._swap(preload("res://scenes/hub.tscn").instantiate())
+	_main.area_loader._swap(preload("res://scenes/hub.tscn").instantiate())
 	await physics_frame
 	panel.close()
 	await process_frame

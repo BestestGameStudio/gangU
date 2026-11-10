@@ -91,7 +91,7 @@ func _initialize() -> void:
 	if not _require(main.area_loader.current_area.name == "DungeonA", "GateNormal -> DungeonA"): return
 	if not _require(not (main.area_loader.current_area.get_node("ExitPortal") as ExitPortal).locked, "NORMAL mount: exit portal unlocked"): return
 	await _drain_enemies()
-	if not _require(main.cleared_dungeons.has(&"dungeon_a"), "DungeonA cleared"): return
+	if not _require(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "DungeonA cleared"): return
 
 	# exit portal -> back at the overworld entrance (#378)
 	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
@@ -151,7 +151,7 @@ func _initialize() -> void:
 	var red_portal: ExitPortal = main.area_loader.current_area.get_node("ExitPortal")
 	_check(red_portal.locked, "(F) RED mount: exit portal locked (clear-or-die)")
 	await _drain_enemies()
-	if not _require(main.cleared_dungeons.has(&"dungeon_a"), "(F) RED DungeonA cleared"): return
+	if not _require(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(F) RED DungeonA cleared"): return
 	_check(not red_portal.locked, "(F) clear unlocks the RED exit portal")
 	red_portal._on_body_entered(p)
 	await _frames(3)

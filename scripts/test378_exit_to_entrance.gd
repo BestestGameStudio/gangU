@@ -63,7 +63,7 @@ func _initialize() -> void:
 		p.hp = 77
 		portal._on_body_entered(p)
 		await _frames(3)
-		var spot: Vector2 = gate_pos + main.ENTRANCE_EXIT_OFFSET
+		var spot: Vector2 = gate_pos + main.area_loader.ENTRANCE_EXIT_OFFSET
 		# (A)
 		_check(main.area_loader.current_area.name == "Overworld", "(A) exiting %s returns to the overworld (got %s)" % [dname, main.area_loader.current_area.name])
 		_check(p.global_position.distance_to(spot) < 4.0, "(A) exiting %s lands in front of %s (at %s, want %s)" % [dname, gate_name, p.global_position, spot])
@@ -85,7 +85,7 @@ func _initialize() -> void:
 	_check(main.area_loader.current_area.name == "Hub", "(D) unknown dungeon falls back to the hub")
 
 	# (E) fast return still goes to the hub
-	main.cleared_dungeons[&"dungeon_a"] = true
+	main.area_loader.cleared_dungeons[&"dungeon_a"] = true
 	main.area_loader.enter_overworld()
 	await _frames(3)
 	(main.area_loader.current_area.get_node("GateNormal") as Gate)._on_body_entered(p)

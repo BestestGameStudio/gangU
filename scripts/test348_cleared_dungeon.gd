@@ -71,7 +71,7 @@ func _initialize() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 	_check(main.get_node_or_null("DungeonClearRecord") == null, "no second store: Main.cleared_dungeons is the only clear state")
-	_check(main.cleared_dungeons.is_empty(), "run starts with nothing cleared")
+	_check(main.area_loader.cleared_dungeons.is_empty(), "run starts with nothing cleared")
 	main.area_loader.gate_reentry_cooldown_seconds = 0.2 # #400: shortened so re-entry legs wait moments, not a real minute
 
 	# uncleared baseline
@@ -86,8 +86,8 @@ func _initialize() -> void:
 	await _clear_dungeon_a(main)
 	_check(main.area_loader.current_area.name == "DungeonA", "overworld GateNormal -> DungeonA")
 	# (A)
-	_check(main.cleared_dungeons.has(&"dungeon_a"), "(A) clearing DungeonA records dungeon_a")
-	_check(not main.cleared_dungeons.has(&"dungeon_b"), "(A) dungeon_b is not recorded")
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(A) clearing DungeonA records dungeon_a")
+	_check(not main.area_loader.cleared_dungeons.has(&"dungeon_b"), "(A) dungeon_b is not recorded")
 	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
 	_check(main.area_loader.current_area.name == "Overworld", "exit portal returns to the overworld (#378)")
@@ -122,7 +122,7 @@ func _initialize() -> void:
 	_check(_drops(area) > 0, "(C) re-entry kills drop rewards (%d)" % _drops(area))
 	_check(obj.is_cleared(), "(C) re-entry objective clears again")
 	# (D)
-	_check(main.cleared_dungeons.size() == 1 and main.cleared_dungeons.has(&"dungeon_a"), "(D) still a single dungeon_a entry")
+	_check(main.area_loader.cleared_dungeons.size() == 1 and main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(D) still a single dungeon_a entry")
 	(area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
 	_check(main.area_loader.current_area.name == "Overworld", "(D) exit lands back in the overworld (#378)")
@@ -136,7 +136,7 @@ func _initialize() -> void:
 			break
 	var fresh: Node = current_scene
 	_check(fresh != main and fresh.area_loader.current_area.name == "Hub", "(E) death restarts the run in the hub")
-	_check(fresh.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
+	_check(fresh.area_loader.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
 	fresh.area_loader.enter_overworld()
 	await _frames(3)
 	_check(_guards(fresh).size() == 29, "(E) every entrance is guarded again, all 29 (#414 + #490) (got %d)" % _guards(fresh).size())

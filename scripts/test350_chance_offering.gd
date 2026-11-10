@@ -131,8 +131,8 @@ func _fixed_leg() -> void:
 	var ow3: Node = await _enter_overworld(main2)
 	var gr2 := ow3.get_node_or_null("GateRed") as Gate
 	_check("fixed: death restart (fresh Main) re-rolls into its own record",
-		gr2 != null and main2._offering_rolls.get(&"GateRed") == gr2.gate_type
-		and main2._offering_rolls.size() <= 2)
+		gr2 != null and main2.area_loader._offering_rolls.get(&"GateRed") == gr2.gate_type
+		and main2.area_loader._offering_rolls.size() <= 2)
 	await _shutdown(main2)
 
 func _red_leg() -> void:

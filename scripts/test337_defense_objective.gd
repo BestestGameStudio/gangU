@@ -159,7 +159,7 @@ func _leg_flow() -> void:
 	_check(not obj.is_cleared(), "(E) not complete while wave enemies live")
 	await _kill_all(area)
 	_check(obj.is_cleared() and not obj.is_failed(), "(E) all %d waves cleared -> objective complete" % obj.wave_count)
-	_check(main.cleared_dungeons.has(&"dungeon_e"), "(E) dungeon_e recorded as cleared")
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_e"), "(E) dungeon_e recorded as cleared")
 	await _physics(int(obj.wave_interval * 60.0) + 10)
 	_check(obj.waves_spawned() == obj.wave_count and _wave_enemies(area).is_empty(), "(E) no wave beyond the fixed count")
 	await _physics(20)
@@ -178,9 +178,9 @@ func _leg_failure() -> void:
 	p.max_hp = 100000
 	p.hp = 100000
 	# Enter as RED so the portal mounts locked: failure must still open it.
-	main._entry_gate_type = Gate.GateType.RED
+	main.area_loader._entry_gate_type = Gate.GateType.RED
 	main.area_loader._swap((load("res://scenes/dungeon_e.tscn") as PackedScene).instantiate())
-	main._entry_gate_type = Gate.GateType.RED
+	main.area_loader._entry_gate_type = Gate.GateType.RED
 	await _physics(2)
 	var area: Node = main.area_loader.current_area
 	var obj := area.get_node("DungeonObjective") as DungeonObjective
@@ -198,7 +198,7 @@ func _leg_failure() -> void:
 	await _physics(int(obj.wave_interval * 60.0) + 10)
 	_check(obj.waves_spawned() == spawned, "(F) no more waves after failure")
 	await _kill_all(area)
-	_check(not obj.is_cleared() and not main.cleared_dungeons.has(&"dungeon_e"), "(F) a failed defense never completes")
+	_check(not obj.is_cleared() and not main.area_loader.cleared_dungeons.has(&"dungeon_e"), "(F) a failed defense never completes")
 	var hud := main.find_child("HUD", true, false)
 	if hud != null:
 		_check((hud.get_node("Root/ObjectiveLabel") as Label).text.begins_with("Objective: FAILED"), "(F) HUD row reads FAILED")

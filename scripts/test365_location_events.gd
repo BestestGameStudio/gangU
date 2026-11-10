@@ -119,7 +119,7 @@ func _flow_legs() -> void:
 	main.area_loader._swap(ow)
 	await _frames(3)
 	var trig: LocationTrigger = ow.get_node("AmbushSpot")
-	_check(trig.triggered.is_connected(main._on_location_triggered), "(C) Main wired the area's trigger on mount")
+	_check(trig.triggered.is_connected(main.area_loader._on_location_triggered), "(C) Main wired the area's trigger on mount")
 	_check(trig.fire_count == 0 and heard.is_empty(), "(C) nothing fires while the player stands at the arrival point")
 	p.global_position = ow.to_global(spot)
 	await _frames(4)

@@ -200,7 +200,7 @@ func _flow_legs() -> void:
 		for e in alive:
 			e.apply_damage(999) # synthetic kills
 		await _frames(3)
-	_check(main.cleared_dungeons.has(&"dungeon_a"), "(E) clearing DungeonA records it as cleared")
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(E) clearing DungeonA records it as cleared")
 	var portal: ExitPortal = main.area_loader.current_area.get_node("ExitPortal")
 	portal._on_body_entered(p)
 	await _frames(3)
@@ -224,7 +224,7 @@ func _flow_legs() -> void:
 			break
 	var fresh: Node = current_scene
 	_check(fresh != main and fresh.area_loader.current_area.name == "Hub", "(F) death restarts the run in the hub")
-	_check(fresh.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
+	_check(fresh.area_loader.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
 	fresh.area_loader.enter_overworld()
 	await _frames(3)
 	_remove_bird(fresh) # #478

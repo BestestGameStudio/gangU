@@ -269,7 +269,7 @@ func _flow_legs() -> void:
 		for e in alive:
 			e.apply_damage(9999)
 		await _frames(3)
-	_check(main.cleared_dungeons.has(&"dungeon_a"), "(F) DungeonA cleared")
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(F) DungeonA cleared")
 	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3) # #378: the exit lands back in the overworld at the DungeonA entrance
 	var gate_a: Vector2 = main.area_loader.current_area.get_node("GateNormal").global_position

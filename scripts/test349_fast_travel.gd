@@ -86,12 +86,12 @@ func _run() -> void:
 	await _frames()
 	defense = main.area_loader.current_area.get_node("DungeonObjective") as DungeonObjective
 	_check(main.area_loader.current_area.name == "DungeonE" and not defense.is_cleared() and defense.waves_spawned() == 0, "defense shortcut mounts fresh objective and core")
-	_check(not (main.area_loader.current_area.get_node("ExitPortal") as ExitPortal).locked and main._entry_gate_type == Gate.GateType.NORMAL, "defense shortcut preserves normal gate exit semantics")
+	_check(not (main.area_loader.current_area.get_node("ExitPortal") as ExitPortal).locked and main.area_loader._entry_gate_type == Gate.GateType.NORMAL, "defense shortcut preserves normal gate exit semantics")
 	_check(main.travel.can_fast_return(), "historically cleared defense returns immediately despite future wave capability")
 	main.travel._request_fast_return()
 	await _frames()
 	_check(main.area_loader.current_area.name == "Hub", "defense re-entry shortcut returns to Hub")
-	main.cleared_dungeons.clear() # synthetic death-state invalidation for stale click check
+	main.area_loader.cleared_dungeons.clear() # synthetic death-state invalidation for stale click check
 	main.travel._request_fast_travel(&"dungeon_a")
 	await _frames()
 	_check(main.area_loader.current_area.name == "Hub", "stale button selection revalidates empty record")

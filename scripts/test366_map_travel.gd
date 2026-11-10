@@ -157,7 +157,7 @@ func _run() -> void:
 	panel.toggle_world_view()
 	panel.select_dungeon(&"dungeon_e")
 	_check(panel.can_travel_selected(), "Hub -> DungeonE allowed")
-	main.cleared_dungeons.erase(&"dungeon_e") # synthetic invalidation after selecting
+	main.area_loader.cleared_dungeons.erase(&"dungeon_e") # synthetic invalidation after selecting
 	panel.request_travel()
 	_check(emitted[0] == 0 and panel.visible, "stale selection refused on the Travel click")
 	_check(panel._travel_button.visible, "selection row still shown after refusal")
@@ -197,7 +197,7 @@ func _run() -> void:
 	await _frames()
 	_check(wm.cell_color(ow, probe) == ow_color, "overworld colours survive the generated dungeon being freed")
 
-	main.cleared_dungeons.clear()
+	main.area_loader.cleared_dungeons.clear()
 	_check(wm.cleared_sites(ow).is_empty(), "marks follow the canonical clear record")
 
 	main.queue_free()
