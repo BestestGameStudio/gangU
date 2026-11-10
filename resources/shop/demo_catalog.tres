@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ShopCatalog" load_steps=84 format=3 uid="uid://bgangurshopcat"]
+[gd_resource type="Resource" script_class="ShopCatalog" load_steps=80 format=3 uid="uid://bgangurshopcat"]
 
 [ext_resource type="Script" path="res://scripts/shop_catalog.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/shop_entry.gd" id="2"]
@@ -15,7 +15,6 @@
 [ext_resource type="Spell" uid="uid://bgangum2sh" path="res://resources/spells/fire_ball_split_heavy.tres" id="13"]
 [ext_resource type="Spell" uid="uid://bgangum2sw" path="res://resources/spells/fire_ball_split_wide.tres" id="14"]
 [ext_resource type="Spell" path="res://resources/spells/frost_shard.tres" id="15"]
-[ext_resource type="Spell" path="res://resources/spells/head_bolt.tres" id="16"]
 [ext_resource type="Spell" path="res://resources/spells/heavy_rain.tres" id="17"]
 [ext_resource type="Spell" uid="uid://bgangu4mana" path="res://resources/spells/mana_shot.tres" id="18"]
 [ext_resource type="Spell" uid="uid://bgangumslnce" path="res://resources/spells/mana_shot_lance.tres" id="19"]
@@ -35,7 +34,6 @@
 [ext_resource type="Spell" path="res://resources/spells/stone_hammer_vortex.tres" id="33"]
 [ext_resource type="Spell" uid="uid://bgangu212sum" path="res://resources/spells/summon_ally.tres" id="34"]
 [ext_resource type="Spell" path="res://resources/spells/surging_bubble.tres" id="35"]
-[ext_resource type="Spell" uid="uid://bgangu177orb" path="res://resources/spells/warlord_orb.tres" id="36"]
 [ext_resource type="Spell" path="res://resources/spells/water_ball.tres" id="37"]
 [ext_resource type="Spell" path="res://resources/spells/water_ball_guided.tres" id="38"]
 [ext_resource type="Spell" path="res://resources/spells/water_ball_seeking.tres" id="39"]
@@ -107,11 +105,6 @@ price = 10
 [sub_resource type="Resource" id="15"]
 script = ExtResource("2")
 good = ExtResource("15")
-price = 10
-
-[sub_resource type="Resource" id="16"]
-script = ExtResource("2")
-good = ExtResource("16")
 price = 10
 
 [sub_resource type="Resource" id="17"]
@@ -209,11 +202,6 @@ script = ExtResource("2")
 good = ExtResource("35")
 price = 10
 
-[sub_resource type="Resource" id="36"]
-script = ExtResource("2")
-good = ExtResource("36")
-price = 10
-
 [sub_resource type="Resource" id="37"]
 script = ExtResource("2")
 good = ExtResource("37")
@@ -251,4 +239,4 @@ price = 10
 
 [resource]
 script = ExtResource("1")
-entries = Array[ExtResource("2")]([SubResource("3"), SubResource("4"), SubResource("5"), SubResource("6"), SubResource("7"), SubResource("8"), SubResource("9"), SubResource("10"), SubResource("11"), SubResource("12"), SubResource("13"), SubResource("14"), SubResource("15"), SubResource("16"), SubResource("17"), SubResource("18"), SubResource("19"), SubResource("20"), SubResource("21"), SubResource("22"), SubResource("23"), SubResource("24"), SubResource("25"), SubResource("26"), SubResource("27"), SubResource("28"), SubResource("29"), SubResource("30"), SubResource("31"), SubResource("32"), SubResource("33"), SubResource("34"), SubResource("35"), SubResource("36"), SubResource("37"), SubResource("38"), SubResource("39"), SubResource("40"), SubResource("41"), SubResource("42"), SubResource("43")])
+entries = Array[ExtResource("2")]([SubResource("3"), SubResource("4"), SubResource("5"), SubResource("6"), SubResource("7"), SubResource("8"), SubResource("9"), SubResource("10"), SubResource("11"), SubResource("12"), SubResource("13"), SubResource("14"), SubResource("15"), SubResource("17"), SubResource("18"), SubResource("19"), SubResource("20"), SubResource("21"), SubResource("22"), SubResource("23"), SubResource("24"), SubResource("25"), SubResource("26"), SubResource("27"), SubResource("28"), SubResource("29"), SubResource("30"), SubResource("31"), SubResource("32"), SubResource("33"), SubResource("34"), SubResource("35"), SubResource("37"), SubResource("38"), SubResource("39"), SubResource("40"), SubResource("41"), SubResource("42"), SubResource("43")])

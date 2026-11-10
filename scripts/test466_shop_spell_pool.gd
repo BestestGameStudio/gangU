@@ -1,9 +1,13 @@
 extends SceneTree
-## #466: every spell in the game joins the shop pool at a flat price, and
-## each stock shows 3 random picks from that pool (Daniel 2026-11-09:
-## "issue: add all spells to the shop pool" / "1. flat price" /
-## "2. 3 Random from the pool"). Exercises the PRODUCTION data
-## (resources/shop/demo_catalog.tres) and the new stock_size default.
+## #466: every PLAYER spell in the game joins the shop pool at a flat
+## price, and each stock shows 3 random picks from that pool (Daniel
+## 2026-11-09: "issue: add all spells to the shop pool" / "1. flat
+## price" / "2. 3 Random from the pool"). Enemy-only boss spells stay
+## OUT (Daniel 2026-11-09: "Do not keep enemy spells"): head_bolt and
+## warlord_orb exist only as boss attack projectiles
+## (scripts/enemy_behavior_head.gd / enemy_behavior_warlord.gd). Exercises
+## the PRODUCTION data (resources/shop/demo_catalog.tres) and the new
+## stock_size default.
 var failures := 0
 
 var shop: Shop
@@ -35,10 +39,24 @@ func _make_player() -> Player:
 	caster = c
 	return p
 
+## Enemy-only boss attack spells (Daniel 2026-11-09: "Do not keep enemy
+## spells"). Each is preloaded ONLY by a boss behavior as a projectile;
+## no player path (starting kit, reward table, upgrade) grants them.
+const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres"]
+
 func _spell_files() -> Array[String]:
 	var out: Array[String] = []
 	for f in DirAccess.open("res://resources/spells").get_files():
 		if f.ends_with(".tres"):
+			out.append(f)
+	return out
+
+## Spell resources that BELONG in the shop pool: every spell file minus
+## the enemy-only set.
+func _player_spell_files() -> Array[String]:
+	var out: Array[String] = []
+	for f in _spell_files():
+		if not ENEMY_ONLY.has(f):
 			out.append(f)
 	return out
 
@@ -49,18 +67,27 @@ func _oos_count() -> int:
 	return _rows().find_children("OutOfStockLabel", "Label", true, false).size()
 
 func _run() -> void:
-	## 1. Production pool data: one entry per spell resource, flat 10c.
+	## 1. Production pool data: one entry per PLAYER spell resource, flat
+	## 10c; the enemy-only boss spells are excluded.
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
-	var files := _spell_files()
+	var files := _player_spell_files()
 	_check(demo.entries.size() == files.size(),
-		"pool holds every spell resource (%d entries)" % files.size())
+		"pool holds every player spell resource (%d entries)" % files.size())
 	var flat := true
 	var seen: Array[Resource] = []
+	var present := {}
 	for e in demo.entries:
 		if not (e.good is Spell) or e.price != 10 or seen.has(e.good):
 			flat = false
 		seen.append(e.good)
+		present[(e.good as Spell).resource_path.get_file()] = true
 	_check(flat, "every pool entry is a distinct Spell at the flat price 10")
+	for enemy_file in ENEMY_ONLY:
+		_check(not present.has(enemy_file),
+			"enemy-only spell stays out of the pool: %s" % enemy_file)
+	for player_file in files:
+		_check(present.has(player_file),
+			"player spell is in the pool: %s" % player_file)
 
 	## 2. Production slot count is 3 (Daniel: "3 Random from the pool").
 	_check(Shop.new().stock_size == 3, "stock_size default is 3 (#466)")
@@ -86,7 +113,7 @@ func _run() -> void:
 		"fresh caster: whole pool offerable")
 
 	## 4. Ownership exclusion holds across the full pool: own one spell,
-	## re-roll, and it can never surface while 40 others remain.
+	## re-roll, and it can never surface while the rest remain.
 	var owned: Spell = stock[0].good
 	caster.unlock_spell(owned)
 	shop._reroll_stock()

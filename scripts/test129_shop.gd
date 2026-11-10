@@ -99,14 +99,23 @@ func _process(_delta: float) -> bool:
 	return false
 
 func _run_legs() -> void:
-	## 1. Catalog DATA leg (#466): every spell in the game is in the pool at
-	## a flat 10c - one entry per resources/spells/*.tres, no dupes.
+	## 1. Catalog DATA leg (#466): every PLAYER spell in the game is in the
+	## pool at a flat 10c - one entry per resources/spells/*.tres, no
+	## dupes - EXCEPT the enemy-only boss spells head_bolt/warlord_orb
+	## (Daniel 2026-11-09: "Do not keep enemy spells").
+	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres"]
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
 	var spell_files: Array[String] = []
 	for f in DirAccess.open("res://resources/spells").get_files():
-		if f.ends_with(".tres"):
+		if f.ends_with(".tres") and not ENEMY_ONLY.has(f):
 			spell_files.append(f)
-	_check(demo.entries.size() == spell_files.size(), "catalog holds every spell resource (%d)" % spell_files.size())
+	_check(demo.entries.size() == spell_files.size(), "catalog holds every player spell resource (%d)" % spell_files.size())
+	for enemy_file in ENEMY_ONLY:
+		var leaked := false
+		for e in demo.entries:
+			if e.good is Spell and (e.good as Spell).resource_path.get_file() == enemy_file:
+				leaked = true
+		_check(not leaked, "enemy-only spell stays out of the pool: %s" % enemy_file)
 	var seen: Array[Resource] = []
 	var all_spells_flat10 := true
 	var bolt_found := false

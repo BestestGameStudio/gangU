@@ -152,9 +152,11 @@ func on_dungeon_victory() -> void:
 ## (#132) Re-roll: draw up to stock_size DISTINCT entries from the current
 ## offerable set (rotation among non-owned only). Fewer eligible goods
 ## than slots leaves empty slots - the panel signs those OUT OF STOCK.
-## (#466) The pool now holds EVERY spell in the game (demo catalog lists
-## all resources/spells/*.tres at a flat 10c), so each stock is Daniel's
-## "3 Random from the pool"; ownership exclusion still applies per-draw.
+## (#466) The pool holds every PLAYER spell in the game: the demo catalog
+## lists all resources/spells/*.tres at a flat 10c EXCEPT the enemy-only
+## boss spells (head_bolt, warlord_orb - Daniel 2026-11-09: "Do not keep
+## enemy spells"), so each stock is Daniel's "3 Random from the pool";
+## ownership exclusion still applies per-draw.
 func _reroll_stock() -> void:
 	var pool := offerable_entries()
 	pool.shuffle()
