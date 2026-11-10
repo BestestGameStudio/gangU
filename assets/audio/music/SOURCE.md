@@ -26,3 +26,18 @@ files' decoded audio exactly (matching `ffmpeg -f md5` of the decoded PCM).
 
 At runtime `BossMusic.MUSIC_VOLUME_DB` (`scripts/boss_music.gd`) applies a
 further -6 dB. Looping is set in code (`BossMusic.start`), not in the import.
+
+# Dungeon music (#471)
+
+`dungeon_battle_loop.ogg` is the default dungeon loop Colin approved on
+2026-11-09 (iMessage: "Make that the default dungeon music"). It is an original
+composition synthesized locally by Instinct (retro square-wave lead with echo,
+saw bass, chiptune drums, quiet low drone; D minor, 140 BPM, 32 bars, 54.857 s,
+44.1 kHz stereo). No samples and no third-party music.
+
+The committed file is the delivered OGG unchanged (no trimming, no gain edit).
+Levels (`ffmpeg -af volumedetect`): mean -14.9 dB, peak -0.1 dB. At runtime
+`DungeonMusic.MUSIC_VOLUME_DB` (`scripts/dungeon_music.gd`, -13 dB) brings it
+near the boss themes' effective level (about -21.5 dB mean, then their -6 dB).
+Looping is set in code (`DungeonMusic.start`), not in the import. The lossless
+WAV master is not committed.
