@@ -2,7 +2,7 @@ class_name UpgradeCard
 extends Button
 ## #402 presentation only. The panel owns eligibility, path IDs and actions.
 ## Splash is deliberately a code-drawn placeholder, never claimed final art.
-const CARD_WIDTH := 224.0
+const CARD_WIDTH := 176.0
 var name_label: Label
 var description_label: Label
 var action_label: Label

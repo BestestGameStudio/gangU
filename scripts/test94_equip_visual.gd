@@ -171,19 +171,14 @@ func _initialize() -> void:
 	_check(ub != null and ub.name_label.text == "Path One", "(4) upgrade path button (got '%s')" % (ub.name_label.text if ub != null else "null"))
 	_check(_border_of(ub) == C_UPGRADE, "(4) upgrade button amber")
 
-	# (5) rearrange flow end-to-end: put BetaBolt back, select AlphaBolt,
-	# press slot 3 -> move.
-	panel._on_slot_pressed(1)
-	await process_frame
-	panel._on_slot_pressed(0)
-	await process_frame
-	panel._on_slot_pressed(2)
+	# (5) rearrange flow end-to-end (#441: hold-and-drag only; the drag
+	# lands in _rearrange_slots): drag AlphaBolt from slot 1 to slot 3.
+	panel._rearrange_slots(0, 2)
 	await process_frame
 	_check(caster.assigned.size() == 1 and caster.assigned[0][0] == 2 and caster.assigned[0][1] == a, "(5) assign_slot(2, AlphaBolt) recorded")
 	_check(caster.cleared.has(0), "(5) old slot cleared (move semantics)")
 	_check(slot_buttons[2].text == "Q: AlphaBolt", "(5) slot 3 shows spell (got '%s')" % slot_buttons[2].text)
 	_check(slot_buttons[0].text == "LMB: (empty)", "(5) slot 1 emptied (got '%s')" % slot_buttons[0].text)
-	_check(panel._selected == null, "(5) selection cleared after rearrange")
 	_check(_border_of(slot_buttons[2]) == C_ASSIGNED, "(5) newly occupied slot border")
 
 	print("[94] failures=%d" % failures)

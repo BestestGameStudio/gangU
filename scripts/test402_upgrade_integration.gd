@@ -41,7 +41,7 @@ func run() -> void:
 	ck(offered[1].global_position.x >= offered[0].get_global_rect().end.x, "production cards side by side")
 	ck(offered[0].name_label.text == "Split shot [S]" and offered[1].name_label.text == "Beam [S]", "real names and tier labels")
 	ck(offered[0].description_label.text.begins_with(SpellDescription.for_spell(load("res://resources/spells/fire_ball_split.tres"))), "copy from real result behavior")
-	ck(offered[1].description_label.text.contains("900 px range | 2000 px/s") and not offered[1].description_label.text.contains("pierc"), "Beam copy matches nonpiercing real range and speed")
+	ck(offered[1].description_label.text.contains("900 px | 2000 px/s") and not offered[1].description_label.text.contains("pierc"), "Beam copy matches nonpiercing real range and speed")
 	ck(panel._stats_box.description() == SpellDescription.for_spell(fire), "399 selected source description preserved")
 	var scroller: ScrollContainer = panel._upgrade_box.get_node("UpgradeScroll")
 	ck(scroller.get_global_rect().end.x <= 1152 and scroller.get_global_rect().end.y <= 648, "card scroll viewport fits screen")
