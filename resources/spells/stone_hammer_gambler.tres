@@ -6,7 +6,6 @@
 
 [sub_resource type="Resource" id="e1a"]
 script = ExtResource("3_entry")
-mode = 1
 kind = 2
 currency_amount = 2
 weight = 3.0
@@ -103,6 +102,7 @@ entries = Array[ExtResource("3_entry")]([SubResource("e6a"), SubResource("e6b")]
 
 [resource]
 script = ExtResource("1_spell")
+mode = 1
 spell_name = "Gambler's Hammer"
 icon_upgraded = true
 cooldown = 8.5
