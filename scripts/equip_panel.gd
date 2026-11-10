@@ -43,7 +43,7 @@ class_name EquipPanel
 ##   qualification, stages and path contents are the provider writer's scope.
 
 ## Explicit wiring convention (matches HUD): set before tree entry, or the
-## "player" group fallback applies. Production mount is a separate window.
+## Player.find fallback applies. Production mount is a separate window.
 @export var player_path: NodePath
 ## Optional upgrade provider (see header contract). Unset = equip-only panel.
 @export var upgrader_path: NodePath
@@ -181,7 +181,7 @@ func _ready() -> void:
 	if player_path != NodePath(""):
 		player = get_node_or_null(player_path) as Player
 	if player == null:
-		player = get_tree().get_first_node_in_group("player") as Player
+		player = Player.find(get_tree())
 	if player == null:
 		push_warning("EquipPanel: no player found; panel inert.")
 		return

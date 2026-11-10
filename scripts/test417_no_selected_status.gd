@@ -9,7 +9,7 @@ extends SceneTree
 
 class StubPlayer extends Player:
 	func _ready() -> void:
-		pass
+		add_to_group(ActorCollision.PLAYER_GROUP)
 	func _process(_delta: float) -> void:
 		pass
 	func _init() -> void:
@@ -78,7 +78,6 @@ func _initialize() -> void:
 		if arg.begins_with("--shot="):
 			_shot_dir = arg.trim_prefix("--shot=")
 	var player := StubPlayer.new()
-	player.add_to_group("player")
 	root.add_child(player)
 	var caster := StubCaster.new()
 	caster.name = "SpellCaster"

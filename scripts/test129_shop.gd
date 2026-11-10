@@ -43,7 +43,6 @@ func _make_player() -> Player:
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	root.add_child(p)
 	return p
 
@@ -252,14 +251,14 @@ func _run_legs() -> void:
 	stranger.free()
 
 	## 14. Production mount: main.tscn wires the Shop with a RESOLVED caster
-	## (explicit caster_path; the group fallback alone finds no player).
+	## (explicit caster_path, not the Player.find fallback).
 	var scene: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	await process_frame
 	await process_frame
 	var prod_shop: Shop = scene.get_node_or_null("Shop") as Shop
 	_check(prod_shop != null, "main.tscn mounts Shop")
-	_check(prod_shop != null and prod_shop._caster != null, "production Shop caster RESOLVED via caster_path")
+	_check(prod_shop != null and prod_shop._caster == scene.get_node("Player/SpellCaster"), "production Shop caster RESOLVED via caster_path")
 	_check(prod_shop != null and not prod_shop.offerable_entries().is_empty(), "production shop offers the placeholder bolt")
 	scene.queue_free()
 

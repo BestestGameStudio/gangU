@@ -40,7 +40,6 @@ func _spell(p_damage: float, p_range: float = 600.0, p_speed: float = 500.0) -> 
 
 func _player(stage: Node2D, pos: Vector2) -> Player:
 	var p: Player = preload("res://scenes/player.tscn").instantiate()
-	p.add_to_group("player")
 	stage.add_child(p)
 	p.global_position = pos ## parked far from every hit line
 	return p

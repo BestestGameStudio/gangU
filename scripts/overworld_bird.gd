@@ -106,11 +106,10 @@ func alive() -> bool:
 	return bird != null and is_instance_valid(bird) and bird.hp > 0
 
 func _player() -> Player:
-	# Production Main/<Area>/OverworldBird -> Main/Player (the production
-	# Player is in no group, same wiring problem Enemy solves explicitly).
+	# Production Main/<Area>/OverworldBird -> Main/Player.
 	var p := get_node_or_null(NodePath("../../Player")) as Player
 	if p == null:
-		p = get_tree().get_first_node_in_group("player") as Player
+		p = Player.find(get_tree())
 	return p
 
 func _on_bird_died(b: Enemy) -> void:

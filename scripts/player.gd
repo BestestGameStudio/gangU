@@ -137,13 +137,16 @@ var facing: StringName = &"down"
 ## bare player.tscn instances (test arenas), which keep the legacy Body dart.
 @onready var sprite: AnimatedSprite2D = get_node_or_null("WizardSprite")
 
+## Fallback when a node has no explicit player wiring: the first Player in
+## the tree (every Player joins ActorCollision.PLAYER_GROUP in _ready).
+static func find(tree: SceneTree) -> Player:
+	return tree.get_first_node_in_group(ActorCollision.PLAYER_GROUP) as Player
+
 func _ready() -> void:
 	base_max_hp = max_hp
 	hp = max_hp
 	damage_rng.randomize()
-	# #290: players never physically block or push enemies. The "players"
-	# group is collision-only (targeting still uses explicit wiring / the
-	# legacy "player" group); deferred so same-frame enemies are registered.
+	# #290: the ignore is deferred so same-frame enemies are registered.
 	add_to_group(ActorCollision.PLAYER_GROUP)
 	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
 	stats.changed.connect(_on_stat_changed)

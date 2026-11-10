@@ -55,7 +55,7 @@ func _ready() -> void:
 	add_to_group("spell_directory_panel")
 	layer = 3
 	_build_skeleton()
-	var player := get_tree().get_first_node_in_group("player")
+	var player := Player.find(get_tree())
 	if player != null:
 		_bind_caster(player.get_node_or_null("SpellCaster") as SpellCaster)
 	visible = false

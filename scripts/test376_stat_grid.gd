@@ -34,7 +34,6 @@ func _initialize() -> void:
 	await process_frame
 
 	var player: Player = load("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	stage.add_child(player)
 	await _frames(2)
 	var caster: SpellCaster = player.get_node("SpellCaster")

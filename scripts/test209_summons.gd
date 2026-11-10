@@ -76,7 +76,6 @@ func _initialize() -> void:
 
 	# --- enemy target resolution: flag ON, flag OFF, parity, boss exclusion ---
 	var player: Player = load("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	root.add_child(player)
 	player.global_position = Vector2(2000, 2000)
 	var enemy: Enemy = load("res://scenes/enemy.tscn").instantiate()

@@ -376,7 +376,7 @@ func _mount_dungeon_modifiers(area: Node) -> void:
 ## #100 generic mounter: every area swap reads the area's "SpawnData" child
 ## (AreaSpawnData). Entries are plain scene data - position, enemy scene and
 ## reward table per spawn. The carrier's player_path is assigned BEFORE
-## add_child so Enemy._ready resolves it (production Player is in no group).
+## add_child so Enemy._ready resolves it (D6 explicit wiring).
 ## Children of the area so a gate swap frees them.
 func _mount_area_spawns(area: Node) -> void:
 	var data := area.get_node_or_null("SpawnData") as AreaSpawnData
@@ -477,8 +477,8 @@ func _mount_entrance_guards(area: Node) -> void:
 ## the objective targets 0 and never completes.
 ## #177 / O1 (human decision 2026-11-08): red-gate DungeonB runs ELIMINATION -
 ## clear its mobs, then the Mustache Warlord spawns; the boss kill clears it.
-## The boss enters the tree deferred, so its player_path (production Player is
-## in no group, D6) is assigned in boss_spawned, before tree entry.
+## The boss enters the tree deferred, so its player_path (D6 explicit wiring)
+## is assigned in boss_spawned, before tree entry.
 const WARLORD_SCENE: PackedScene = preload("res://scenes/mustache_warlord.tscn")
 const DUNGEON_B_BOSS_SPAWN: Vector2 = Vector2(576, 240)
 ## #173 (human decision 2026-11-08): boss-gate DungeonC is a boss arena only -

@@ -118,7 +118,7 @@ func _capture(shot_name: String) -> void:
 		img.save_png(_capture_dir + "/test146_" + shot_name + ".png")
 
 func _cast() -> void:
-	var p := get_tree().get_first_node_in_group("player")
+	var p := Player.find(get_tree())
 	if p == null or p.get("hp") <= 0:
 		return
 	var dir: Vector2

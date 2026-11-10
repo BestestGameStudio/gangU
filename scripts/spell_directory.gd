@@ -17,8 +17,7 @@ func _on_body_entered(body: Node2D) -> void:
 		var panel := get_tree().get_first_node_in_group("spell_directory_panel")
 		if panel != null:
 			# The walk-up body IS the player: hand its caster to the panel
-			# directly. Production Player is not in the "player" group, so
-			# the panel cannot rely on the group fallback there.
+			# directly rather than relying on the panel's Player.find binding.
 			panel.open(body.get_node_or_null("SpellCaster"))
 
 func _on_body_exited(body: Node2D) -> void:
