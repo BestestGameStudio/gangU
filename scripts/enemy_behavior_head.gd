@@ -83,6 +83,12 @@ func _configure() -> void:
 	arrival_color = HEAD_RED
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
+	ring_data = RingData.new()
+	ring_data.radius = PULSE_RADIUS
+	ring_data.enraged_radius = PULSE_RADIUS_ENRAGED
+	ring_data.damage = PULSE_DAMAGE
+	ring_data.display_time = PULSE_TIME
+	ring_data.color = HEAD_RED
 	volley_data = VolleyData.new()
 	volley_data.spell = BOLT_SPELL
 	volley_data.scene = PROJECTILE_SCENE
@@ -156,13 +162,8 @@ func _pulse(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegrap
 
 func _release_ring(enemy: Enemy, player: Player, to_player: Vector2, radius: float, tele: BossTelegraph) -> void:
 	_pulses += 1
-	if tele != null:
-		tele.show_ring(radius, PULSE_TIME, true)
-	CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, HEAD_RED)
-	if to_player.length() <= radius:
-		player.apply_damage(PULSE_DAMAGE)
-		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+	_ring_release(enemy, player, to_player, radius, tele)
 
 ## The wind-up ring shows the outermost ring the pulse will reach.
 func _pulse_radius(enemy: Enemy) -> float:
-	return PULSE_RADIUS_ENRAGED if is_enraged(enemy) else PULSE_RADIUS
+	return _ring_radius(enemy)

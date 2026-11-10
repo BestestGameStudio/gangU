@@ -67,6 +67,12 @@ func _configure() -> void:
 	arrival_color = BEAST_GREEN
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
+	ring_data = RingData.new()
+	ring_data.radius = SCREAM_RADIUS
+	ring_data.enraged_radius = SCREAM_RADIUS_ENRAGED
+	ring_data.damage = SCREAM_DAMAGE
+	ring_data.display_time = SCREAM_TIME
+	ring_data.color = BEAST_GREEN
 	lunge_data = LungeData.new()
 	lunge_data.speed = LUNGE_SPEED
 	lunge_data.enraged_speed = LUNGE_SPEED_ENRAGED
@@ -146,20 +152,14 @@ func _scream(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegra
 	enemy.velocity = Vector2.ZERO
 	if _screams == 0:
 		_screams = 1
-		var radius: float = _scream_radius(enemy)
-		if tele != null:
-			tele.show_ring(radius, SCREAM_TIME, true)
-		CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, BEAST_GREEN)
-		if to_player.length() <= radius:
-			player.apply_damage(SCREAM_DAMAGE)
-			CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+		_ring_release(enemy, player, to_player, _scream_radius(enemy), tele)
 	if _t >= SCREAM_TIME:
 		if tele != null:
 			tele.clear()
 		_enter_recover(enemy)
 
 func _scream_radius(enemy: Enemy) -> float:
-	return SCREAM_RADIUS_ENRAGED if is_enraged(enemy) else SCREAM_RADIUS
+	return _ring_radius(enemy)
 
 # --- transitions ---------------------------------------------------------------
 

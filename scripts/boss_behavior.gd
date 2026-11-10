@@ -278,3 +278,26 @@ func _lunge_step(enemy: Enemy, player: Player, dist: float) -> void:
 		_hits = 1
 		player.apply_damage(lunge_data.damage)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+
+# --- shared ring attack ------------------------------------------------------
+
+class RingData extends RefCounted:
+	var radius: float
+	var enraged_radius: float
+	var damage: int
+	var display_time: float
+	var color: Color
+
+var ring_data: RingData
+
+func _ring_radius(enemy: Enemy) -> float:
+	return ring_data.enraged_radius if is_enraged(enemy) else ring_data.radius
+
+## Owners retain ring count, stagger/phase timing and recover transitions.
+func _ring_release(enemy: Enemy, player: Player, to_player: Vector2, radius: float, tele: BossTelegraph) -> void:
+	if tele != null:
+		tele.show_ring(radius, ring_data.display_time, true)
+	CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, ring_data.color)
+	if to_player.length() <= radius:
+		player.apply_damage(ring_data.damage)
+		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
