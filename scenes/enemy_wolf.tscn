@@ -18,8 +18,8 @@ color = Color(0, 0, 0, 0.32)
 polygon = PackedVector2Array(-12, 0, -8.5, -3, 0, -4, 8.5, -3, 12, 0, 8.5, 3, 0, 4, -8.5, 3)
 
 [node name="Sprite" type="AnimatedSprite2D" parent="."]
-texture_filter = 1
-position = Vector2(0, 0)
+texture_filter = 2
+position = Vector2(0, 2)
 sprite_frames = ExtResource("3_frames")
 animation = &"idle"
 script = ExtResource("2_sprite")

@@ -323,19 +323,28 @@ style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
 - Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
 - Rows: idle x4 (5 fps loop), walk x6 (10 fps loop), hurt x2, attack x3, death x5 (one-shots).
 
-# wolf.png - original code-drawn Wolf sheet (#474)
+# wolf.png - Wolf sheet (#476, art by Mitra's artist)
 
-Original art drawn by `tools/sprites/draw_wolf.gd` (procedural pixel drawing,
-no external assets, no traced or generated images), same idiom as the Slime.
-`resources/sprites/wolf_frames.tres` is built from it by
-`tools/sprites/build_wolf_frames.gd`. Placeholder-quality style pass;
-replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
+Hand-drawn 8-direction wolf sheet supplied by Mitra's user in PR #476
+(https://github.com/BestestGameStudio/gangU/pull/476#issuecomment-6758758613),
+replacing the earlier code-drawn placeholder. The source board is presentation
+art (direction headers, row labels, grid lines); the game sheet is packed from
+it by `tools/sprites/pack_alpha_strip.py` with spec
+`tools/sprites/specs/wolf.json` (clip windows drop the grid lines/labels;
+3x premultiplied box downsample), which also writes
+`resources/sprites/wolf_frames.tres`.
 
-- Cell 32x32, feet baseline y=28, art faces RIGHT (EnemySprite flips with flip_h).
-- Rows: idle x4 (5 fps loop), walk x6 (12 fps loop), hurt x2, attack x3,
-  death x5 (one-shots). The attack row doubles as the pounce set: `telegraph`
-  holds the crouch (frame 0) and `pounce` plays the lunge stretch + snap
-  (frames 1-2), packed alongside the base rows.
+- Cell 56x22 (3x downsample), feet baseline at the cell bottom.
+- 8 directions per row: S, SE, E, NE, N, NW, W, SW; EnemySprite plays the
+  `<anim>_<dir>` variant for the body's travel direction (no flip_h).
+- The board's labels claim Idle 4 / Run 6 / Bite 6 frames, but the drawn rows
+  actually count 4 / 5 / 5 - only the drawn frames are packed:
+  idle x4 (5 fps loop), walk x5 (12 fps loop), attack (bite) x5 (10 fps
+  one-shot). `telegraph` holds the bite crouch (frame 0), `pounce` plays the
+  lunge (bite frames 1-4). `hurt` and `death` reuse the idle frame (the sheet
+  has no hurt/death art; the hit flash and corpse fade carry those beats).
+- Base `idle`/`walk`/`attack`/`hurt`/`death`/`telegraph`/`pounce` animations
+  (E-facing) are kept as fallbacks alongside the directional variants.
 
 # wolf_cave.png - original code-drawn wolf den decor (#474)
 
