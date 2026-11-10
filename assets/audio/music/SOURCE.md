@@ -27,21 +27,37 @@ files' decoded audio exactly (matching `ffmpeg -f md5` of the decoded PCM).
 At runtime `BossMusic.MUSIC_VOLUME_DB` (`scripts/boss_music.gd`) applies a
 further -6 dB. Looping is set in code (`BossMusic.start`), not in the import.
 
-# Overworld ambience (#477)
+# Overworld soft piano (#487)
 
-`overworld_ambience_loop.ogg` is the overworld ambience Colin approved on
-2026-11-09 (iMessage: add it as the overworld sound). It is an original
-nature-only loop synthesized locally by Instinct: mostly silence, sparse quiet
-birds and brief leaf rustles. No music, no wind bed, no water or rain sound and
-no continuous noise. 45.714 s, 44.1 kHz stereo. No samples and no third-party
-audio.
+`overworld_soft_piano_loop.ogg` is the overworld music Colin approved on
+2026-11-09 (iMessage: "make this the new overworld music and keep the volume
+low"). It replaces the #477 nature ambience, which is removed. The Ogg Vorbis
+(q5, 48 kHz stereo, 81.778 s) is the file delivered with the approved v2 mix,
+unchanged (no trimming, no gain edit). The approved sample was an AAC copy of
+the same mix; the Ogg was encoded by its creator and is not the exact bytes
+Colin heard.
 
-The committed file is the delivered OGG unchanged (no trimming, no gain edit).
-It is quiet on purpose. Levels (`ffmpeg -af volumedetect` on the WAV master):
-mean -44.6 dB, peak -13.3 dB. **Do not normalize or loudness-match it up.**
-`OverworldAmbience` (`scripts/overworld_ambience.gd`) plays it at 0 dB, with no
-trim. Looping is set in code, not in the import. The lossless WAV master is not
-committed.
+Composition: original melody and arrangement written 2026-11-09 for this game;
+no existing musical work was sampled, quoted or adapted. Sparse, very soft
+piano with long rests, light room reverb, no ambience bed (no wind, water or
+bush rustling).
 
-Checksums of the delivered files: OGG md5 `40bfc5d8447dcf5d6e95ddba7c29f4e2`,
-WAV master md5 `d8c4dba127824d732916d98fa3cd90d4`.
+Piano sound (third party, attribution required): "Salamander Grand Piano V3"
+by Alexander Holm, licensed CC BY 3.0
+(https://creativecommons.org/licenses/by/3.0/). Source:
+https://github.com/sfzinstruments/SalamanderGrandPiano (recording also at
+https://archive.org/details/SalamanderGrandPianoV3). Yamaha C5, only the soft
+sustain layers (v3 to v6 of 16) were used, no hammer, pedal or resonance
+samples. Required credit line: "Piano sound: Salamander Grand Piano V3 by
+Alexander Holm, licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)".
+Add this to any in-game credits screen if one is added.
+
+The track is quiet on purpose. Levels (`ffmpeg -af volumedetect` on the Ogg):
+mean -37.3 dB, peak -15.1 dB. **Do not normalize or loudness-match it up.**
+It starts from silence and fades to silence over the last 4 s, so the loop
+restarts after a short natural pause. `OverworldAmbience`
+(`scripts/overworld_ambience.gd`) plays it at 0 dB, with no trim. Looping is set
+in code, not in the import. The lossless WAV master is not committed.
+
+Checksums of the delivered files: OGG md5 `31a6a511540334b7109de61b73fa2bcc`,
+WAV master md5 `48ebb0b80daedb89edb84f39b1991315`.
