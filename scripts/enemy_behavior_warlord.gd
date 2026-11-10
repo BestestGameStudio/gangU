@@ -86,6 +86,17 @@ func _configure() -> void:
 	volley_data.duration = VOLLEY_TIME
 	volley_data.muzzle_offset = MUZZLE_OFFSET
 
+	var lunge := _present(Attack.LUNGE, State.LUNGE, &"lunge", TelegraphShape.LINE)
+	lunge.length = LUNGE_LENGTH
+	lunge.width = LUNGE_HIT_RANGE * 0.6
+	var spin := _present(Attack.SPIN, State.SPIN, &"spin", TelegraphShape.RING)
+	spin.radius = SPIN_RADIUS
+	spin.start_ring = true
+	spin.start_duration = SPIN_TIME
+	var volley := _present(Attack.VOLLEY, State.VOLLEY, &"ranged", TelegraphShape.CONE)
+	volley.length = 220.0
+
+
 func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	var dist: float = to_player.length()
 	match state:
@@ -100,35 +111,10 @@ func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele:
 		State.VOLLEY:
 			_volley(enemy, to_player, tele)
 
-func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTelegraph) -> void:
-	match which:
-		Attack.LUNGE:
-			tele.show_line(_dir, LUNGE_LENGTH, LUNGE_HIT_RANGE * 0.6, dur)
-		Attack.SPIN:
-			tele.show_ring(SPIN_RADIUS, dur)
-		Attack.VOLLEY:
-			tele.show_cone(_dir, 220.0, deg_to_rad(_volley_spread(enemy)), dur)
-
-func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
+func _attack_begin_reset() -> void:
 	_hits = 0
 	_tick_t = 0.0
 	_waves_fired = 0
-	match attack:
-		Attack.LUNGE:
-			state = State.LUNGE
-			enemy.play_action(&"lunge", true)
-			if tele != null:
-				tele.clear()
-		Attack.SPIN:
-			state = State.SPIN
-			enemy.play_action(&"spin", true)
-			if tele != null:
-				tele.show_ring(SPIN_RADIUS, SPIN_TIME, true)
-		Attack.VOLLEY:
-			state = State.VOLLEY
-			enemy.play_action(&"ranged", true)
-			if tele != null:
-				tele.clear()
 
 # --- CHASE -------------------------------------------------------------------
 

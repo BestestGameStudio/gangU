@@ -79,6 +79,13 @@ func _configure() -> void:
 	lunge_data.duration = LUNGE_TIME
 	lunge_data.hit_range = LUNGE_HIT_RANGE
 	lunge_data.damage = LUNGE_DAMAGE
+	var lunge := _present(Attack.LUNGE, State.LUNGE, &"bite", TelegraphShape.LINE)
+	lunge.length = LUNGE_LENGTH
+	lunge.width = LUNGE_HIT_RANGE * 0.6
+	var scream := _present(Attack.SCREAM, State.SCREAM, &"aoe", TelegraphShape.RING)
+	scream.phase_ring = true
+	scream.clear_on_start = false
+
 
 ## Enraged chain: the second lunge's "wind-up" is just the re-aim pause.
 func _windup_duration() -> float:
@@ -100,26 +107,14 @@ func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele:
 		State.SCREAM:
 			_scream(enemy, player, to_player, tele)
 
-func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTelegraph) -> void:
-	match which:
-		Attack.LUNGE:
-			tele.show_line(_dir, LUNGE_LENGTH, LUNGE_HIT_RANGE * 0.6, dur)
-		Attack.SCREAM:
-			tele.show_ring(_scream_radius(enemy), dur)
-
-func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
+func _attack_begin_reset() -> void:
 	_hits = 0
-	match attack:
-		Attack.LUNGE:
-			state = State.LUNGE
-			_lunges += 1
-			enemy.play_action(&"bite", true)
-			if tele != null:
-				tele.clear()
-		Attack.SCREAM:
-			state = State.SCREAM
-			_screams = 0
-			enemy.play_action(&"aoe", true)
+
+func _attack_begin_count() -> void:
+	if attack == Attack.LUNGE:
+		_lunges += 1
+	elif attack == Attack.SCREAM:
+		_screams = 0
 
 # --- CHASE -------------------------------------------------------------------
 

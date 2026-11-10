@@ -101,6 +101,13 @@ func _configure() -> void:
 	volley_data.duration = VOLLEY_TIME
 	volley_data.muzzle_offset = MUZZLE_OFFSET
 
+	var volley := _present(Attack.VOLLEY, State.VOLLEY, &"projectile", TelegraphShape.CONE)
+	volley.length = VOLLEY_CONE_LENGTH
+	var pulse := _present(Attack.PULSE, State.PULSE, &"aoe", TelegraphShape.RING)
+	pulse.phase_ring = true
+	pulse.clear_on_start = false
+
+
 func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	match state:
 		State.CHASE:
@@ -112,25 +119,9 @@ func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele:
 		State.PULSE:
 			_pulse(enemy, player, to_player, tele)
 
-func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTelegraph) -> void:
-	match which:
-		Attack.VOLLEY:
-			tele.show_cone(_dir, VOLLEY_CONE_LENGTH, deg_to_rad(_volley_spread(enemy)), dur)
-		Attack.PULSE:
-			tele.show_ring(_pulse_radius(enemy), dur)
-
-func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
+func _attack_begin_reset() -> void:
 	_waves_fired = 0
 	_pulses = 0
-	match attack:
-		Attack.VOLLEY:
-			state = State.VOLLEY
-			enemy.play_action(&"projectile", true)
-			if tele != null:
-				tele.clear()
-		Attack.PULSE:
-			state = State.PULSE
-			enemy.play_action(&"aoe", true)
 
 # --- CHASE -------------------------------------------------------------------
 
