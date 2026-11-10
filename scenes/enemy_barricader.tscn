@@ -9,6 +9,8 @@
 radius = 13.0
 
 [node name="EnemyBarricader" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
 script = ExtResource("1")
 cover_seek = true
 definition = ExtResource("4_def")
