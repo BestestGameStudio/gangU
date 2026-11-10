@@ -1,5 +1,5 @@
 class_name MapPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#347) The map, toggled with M (Esc also closes). Shows a WorldMap's
 ## explored terrain for the current area, centered on the player when it
 ## opens, and lets the player draw on it and place their own markers.
@@ -8,8 +8,8 @@ extends CanvasLayer
 ##   - Tools: Draw (freehand ink), Marker (pick one of four symbols, click to
 ##     place), Erase (click/drag removes nearby marks). RMB erases with any
 ##     tool. Limits live on WorldMap (provisional caps).
-##   - Does NOT pause (EquipPanel/Tab idiom). While open it joins "modal_ui"
-##     so map clicks never cast spells.
+##   - Does NOT pause (EquipPanel/Tab idiom). A ModalPanel, so map clicks
+##     never cast spells.
 ## Everything shown comes from WorldMap; this panel never looks at gates,
 ## portals or enemies (details are player-marked only, #347 settled).
 ##
@@ -73,7 +73,7 @@ func _input(event: InputEvent) -> void:
 			close()
 		else:
 			open()
-	elif visible and event is InputEventKey and event.pressed and (event as InputEventKey).physical_keycode == KEY_ESCAPE:
+	elif visible and event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).physical_keycode == KEY_ESCAPE:
 		get_viewport().set_input_as_handled()
 		close()
 
@@ -82,16 +82,14 @@ func open() -> void:
 		return
 	_set_view(&"")
 	canvas.cancel_interaction() # never resume a drag from a previous opening
-	visible = true
-	add_to_group("modal_ui")
+	_set_shown(true)
 	_refresh()
 
 func close() -> void:
 	# The hidden canvas never sees a release that happens while closed, so
 	# drop the drag here (PR #355 review: ghost stroke on reopen).
 	canvas.cancel_interaction()
-	visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
 
 func set_tool(t: MapCanvas.Tool) -> void:
 	canvas.tool = t
@@ -138,9 +136,11 @@ func _fit_sites(include_player: bool) -> void:
 	var s := world_map.cleared_sites(canvas.view())
 	if s.is_empty():
 		return
-	var box := Rect2(s.values()[0], Vector2.ZERO)
+	var first: Vector2 = s.values()[0]
+	var box := Rect2(first, Vector2.ZERO)
 	for d: StringName in s:
-		box = box.expand(s[d])
+		var dpos: Vector2 = s[d]
+		box = box.expand(dpos)
 	if include_player:
 		box = box.expand(world_map.player.global_position)
 	var view_size := canvas.size if canvas.size != Vector2.ZERO else MAP_SIZE
@@ -171,7 +171,10 @@ func select_dungeon(dungeon_id: StringName) -> void:
 	canvas.select_site(dungeon_id)
 
 func can_travel_selected() -> bool:
-	return canvas.selected_site != &"" and travel_rule.is_valid() and bool(travel_rule.call(canvas.selected_site))
+	if canvas.selected_site == &"" or not travel_rule.is_valid():
+		return false
+	var allowed: bool = travel_rule.call(canvas.selected_site)
+	return allowed
 
 ## Travel button. Closes the map, then asks main.gd to make the trip.
 func request_travel() -> void:
@@ -247,7 +250,7 @@ func _build_ui() -> void:
 	add_child(backdrop)
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right"]:
+	for side: String in ["left", "right"]:
 		margin.add_theme_constant_override("margin_" + side, 14)
 	margin.add_theme_constant_override("margin_top", 8)
 	margin.add_theme_constant_override("margin_bottom", 8)

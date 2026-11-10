@@ -12,7 +12,7 @@ var wallet: CurrencyWallet
 var caster: SpellCaster
 var shop: Shop
 var panel: ShopPanel
-var vendor: ShopVendor
+var vendor: PanelStation
 var bolt: Spell = preload("res://resources/spells/placeholder_bolt.tres")
 var fireball: Spell = preload("res://resources/spells/fire_ball.tres")
 var purchases_seen: Array = []
@@ -43,7 +43,6 @@ func _make_player() -> Player:
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	root.add_child(p)
 	return p
 
@@ -106,12 +105,25 @@ func _run_legs() -> void:
 	## by enemy_behavior_cover) - Daniel 2026-11-09: "Do not keep enemy
 	## spells".
 	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres", "mustache_rock.tres"]
+	## #496: upgraded variants (any SpellUpgrade result_spell, derived from
+	## the upgrade data) are never sold - only base spells.
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
+	var upgraded := {}
+	for f in DirAccess.open("res://resources/upgrades").get_files():
+		if f.ends_with(".tres"):
+			var up := load("res://resources/upgrades/" + f) as SpellUpgrade
+			if up != null and up.result_spell != null:
+				upgraded[up.result_spell.resource_path.get_file()] = true
 	var spell_files: Array[String] = []
 	for f in DirAccess.open("res://resources/spells").get_files():
-		if f.ends_with(".tres") and not ENEMY_ONLY.has(f):
+		if f.ends_with(".tres") and not ENEMY_ONLY.has(f) and not upgraded.has(f):
 			spell_files.append(f)
-	_check(demo.entries.size() == spell_files.size(), "catalog holds every player spell resource (%d)" % spell_files.size())
+	_check(demo.entries.size() == spell_files.size(), "catalog holds every base player spell resource (%d)" % spell_files.size())
+	var upgraded_leak := false
+	for e in demo.entries:
+		if e.good is Spell and upgraded.has((e.good as Spell).resource_path.get_file()):
+			upgraded_leak = true
+	_check(not upgraded_leak, "no upgraded variant in the pool (#496)")
 	for enemy_file in ENEMY_ONLY:
 		var leaked := false
 		for e in demo.entries:
@@ -252,14 +264,14 @@ func _run_legs() -> void:
 	stranger.free()
 
 	## 14. Production mount: main.tscn wires the Shop with a RESOLVED caster
-	## (explicit caster_path; the group fallback alone finds no player).
+	## (explicit caster_path, not the Player.find fallback).
 	var scene: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	await process_frame
 	await process_frame
 	var prod_shop: Shop = scene.get_node_or_null("Shop") as Shop
 	_check(prod_shop != null, "main.tscn mounts Shop")
-	_check(prod_shop != null and prod_shop._caster != null, "production Shop caster RESOLVED via caster_path")
+	_check(prod_shop != null and prod_shop._caster == scene.get_node("Player/SpellCaster"), "production Shop caster RESOLVED via caster_path")
 	_check(prod_shop != null and not prod_shop.offerable_entries().is_empty(), "production shop offers the placeholder bolt")
 	scene.queue_free()
 

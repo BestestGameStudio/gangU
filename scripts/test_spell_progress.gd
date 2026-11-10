@@ -90,6 +90,7 @@ func _process(delta: float) -> bool:
 				if not caster.has_method("replace_spell"):
 					print("[PROG] FAIL replace_spell seam expected landed (#67 merged)"); ok = false
 					print("[PROG] ", "PASS" if ok else "FAIL")
+					quit(0 if ok else 1)
 					return true
 				var fire_cd: float = caster.cooldown_remaining(fire)
 				if prog.apply_upgrade(fire, &"fireball_split") != true:
@@ -133,10 +134,13 @@ func _process(delta: float) -> bool:
 				else:
 					print("[PROG] refusal: consumed source re-replace refused OK")
 				print("[PROG] ", "PASS" if ok else "FAIL")
+				quit(0 if ok else 1)
 				return true
 		_:
+			quit(0 if ok else 1)
 			return true
 	if t > 30.0:
-		print("[PROG] FAIL timeout in phase ", phase)
+		print("[PROG] FAIL timeout in phase ", phase); ok = false
+		quit(0 if ok else 1)
 		return true
 	return false

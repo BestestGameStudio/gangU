@@ -9,7 +9,7 @@ class_name ReviveSatchel
 ##   - This node has NO died() listener by design - interception ordering is
 ##     owned by the run manager, never by signal order.
 ##   - player_path MUST be set explicitly BEFORE tree entry; there is no
-##     "player" group fallback (accepted contract).
+##     Player.find fallback (accepted contract).
 ##   - Player.heal() mirrors apply_damage: clampi + health_changed emitted
 ##     inside (lands with the #12 integration PR; died() still fires at HP 0
 ##     and the HUD recovers on health_changed).

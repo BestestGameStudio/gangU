@@ -23,7 +23,6 @@ func _initialize() -> void:
 
 	var def: SummonDefinition = load("res://resources/summons/ally.tres")
 	var player: Player = load("res://scenes/player.tscn").instantiate()
-	player.add_to_group("player")
 	stage.add_child(player)
 	player.global_position = Vector2(0, 0)
 	var manager := SummonManager.new()

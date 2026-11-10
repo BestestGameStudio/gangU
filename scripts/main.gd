@@ -324,7 +324,8 @@ func offering_type_for(gate_name: StringName, authored: Gate.GateType, offering:
 func _area_is_red(area: Node) -> bool:
 	if _entry_gate_type >= 0:
 		return _entry_gate_type == Gate.GateType.RED
-	return area.name == &"DungeonB"
+	var def := DungeonCatalog.for_area(area)
+	return def != null and def.red_by_default
 
 func _swap(area: Node) -> void:
 	if current_area:
@@ -376,7 +377,7 @@ func _mount_dungeon_modifiers(area: Node) -> void:
 ## #100 generic mounter: every area swap reads the area's "SpawnData" child
 ## (AreaSpawnData). Entries are plain scene data - position, enemy scene and
 ## reward table per spawn. The carrier's player_path is assigned BEFORE
-## add_child so Enemy._ready resolves it (production Player is in no group).
+## add_child so Enemy._ready resolves it (D6 explicit wiring).
 ## Children of the area so a gate swap frees them.
 func _mount_area_spawns(area: Node) -> void:
 	var data := area.get_node_or_null("SpawnData") as AreaSpawnData
@@ -477,64 +478,47 @@ func _mount_entrance_guards(area: Node) -> void:
 ## the objective targets 0 and never completes.
 ## #177 / O1 (human decision 2026-11-08): red-gate DungeonB runs ELIMINATION -
 ## clear its mobs, then the Mustache Warlord spawns; the boss kill clears it.
-## The boss enters the tree deferred, so its player_path (production Player is
-## in no group, D6) is assigned in boss_spawned, before tree entry.
+## The boss enters the tree deferred, so its player_path (D6 explicit wiring)
+## is assigned in boss_spawned, before tree entry.
+## (#512: the boss and spawn point now live in data/dungeons/dungeon_b.tres;
+## this constant stays for tests that spawn the Warlord directly.)
 const WARLORD_SCENE: PackedScene = preload("res://scenes/mustache_warlord.tscn")
-const DUNGEON_B_BOSS_SPAWN: Vector2 = Vector2(576, 240)
 ## #173 (human decision 2026-11-08): boss-gate DungeonC is a boss arena only -
 ## ELIMINATION with zero mobs, so the Head boss spawns on entry.
-const HEAD_BOSS_SCENE: PackedScene = preload("res://scenes/head_boss.tscn")
-const DUNGEON_C_BOSS_SPAWN: Vector2 = Vector2(576, 300)
 ## #326 (human request by Mitravasu, 2026-11-09: "create a new dungeon for
 ## it"): DungeonD is the Beast boss's den - a boss arena only like DungeonC,
 ## ELIMINATION with zero mobs, so the Beast (#174) spawns on entry.
-const BEAST_BOSS_SCENE: PackedScene = preload("res://scenes/beast_boss.tscn")
-const DUNGEON_D_BOSS_SPAWN: Vector2 = Vector2(576, 280)
 ## #337: DungeonE runs the DEFENSE objective with plain chase/contact mobs.
-const DEFENSE_WAVE_ENEMY: PackedScene = preload("res://scenes/enemy.tscn")
 const DEFENSE_WAVE_TABLE: RewardTable = preload("res://resources/rewards/demo_table.tres")
 ## #368: boss of a defense boss wave.
-const DEFENSE_WAVE_BOSS: PackedScene = preload("res://scenes/defense_wave_boss.tscn")
 
 func _mount_objective(area: Node) -> void:
+	# #512: the area's DungeonDefinition (data/dungeons/) decides the objective.
+	var def := DungeonCatalog.for_area(area)
+	if def == null:
+		return
 	var obj := DungeonObjective.new()
 	obj.name = "DungeonObjective"
-	if area.name == "DungeonA":
-		obj.dungeon_id = &"dungeon_a"
-	elif area.name == "DungeonB":
-		obj.dungeon_id = &"dungeon_b"
-		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
-		obj.boss_scene = WARLORD_SCENE
-		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_B_BOSS_SPAWN) if area is Node2D else DUNGEON_B_BOSS_SPAWN
+	obj.dungeon_id = def.id
+	obj.objective_type = def.objective_type
+	if def.boss_scene != null:
+		obj.boss_scene = def.boss_scene
+		obj.boss_spawn_position = (area as Node2D).to_global(def.boss_spawn) if area is Node2D else def.boss_spawn
 		obj.boss_spawned.connect(_on_boss_spawned)
-	elif area.name == "DungeonC":
-		obj.dungeon_id = &"dungeon_c"
-		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
-		obj.boss_scene = HEAD_BOSS_SCENE
-		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_C_BOSS_SPAWN) if area is Node2D else DUNGEON_C_BOSS_SPAWN
-		obj.boss_spawned.connect(_on_boss_spawned)
-	elif area.name == "DungeonD":
-		obj.dungeon_id = &"dungeon_d"
-		obj.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
-		obj.boss_scene = BEAST_BOSS_SCENE
-		obj.boss_spawn_position = (area as Node2D).to_global(DUNGEON_D_BOSS_SPAWN) if area is Node2D else DUNGEON_D_BOSS_SPAWN
-		obj.boss_spawned.connect(_on_boss_spawned)
-	elif area.name == "DungeonE" or area.name == "DungeonMaze":
+	if def.objective_type == DungeonObjective.ObjectiveType.DEFENSE:
 		# #337: DEFENSE - protect the area's DefenseCore through a fixed number
 		# of periodic waves spawned at its "WaveSpawns" markers. Wave/HP numbers
 		# are the objective's tunable defaults (implementer's choice).
 		# #367: DungeonMaze is the maze variant - its WaveSpawns are the maze
 		# entrances and its FlowNav steers every wave enemy through the maze.
 		# Same defaults otherwise, mixed targeting (core_attacker_share) included.
-		obj.dungeon_id = &"dungeon_e" if area.name == "DungeonE" else &"dungeon_maze"
-		obj.objective_type = DungeonObjective.ObjectiveType.DEFENSE
 		obj.wave_nav = area.get_node_or_null("FlowNav") as FlowNav
-		obj.wave_enemy_scene = DEFENSE_WAVE_ENEMY
-		obj.wave_reward_table = DEFENSE_WAVE_TABLE
+		obj.wave_enemy_scene = def.wave_enemy_scene
+		obj.wave_reward_table = def.wave_reward_table
 		# #368: the final wave is a boss wave - its usual enemies plus one
 		# Siege Brute that marches on the core (implementer defaults; boss
 		# count, placement and balance are open).
-		obj.wave_boss_scene = DEFENSE_WAVE_BOSS
+		obj.wave_boss_scene = def.wave_boss_scene
 		var boss_waves: Array[int] = [obj.wave_count]
 		obj.boss_waves = boss_waves
 		var points: Array[Vector2] = []
@@ -545,9 +529,6 @@ func _mount_objective(area: Node) -> void:
 					points.append((m as Node2D).position + (holder as Node2D).position)
 		obj.wave_spawn_points = points
 		obj.objective_failed.connect(_on_objective_failed)
-	else:
-		obj.free()
-		return
 	obj.objective_completed.connect(_on_objective_completed)
 	area.add_child(obj)
 
@@ -573,10 +554,9 @@ func _on_boss_spawned(boss: Node) -> void:
 			dungeon_music.yield_to_boss() # #471: the boss theme takes over
 
 ## #359: areas whose boss fight plays the boss theme.
-const BOSS_THEME_ARENAS: Array[StringName] = [&"DungeonC", &"DungeonD"]
-
 func _boss_theme_area(area: Node) -> bool:
-	return _area_is_red(area) or area.name in BOSS_THEME_ARENAS
+	var def := DungeonCatalog.for_area(area)
+	return _area_is_red(area) or (def != null and def.boss_theme)
 
 func _on_objective_completed(dungeon_id: StringName) -> void:
 	print("objective completed: ", dungeon_id)
@@ -607,7 +587,8 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 ## An area with an "ExitPoint" marker gets an unlocked portal at that marker.
 func _mount_exit_portal(area: Node) -> void:
 	var exit_point := area.get_node_or_null("ExitPoint") as Node2D
-	if exit_point == null and not area.name in [&"DungeonA", &"DungeonB", &"DungeonC", &"DungeonD", &"DungeonE"]:
+	var def := DungeonCatalog.for_area(area)
+	if exit_point == null and not (def != null and def.default_exit_portal):
 		return
 	var portal: ExitPortal = preload("res://scenes/exit_portal.tscn").instantiate()
 	portal.name = "ExitPortal"
@@ -622,11 +603,11 @@ func _mount_exit_portal(area: Node) -> void:
 	# Beast dies). #350: RED is whatever the entered gate rolled, so a
 	# RED-rolled DungeonA locks and a NORMAL-rolled DungeonB allows retreat.
 	var red := _area_is_red(area)
-	if (red or area.name == &"DungeonC" or area.name == &"DungeonD") and completable:
+	if (red or (def != null and def.locks_portal)) and completable:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
 	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
-	portal.beast_portal_look = area.name == &"DungeonD"  # #447: the Beast den's exit portal gets the portal look in purple
+	portal.beast_portal_look = def != null and def.beast_portal_look  # #447: the Beast den's exit portal gets the portal look in purple
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 
@@ -683,7 +664,8 @@ func _on_revive_collected(_carried: int) -> void:
 	_revive_claimed = true
 
 func _mount_revive_item(area: Node) -> void:
-	if area.name != "DungeonA" or _revive_claimed:
+	var def := DungeonCatalog.for_area(area)
+	if def == null or not def.revive_item or _revive_claimed:
 		return
 	var item: ReviveItem = preload("res://scenes/revive_item.tscn").instantiate()
 	item.name = "ReviveItem"

@@ -48,7 +48,7 @@ static func blockers_in(tree: SceneTree, caster_owner: Node2D) -> Array[Vector2]
 	var out: Array[Vector2] = []
 	if caster_owner != null:
 		out.append(caster_owner.global_position)
-	for group in [&"enemies", &"summons", &"player"]:
+	for group in [&"enemies", &"summons", ActorCollision.PLAYER_GROUP]:
 		for n in tree.get_nodes_in_group(group):
 			if n is Node2D and n != caster_owner:
 				out.append((n as Node2D).global_position)

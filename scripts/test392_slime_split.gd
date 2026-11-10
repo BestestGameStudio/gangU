@@ -110,7 +110,7 @@ func _initialize() -> void:
 	var da := (load("res://scenes/dungeon_a.tscn") as PackedScene).instantiate()
 	var da_entries: Array = da.get_node("SpawnData").entries
 	var da_slimes := da_entries.filter(func(e): return (e["enemy"] as PackedScene).resource_path == "res://scenes/enemy_slime.tscn")
-	_check(da_entries.size() == 6 and da_slimes.size() == 2, "dungeon A: 3 original + 2 slimes (+ #464 Fishy)")
+	_check(da_entries.size() == 7 and da_slimes.size() == 2, "dungeon A: 3 original + 2 slimes (+ 2 Fishy, #490)")
 	da.free()
 	var ow := (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
 	var gn: Node = ow.get_node("EntranceGuards/GuardsNormal")

@@ -12,8 +12,7 @@ class_name HUD
 ## hub).
 ##
 ## Self-contained: mounted by the scene that owns the player, by instancing
-## scenes/hud.tscn and setting player_path, OR via the "player" group
-## fallback.
+## scenes/hud.tscn and setting player_path, OR via the Player.find fallback.
 ##
 ## Consumed contracts:
 ##   Player: hp, max_hp, health_changed(current, max_hp), died(),
@@ -25,7 +24,7 @@ class_name HUD
 ##   Spell: cooldown.
 ##   SpellProgress (discovered by name): can_upgrade(spell), get_tier(spell).
 
-## Set by the mounting scene. If unset, falls back to the "player" group.
+## Set by the mounting scene. If unset, falls back to Player.find.
 @export var player_path: NodePath
 
 const RESERVED_PAD := 8.0
@@ -86,9 +85,9 @@ func _ready() -> void:
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 	if _player == null:
-		_player = get_tree().get_first_node_in_group("player") as Player
+		_player = Player.find(get_tree())
 	if _player == null:
-		push_warning("HUD: no player found (player_path unset, no 'player' group); HUD idle.")
+		push_warning("HUD: no player found (player_path unset, no Player in the tree); HUD idle.")
 		return
 	_caster = _player.get_node_or_null("SpellCaster") as SpellCaster
 	_player.health_changed.connect(_on_health_changed)
@@ -153,12 +152,16 @@ func _rank_tier(spell: Spell) -> int:
 	if spell == null:
 		return SpellRankBorder.NONE
 	if is_instance_valid(_progress) and _progress.has_method("get_tier"):
-		return _progress.get_tier(spell)
+		var tier: int = _progress.call("get_tier", spell)
+		return tier
 	return 0
 
 func _can_upgrade(spell: Spell) -> bool:
-	return spell != null and is_instance_valid(_progress) \
-		and _progress.has_method("can_upgrade") and _progress.can_upgrade(spell)
+	if spell == null or not is_instance_valid(_progress) \
+			or not _progress.has_method("can_upgrade"):
+		return false
+	var allowed: bool = _progress.call("can_upgrade", spell)
+	return allowed
 
 func _process(delta: float) -> void:
 	_update_objective(delta)
@@ -290,8 +293,9 @@ func reserved_rect() -> Rect2:
 		if c is Label:
 			var font := c.get_theme_font("font")
 			var fs := c.get_theme_font_size("font_size")
-			if font != null and c.text != "":
-				var ts := font.get_string_size(c.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+			var label := c as Label
+			if font != null and label.text != "":
+				var ts := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 				r.size.x = maxf(r.size.x, ts.x)
 				r.size.y = maxf(r.size.y, ts.y)
 		rect = r if first else rect.merge(r)

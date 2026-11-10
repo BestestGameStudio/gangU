@@ -94,7 +94,8 @@ func cell_color(id: StringName, cell: Vector2i) -> Color:
 		return terrain_color(terrain, cell)
 	if not _areas.has(id):
 		return FALLBACK_GROUND
-	return _areas[id]["colors"].get(cell, FALLBACK_GROUND)
+	var colors: Dictionary = _areas[id]["colors"]
+	return colors.get(cell, FALLBACK_GROUND)
 
 static func terrain_color(t: TerrainMap, cell: Vector2i) -> Color:
 	if t == null or not is_instance_valid(t):
@@ -118,7 +119,8 @@ func _physics_process(_delta: float) -> void:
 	_last_pos[area_id] = player.global_position
 	if not reveal_rule.is_valid():
 		return
-	reveal_cells(area_id, reveal_rule.call(player.global_position, CELL_SIZE))
+	var cells: Array = reveal_rule.call(player.global_position, CELL_SIZE)
+	reveal_cells(area_id, cells)
 
 ## --- dungeon sites (#366) ---
 
@@ -131,7 +133,10 @@ func sites(id: StringName) -> Dictionary:
 	return _sites.get(id, {})
 
 func is_site_cleared(dungeon_id: StringName) -> bool:
-	return cleared_rule.is_valid() and bool(cleared_rule.call(dungeon_id))
+	if not cleared_rule.is_valid():
+		return false
+	var cleared: bool = cleared_rule.call(dungeon_id)
+	return cleared
 
 ## The entrances the map shows: cleared dungeons only.
 func cleared_sites(id: StringName) -> Dictionary:
@@ -192,7 +197,7 @@ func view_center(id: StringName) -> Vector2:
 func reveal_cells(id: StringName, cells: Array) -> int:
 	var explored: Dictionary = _area(id)["explored"]
 	var added := 0
-	for cell in cells:
+	for cell: Vector2i in cells:
 		if not explored.has(cell):
 			explored[cell] = true
 			added += 1
@@ -201,10 +206,16 @@ func reveal_cells(id: StringName, cells: Array) -> int:
 	return added
 
 func is_explored(id: StringName, cell: Vector2i) -> bool:
-	return _areas.has(id) and _areas[id]["explored"].has(cell)
+	if not _areas.has(id):
+		return false
+	var explored: Dictionary = _areas[id]["explored"]
+	return explored.has(cell)
 
 func explored_cells(id: StringName) -> Array:
-	return _areas[id]["explored"].keys() if _areas.has(id) else []
+	if not _areas.has(id):
+		return []
+	var explored: Dictionary = _areas[id]["explored"]
+	return explored.keys()
 
 static func world_to_cell(world_pos: Vector2) -> Vector2i:
 	return Vector2i((world_pos / float(CELL_SIZE)).floor())
@@ -274,7 +285,8 @@ func erase_near(id: StringName, world_pos: Vector2, radius: float) -> int:
 	var removed := 0
 	var keep_m: Array = []
 	for m: Dictionary in a["markers"]:
-		if (m["pos"] as Vector2).distance_to(world_pos) <= radius:
+		var mpos: Vector2 = m["pos"]
+		if mpos.distance_to(world_pos) <= radius:
 			removed += 1
 		else:
 			keep_m.append(m)

@@ -1,5 +1,5 @@
 class_name SettingsPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#489) Settings panel with a master volume slider. Esc (or the small
 ## "Settings" button in the bottom-right corner) opens / closes it.
 ##
@@ -9,8 +9,8 @@ extends CanvasLayer
 ##   scales everything on top of them. 0% mutes the bus.
 ## - The value is saved to user://settings.cfg and re-applied on every
 ##   _ready, so it survives the per-run scene reload and game restarts.
-## - Does NOT pause (MapPanel / EquipPanel idiom). While open it joins
-##   "modal_ui" so clicks on the slider never cast spells.
+## - Does NOT pause (MapPanel / EquipPanel idiom). A ModalPanel, so clicks
+##   on the slider never cast spells.
 ## - Esc only opens the panel when no other modal UI (map, equip, fast
 ##   travel) is open, so Esc still closes those first.
 
@@ -48,7 +48,29 @@ static func load_master_volume(path: String = SETTINGS_PATH) -> float:
 	var cfg := ConfigFile.new()
 	if cfg.load(path) != OK:
 		return DEFAULT_MASTER
-	return clampf(float(cfg.get_value(SECTION, KEY_MASTER, DEFAULT_MASTER)), 0.0, 1.0)
+	# Coerce like the pre-typing float() loader: legacy/hand-edited configs
+	# can hold string, int or bool values (see bestiary.gd for why narrowed).
+	var raw: Variant = cfg.get_value(SECTION, KEY_MASTER, DEFAULT_MASTER)
+	var saved: float
+	if raw is float:
+		saved = raw
+	elif raw is int:
+		var i: int = raw
+		saved = float(i)
+	elif raw is bool:
+		var b: bool = raw
+		saved = float(b)
+	elif raw is String:
+		var s: String = raw
+		saved = s.to_float()
+	elif raw is StringName:
+		var sn: StringName = raw
+		saved = String(sn).to_float()
+	else:
+		# float() rejected non-scalar values with a hard script error;
+		# keep rejecting instead of silently forcing a wrong volume.
+		saved = raw + 0.0
+	return clampf(saved, 0.0, 1.0)
 
 static func save_master_volume(v: float, path: String = SETTINGS_PATH) -> void:
 	var cfg := ConfigFile.new()
@@ -68,12 +90,14 @@ func is_open() -> bool:
 	return _backdrop != null and _backdrop.visible
 
 func open() -> void:
-	_backdrop.visible = true
-	add_to_group("modal_ui")
+	_set_shown(true)
 
 func close() -> void:
-	_backdrop.visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
+
+## The corner button stays on screen; only the backdrop is the panel.
+func _apply_shown(shown: bool) -> void:
+	_backdrop.visible = shown
 
 func toggle() -> void:
 	if is_open():
@@ -83,13 +107,13 @@ func toggle() -> void:
 
 ## True when some other panel (map, equip, fast travel) is open.
 func _other_modal_open() -> bool:
-	for n in get_tree().get_nodes_in_group("modal_ui"):
+	for n in get_tree().get_nodes_in_group(GROUP):
 		if n != self:
 			return true
 	return false
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.is_echo()):
+	if not (event is InputEventKey and (event as InputEventKey).pressed and not event.is_echo()):
 		return
 	if (event as InputEventKey).keycode != KEY_ESCAPE:
 		return

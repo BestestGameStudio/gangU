@@ -127,10 +127,13 @@ func _process(delta: float) -> bool:
 					else:
 						print("[A] FAIL spell_unlocked count/content: ", unlock_signals.size()); ok = false
 				print("[A] ", "PASS" if ok else "FAIL")
+				quit(0 if ok else 1)
 				return true
 		_:
+			quit(0 if ok else 1)
 			return true
 	if t > 6.0:
-		print("[A] FAIL timeout in phase ", phase)
+		print("[A] FAIL timeout in phase ", phase); ok = false
+		quit(0 if ok else 1)
 		return true
 	return false

@@ -20,7 +20,7 @@ var _elapsed := 0.0
 var _next_drop := 0.0
 var drops := 0
 var _ending := false
-var _freeze_count := 0
+var freeze := FreezeHold.new()
 
 static func spawn(parent: Node, p_spell: Spell, p_source: Node2D, at: Vector2) -> WaterRain:
 	var r := WaterRain.new()
@@ -40,17 +40,11 @@ func _ready() -> void:
 ## until released. Drops it already made (or makes from outside into a
 ## bubble) are WaterSplash nodes and are claimed on their own.
 func set_frozen(frozen: bool) -> void:
-	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
-
-func is_frozen() -> bool:
-	return _freeze_count > 0
-
-func freeze_count() -> int:
-	return _freeze_count
+	freeze.apply(frozen)
 
 func _physics_process(delta: float) -> void:
 	WaterSplash.claim_by_bubbles(self)
-	if _freeze_count > 0:
+	if freeze.is_frozen():
 		return
 	_elapsed += delta
 	queue_redraw()

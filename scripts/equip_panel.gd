@@ -1,4 +1,4 @@
-extends CanvasLayer
+extends ModalPanel
 class_name EquipPanel
 ## #375 Tab menu (Daniel, 2026-11-09): "spell menu should only show your
 ## slots and allow you to rearrange the 6 spells ... You can still upgrade
@@ -43,7 +43,7 @@ class_name EquipPanel
 ##   qualification, stages and path contents are the provider writer's scope.
 
 ## Explicit wiring convention (matches HUD): set before tree entry, or the
-## "player" group fallback applies. Production mount is a separate window.
+## Player.find fallback applies. Production mount is a separate window.
 @export var player_path: NodePath
 ## Optional upgrade provider (see header contract). Unset = equip-only panel.
 @export var upgrader_path: NodePath
@@ -181,7 +181,7 @@ func _ready() -> void:
 	if player_path != NodePath(""):
 		player = get_node_or_null(player_path) as Player
 	if player == null:
-		player = get_tree().get_first_node_in_group("player") as Player
+		player = Player.find(get_tree())
 	if player == null:
 		push_warning("EquipPanel: no player found; panel inert.")
 		return
@@ -360,12 +360,10 @@ func show_panel() -> void:
 	_hook_relics()
 	_fit_plate()
 	_refresh()
-	visible = true
-	add_to_group("modal_ui") # caster cast-guard hook (coordinated with B)
+	_set_shown(true)
 
 func hide_panel() -> void:
-	visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
 	_press_slot = -1
 	if _drag_from != -1 or _drag_ghost != null:
 		_end_drag()

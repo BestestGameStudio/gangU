@@ -17,7 +17,7 @@ offset_top = 16.0
 theme_override_font_sizes/font_size = 20
 text = "#10 evidence fixture: walk RIGHT into the pickup (Placeholder Bolt)"
 
-[node name="Player" parent="." instance=ExtResource("2") groups=["player"]]
+[node name="Player" parent="." instance=ExtResource("2")]
 position = Vector2(300, 324)
 
 [node name="SpellPickup" parent="." instance=ExtResource("3")]

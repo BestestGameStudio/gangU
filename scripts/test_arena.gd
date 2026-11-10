@@ -14,7 +14,7 @@ var _cast_count := 0
 
 func _ready() -> void:
 	_autotest = OS.get_environment("GANGU_AUTOTEST") == "1"
-	var p = get_tree().get_first_node_in_group("player")
+	var p = Player.find(get_tree())
 	print("[arena] player=", p, " has_hp=", p != null and p.get("hp") != null)
 	p.health_changed.connect(func(c, m): _status = "health_changed(" + str(c) + "/" + str(m) + ") from apply_damage")
 	p.died.connect(func(): _status = "PLAYER died() EMITTED"; print("[arena] PLAYER died() emitted"))
@@ -24,7 +24,7 @@ func _ready() -> void:
 		get_tree().create_timer(21.0).timeout.connect(func(): get_tree().quit())
 
 func _cast() -> void:
-	var p = get_tree().get_first_node_in_group("player")
+	var p = Player.find(get_tree())
 	if p == null or p.get("hp") <= 0:
 		return
 	var proj := TestProjectileScene.instantiate()
@@ -41,7 +41,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 var _print_timer := 0.0
 func _process(delta: float) -> void:
-	var p = get_tree().get_first_node_in_group("player")
+	var p = Player.find(get_tree())
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	debug.text = "hp " + str(p.get("hp")) + "/" + str(p.get("max_hp")) + " | enemies " + str(enemies.size()) + " | " + _status
 	if _autotest:

@@ -1,5 +1,5 @@
 class_name FastTravelPanel
-extends CanvasLayer
+extends ModalPanel
 ## #349: view only. Main supplies live eligibility and handles requests.
 ## The panel has no clear record or origin policy of its own.
 signal destination_requested(dungeon_id: StringName)
@@ -68,15 +68,14 @@ func set_choices(ids: Array[StringName], can_return: bool) -> void:
 		close()
 
 func close() -> void:
-	_backdrop.visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
 
 func _toggle() -> void:
-	if _backdrop.visible:
-		close()
-	else:
-		_backdrop.visible = true
-		add_to_group("modal_ui")
+	_set_shown(not _backdrop.visible)
+
+## The open button stays on screen; only the choices backdrop is the panel.
+func _apply_shown(shown: bool) -> void:
+	_backdrop.visible = shown
 
 func _request_destination(id: StringName) -> void:
 	close()
@@ -87,6 +86,6 @@ func _request_hub() -> void:
 	hub_requested.emit()
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if _backdrop.visible and event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+	if _backdrop.visible and event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
 		close()
 		get_viewport().set_input_as_handled()

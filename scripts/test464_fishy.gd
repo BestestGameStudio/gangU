@@ -344,7 +344,7 @@ func _leg_h_spawn_wiring() -> void:
 			if (e["enemy"] as PackedScene).resource_path == "res://scenes/enemy_fishy.tscn" and e.get("definition") != OVERWORLD_FISHY_DEF:
 				all_def = false
 		_check(_walkable_entries(ow, camp.entries), "H: overworld %s Fishy spawns are walkable" % camp.name)
-	_check(total[0] >= 1 and total[0] * 4 <= total[1], "H: overworld camps carry Fishy, much rarer than warriors (%d vs %d)" % [total[0], total[1]])
+	_check(total[0] >= 1 and total[0] < total[1], "H: overworld camps carry Fishy, fewer than warriors (#490: about half, %d vs %d)" % [total[0], total[1]])
 	_check(all_def, "H: overworld Fishy uses the post/notice definition")
 	ow.queue_free()
 	await process_frame
