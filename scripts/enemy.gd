@@ -227,6 +227,10 @@ func sight_map() -> TerrainMap:
 	return null
 
 func sees(other: Node2D) -> bool:
+	# #499: a player who attacked from tall grass is revealed to every enemy,
+	# at any range, until they leave the grass.
+	if other is Player and (other as Player).is_grass_revealed():
+		return true
 	return TallGrass.can_see(sight_map(), global_position, other.global_position)
 
 ## #461: whether the player can currently see me. Drives my drawing: an enemy
