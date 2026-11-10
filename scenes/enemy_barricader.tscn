@@ -1,0 +1,42 @@
+[gd_scene load_steps=7 format=3 uid="uid://bgangu420barricader"]
+
+[ext_resource type="Script" path="res://scripts/enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/enemy_sprite.gd" id="2_sprite"]
+[ext_resource type="SpriteFrames" uid="uid://bgangu177mwframes" path="res://resources/sprites/mustache_warrior_frames.tres" id="3_frames"]
+[ext_resource type="Resource" path="res://resources/enemies/mustache_barricader.tres" id="4_def"]
+
+[sub_resource type="CircleShape2D" id="1"]
+radius = 13.0
+
+[node name="EnemyBarricader" type="CharacterBody2D"]
+script = ExtResource("1")
+cover_seek = true
+definition = ExtResource("4_def")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+position = Vector2(0, 13)
+color = Color(0, 0, 0, 0.32)
+polygon = PackedVector2Array(-12, 0, -8.5, -3, 0, -4, 8.5, -3, 12, 0, 8.5, 3, 0, 4, -8.5, 3)
+
+[node name="PlankPack" type="Polygon2D" parent="."]
+position = Vector2(-6, -12)
+rotation = -0.35
+color = Color(0.55, 0.36, 0.18, 1)
+polygon = PackedVector2Array(-3, -11, 3, -11, 3, 11, -3, 11)
+
+[node name="PlankPack2" type="Polygon2D" parent="."]
+position = Vector2(-2, -13)
+rotation = -0.2
+color = Color(0.72, 0.5, 0.27, 1)
+polygon = PackedVector2Array(-3, -10, 3, -10, 3, 10, -3, 10)
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+modulate = Color(1, 0.86, 0.7, 1)
+texture_filter = 1
+position = Vector2(0, -7)
+sprite_frames = ExtResource("3_frames")
+animation = &"idle"
+script = ExtResource("2_sprite")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")

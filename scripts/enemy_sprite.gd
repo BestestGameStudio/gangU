@@ -26,6 +26,14 @@ const CORPSE_FADE: float = 0.35
 ## has super armor: the hit still flashes but the animation keeps playing.
 const HURT_INTERRUPTS: Array[StringName] = [&"", &"attack", &"hurt"]
 
+## #476: 8-way sheets (the wolf art) carry one variant per animation per
+## screen direction: idle_s/idle_se/idle_e/idle_ne/idle_n/idle_nw/idle_w/
+## idle_sw, and the same suffixes for walk/attack/hurt/death/telegraph/
+## pounce. When idle_s exists the sprite plays the variant for the body's
+## travel direction and never mirrors; sheets without variants keep the
+## flip_h behaviour above. Suffix for an octant of Vector2.angle().
+const DIR_SUFFIXES: Array[StringName] = [&"e", &"se", &"s", &"sw", &"w", &"nw", &"n", &"ne"]
+
 ## #173: true when the sheet's side-on art faces LEFT (the Head boss walk
 ## row); face() then mirrors the other way. Default: art faces right.
 @export var art_faces_left: bool = false
@@ -39,11 +47,16 @@ var _last_hp: int = -1
 var _glow: bool = false
 var _glow_t: float = 0.0
 var _is_corpse: bool = false
+## #476: last travel direction (8-way sheets) and whether this sheet
+## carries directional variants.
+var _facing: Vector2 = Vector2.RIGHT
+var _directional: bool = false
 
 func _ready() -> void:
 	animation_finished.connect(_on_animation_finished)
+	_directional = sprite_frames != null and sprite_frames.has_animation(&"idle_s")
 	if _is_corpse:
-		play(&"death")
+		play(_variant(&"death"))
 		return
 	var body := get_parent()
 	if body != null and body.has_signal("health_changed"):
@@ -57,12 +70,13 @@ func current_action() -> StringName:
 ## Play `anim` from its first frame. hold=false: locomotion resumes when a
 ## non-looping anim finishes. hold=true: stays until clear_action().
 func play_action(anim: StringName, hold: bool = false) -> void:
-	if sprite_frames == null or not sprite_frames.has_animation(anim):
+	var variant := _variant(anim)
+	if sprite_frames == null or not sprite_frames.has_animation(variant):
 		return
-	_action = anim
+	_action = anim # base name: HURT_INTERRUPTS / current_action() stay directional-agnostic
 	_hold = hold
 	stop()
-	play(anim)
+	play(variant)
 
 func clear_action() -> void:
 	_action = &""
@@ -75,6 +89,15 @@ func set_glow(on: bool) -> void:
 	_glow_t = 0.0
 	if not on:
 		self_modulate = Color.WHITE
+
+## The animation for `base` in the current travel direction, when this
+## sheet carries directional variants; otherwise `base` itself.
+func _variant(base: StringName) -> StringName:
+	if not _directional or sprite_frames == null:
+		return base
+	var octant := int(round(_facing.angle() / (PI / 4.0))) & 7
+	var name := StringName("%s_%s" % [base, DIR_SUFFIXES[octant]])
+	return name if sprite_frames.has_animation(name) else base
 
 ## Mirror toward a horizontal direction (art faces right). Tiny x is ignored
 ## so a target straight above/below never flickers the facing.
@@ -93,10 +116,19 @@ func _process(delta: float) -> void:
 	if body == null:
 		return
 	if _action == &"":
-		face(body.velocity.x)
-		var loco: StringName = &"walk" if body.velocity.length() > WALK_THRESHOLD else &"idle"
-		if animation != loco or not is_playing():
-			play(loco)
+		if _directional:
+			# 8-way art: pick the variant for the travel direction; a standing
+			# wolf keeps its last facing (the telegraph aims it).
+			if body.velocity.length() > WALK_THRESHOLD:
+				_facing = body.velocity
+			var loco := _variant(&"walk" if body.velocity.length() > WALK_THRESHOLD else &"idle")
+			if animation != loco or not is_playing():
+				play(loco)
+		else:
+			face(body.velocity.x)
+			var loco: StringName = &"walk" if body.velocity.length() > WALK_THRESHOLD else &"idle"
+			if animation != loco or not is_playing():
+				play(loco)
 
 func _on_health_changed(current: int, _max_hp: int) -> void:
 	# Enemies only ever lose HP; the first event (no previous value) is a hit.
@@ -120,6 +152,7 @@ func _on_animation_finished() -> void:
 static func spawn_corpse(src: EnemySprite, parent: Node) -> EnemySprite:
 	var c := EnemySprite.new()
 	c._is_corpse = true
+	c._facing = src._facing
 	c.sprite_frames = src.sprite_frames
 	c.texture_filter = src.texture_filter
 	c.flip_h = src.flip_h

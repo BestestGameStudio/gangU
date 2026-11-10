@@ -153,17 +153,23 @@ func _initialize() -> void:
 	ally_far.queue_free()
 	await process_frame
 
-	# --- acquisition data: demo table carries the summon spell ---
-	var table: RewardTable = load("res://resources/rewards/demo_table.tres")
-	var summon_entry: RewardEntry = null
-	var bolt_entry: RewardEntry = null
-	for e in table.entries:
-		if e.spell == spell:
-			summon_entry = e
-		if e.spell != null and e.spell.spell_name == "Placeholder Bolt":
-			bolt_entry = e
-	_check(summon_entry != null and summon_entry.kind == RewardEntry.Kind.SPELL and summon_entry.weight == 1.0, "demo table carries the summon spell entry (weight 1.0)")
-	_check(bolt_entry != null, "existing Placeholder Bolt entry preserved")
+	# --- acquisition wiring: a spell entry leaves the pool on grant ---
+	# #465 (Daniel, 2026-11-09: regular mobs drop currency only): the
+	# production mob table no longer carries spells, so this uses an
+	# in-code fixture table (summon + bolt entries).
+	var table := RewardTable.new()
+	var summon_entry := RewardEntry.new()
+	summon_entry.kind = RewardEntry.Kind.SPELL
+	summon_entry.spell = spell
+	summon_entry.weight = 1.0
+	var bolt_entry := RewardEntry.new()
+	bolt_entry.kind = RewardEntry.Kind.SPELL
+	bolt_entry.spell = load("res://resources/spells/placeholder_bolt.tres")
+	bolt_entry.weight = 1.0
+	var fixture_entries: Array[RewardEntry] = [summon_entry, bolt_entry]
+	table.entries = fixture_entries
+	_check(summon_entry.kind == RewardEntry.Kind.SPELL and summon_entry.weight == 1.0, "fixture table carries the summon spell entry (weight 1.0)")
+	_check(bolt_entry.spell.spell_name == "Placeholder Bolt", "fixture Placeholder Bolt entry present")
 	var pool := RewardPool.new()
 	root.add_child(pool)
 	pool.setup(table)

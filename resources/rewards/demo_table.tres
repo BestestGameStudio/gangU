@@ -1,56 +1,14 @@
-[gd_resource type="Resource" script_class="RewardTable" load_steps=15 format=3 uid="uid://bgangurdemotable"]
+[gd_resource type="Resource" script_class="RewardTable" load_steps=3 format=3 uid="uid://bgangurdemotable"]
 
 [ext_resource type="Script" path="res://scripts/reward_table.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/reward_entry.gd" id="2"]
-[ext_resource type="Spell" uid="uid://bgangu3bolt" path="res://resources/spells/placeholder_bolt.tres" id="3"]
-[ext_resource type="Spell" uid="uid://bgangu212sum" path="res://resources/spells/summon_ally.tres" id="4"]
-[ext_resource type="Spell" uid="uid://bgangu216blk" path="res://resources/spells/stone_block.tres" id="5"]
-[ext_resource type="Spell" path="res://resources/spells/spirit_punch.tres" id="6"]
-[ext_resource type="Spell" path="res://resources/spells/water_ball.tres" id="7"]
-[ext_resource type="Spell" path="res://resources/spells/stone_hammer.tres" id="8"]
 
 [sub_resource type="Resource" id="1"]
-script = ExtResource("2")
-kind = 0
-spell = ExtResource("3")
-weight = 1.0
-
-[sub_resource type="Resource" id="2"]
-script = ExtResource("2")
-kind = 0
-spell = ExtResource("4")
-weight = 1.0
-
-[sub_resource type="Resource" id="3"]
 script = ExtResource("2")
 kind = 2
 currency_amount = 5
 weight = 1.0
 
-[sub_resource type="Resource" id="4"]
-script = ExtResource("2")
-kind = 0
-spell = ExtResource("5")
-weight = 1.0
-
-[sub_resource type="Resource" id="5"]
-script = ExtResource("2")
-kind = 0
-spell = ExtResource("6")
-weight = 1.0
-
-[sub_resource type="Resource" id="6"]
-script = ExtResource("2")
-kind = 0
-spell = ExtResource("7")
-weight = 1.0
-
-[sub_resource type="Resource" id="7"]
-script = ExtResource("2")
-kind = 0
-spell = ExtResource("8")
-weight = 1.0
-
 [resource]
 script = ExtResource("1")
-entries = Array[ExtResource("2")]([SubResource("1"), SubResource("2"), SubResource("3"), SubResource("4"), SubResource("5"), SubResource("6"), SubResource("7")])
+entries = Array[ExtResource("2")]([SubResource("1")])

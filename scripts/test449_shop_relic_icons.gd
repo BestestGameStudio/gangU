@@ -40,6 +40,16 @@ func _initialize() -> void:
 	_check(rich.tooltip_text == "Rich Relic\nDoes a thing.", "(2) tooltip is name + description on hover")
 	_check(rich.mouse_filter != Control.MOUSE_FILTER_IGNORE, "(2) icon accepts hover (mouse_filter not IGNORE)")
 	rich.free()
+	# (2b) ID-only relic (valid: nonempty id, empty display_name): the id is
+	# the identity line, with or without a description; fully blank -> "Relic".
+	var bare := RelicIcon.new()
+	bare.show_relic(_relic(&"probe_relic", ""))
+	_check(bare.tooltip_text == "probe_relic", "(2b) ID-only tooltip falls back to the id (got '%s')" % bare.tooltip_text)
+	bare.show_relic(_relic(&"probe_relic", "", "Probe text."))
+	_check(bare.tooltip_text == "probe_relic\nProbe text.", "(2b) ID-only + desc keeps an id first line (got '%s')" % bare.tooltip_text)
+	bare.show_relic(_relic(&"", ""))
+	_check(bare.tooltip_text == "Relic", "(2b) no id and no name -> generic 'Relic'")
+	bare.free()
 
 	# (3) ONE shared placeholder for every relic: same draw colors, no per-relic art.
 	_check(RelicIcon.PLACEHOLDER_FILL.is_equal_approx(Color(0.85, 0.62, 0.20)), "(3) shared placeholder color")
@@ -81,7 +91,13 @@ func _process(_delta: float) -> bool:
 	var e_relic := ShopEntry.new()
 	e_relic.good = _twin
 	e_relic.price = 25
-	catalog.entries = [e_spell, e_relic]
+	# Valid stockable ID-only probe (nonempty id, empty display_name): its
+	# tooltip must keep an identity line, not show only the description.
+	var probe := _relic(&"probe_relic", "", "Probe text.")
+	var e_probe := ShopEntry.new()
+	e_probe.good = probe
+	e_probe.price = 5
+	catalog.entries = [e_spell, e_relic, e_probe]
 	shop.setup(catalog)
 	root.add_child(shop)
 	panel._shop = shop
@@ -91,8 +107,12 @@ func _process(_delta: float) -> bool:
 	await process_frame
 
 	var relic_rows := panel.get_node("Backdrop/Margin/VBox/RelicRows") as VBoxContainer
-	var icons := relic_rows.find_children("*", "RelicIcon", true, false)
-	_check(icons.size() == 1, "(4) relic row has exactly one RelicIcon")
+	var all_icons := relic_rows.find_children("*", "RelicIcon", true, false)
+	_check(all_icons.size() == 2, "(4) one RelicIcon per stocked relic (got %d)" % all_icons.size())
+	var icons := all_icons.filter(func(i): return (i as RelicIcon).tooltip_text.begins_with("Twin Dash"))
+	var probe_icons := all_icons.filter(func(i): return not (i as RelicIcon).tooltip_text.begins_with("Twin Dash"))
+	_check(probe_icons.size() == 1 and (probe_icons[0] as RelicIcon).tooltip_text == "probe_relic\nProbe text.", "(4b) ID-only stocked relic keeps an id identity line (got %s)" % [probe_icons.map(func(i): return (i as RelicIcon).tooltip_text)])
+	_check(shop.can_grant(probe), "(4b) ID-only probe is a valid, grantable relic")
 	if icons.size() == 1:
 		var icon := icons[0] as RelicIcon
 		_check(icon.tooltip_text == "Twin Dash\nGrants a second dash charge.", "(4) relic tooltip is name + desc (got '%s')" % icon.tooltip_text)

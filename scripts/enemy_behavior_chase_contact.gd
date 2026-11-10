@@ -37,7 +37,9 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 	# #406 (Daniel, 2026-11-09: "moustache men now seek cover", "just
 	# regular mobs", "any cover"): an opted-in enemy chases through the
 	# cover machine; everything else runs the unchanged chase below.
-	if enemy.cover_seek:
+	# #464: a rallied enemy (a Fishy hooked the player) skips cover and
+	# groups up on the target with a plain chase.
+	if enemy.cover_seek and not enemy.is_rallied():
 		_cover.physics_step(self, enemy, player, delta)
 		return
 	_chase_step(enemy, player, delta)
@@ -65,11 +67,13 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 	var heading: Vector2 = to_player
 	if enemy.nav != null:
 		heading = enemy.nav.waypoint(enemy.global_position, player.global_position) - enemy.global_position
-	var chase: Vector2 = heading.normalized() * enemy.speed if to_player.length() > 8.0 + pad else Vector2.ZERO
+	# #464: chase_speed() is enemy.speed unless the enemy is rallied.
+	var spd: float = enemy.chase_speed()
+	var chase: Vector2 = heading.normalized() * spd if to_player.length() > 8.0 + pad else Vector2.ZERO
 	if enemy.nav != null:
 		enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, chase, delta, enemy.can_swim)
 	else:
-		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, chase, player.global_position, enemy.speed, delta, enemy.can_swim)
+		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, chase, player.global_position, spd, delta, enemy.can_swim)
 	_slide(enemy)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if to_player.length() <= enemy.contact_range + pad and _contact_timer <= 0.0:
