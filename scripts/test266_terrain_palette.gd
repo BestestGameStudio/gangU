@@ -47,7 +47,7 @@ func _tile(id: StringName, movement: TerrainTypes.Movement) -> TerrainTile:
 
 func _registry_legs() -> void:
 	var expected := {
-		TerrainTypes.GROUND: W, TerrainTypes.GRASS: W, TerrainTypes.SNOW: W, TerrainTypes.ICE: W, TerrainTypes.MUD: W,
+		TerrainTypes.GROUND: W, TerrainTypes.GRASS: W, TerrainTypes.SNOW: W, TerrainTypes.ICE: W, TerrainTypes.MUD: W, TerrainTypes.TALL_GRASS: W,
 		TerrainTypes.OBSTACLE: B, TerrainTypes.TREE: B, TerrainTypes.MOUNTAIN: B, TerrainTypes.WATER: B, TerrainTypes.BLOCK: B,
 	}
 	for type: StringName in TerrainTypes.ALL:

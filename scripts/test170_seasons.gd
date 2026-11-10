@@ -22,6 +22,7 @@ const BASE_COLORS: Dictionary = {
 	TerrainTypes.WATER: Color(0.15, 0.4, 0.8, 1.0),
 	TerrainTypes.MOUNTAIN: Color(0.5, 0.5, 0.52, 1.0),
 	TerrainTypes.BLOCK: Color(0.7, 0.56, 0.34, 1.0),
+	TerrainTypes.TALL_GRASS: Color(0.24, 0.48, 0.2, 1.0),
 }
 const AUTUMN_GRASS := Color(0.72, 0.45, 0.2, 1.0)
 const AUTUMN_TREE := Color(0.55, 0.22, 0.1, 1.0)

@@ -60,16 +60,46 @@ var patch_colors := PackedColorArray()
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
 var decor: Array[Dictionary] = []
 var _canopy: Node2D
+## #461: tall-grass patches. Centres/radii are hashed like the decor; the
+## patch is the set of Terrain cells whose centre falls inside the circle,
+## so what is drawn is exactly what conceals. Cells are in the area's
+## Terrain grid (empty when the area has no Terrain sibling).
+## {"at": Vector2, "r": float}
+var grass_patches: Array[Dictionary] = []
+var grass_cells: Array[Vector2i] = []
+var _grass_cell_size := 32
+var _grass_top: Node2D
+
+## #461 layout (implementer defaults, not approved design): one candidate
+## per GRASS_STEP grid point, kept with GRASS_CHANCE, radius 64..128 px, and
+## nothing within GRASS_CLEAR of a gate or the arrival point, so gate
+## guards and the hub arrival stay in the open.
+const GRASS_STEP := 420.0
+const GRASS_CHANCE := 0.4
+const GRASS_CLEAR := 330.0
+const TALL_GRASS := Color(0.2, 0.36, 0.17)
+const TALL_GRASS_BLADE := Color(0.32, 0.52, 0.24)
+const TALL_GRASS_BLADE_DARK := Color(0.15, 0.3, 0.13)
+## Blade tufts draw just under the tree crowns, above characters, so anyone
+## in the grass is partly covered by it.
+const GRASS_TOP_Z := 2
 
 func _init() -> void:
 	z_index = -80
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
+	_grass_top = Node2D.new()
+	_grass_top.name = "GrassTop"
+	_grass_top.z_as_relative = false
+	_grass_top.z_index = GRASS_TOP_Z
+	_grass_top.draw.connect(_draw_grass_top)
+	add_child(_grass_top)
 
 func _ready() -> void:
 	build_from(get_parent())
 	queue_redraw()
 	_canopy.queue_redraw()
+	_grass_top.queue_redraw()
 
 ## #418: tree canopies draw on their own child at an absolute z above every
 ## character (player, enemies, summons all sit at z 0), so anyone standing
@@ -114,6 +144,8 @@ func build_from(area: Node) -> void:
 	_build_patches()
 	_build_decor()
 	_plant_tree_collision(area)
+	_build_tall_grass()
+	_plant_tall_grass(area)
 
 func covers(p: Vector2) -> bool:
 	return Geometry2D.is_point_in_polygon(p, outline)
@@ -210,6 +242,84 @@ func _plant_tree_collision(area: Node) -> void:
 	map.set_cells(cells)
 	map.set_projectile_blockers(blockers)
 
+## #461: hashed tall-grass patch centres (deterministic, no RNG). Decor is
+## left exactly as it was; grass simply never covers a tree's cells.
+func _build_tall_grass() -> void:
+	grass_patches.clear()
+	var inner := _blob(-120.0)
+	var gx_n := int(ceil(RADII.x / GRASS_STEP)) + 1
+	var gy_n := int(ceil(RADII.y / GRASS_STEP)) + 1
+	for gx in range(-gx_n, gx_n + 1):
+		for gy in range(-gy_n, gy_n + 1):
+			if _hash01(gx, gy, 41) > GRASS_CHANCE:
+				continue
+			var at := CENTER + Vector2(gx, gy) * GRASS_STEP + Vector2(_hash01(gx, gy, 42) - 0.5, _hash01(gx, gy, 43) - 0.5) * GRASS_STEP * 0.6
+			if not Geometry2D.is_point_in_polygon(at, inner):
+				continue
+			var r := 64.0 + _hash01(gx, gy, 44) * 64.0
+			if at.distance_to(spawn) < GRASS_CLEAR + r:
+				continue
+			var near_gate := false
+			for l in landmarks:
+				if at.distance_to(l) < GRASS_CLEAR + r:
+					near_gate = true
+					break
+			if near_gate:
+				continue
+			grass_patches.append({"at": at, "r": r})
+
+## #461: writes every patch's cells into the area's Terrain grid as
+## TALL_GRASS, skipping cells already blocked (tree collision).
+func _plant_tall_grass(area: Node) -> void:
+	grass_cells.clear()
+	var map := area.get_node_or_null("Terrain") as TerrainMap if area != null else null
+	if map == null:
+		return
+	_grass_cell_size = map.cell_size
+	var cells := {}
+	for p in grass_patches:
+		var at: Vector2 = p["at"]
+		var r: float = p["r"]
+		var lo := map.world_to_cell(at - Vector2(r, r))
+		var hi := map.world_to_cell(at + Vector2(r, r))
+		for cx in range(lo.x, hi.x + 1):
+			for cy in range(lo.y, hi.y + 1):
+				var cell := Vector2i(cx, cy)
+				if map.tile_type_at_cell(cell) != TerrainTypes.GROUND:
+					continue
+				# Hashed ragged edge: the outer ring keeps ~60% of its cells.
+				var d := map.cell_to_world(cell).distance_to(at)
+				if d > r or (d > r * 0.75 and _hash01(cx, cy, 45) > 0.6):
+					continue
+				cells[cell] = TerrainTypes.TALL_GRASS
+	map.set_cells(cells)
+	grass_cells.assign(cells.keys())
+
+func _grass_rect(cell: Vector2i) -> Rect2:
+	var s := float(_grass_cell_size)
+	return Rect2(Vector2(cell) * s, Vector2(s, s))
+
+## Floor layer: the dark mat under each tall-grass cell.
+func _draw_grass_floor() -> void:
+	for cell in grass_cells:
+		draw_rect(_grass_rect(cell).grow(2.0), TALL_GRASS)
+
+## Above characters: a few hashed blades per cell.
+func _draw_grass_top() -> void:
+	for cell in grass_cells:
+		var rect := _grass_rect(cell)
+		for k in 4:
+			var base := rect.position + Vector2(_hash01(cell.x, cell.y, 50 + k), 0.55 + 0.45 * _hash01(cell.x, cell.y, 60 + k)) * rect.size
+			var h := rect.size.y * (0.45 + 0.35 * _hash01(cell.x, cell.y, 70 + k))
+			var lean := (_hash01(cell.x, cell.y, 80 + k) - 0.5) * 10.0
+			var c := TALL_GRASS_BLADE if k % 2 == 0 else TALL_GRASS_BLADE_DARK
+			_grass_top.draw_colored_polygon(PackedVector2Array([
+				base + Vector2(-3.5, 0), base + Vector2(lean, -h), base + Vector2(3.5, 0)]), c)
+
+## Harness introspection: the node that draws the blades over characters.
+func grass_top() -> Node2D:
+	return _grass_top
+
 func _clear_spot(p: Vector2) -> bool:
 	if p.distance_to(spawn) < GATE_CLEAR:
 		return false
@@ -249,6 +359,7 @@ func _draw() -> void:
 	draw_colored_polygon(outline, GRASS)
 	for i in patches.size():
 		draw_colored_polygon(patches[i], patch_colors[i])
+	_draw_grass_floor() # #461
 	# #419: roads are no longer drawn (cosmetic only). Their polylines are
 	# still laid out in build_from so decor/tree placement - and with it the
 	# tree collision on the Terrain grid - stays exactly as before.
