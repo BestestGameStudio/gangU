@@ -48,7 +48,7 @@ func _init() -> void:
 	_check("DONE failures=7 errors=0" in str(failed.text), "fail fixture prints DONE failures=7 errors=0")
 	_check("failing check -> FAIL" in str(failed.text), "failing check is reported")
 	_check("incomparable types" in str(failed.text), "eq type guard reports incomparable types")
-	_check(not ("SCRIPT ERROR" in str(failed.text)), "fail fixture raises no SCRIPT ERROR")
+	_check(not ("SCRIPT ERROR" in str(failed.text)), "fail fixture raises no script error")
 
 	var error_path: String = "res://tests/support/fixtures/error_harness.gd"
 	var error_before: Dictionary = _run_fixture(error_path, "before")
