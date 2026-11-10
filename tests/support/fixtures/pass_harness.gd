@@ -17,4 +17,8 @@ func run() -> void:
 	check(ok, "until held")
 	var missed: bool = await until(func() -> bool: return false, 3)
 	eq(missed, false, "until budgets out false without a label")
+	eq(1, 1.0, "eq compares int against float")
+	eq(&"hello", "hello", "eq compares StringName against String")
+	eq(null, null, "eq accepts nil on both sides")
+	check(NAN != NAN, "NaN semantics stay plain Godot")
 	eq(failures, 0, "no failures recorded")
