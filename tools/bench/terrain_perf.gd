@@ -138,6 +138,8 @@ func _bench() -> void:
 		mmap.set_cell(wall, TerrainTypes.BLOCK)
 		for g in 4:
 			nav.field(goals[g * 11]))
+	map.visible = true
+	_t("TerrainMap.set_cell overworld (art visible)", 5, func(): return map.set_cell(some_cell, ty))
 
 func _sum(a: Array[float]) -> float:
 	var s := 0.0

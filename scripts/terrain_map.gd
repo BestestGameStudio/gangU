@@ -86,6 +86,8 @@ const _CONCEALS := 16
 ## Bumped on every write to the cell store or the palette; lets readers
 ## (TerrainPath) reuse an answer computed on an unchanged map.
 var revision: int = 0
+var _bounds: Rect2i = Rect2i()
+var _bounds_stale: bool = false
 var _type_flags: Dictionary = {} ## StringName -> int (_WALKABLE | ...)
 var _type_props: Dictionary = {} ## StringName -> read-only Dictionary
 ## #407: solid circles that stop projectiles (overworld trees). World-space
@@ -118,36 +120,45 @@ func _ready() -> void:
 func set_cell(cell: Vector2i, type: StringName) -> bool:
 	if not is_valid_type(type):
 		return false
-	if type == TerrainTypes.GROUND:
-		_cells.erase(cell)
-	else:
-		_cells[cell] = type
-	revision += 1
-	_rebuild_presentation()
+	var before := art_bounds()
+	_write(cell, type)
+	_repaint([cell], before)
 	return true
 
 ## Bulk write (Vector2i -> StringName). All-or-nothing: any unregistered
-## type refuses the whole batch with no change. Presentation rebuilds once,
-## since a per-cell set_cell rebuild makes filling a map quadratic.
+## type refuses the whole batch with no change. Presentation updates once
+## for the whole batch.
 func set_cells(cells: Dictionary) -> bool:
 	for type: StringName in cells.values():
 		if not is_valid_type(type):
 			return false
+	var before := art_bounds()
 	for cell: Vector2i in cells:
-		var type: StringName = cells[cell]
-		if type == TerrainTypes.GROUND:
-			_cells.erase(cell)
-		else:
-			_cells[cell] = type
-	revision += 1
-	_rebuild_presentation()
+		_write(cell, cells[cell])
+	_repaint(cells.keys(), before)
 	return true
 
 ## Restores a cell to the flat-world default (GROUND).
 func clear_cell(cell: Vector2i) -> void:
-	_cells.erase(cell)
+	var before := art_bounds()
+	_write(cell, TerrainTypes.GROUND)
+	_repaint([cell], before)
+
+## The one store write: the sparse entry, the revision and the cached
+## bounding box of assigned cells.
+func _write(cell: Vector2i, type: StringName) -> void:
 	revision += 1
-	_rebuild_presentation()
+	if type != TerrainTypes.GROUND:
+		_cells[cell] = type
+		if not _bounds_stale:
+			_bounds = Rect2i(cell, Vector2i.ONE) if _cells.size() == 1 else _bounds.merge(Rect2i(cell, Vector2i.ONE))
+		return
+	if not _cells.erase(cell) or _bounds_stale:
+		return
+	if _cells.is_empty():
+		_bounds = Rect2i()
+	elif cell.x == _bounds.position.x or cell.y == _bounds.position.y or cell.x == _bounds.end.x - 1 or cell.y == _bounds.end.y - 1:
+		_bounds_stale = true
 
 ## The single entry point every damage source calls when it hits terrain.
 ## A destroyable cell becomes its registry destroyed_into type; anything
@@ -461,15 +472,52 @@ func _rebuild_presentation() -> void:
 	_obstacle_layer.clear()
 	var types := _atlas_types()
 	for cell: Vector2i in _cells:
-		var type: StringName = _cells[cell]
-		var col := Vector2i(types.find(type), 0)
-		if col.x < 0:
-			continue # palette swapped away from this type: no look to draw
-		if _props_of(type)["walkable"]:
-			_ground_layer.set_cell(cell, 0, col)
-		else:
-			_obstacle_layer.set_cell(cell, 0, col)
+		_draw_swatch(cell, _cells[cell], types)
 	_rebuild_art()
+
+func _draw_swatch(cell: Vector2i, type: StringName, types: Array[StringName]) -> void:
+	var col := Vector2i(types.find(type), 0)
+	if col.x < 0:
+		return # palette swapped away from this type: no look to draw
+	if _props_of(type)["walkable"]:
+		_ground_layer.set_cell(cell, 0, col)
+	else:
+		_obstacle_layer.set_cell(cell, 0, col)
+
+## Updates the presentation after `changed` cells were written: their color
+## swatches, and the art of each one and its 4 neighbours (an autotile piece
+## depends on its 4 neighbours). Same result as _rebuild_presentation; that
+## full rebuild still runs when the art bounds moved (every floor in the
+## box changes) or the batch covers most of the box.
+func _repaint(changed: Array, bounds_before: Rect2i) -> void:
+	if _ground_layer == null:
+		return
+	var bounds := art_bounds()
+	if bounds != bounds_before or changed.size() * 5 >= bounds.get_area():
+		_rebuild_presentation()
+		return
+	var types := _atlas_types()
+	for cell: Vector2i in changed:
+		_ground_layer.erase_cell(cell)
+		_obstacle_layer.erase_cell(cell)
+		if _cells.has(cell):
+			_draw_swatch(cell, _cells[cell], types)
+	if not art_enabled or not is_visible_in_tree():
+		_rebuild_art()
+		return
+	var dirty := {}
+	for cell: Vector2i in changed:
+		for c: Vector2i in [cell, cell + Vector2i.UP, cell + Vector2i.RIGHT, cell + Vector2i.DOWN, cell + Vector2i.LEFT]:
+			if bounds.has_point(c):
+				dirty[c] = true
+	var same_in_bounds := func(n: Vector2i, art: StringName) -> bool:
+		return not bounds.has_point(n) or art_at_cell(n) == art
+	for c: Vector2i in dirty:
+		_art_floor.erase_cell(c)
+		_art_walls.erase_cell(c)
+		_art_objects.erase_cell(c)
+		var art := art_at_cell(c)
+		_draw_art(c, art, same_in_bounds.bind(art))
 
 ## The TerrainArt id drawing `cell` (&"" = color swatch).
 func art_at_cell(cell: Vector2i) -> StringName:
@@ -480,15 +528,16 @@ func art_at_cell(cell: Vector2i) -> StringName:
 ## Cells the art covers: the bounding box of every assigned cell (empty
 ## for a flat map, which keeps showing the scene background).
 func art_bounds() -> Rect2i:
-	var first := true
-	var r := Rect2i()
-	for cell: Vector2i in _cells:
-		if first:
-			r = Rect2i(cell, Vector2i.ONE)
-			first = false
-		else:
-			r = r.merge(Rect2i(cell, Vector2i.ONE))
-	return r
+	if _bounds_stale:
+		_bounds_stale = false
+		var first := true
+		for cell: Vector2i in _cells:
+			if first:
+				_bounds = Rect2i(cell, Vector2i.ONE)
+				first = false
+			else:
+				_bounds = _bounds.merge(Rect2i(cell, Vector2i.ONE))
+	return _bounds
 
 func _rebuild_art() -> void:
 	if _art_floor == null:
@@ -506,18 +555,22 @@ func _rebuild_art() -> void:
 			arts[c] = art_at_cell(c)
 	for c: Vector2i in arts:
 		var art: StringName = arts[c]
-		match TerrainArt.kind(art):
-			TerrainArt.Kind.FLOOR:
-				_set_floor(c, art)
-			TerrainArt.Kind.OBJECT:
-				_set_floor(c, TerrainArt.floor_under(art))
-				_art_objects.set_cell(c, TerrainArt.OBJECTS_SOURCE, Vector2i(TerrainArt.variant(c, 2), TerrainArt.row(art)))
-			TerrainArt.Kind.AUTOTILE:
-				# Off-bounds neighbours connect, so a map's outer ring
-				# shows no rim on its outside.
-				var m := TerrainArt.mask(c, func(n: Vector2i) -> bool: return arts.get(n, art) == art)
-				var alt := TerrainArt.variant(c, 3, 2)
-				_art_walls.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(m, TerrainArt.row(art) + alt))
+		_draw_art(c, art, func(n: Vector2i) -> bool: return arts.get(n, art) == art)
+
+## Draws `art` at `c`. `same` answers whether a neighbour connects to an
+## autotile piece; off-bounds neighbours connect, so a map's outer ring
+## shows no rim on its outside.
+func _draw_art(c: Vector2i, art: StringName, same: Callable) -> void:
+	match TerrainArt.kind(art):
+		TerrainArt.Kind.FLOOR:
+			_set_floor(c, art)
+		TerrainArt.Kind.OBJECT:
+			_set_floor(c, TerrainArt.floor_under(art))
+			_art_objects.set_cell(c, TerrainArt.OBJECTS_SOURCE, Vector2i(TerrainArt.variant(c, 2), TerrainArt.row(art)))
+		TerrainArt.Kind.AUTOTILE:
+			var m := TerrainArt.mask(c, same)
+			var alt := TerrainArt.variant(c, 3, 2)
+			_art_walls.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(m, TerrainArt.row(art) + alt))
 
 func _set_floor(c: Vector2i, art: StringName) -> void:
 	var col := 0 if TerrainArt.SETS[art].get("animated", false) else TerrainArt.variant(c, 1)
