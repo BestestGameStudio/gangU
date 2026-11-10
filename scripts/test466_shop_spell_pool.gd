@@ -39,10 +39,12 @@ func _make_player() -> Player:
 	caster = c
 	return p
 
-## Enemy-only boss attack spells (Daniel 2026-11-09: "Do not keep enemy
-## spells"). Each is preloaded ONLY by a boss behavior as a projectile;
-## no player path (starting kit, reward table, upgrade) grants them.
-const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres"]
+## Enemy-only attack spells (Daniel 2026-11-09: "Do not keep enemy
+## spells"). Each is preloaded ONLY by an enemy behavior as a projectile
+## (head_bolt/warlord_orb: boss attacks; mustache_rock: #443 cover-throw
+## rock in enemy_behavior_cover); no player path (starting kit, reward
+## table, upgrade) grants them.
+const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres", "mustache_rock.tres"]
 
 func _spell_files() -> Array[String]:
 	var out: Array[String] = []

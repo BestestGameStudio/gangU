@@ -101,9 +101,11 @@ func _process(_delta: float) -> bool:
 func _run_legs() -> void:
 	## 1. Catalog DATA leg (#466): every PLAYER spell in the game is in the
 	## pool at a flat 10c - one entry per resources/spells/*.tres, no
-	## dupes - EXCEPT the enemy-only boss spells head_bolt/warlord_orb
-	## (Daniel 2026-11-09: "Do not keep enemy spells").
-	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres"]
+	## dupes - EXCEPT the enemy-only spells head_bolt/warlord_orb (boss
+	## attacks) and mustache_rock (#443 cover-throw rock, preloaded only
+	## by enemy_behavior_cover) - Daniel 2026-11-09: "Do not keep enemy
+	## spells".
+	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres", "mustache_rock.tres"]
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
 	var spell_files: Array[String] = []
 	for f in DirAccess.open("res://resources/spells").get_files():
