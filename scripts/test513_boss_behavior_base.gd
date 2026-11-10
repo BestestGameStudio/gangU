@@ -54,6 +54,9 @@ func _init() -> void:
 	_check(head._attack_timer == 1.0, "head initial attack timer 1.0")
 	_check(warlord._attack_timer == 1.2, "warlord initial attack timer 1.2")
 	_check(beast._attack_timer == 1.0, "beast initial attack timer 1.0")
+	_check(head.attack == BossBehavior.Attack.VOLLEY, "head initial attack is VOLLEY (pre-#513 default)")
+	_check(warlord.attack == BossBehavior.Attack.LUNGE, "warlord initial attack is LUNGE")
+	_check(beast.attack == BossBehavior.Attack.LUNGE, "beast initial attack is LUNGE")
 
 	# (5) anti-repeat picker
 	var picker := BossBehavior.new()
