@@ -115,15 +115,13 @@ func _flags(map: TerrainMap, cell: Vector2i) -> int:
 
 ## A cell no mover can enter: BLOCKING and not swimmable, or FALLING.
 func _hard_obstacle(map: TerrainMap, cell: Vector2i) -> bool:
-	var f := _flags(map, cell)
-	if f & F_FALL:
-		return true
-	return not (f & F_WALK) and not (f & F_SWIM)
+	return map.is_hard_obstacle_cell(cell)
 
-## A cell THIS mover may be routed through (can_swim-aware).
+## A cell THIS mover may be routed through (can_swim-aware). FALLING tiles
+## are never swimmable (TerrainTypes.apply_movement), so this is exactly
+## walkable-or-swimmable.
 func _passable(map: TerrainMap, cell: Vector2i, can_swim: bool) -> bool:
-	var f := _flags(map, cell)
-	return (f & F_WALK) != 0 or ((f & F_SWIM) != 0 and can_swim)
+	return map.can_enter_cell(cell, can_swim)
 
 ## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
 ## cutting between blocked cells). Returns the cell path EXCLUDING the start
