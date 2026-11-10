@@ -43,6 +43,8 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 	var was_engaged := engaged
 	if _last_hp >= 0 and enemy.hp < _last_hp:
 		engaged = true # hit from outside aggro range: fight back
+	if enemy.is_rallied():
+		engaged = true # #464: a Fishy hooked the player nearby: group up
 	_last_hp = enemy.hp
 	var alive: bool = player != null and is_instance_valid(player) and player.hp > 0
 	if alive:
