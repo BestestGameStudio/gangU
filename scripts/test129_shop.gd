@@ -106,12 +106,25 @@ func _run_legs() -> void:
 	## by enemy_behavior_cover) - Daniel 2026-11-09: "Do not keep enemy
 	## spells".
 	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres", "mustache_rock.tres"]
+	## #496: upgraded variants (any SpellUpgrade result_spell, derived from
+	## the upgrade data) are never sold - only base spells.
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
+	var upgraded := {}
+	for f in DirAccess.open("res://resources/upgrades").get_files():
+		if f.ends_with(".tres"):
+			var up := load("res://resources/upgrades/" + f) as SpellUpgrade
+			if up != null and up.result_spell != null:
+				upgraded[up.result_spell.resource_path.get_file()] = true
 	var spell_files: Array[String] = []
 	for f in DirAccess.open("res://resources/spells").get_files():
-		if f.ends_with(".tres") and not ENEMY_ONLY.has(f):
+		if f.ends_with(".tres") and not ENEMY_ONLY.has(f) and not upgraded.has(f):
 			spell_files.append(f)
-	_check(demo.entries.size() == spell_files.size(), "catalog holds every player spell resource (%d)" % spell_files.size())
+	_check(demo.entries.size() == spell_files.size(), "catalog holds every base player spell resource (%d)" % spell_files.size())
+	var upgraded_leak := false
+	for e in demo.entries:
+		if e.good is Spell and upgraded.has((e.good as Spell).resource_path.get_file()):
+			upgraded_leak = true
+	_check(not upgraded_leak, "no upgraded variant in the pool (#496)")
 	for enemy_file in ENEMY_ONLY:
 		var leaked := false
 		for e in demo.entries:

@@ -1,6 +1,7 @@
 extends SceneTree
 ## #466 rendered fixture: the production shop pool holds every PLAYER
-## spell in the game (resources/shop/demo_catalog.tres, 39 spells, flat
+## BASE spell in the game (resources/shop/demo_catalog.tres, 9 spells since
+## #496 dropped every upgraded variant, flat
 ## 10c; the enemy-only boss spells head_bolt/warlord_orb are excluded -
 ## Daniel 2026-11-09: "Do not keep enemy spells") and each stock shows 3
 ## random picks from it. Real production catalog + real ShopPanel; the
@@ -44,7 +45,7 @@ func _setup() -> void:
 	_label = Label.new()
 	_label.position = Vector2(24, 24)
 	_label.add_theme_font_size_override("font_size", 30)
-	_label.text = "#466 shop pool: all 39 player spells, flat 10c - 3 random per stock"
+	_label.text = "#496 shop pool: 9 base spells only (no upgrades), flat 10c - 3 random per stock"
 	hud.add_child(_label)
 
 func _process(_delta: float) -> bool:
@@ -58,7 +59,7 @@ func _process(_delta: float) -> bool:
 			var btn := panel.find_children("RefreshButton", "Button", true, false)
 			if not btn.is_empty():
 				btn[0].pressed.emit()
-				_label.text = "#466 paid re-roll: a new random 3 from the 39-spell pool"
+				_label.text = "#496 paid re-roll: a new random 3 from the 9 base spells"
 	if _frame >= END:
 		quit(0)
 	return false
