@@ -3,7 +3,9 @@ extends SceneTree
 ## fixture harnesses (tests/support/fixtures/) as real subprocesses and
 ## asserting the runner-facing contract: exit 0 = pass, 1 = failed check
 ## or engine/script error or zero checks, 2 = watchdog, with the matching
-## summary lines. GangTest's own harness contract is "exit 0 before the
+## summary lines. The hang fixture runs in two modes: a plain hang, and a
+## hang under Engine.time_scale = 0 (the watchdog runs on wall clock, so
+## paused time cannot suppress it). GangTest's own harness contract is "exit 0 before the
 ## timeout means PASS" - no output parsing by runners; the output
 ## assertions here are this self-check's business. The error fixture is
 ## run in three modes via user args: a runtime error before the first
@@ -73,6 +75,11 @@ func _init() -> void:
 	var hang_code: int = hung.code
 	_check(hang_code == 2, "hang fixture exits 2 via watchdog (got %d)" % hang_code)
 	_check("TIMEOUT" in str(hung.text), "watchdog prints TIMEOUT")
+
+	var paused: Dictionary = _run_fixture("res://tests/support/fixtures/hang_harness.gd", "paused")
+	var paused_code: int = paused.code
+	_check(paused_code == 2, "paused hang fixture exits 2 via watchdog (got %d)" % paused_code)
+	_check("TIMEOUT" in str(paused.text), "watchdog fires under time_scale 0")
 
 	print("[516] DONE failures=", failures)
 	quit(1 if failures > 0 else 0)
