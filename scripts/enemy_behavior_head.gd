@@ -62,7 +62,6 @@ const PULSE_TIME: float = 0.5
 const PULSE_SECOND_AT: float = 0.3 ## enraged only, into the pulse
 const PULSE_TIME_ENRAGED: float = 0.75
 
-var _waves_fired: int = 0
 var _pulses: int = 0
 
 ## The Head's pre-#513 initial attack was VOLLEY (Warlord/Beast: LUNGE);
@@ -84,6 +83,17 @@ func _configure() -> void:
 	arrival_color = HEAD_RED
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
+	volley_data = VolleyData.new()
+	volley_data.spell = BOLT_SPELL
+	volley_data.scene = PROJECTILE_SCENE
+	volley_data.shots = VOLLEY_SHOTS
+	volley_data.enraged_shots = VOLLEY_SHOTS_ENRAGED
+	volley_data.spread = VOLLEY_SPREAD_DEG
+	volley_data.enraged_spread = VOLLEY_SPREAD_ENRAGED_DEG
+	volley_data.fire_at = VOLLEY_FIRE_AT
+	volley_data.second_wave_at = VOLLEY_SECOND_WAVE_AT
+	volley_data.duration = VOLLEY_TIME
+	volley_data.muzzle_offset = MUZZLE_OFFSET
 
 func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	match state:
@@ -126,31 +136,7 @@ func _pick_attack(dist: float) -> int:
 # --- ATTACKS -----------------------------------------------------------------
 
 func _volley(enemy: Enemy, to_player: Vector2) -> void:
-	enemy.velocity = Vector2.ZERO
-	if _waves_fired == 0 and _t >= VOLLEY_FIRE_AT:
-		_fire_wave(enemy, _dir, 0.0)
-	elif _waves_fired == 1 and is_enraged(enemy) and _t >= VOLLEY_SECOND_WAVE_AT:
-		# Second wave re-aims and staggers half a gap so it fills the holes.
-		if to_player.length_squared() > 0.0:
-			_dir = to_player.normalized()
-		var shots: int = _volley_shots(enemy)
-		var half_gap: float = deg_to_rad(_volley_spread(enemy)) / float(maxi(shots - 1, 1)) * 0.5
-		_fire_wave(enemy, _dir, half_gap)
-	if _t >= VOLLEY_TIME:
-		_enter_recover(enemy)
-
-func _fire_wave(enemy: Enemy, aim: Vector2, rot: float) -> void:
-	_waves_fired += 1
-	var dirs: Array[Vector2] = SpellFanout.directions(aim.rotated(rot), _volley_shots(enemy), _volley_spread(enemy))
-	var area: Node = enemy.get_parent()
-	var origin: Vector2 = enemy.global_position + aim * MUZZLE_OFFSET
-	for d in dirs:
-		var p: Projectile = PROJECTILE_SCENE.instantiate()
-		p.setup(BOLT_SPELL, d, enemy)
-		p.position = origin
-		# D14: never add to the tree synchronously from a physics step.
-		area.call_deferred("add_child", p)
-	CombatEffects.muzzle(area, origin, aim.angle(), BOLT_SPELL.projectile_color)
+	_volley_step(enemy, to_player)
 
 ## One shockwave per ring: the first at PULSE_RADIUS as the "aoe" anim
 ## starts, and (enraged) a second, wider one PULSE_SECOND_AT later. Each
@@ -176,12 +162,6 @@ func _release_ring(enemy: Enemy, player: Player, to_player: Vector2, radius: flo
 	if to_player.length() <= radius:
 		player.apply_damage(PULSE_DAMAGE)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
-
-func _volley_shots(enemy: Enemy) -> int:
-	return VOLLEY_SHOTS_ENRAGED if is_enraged(enemy) else VOLLEY_SHOTS
-
-func _volley_spread(enemy: Enemy) -> float:
-	return VOLLEY_SPREAD_ENRAGED_DEG if is_enraged(enemy) else VOLLEY_SPREAD_DEG
 
 ## The wind-up ring shows the outermost ring the pulse will reach.
 func _pulse_radius(enemy: Enemy) -> float:

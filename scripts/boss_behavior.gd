@@ -203,3 +203,58 @@ func _enter_chase(enemy: Enemy, tele: BossTelegraph) -> void:
 func _face(enemy: Enemy, dir_x: float) -> void:
 	if enemy.sprite != null:
 		enemy.sprite.face(dir_x)
+
+# --- shared volley attack ----------------------------------------------------
+
+## Attack data is supplied by Head/Warlord from their unchanged constants.
+class VolleyData extends RefCounted:
+	var spell: Spell
+	var scene: PackedScene
+	var shots: int
+	var enraged_shots: int
+	var spread: float
+	var enraged_spread: float
+	var fire_at: float
+	var second_wave_at: float
+	var duration: float
+	var muzzle_offset: float
+
+var volley_data: VolleyData
+var _waves_fired: int = 0
+
+func _volley_step(enemy: Enemy, to_player: Vector2) -> void:
+	enemy.velocity = Vector2.ZERO
+	if _waves_fired == 0 and _t >= volley_data.fire_at:
+		_fire_wave(enemy, _dir, 0.0)
+	elif _waves_fired == 1 and is_enraged(enemy) and _t >= volley_data.second_wave_at:
+		# The staggered second wave re-aims and fills the first wave's gaps.
+		if to_player.length_squared() > 0.0:
+			_dir = to_player.normalized()
+		var shots: int = _volley_shots(enemy)
+		var half_gap: float = deg_to_rad(_volley_spread(enemy)) / float(maxi(shots - 1, 1)) * 0.5
+		_fire_wave(enemy, _dir, half_gap)
+	if _t >= volley_data.duration:
+		_enter_recover(enemy)
+
+func _fire_wave(enemy: Enemy, aim: Vector2, rot: float) -> void:
+	_waves_fired += 1
+	var dirs: Array[Vector2] = SpellFanout.directions(aim.rotated(rot), _volley_shots(enemy), _volley_spread(enemy))
+	var area: Node = enemy.get_parent()
+	var origin: Vector2 = enemy.global_position + aim * volley_data.muzzle_offset
+	for d in dirs:
+		var p: Projectile = volley_data.scene.instantiate()
+		p.setup(volley_data.spell, d, enemy)
+		p.position = origin
+		_decorate_volley_projectile(p, area)
+		area.call_deferred("add_child", p)
+	CombatEffects.muzzle(area, origin, aim.angle(), volley_data.spell.projectile_color)
+
+## Warlord installs its sheet orb visual and impact pop; Head does nothing.
+func _decorate_volley_projectile(_projectile: Projectile, _area: Node) -> void:
+	pass
+
+func _volley_shots(enemy: Enemy) -> int:
+	return volley_data.enraged_shots if is_enraged(enemy) else volley_data.shots
+
+func _volley_spread(enemy: Enemy) -> float:
+	return volley_data.enraged_spread if is_enraged(enemy) else volley_data.spread
