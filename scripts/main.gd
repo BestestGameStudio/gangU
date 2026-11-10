@@ -605,6 +605,7 @@ func _mount_exit_portal(area: Node) -> void:
 		portal.locked = true
 		portal.objective_path = NodePath("../DungeonObjective")
 	portal.red_portal_look = red  # #204: portal look only on a RED dungeon's exit portal (both its locked and unlocked states)
+	portal.beast_portal_look = area.name == &"DungeonD"  # #447: the Beast den's exit portal gets the portal look in purple
 	portal.entered.connect(_on_exit_portal_entered)
 	area.add_child(portal)
 
