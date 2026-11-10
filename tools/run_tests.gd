@@ -7,7 +7,7 @@ extends SceneTree
 ## SCENE_TESTS (run with GANGU_AUTOTEST=1). Each child runs with
 ## `--headless --fixed-fps 60` and its own user:// dir (XDG_DATA_HOME, Linux).
 ## A filter keeps tests whose name contains any of the given substrings.
-## Pass = exit code 0 before the timeout. Exits 1 if anything failed.
+## Pass = exit code 0 before the timeout, with no script diagnostics. Exits 1 if anything failed.
 
 const TEST_DIR := "res://scripts"
 const SCENE_TESTS: Array[String] = [
@@ -152,6 +152,8 @@ func _poll(t: Dictionary) -> void:
 		status = "FAIL (exit %d)" % code
 	elif LOAD_FAILURES.any(func(m): return m in output):
 		status = "FAIL (script did not load)"
+	elif output.count("SCRIPT ERROR") > 0:
+		status = "FAIL (runtime script error)"
 	_finish(t, status, output)
 
 func _drain(t: Dictionary) -> void:
