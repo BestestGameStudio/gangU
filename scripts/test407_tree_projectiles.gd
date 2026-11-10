@@ -60,7 +60,7 @@ func _initialize() -> void:
 		if d["kind"] == "tree":
 			trees.append(d)
 	var blockers := omap.projectile_blockers()
-	_check(trees.size() > 0 and blockers.size() == trees.size(), "A: one projectile blocker per decor tree (%d trees, %d blockers)" % [trees.size(), blockers.size()])
+	_check(trees.size() > 0 and blockers.size() >= trees.size(), "A: a projectile blocker per decor tree (trees first; #546 appends village footprints) (%d trees, %d blockers)" % [trees.size(), blockers.size()])
 	var match_ok := true
 	for i in trees.size():
 		var at: Vector2 = trees[i]["at"]

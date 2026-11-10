@@ -266,6 +266,9 @@ func _plant_tree_collision(area: Node) -> void:
 		# circle: its own cell is blocked regardless, so no tree is
 		# walkable at its own position.
 		cells[map.world_to_cell(at)] = TerrainTypes.OBSTACLE
+	var village := area.get_node_or_null("AbandonedVillage")
+	if village != null:
+		village.plant_footprints(map, cells, blockers) # #546 houses + well
 	map.set_cells(cells)
 	map.set_projectile_blockers(blockers)
 
