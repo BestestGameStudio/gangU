@@ -82,7 +82,9 @@ func spawn_bird() -> Enemy:
 	b.player_path = player_path
 	b.terrain = terrain
 	b.reward_table = BIRD_TABLE
-	b.set_meta("bird_manager", self)
+	var ctx := BirdContext.new()
+	ctx.manager = self
+	b.context = ctx
 	_area.add_child(b)
 	# Arrive already circling: start one orbit-radius out at full height.
 	b.global_position = p.global_position + Vector2.from_angle(_rng.randf() * TAU) * EnemyBehaviorBird.CIRCLE_RADIUS
@@ -94,7 +96,7 @@ func spawn_bird() -> Enemy:
 ## behavior waits out the stun, then leaves).
 func order_leave() -> void:
 	if bird != null and is_instance_valid(bird):
-		bird.set_meta("bird_leave", true)
+		(bird.context as BirdContext).leave = true
 
 ## The bird finished its leave climb: despawn "into the sky".
 func absorb_bird(b: Enemy) -> void:
