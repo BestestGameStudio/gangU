@@ -443,3 +443,17 @@ turnaround views (board rows 1-3, cols 2-6: side and back), board row 5
 cols 1-3 (side cast / hand close-ups) and the drawn fishing lines (the line is
 drawn in-engine so it can reach the real target). The cast/reel art faces
 RIGHT (EnemySprite flips with flip_h); idle/walk are front views.
+
+## Village props (#484 / PR #544)
+
+Original in-house pixel art, reproducible with `python3 tools/sprites/draw_village.py`.
+No external source image or third-party assets. `village_props.png` is a static
+512x128 RGBA sheet, four 128x128 cells in one row: three collapsed-house
+variants (columns 0-2) and a dry well (column 3). House cells include stone
+foundations, broken doors, fallen timber, shingles, rubble, weeds and shadows.
+Well includes chipped stonework, empty interior, broken beam/rope and shadow.
+Static props have no animation or facing. No SpriteFrames resource is needed;
+AbandonedVillage draws atlas regions by path with nearest filtering. The road
+reuses the existing TerrainArt floor atlas; surrounding trees already use its
+object atlas. The old shape-drawn clearing disk is removed, exposing the
+existing grass floor. No building/well/ruin primitive drawing remains.

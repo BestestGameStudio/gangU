@@ -165,6 +165,9 @@ func build_from(area: Node) -> void:
 	_collect_patrols(area)
 	_build_patches()
 	_build_decor()
+	var village := area.get_node_or_null("AbandonedVillage")
+	if village != null:
+		village.shape_decor(self)
 	_plant_tree_collision(area)
 	_build_tall_grass()
 	_plant_tall_grass(area)
@@ -281,6 +284,9 @@ func _build_tall_grass() -> void:
 			if not Geometry2D.is_point_in_polygon(at, inner):
 				continue
 			var r := 64.0 + _hash01(gx, gy, 44) * 64.0
+			var village := get_parent().get_node_or_null("AbandonedVillage") if get_parent() != null else null
+			if village != null and at.distance_to(village.position) < 550.0 + r:
+				continue
 			if at.distance_to(spawn) < GRASS_CLEAR + r:
 				continue
 			var near_gate := false
