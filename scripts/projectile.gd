@@ -522,6 +522,12 @@ func _terrain_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 		# the ordinary rules below and still stops it.
 		if lobbed and _terrain.is_low_cover_cell(cell):
 			continue
+		# #443 review: a stone BLOCK is high cover - a lobbed rock stops at its
+		# face and leaves it intact (Daniel: "stone blocks still block them"),
+		# instead of the #216 destroy-on-contact rule other shots follow.
+		if lobbed and TerrainTypes.is_destroyable(_terrain.tile_type_at_cell(cell)):
+			events.append({"t": _cell_entry_t(from, motion, cell), "cell": cell, "blocker": true})
+			continue
 		# #167: an element interaction (e.g. cold + water -> ice) takes
 		# priority over destruction for the same cell.
 		var interacts := _terrain.interaction_for_cell(cell, spell.tags) != null

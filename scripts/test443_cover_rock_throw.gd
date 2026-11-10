@@ -175,9 +175,14 @@ func _leg_d() -> void:
 	player.global_position = Vector2(500, 144)
 	await _frames(1)
 	var r2 := _fire(stage, _rock, Vector2(250, 144), Vector2.RIGHT, thrower)
+	var w2 := {"blocked": false}
+	r2.blocked.connect(func(): w2.blocked = true)
 	last = await _fly(r2, 90)
-	_check(_gone(r2) and last.x <= 420.0, "D: a stone block stops the rock (x %.1f)" % last.x)
+	_check(_gone(r2) and w2.blocked and last.x <= 386.0, "D: a stone block stops the rock at its face (x %.1f)" % last.x)
 	_check(player.hp == hp0, "D: player behind the stone block is untouched")
+	# #443 review: the rock is blocked, not a block-breaker (#216 destroy rule
+	# applies to other shots only).
+	_check(map.tile_type_at_cell(Vector2i(12, 4)) == TerrainTypes.BLOCK, "D: the stone block remains intact after the rock")
 	await _teardown(stage)
 
 func _leg_e() -> void:
