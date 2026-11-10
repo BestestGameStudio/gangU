@@ -6,8 +6,8 @@ class_name ActorCollision
 ## player/enemy pair is separated with per-pair collision exceptions instead
 ## of re-layering. Only the movement solver is affected: Area overlaps,
 ## projectile hits and distance-based contact damage are untouched, and both
-## actors still collide with everything else (containers, summons, each other
-## within their own side).
+## actors still collide with everything else (walls, terrain, containers).
+## #279 extends this to summons; #493 to enemy-vs-enemy (enemies stack).
 ##
 ## Order-independent: whichever side enters the tree second pairs itself with
 ## every member of the other side's group. Exceptions are added in BOTH

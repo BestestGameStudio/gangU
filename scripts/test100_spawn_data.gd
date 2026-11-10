@@ -86,10 +86,10 @@ func _process(delta: float) -> bool:
 				_check("DA carrier: SpawnData child present", sd != null)
 				if sd != null:
 					var entries: Array = sd.get("entries")
-					_check("DA carrier: 3 original + 2 #392 slime + 1 #464 Fishy entries", entries != null and entries.size() == 6)
+					_check("DA carrier: 3 original + 2 #392 slime + 2 #490 Fishy entries", entries != null and entries.size() == 7)
 					_check("DA carrier: player_path header is ../../Player",
 						sd.get("player_path") == NodePath("../../Player"))
-					if entries != null and entries.size() == 6:
+					if entries != null and entries.size() == 7:
 						var positions_ok := true
 						var resources_ok := true
 						for i in 3:
@@ -105,8 +105,8 @@ func _process(delta: float) -> bool:
 						_check("DA carrier: exact positions (250,280)/(576,220)/(900,280)", positions_ok)
 						_check("DA carrier: every entry pairs enemy.tscn with demo_table.tres", resources_ok)
 				var enemies := _area_enemies()
-				_check("DA mount: 6 enemies as area children (3 + 2 slimes #392 + Fishy #464)", enemies.size() == 6)
-				var positions_ok: bool = mounted_positions.size() == 6
+				_check("DA mount: 7 enemies as area children (3 + 2 slimes #392 + 2 Fishy #490)", enemies.size() == 7)
+				var positions_ok: bool = mounted_positions.size() == 7
 				for expected in EXPECTED_POSITIONS:
 					if not (expected in mounted_positions):
 						positions_ok = false
@@ -120,8 +120,8 @@ func _process(delta: float) -> bool:
 				_check("DA mount: enemies mounted at the carrier's exact positions (captured at mount time)", positions_ok)
 				_check("DA wiring: reward_table is demo_table and player_path resolved to Main/Player", wiring_ok)
 				var obj: DungeonObjective = area.get_node_or_null("DungeonObjective")
-				_check("ordering: objective present and targets 6 (mounted after enemies)",
-					obj != null and obj.progress() == Vector2i(0, 6))
+				_check("ordering: objective present and targets 7 (mounted after enemies)",
+					obj != null and obj.progress() == Vector2i(0, 7))
 				for e in enemies:
 					e.apply_damage(999) # real kills through the damage path
 				phase = 2; t = 0
@@ -137,7 +137,7 @@ func _process(delta: float) -> bool:
 						e.apply_damage(999)
 					t = 0
 					return false
-				_check("completion: progress 18/18 (3 + Fishy + 2 slimes x 7 descendants)", obj.progress() == Vector2i(18, 18))
+				_check("completion: progress 19/19 (3 + 2 Fishy + 2 slimes x 7 descendants)", obj.progress() == Vector2i(19, 19))
 				_check("completion: dungeon_a cleared", obj.is_cleared())
 				_check("completion: killed enemies freed", _area_enemies().size() == 0)
 				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
@@ -156,11 +156,11 @@ func _process(delta: float) -> bool:
 				_check("DB carrier: SpawnData child present", sd != null)
 				if sd != null:
 					var entries: Array = sd.get("entries")
-					_check("DB carrier: 3 warrior + 1 #464 Fishy mob entries", entries != null and entries.size() == 4)
-				_check("DB mount: 4 mobs", _area_enemies().size() == 4)
+					_check("DB carrier: 3 warrior + 2 #490 Fishy mob entries", entries != null and entries.size() == 5)
+				_check("DB mount: 5 mobs", _area_enemies().size() == 5)
 				var obj: DungeonObjective = area.get_node_or_null("DungeonObjective")
 				_check("DB objective: ELIMINATION", obj != null and obj.objective_type == DungeonObjective.ObjectiveType.ELIMINATION)
-				_check("DB objective: progress 0/5 (4 mobs + boss)", obj != null and obj.progress() == Vector2i(0, 5))
+				_check("DB objective: progress 0/6 (5 mobs + boss)", obj != null and obj.progress() == Vector2i(0, 6))
 				var portal: ExitPortal = area.get_node_or_null("ExitPortal")
 				_check("DB portal: locked (red gate, clear-or-die)", portal != null and portal.locked)
 				_check("DB boss: none before the mobs die", get_nodes_in_group("boss").is_empty())
@@ -183,7 +183,7 @@ func _process(delta: float) -> bool:
 		6:
 			if t > 0.3:
 				var obj: DungeonObjective = scene.current_area.get_node("DungeonObjective")
-				_check("DB clear: dungeon_b cleared by the boss kill", obj.is_cleared() and obj.progress() == Vector2i(5, 5))
+				_check("DB clear: dungeon_b cleared by the boss kill", obj.is_cleared() and obj.progress() == Vector2i(6, 6))
 				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
 				_check("DB clear: red portal unlocked", not portal.locked)
 				if fails == 0:

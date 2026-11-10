@@ -7,7 +7,8 @@ extends SceneTree
 ## warlord_orb exist only as boss attack projectiles
 ## (scripts/enemy_behavior_head.gd / enemy_behavior_warlord.gd). Exercises
 ## the PRODUCTION data (resources/shop/demo_catalog.tres) and the new
-## stock_size default.
+## stock_size default. #496 (Colin 2026-11-10): only BASE spells are sold;
+## every SpellUpgrade result_spell (e.g. Heavy Rain) stays out.
 var failures := 0
 
 var shop: Shop
@@ -52,12 +53,24 @@ func _spell_files() -> Array[String]:
 			out.append(f)
 	return out
 
+## #496: spell files that are the RESULT of a SpellUpgrade (upgraded
+## variants), derived from the upgrade data - never from names.
+func _upgraded_spell_files() -> Dictionary:
+	var out := {}
+	for f in DirAccess.open("res://resources/upgrades").get_files():
+		if f.ends_with(".tres"):
+			var up := load("res://resources/upgrades/" + f) as SpellUpgrade
+			if up != null and up.result_spell != null:
+				out[up.result_spell.resource_path.get_file()] = true
+	return out
+
 ## Spell resources that BELONG in the shop pool: every spell file minus
-## the enemy-only set.
+## the enemy-only set and (#496) minus every upgraded variant.
 func _player_spell_files() -> Array[String]:
+	var upgraded := _upgraded_spell_files()
 	var out: Array[String] = []
 	for f in _spell_files():
-		if not ENEMY_ONLY.has(f):
+		if not ENEMY_ONLY.has(f) and not upgraded.has(f):
 			out.append(f)
 	return out
 
@@ -73,7 +86,7 @@ func _run() -> void:
 	var demo: ShopCatalog = preload("res://resources/shop/demo_catalog.tres")
 	var files := _player_spell_files()
 	_check(demo.entries.size() == files.size(),
-		"pool holds every player spell resource (%d entries)" % files.size())
+		"pool holds every BASE player spell resource (%d entries)" % files.size())
 	var flat := true
 	var seen: Array[Resource] = []
 	var present := {}
@@ -89,6 +102,9 @@ func _run() -> void:
 	for player_file in files:
 		_check(present.has(player_file),
 			"player spell is in the pool: %s" % player_file)
+	for upgraded_file in _upgraded_spell_files():
+		_check(not present.has(upgraded_file),
+			"upgraded variant stays out of the pool (#496): %s" % upgraded_file)
 
 	## 2. Production slot count is 3 (Daniel: "3 Random from the pool").
 	_check(Shop.new().stock_size == 3, "stock_size default is 3 (#466)")

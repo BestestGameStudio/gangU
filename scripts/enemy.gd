@@ -95,9 +95,13 @@ func _ready() -> void:
 ## #290: collision exceptions with every Player (plus the resolved target).
 ## #279: also every Summon - enemies spawn continuously, so the late side
 ## pairs itself here (summon.gd covers the cast-time direction).
+## #493: also every other enemy (bosses included) - enemies pass through and
+## stack on each other. The newcomer pairs with everyone already present, so
+## every pair is covered whatever the spawn order. Walls/terrain unchanged.
 func _ignore_player_bodies() -> void:
 	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
 	ActorCollision.ignore_group(self, &"summons")
+	ActorCollision.ignore_group(self, ActorCollision.ENEMY_GROUP)
 	if _player != null and is_instance_valid(_player):
 		ActorCollision.ignore_pair(self, _player)
 
@@ -225,6 +229,10 @@ func sight_map() -> TerrainMap:
 	return null
 
 func sees(other: Node2D) -> bool:
+	# #499: a player who attacked from tall grass is revealed to every enemy,
+	# at any range, until they leave the grass.
+	if other is Player and (other as Player).is_grass_revealed():
+		return true
 	return TallGrass.can_see(sight_map(), global_position, other.global_position)
 
 ## #461: whether the player can currently see me. Drives my drawing: an enemy
