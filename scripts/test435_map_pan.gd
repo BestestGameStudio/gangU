@@ -13,6 +13,17 @@ func _check(ok: bool, label: String) -> void:
 		_fails += 1
 	print("[435] ", label, " -> ", "PASS" if ok else "FAIL")
 
+func _view_in_poly(c: Vector2, half: Vector2, poly: PackedVector2Array) -> bool:
+	var r := PackedVector2Array([c + Vector2(-half.x, -half.y), c + Vector2(half.x, -half.y), c + half, c + Vector2(-half.x, half.y)])
+	if not Geometry2D.clip_polygons(r, poly).is_empty():
+		return false
+	# Independent sample check: every corner and 7 points along each edge.
+	for i in 4:
+		for k in 8:
+			if not Geometry2D.is_point_in_polygon(r[i].lerp(r[(i + 1) % 4], k / 8.0), poly):
+				return false
+	return true
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -142,6 +153,9 @@ func _run() -> void:
 	var b := wm.pan_bounds()
 	_check(b.size.x > 0.0 and b.size.y > 0.0, "overworld has pan bounds")
 	_check(c.pan_bounds == b, "canvas uses the overworld bounds")
+	var real_outline := c.pan_outline
+	var real_bounds := c.pan_bounds
+	_check(real_outline.size() >= 3 and c.pan_outline == wm.pan_outline(), "canvas uses the overworld outline")
 	_check(c.center.is_equal_approx(c.clamp_center(player.global_position)), "opens centered on the player (kept inside bounds)")
 	var mid := c.size * 0.5
 
@@ -184,7 +198,12 @@ func _run() -> void:
 		_move(c, mid, Vector2(5000, 5000), MOUSE_BUTTON_MASK_MIDDLE)
 	_btn(c, mid, MOUSE_BUTTON_MIDDLE, false)
 	view = Rect2(c.center - half, half * 2.0)
-	_check(view.position.x <= b.position.x + 0.01 and view.position.y <= b.position.y + 0.01, "reaches the near corner but never past it")
+	if c.outline_fits_view():
+		# (#440 review) With a land outline that fits the view, the near end of
+		# the pan is the outline's own edge, not the bounding-rect corner.
+		_check(_view_in_poly(c.center, half, c.pan_outline), "reaches the outline's near edge but never past it")
+	else:
+		_check(view.position.x <= b.position.x + 0.01 and view.position.y <= b.position.y + 0.01, "reaches the near corner but never past it")
 
 	# Snap back when the player moves.
 	player.global_position += Vector2(80, 0)
@@ -226,6 +245,67 @@ func _run() -> void:
 	_move(c, mid + Vector2(30, 0), Vector2(30, 0), MOUSE_BUTTON_MASK_MIDDLE)
 	_btn(c, mid, MOUSE_BUTTON_MIDDLE, false)
 	_check(c.center == h and not c.is_panning(), "middle drag is inert where the area has no bounds")
+
+	# (#440 review) Outline clamp: the whole view stays inside the land polygon,
+	# not just inside its bounding rect. Synthetic wobbled ellipse at the #439
+	# radii so this runs the same on any base; the real outline follows.
+	var syn := PackedVector2Array()
+	for i in 64:
+		var a := TAU * i / 64.0
+		var wob := 1.0 + (float((i * 37) % 11) / 11.0 - 0.5) * 0.12
+		syn.append(Vector2(576, -150) + Vector2(cos(a) * 2400.0 * wob, sin(a) * 2100.0 * wob))
+	var sb := Rect2(syn[0], Vector2.ZERO)
+	for p in syn:
+		sb = sb.expand(p)
+	c.map_scale = 0.375
+	c.pan_bounds = sb
+	c.pan_outline = syn
+	_check(c.outline_fits_view(), "synthetic outline has a center where the whole view fits")
+	var vhalf := c.size * 0.5 / c.map_scale
+	var worst_rect := 0.0
+	var all_inside := true
+	var rect_corners_exposed := 0
+	for dir in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1), Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
+		var far: Vector2 = sb.get_center() + Vector2(dir.x * sb.size.x, dir.y * sb.size.y)
+		var got := c.clamp_center(far)
+		if not _view_in_poly(got, vhalf, syn):
+			all_inside = false
+		# What the old bbox-only clamp gave for the same drag.
+		var lo := sb.position + vhalf
+		var hi := sb.end - vhalf
+		var old := Vector2(clampf(far.x, lo.x, hi.x), clampf(far.y, lo.y, hi.y))
+		if not _view_in_poly(old, vhalf, syn):
+			rect_corners_exposed += 1
+	_check(all_inside, "every extreme drag keeps the whole view inside the outline polygon")
+	_check(rect_corners_exposed >= 4, "the old bounding-rect clamp WOULD expose outside space at the corners (%d of 8 directions)" % rect_corners_exposed)
+	# A center already inside is untouched; the rect-corner center is pulled in.
+	var ok_c := c.clamp_center(sb.get_center())
+	_check(_view_in_poly(ok_c, vhalf, syn) and c.clamp_center(ok_c).is_equal_approx(ok_c), "a fitting center is left alone")
+	var corner := Vector2(sb.end.x - vhalf.x, sb.end.y - vhalf.y)
+	_check(not _view_in_poly(corner, vhalf, syn) and _view_in_poly(c.clamp_center(corner), vhalf, syn), "the exact old-rect corner center is rejected and pulled inside")
+	# Dragging step by step into the corner never leaves the polygon.
+	c.center = ok_c
+	var stepped_ok := true
+	for i in 400:
+		c.center = c.clamp_center(c.center - Vector2(30, 30) / c.map_scale)
+		if not _view_in_poly(c.center, vhalf, syn):
+			stepped_ok = false
+	_check(stepped_ok, "a long drag toward the corner stays inside the polygon at every step")
+	# Too small for the view (zoomed way out): no center fits, rect clamp only.
+	c.map_scale = 0.1
+	_check(not c.outline_fits_view(), "when the view cannot fit at all, no fitting center is claimed")
+	c.map_scale = 0.375
+	# The real overworld outline on this base.
+	c.pan_bounds = real_bounds
+	c.pan_outline = real_outline
+	var fits := c.outline_fits_view()
+	var real_ok := true
+	for dir in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+		var got := c.clamp_center(real_bounds.get_center() + Vector2(dir.x * real_bounds.size.x, dir.y * real_bounds.size.y))
+		if fits and not _view_in_poly(got, c.size * 0.5 / c.map_scale, real_outline):
+			real_ok = false
+	print("[435] real overworld outline fits the default view: ", fits)
+	_check(real_ok, "real outline: extreme drags stay inside the polygon whenever the view fits at all")
 
 	print("test435 done: %d checks, %d failures" % [_checks, _fails])
 	print("RESULT: ALL PASS" if _fails == 0 else "RESULT: FAIL")
