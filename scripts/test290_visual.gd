@@ -23,8 +23,8 @@ func _pair(stage: Node2D, centre: Vector2, keep_exceptions: bool) -> void:
 	await physics_frame
 	if not keep_exceptions:
 		for e in enemies:
-			e.remove_collision_exception_with(p)
-			p.remove_collision_exception_with(e)
+			e.collision_mask |= PhysicsLayers.PLAYER # pre-#290: enemy hull blocks the player
+			p.collision_mask |= PhysicsLayers.ENEMY
 
 func _initialize() -> void:
 	var stage := Node2D.new()
