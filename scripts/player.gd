@@ -30,8 +30,11 @@ signal launch_started(direction: Vector2)
 signal launch_ended()
 signal launch_cancelled()
 
+## #450: dash range nerfed 40% (135 px -> 81 px) by shortening the duration
+## only; speed and cooldown are unchanged. 900 x 0.09 = 81 px is the flat base
+## dash distance that any future range scaling applies on top of.
 @export var dash_speed: float = 900.0
-@export var dash_duration: float = 0.15
+@export var dash_duration: float = 0.09
 ## Seconds to recharge ONE dash charge. With the base single charge this is
 ## the classic #198 cooldown (counted from dash start).
 @export var dash_cooldown: float = 0.6
@@ -302,7 +305,11 @@ func _physics_process(delta: float) -> void:
 		try_dash(input_dir)
 	var desired := input_dir * move_speed()
 	if _dash_time_left > 0.0:
-		desired = _dash_dir * dash_speed
+		# #450: the last tick only covers the remaining time, so the distance
+		# is exactly dash_speed * dash_duration instead of rounding up to a
+		# whole physics frame (0.09s is 5.4 frames at 60 fps).
+		var dash_scale := minf(_dash_time_left, delta) / delta if delta > 0.0 else 1.0
+		desired = _dash_dir * dash_speed * dash_scale
 		_dash_time_left = maxf(_dash_time_left - delta, 0.0)
 		_spawn_dash_ghost()
 		if _dash_time_left == 0.0:
