@@ -10,8 +10,9 @@ extends SceneTree
 ##   (E) PIERCING shots are stopped too (trees are solid cover).
 ##   (F) a body in front of the tree still takes the hit first.
 ##   (G) a shot fired from inside a canopy edge flies out; shots that miss
-##       the tree and terrain-less sources (hub, fixtures) are unaffected;
-##       OBSTACLE cells alone (dungeon walls) still let shots through.
+##       the tree and terrain-less sources (hub, fixtures) are unaffected.
+##       #433 superseded the OBSTACLE carve-out: dungeon walls are solid
+##       cover now (full wall coverage in test433).
 
 var failures := 0
 
@@ -196,7 +197,10 @@ func _initialize() -> void:
 	var wp := _fire(stage, bolt, Vector2(250, 0), Vector2.RIGHT, player)
 	var ww := _watch(wp)
 	await _run(wp, ww, 40)
-	_check(not ww.blocked and ww.pos.x > tree_at.x + tree_r, "G: plain OBSTACLE cells (dungeon walls) still let shots through")
+	# #433: the #407 carve-out is gone - a plain OBSTACLE cell (dungeon
+	# wall) is solid cover now and stops the shot at its face (x 384 on
+	# this 32px grid). Full wall coverage lives in test433.
+	_check(ww.blocked and absf(ww.pos.x - 384.0) < 1.0, "G: an OBSTACLE cell (dungeon wall) blocks the shot at its face (x %.1f)" % ww.pos.x)
 
 	print("RESULT: ", "ALL PASS" if failures == 0 else "%d FAILED" % failures)
 	quit(0 if failures == 0 else 1)
