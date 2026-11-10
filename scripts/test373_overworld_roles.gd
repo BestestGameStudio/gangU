@@ -93,9 +93,9 @@ func _scene_legs() -> void:
 					on_field = on_field and ground.covers(p)
 			else:
 				patrols_ok = false
-		# #392: GuardsNormal also posts one slime on the guard behavior (Daniel).
-		var want_guards := 2 if g.name == "GuardsNormal" else 1
-		_check(guards == want_guards, "(A) %s has %d gate guard(s) (got %d)" % [g.name, want_guards, guards])
+		# #414: every guarded entrance keeps exactly ONE posted guard -
+		# GuardsNormal's #392 slime post is now a slime PATROLLER.
+		_check(guards == 1, "(A) %s has 1 gate guard (got %d)" % [g.name, guards])
 		_check(patrols_ok, "(A) every other %s enemy patrols a closed loop starting at its spawn" % g.name)
 	var roamers := ow.get_node_or_null("Roamers") as AreaSpawnData
 	_check(roamers != null and not roamers is EntranceGuards, "(A) overworld has a Roamers carrier tied to no dungeon")
@@ -118,7 +118,7 @@ func _scene_legs() -> void:
 	_check(long_paths, "(A) every migration path is long (> 900 px)")
 	_check(clear_of_spawn, "(A) migration paths keep clear of the arrival point")
 	_check(on_field, "(A) every route point is on the overworld field")
-	_check(counts["guard"] == 6 and counts["patrol"] == 10 and counts["migrant"] == 4, "(A) 6 gate guards (5 + #392 slime), 10 patrols, 4 migrants (%s)" % [counts])
+	_check(counts["guard"] == 5 and counts["patrol"] == 14 and counts["migrant"] == 4, "(A) #414 mix: 5 gate guards, 14 patrols, 4 migrants (%s)" % [counts])
 	_check(counts["patrol"] + counts["migrant"] > counts["guard"], "(A) moving roles are the norm")
 	ow.free()
 
@@ -135,7 +135,7 @@ func _flow_legs() -> void:
 	var guards := _by_role(main, "guard")
 	var patrols := _by_role(main, "patrol")
 	var migrants := _by_role(main, "migrant")
-	_check(guards.size() == 6 and patrols.size() == 10 and migrants.size() == 4, "(B) mounted 6 guards (5 + #392 slime) / 10 patrols / 4 migrants (got %d/%d/%d)" % [guards.size(), patrols.size(), migrants.size()])
+	_check(guards.size() == 5 and patrols.size() == 14 and migrants.size() == 4, "(B) mounted 5 guards / 14 patrols / 4 migrants (#414, got %d/%d/%d)" % [guards.size(), patrols.size(), migrants.size()])
 	_check(patrols.all(func(e: Enemy) -> bool: return (e._behavior as EnemyBehaviorGuard).route.size() >= 3), "(B) every patrol received its loop")
 	_check(migrants.all(func(e: Enemy) -> bool: return (e._behavior as EnemyBehaviorGuard).route.size() >= 3), "(B) every migrant received its path")
 	var start := {}
@@ -198,23 +198,27 @@ func _flow_legs() -> void:
 			break
 	_check(home_again, "(D) after resting it migrates all the way back")
 
-	# (E) moving roles keep aggro / leash, then resume
+	# (E) moving roles keep aggro / leash; #414: the patrol's give-up
+	# distance is the larger 900, then it RETURNS TO ITS OLD ROUTE.
 	var pt: Enemy = patrols[0]
 	var pb := pt._behavior as EnemyBehaviorPatrol
 	p.global_position = pt.global_position + Vector2(0, -120)
 	await _frames(20)
 	_check(pb.engaged, "(E) a patrol engages a player inside its aggro radius")
-	p.global_position = pb.engaged_from + Vector2(0, 1200)
+	p.global_position = pb.engaged_from + Vector2(0, 700)
+	await _frames(30)
+	_check(pb.engaged, "(E) #414: still chasing at 700px (past the old 520 leash)")
+	p.global_position = pb.engaged_from + Vector2(0, 1400)
 	await _frames(4)
-	_check(not pb.engaged, "(E) the patrol gives up past its leash")
+	_check(not pb.engaged, "(E) the patrol gives up past its 900px chase distance")
 	var wp_before := pb.waypoint
 	var resumed := false
-	for f in 600:
+	for f in 900:
 		await physics_frame
 		if pb.waypoint != wp_before:
 			resumed = true
 			break
-	_check(resumed, "(E) and resumes its loop")
+	_check(resumed, "(E) #414: and returns to its old route (Daniel)")
 	p.hp = p.max_hp
 	var mg: Enemy = migrants[0]
 	var mgb := mg._behavior as EnemyBehaviorMigrate
@@ -248,5 +252,5 @@ func _flow_legs() -> void:
 		if e.global_position.distance_to(gate_a) <= 260.0:
 			near_a += 1
 	_check(near_a == 0, "(F) the cleared entrance has neither its gate guard nor its patrol")
-	_check(_by_role(main, "guard").size() == 4 and _by_role(main, "patrol").size() == 9, "(F) 4 guards / 9 patrols remain")
+	_check(_by_role(main, "guard").size() == 4 and _by_role(main, "patrol").size() == 11, "(F) 4 guards / 11 patrols remain (#414)")
 	_check(_by_role(main, "migrant").size() == 4, "(F) all 4 migrants still roam")

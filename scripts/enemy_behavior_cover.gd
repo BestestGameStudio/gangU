@@ -57,11 +57,21 @@ extends RefCounted
 ##           Shelter is re-checked even while aimed at: if the player
 ##           strafes so the cover no longer shields them, they DASH to valid
 ##           shelter, or ENGAGE when none exists.
+##           #414 (Daniel, 2026-11-09: "moustache men periodically find
+##           nearby cover if holding cover for over 5s"): holding the same
+##           cover for HOLD_RELOCATE_TIME triggers a relocate DASH to a
+##           DIFFERENT nearby cover, aimed at or not (the newer instruction
+##           modifies the original "stay behind cover while aimed at").
+##           With no other cover around it keeps holding and retries one
+##           period later.
 ##   CHARGE- the per-enemy away-timer runs whenever the mouse is NOT
 ##           pointing their way (in SEEK/DASH/HOLD) and resets the moment
 ##           it points back; at AWAY_CHARGE_TIME the moustache man charges:
 ##           fast direct chase, normal contact attack on arrival, then
-##           ENGAGED.
+##           ENGAGED. #414 (Daniel: "Once they begin charging dont stop"):
+##           a charge COMMITS - the away-timer only ticks in SEEK/DASH/HOLD,
+##           so re-aiming never cancels a charge already running; only
+##           contact ends it. (Unchanged behavior, now pinned by test414.)
 ##   ENGAGED - plain chase/contact (the owner's _chase_step, unchanged).
 ##           If the player disengages beyond RE_ENGAGE_DIST and cover
 ##           exists, back to SEEK.
@@ -91,6 +101,7 @@ const COVER_SEARCH_RADIUS: float = 384.0 ## how far a moustache man looks for co
 const COVER_CONE_COS: float = 0.5 ## cover must sit within 60deg of the player direction (PLACEHOLDER)
 const AIM_CONE_COS: float = 0.8660254 ## mouse "pointing their direction" = player aim within 30deg of player->enemy (PLACEHOLDER)
 const AWAY_CHARGE_TIME: float = 3.0 ## Daniel: charge after the mouse is away this long (per enemy, resets on re-aim)
+const HOLD_RELOCATE_TIME: float = 5.0 ## Daniel (2026-11-09): holding one cover this long -> relocate to a different nearby cover
 const FAST_MULT: float = 2.2 ## "run fast": dash-between-cover and charge speed multiplier (PLACEHOLDER)
 const STANDOFF: float = 20.0 ## hold distance behind the cover edge (PLACEHOLDER)
 const SOLID_RADIUS: float = 24.0 ## assumed blocking radius of a cover-group solid (PLACEHOLDER)
@@ -117,6 +128,8 @@ var _hold_pos: Vector2 = Vector2.ZERO
 var _away_timer: float = 0.0
 var _repick_timer: float = 0.0
 var _stall_timer: float = 0.0
+## #414: time spent HOLDing the current cover (reset on each new hold).
+var _hold_elapsed: float = 0.0
 ## The TerrainMap whose cell_destroyed/cell_interacted signals we listen
 ## to for instant cover invalidation (raw set/clear_cell emit nothing, so
 ## the repick poll below remains the catch-all).
@@ -148,7 +161,7 @@ func physics_step(owner: EnemyBehaviorChaseContact, enemy: Enemy, player, delta:
 		State.DASH:
 			_seek(owner, enemy, player, delta, true)
 		State.HOLD:
-			_hold(enemy, player, pointing)
+			_hold(enemy, player, pointing, delta)
 		State.CHARGE:
 			_charge(owner, enemy, player, delta)
 		State.ENGAGED:
@@ -176,6 +189,7 @@ func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta
 		_state = State.HOLD
 		enemy.velocity = Vector2.ZERO
 		_stall_timer = 0.0
+		_hold_elapsed = 0.0 # #414: a fresh hold restarts the relocate clock
 	elif enemy.velocity == Vector2.ZERO:
 		# Wedged (unreachable hold point): give up on this cover.
 		_stall_timer += delta
@@ -188,9 +202,10 @@ func _seek(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, delta
 
 # --- HOLD -------------------------------------------------------------------
 
-func _hold(enemy: Enemy, player: Player, pointing: bool) -> void:
+func _hold(enemy: Enemy, player: Player, pointing: bool, delta: float) -> void:
 	enemy.velocity = Vector2.ZERO
 	EnemyBehaviorChaseContact._slide(enemy)
+	_hold_elapsed += delta
 	if _repick_timer > 0.0:
 		return
 	if not _cover_still_valid(enemy):
@@ -211,6 +226,15 @@ func _hold(enemy: Enemy, player: Player, pointing: bool) -> void:
 		else:
 			_drop_cover()
 			_state = State.ENGAGED
+		return
+	# #414 (Daniel, 2026-11-09: "moustache men periodically find nearby
+	# cover if holding cover for over 5s"): held this cover too long -
+	# relocate to a DIFFERENT nearby cover, aimed at or not. No other
+	# cover around: keep holding, retry after another full period.
+	if _hold_elapsed >= HOLD_RELOCATE_TIME:
+		_hold_elapsed = 0.0
+		if _pick_cover(enemy, player, false, true):
+			_state = State.DASH
 		return
 	if pointing:
 		return
@@ -236,11 +260,15 @@ func _charge(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, del
 
 ## Picks the nearest cover toward the player. With `advance_only`, only a
 ## cover that gets the enemy ADVANCE_MARGIN closer to the player than the
-## currently held one qualifies. Returns whether a cover is held now.
-func _pick_cover(enemy: Enemy, player: Player, advance_only: bool) -> bool:
+## currently held one qualifies. With `exclude_held` (#414 relocate), the
+## currently held cover is skipped so the pick lands somewhere new.
+## Returns whether a cover is held now.
+func _pick_cover(enemy: Enemy, player: Player, advance_only: bool, exclude_held: bool = false) -> bool:
 	var best: Dictionary = {}
 	var best_dist := INF
 	for c in _cover_candidates(enemy, player):
+		if exclude_held and _has_cover and (c["pos"] as Vector2) == _cover_pos:
+			continue
 		if advance_only and _has_cover:
 			if (c["pos"] as Vector2).distance_to(player.global_position) >= _cover_pos.distance_to(player.global_position) - ADVANCE_MARGIN:
 				continue
