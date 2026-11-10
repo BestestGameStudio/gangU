@@ -1,0 +1,39 @@
+[gd_scene load_steps=7 format=3 uid="uid://bgangu368wboss"]
+
+[ext_resource type="Script" path="res://scripts/enemy.gd" id="1_enemy"]
+[ext_resource type="Resource" path="res://resources/enemies/defense_wave_boss.tres" id="2_def"]
+[ext_resource type="Script" path="res://scripts/enemy_sprite.gd" id="3_sprite"]
+[ext_resource type="SpriteFrames" uid="uid://bgangu177mwframes" path="res://resources/sprites/mustache_warrior_frames.tres" id="4_frames"]
+[ext_resource type="Script" path="res://scripts/boss_health_bar.gd" id="5_bar"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wboss"]
+radius = 20.0
+
+[node name="SiegeBrute" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_enemy")
+definition = ExtResource("2_def")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+position = Vector2(0, 20)
+color = Color(0, 0, 0, 0.35)
+polygon = PackedVector2Array(-20, 0, -14, -5, 0, -7, 14, -5, 20, 0, 14, 5, 0, 7, -14, 5)
+
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+modulate = Color(1, 0.62, 0.55, 1)
+texture_filter = 1
+position = Vector2(0, -12)
+scale = Vector2(1.7, 1.7)
+sprite_frames = ExtResource("4_frames")
+animation = &"idle"
+script = ExtResource("3_sprite")
+
+[node name="HealthBar" type="Node2D" parent="."]
+position = Vector2(0, -52)
+script = ExtResource("5_bar")
+fill_color = Color(0.95, 0.3, 0.25, 1)
+fill_enraged_color = Color(1, 0.6, 0.15, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_wboss")
