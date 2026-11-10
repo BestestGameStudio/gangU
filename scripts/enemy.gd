@@ -255,27 +255,14 @@ func is_rallied() -> bool:
 func chase_speed() -> float:
 	return speed * (RALLY_SPEED_MULT if is_rallied() else 1.0)
 
-## #305: Signature freeze. Reference-counted by FreezeBubble claims; while
-## positive, the behavior physics_step (which accumulates ALL behavior
-## clocks from delta) never runs, so the whole enemy freezes.
-var _freeze_count := 0
+## #305: Signature freeze. While held, the behavior physics_step (which
+## accumulates ALL behavior clocks from delta) never runs, and the sprite
+## pauses - a frozen enemy must LOOK frozen.
+var freeze := FreezeHold.new()
 var _spawn_claim_pending := true
 
-## #305: Signature freeze contract. Claims are reference-counted so
-## overlapping bubbles freeze and release independently. The animated
-## sprite pauses while held - a frozen enemy must LOOK frozen.
 func set_frozen(frozen: bool) -> void:
-	var was := _freeze_count
-	_freeze_count = maxi(_freeze_count + (1 if frozen else -1), 0)
-	if sprite != null:
-		if _freeze_count > 0 and was == 0:
-			# pause() alone does not hold: the sprite driver's _process
-			# replays locomotion every frame. Stop its processing too.
-			sprite.pause()
-			sprite.process_mode = Node.PROCESS_MODE_DISABLED
-		elif _freeze_count == 0 and was > 0:
-			sprite.process_mode = Node.PROCESS_MODE_INHERIT
-			sprite.play()
+	freeze.apply(frozen, sprite)
 
 func _physics_process(delta: float) -> void:
 	if _spawn_claim_pending:
@@ -288,7 +275,7 @@ func _physics_process(delta: float) -> void:
 		_spawn_claim_pending = false
 		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
-	if _freeze_count > 0:
+	if freeze.is_frozen():
 		return
 	_rally_left = maxf(_rally_left - delta, 0.0)
 	# #331: a strong knockback owns the body until it decays below
