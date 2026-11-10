@@ -30,6 +30,28 @@ signal launch_started(direction: Vector2)
 signal launch_ended()
 signal launch_cancelled()
 
+## #478: stun (the bird's dive hit - Daniel: "Player is stunned when hit
+## (0.5s)"). Same contract shape as the dash: a started/ended pair. While
+## stunned the player cannot move, dash or be launched; an in-flight dash
+## or launch is cancelled (same cleanup as death).
+signal stun_started(duration: float)
+signal stun_ended()
+var _stun_left := 0.0
+
+## #478: single entry point for stuns. Overlapping stuns take the longer
+## remaining time instead of stacking. Emits stun_started only on the
+## transition into stun, mirroring the apply_damage/health_changed rule.
+func apply_stun(duration: float) -> void:
+	if duration <= 0.0 or hp <= 0:
+		return
+	var was := _stun_left
+	_stun_left = maxf(_stun_left, duration)
+	if was <= 0.0:
+		stun_started.emit(duration)
+
+func is_stunned() -> bool:
+	return _stun_left > 0.0
+
 ## #450: dash range nerfed 40% (135 px -> 81 px) by shortening the duration
 ## only; speed and cooldown are unchanged. 900 x 0.09 = 81 px is the flat base
 ## dash distance that any future range scaling applies on top of.
@@ -296,6 +318,21 @@ func _physics_process(delta: float) -> void:
 		if _launch_time_left > 0.0:
 			_launch_time_left = 0.0
 			launch_cancelled.emit()
+		return
+	# #478: stunned (bird dive). Movement, dash and launch all stop; the
+	# stun clock still ticks so the freeze is exactly the stun duration.
+	if _stun_left > 0.0:
+		_stun_left = maxf(_stun_left - delta, 0.0)
+		if _dash_time_left > 0.0:
+			_dash_time_left = 0.0
+			_end_dash()
+		if _launch_time_left > 0.0:
+			_launch_time_left = 0.0
+			launch_cancelled.emit()
+		velocity = Vector2.ZERO
+		move_and_slide()
+		if _stun_left == 0.0:
+			stun_ended.emit()
 		return
 	var input_dir := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	if input_dir != Vector2.ZERO:
