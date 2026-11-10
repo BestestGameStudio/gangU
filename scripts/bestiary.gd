@@ -120,17 +120,20 @@ static func record(id: StringName) -> void:
 	if id == &"":
 		return
 	_ensure_loaded()
-	_counts[id] = int(_counts.get(id, 0)) + 1
+	var prev: int = _counts.get(id, 0)
+	_counts[id] = prev + 1
 	revision += 1
 	_save()
 
 static func has_seen(id: StringName) -> bool:
 	_ensure_loaded()
-	return int(_counts.get(id, 0)) > 0
+	var seen: int = _counts.get(id, 0)
+	return seen > 0
 
 static func encounter_count(id: StringName) -> int:
 	_ensure_loaded()
-	return int(_counts.get(id, 0))
+	var total: int = _counts.get(id, 0)
+	return total
 
 ## Every id the bestiary should list: the catalog first (seen or not),
 ## then any seen enemy types the catalog does not know about.
@@ -139,7 +142,7 @@ static func listed_ids() -> Array[StringName]:
 	var ids: Array[StringName] = []
 	for entry in CATALOG:
 		ids.append(entry["id"])
-	for id in _counts.keys():
+	for id: StringName in _counts.keys():
 		if not ids.has(id):
 			ids.append(id)
 	return ids
@@ -147,8 +150,9 @@ static func listed_ids() -> Array[StringName]:
 static func seen_count() -> int:
 	_ensure_loaded()
 	var n := 0
-	for id in _counts.keys():
-		if int(_counts[id]) > 0:
+	for id: StringName in _counts.keys():
+		var c: int = _counts[id]
+		if c > 0:
 			n += 1
 	return n
 
@@ -177,12 +181,13 @@ static func _ensure_loaded() -> void:
 		return
 	if not cfg.has_section("encountered"):
 		return
-	for key in cfg.get_section_keys("encountered"):
-		_counts[StringName(key)] = int(cfg.get_value("encountered", key, 0))
+	for key: String in cfg.get_section_keys("encountered"):
+		var saved: int = cfg.get_value("encountered", key, 0)
+		_counts[StringName(key)] = saved
 
 static func _save() -> void:
 	var cfg := ConfigFile.new()
-	for id in _counts.keys():
+	for id: StringName in _counts.keys():
 		cfg.set_value("encountered", String(id), _counts[id])
 	var err := cfg.save(save_path)
 	if err != OK:

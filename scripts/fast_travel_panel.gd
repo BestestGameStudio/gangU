@@ -87,6 +87,6 @@ func _request_hub() -> void:
 	hub_requested.emit()
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if _backdrop.visible and event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+	if _backdrop.visible and event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
 		close()
 		get_viewport().set_input_as_handled()

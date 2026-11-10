@@ -153,12 +153,16 @@ func _rank_tier(spell: Spell) -> int:
 	if spell == null:
 		return SpellRankBorder.NONE
 	if is_instance_valid(_progress) and _progress.has_method("get_tier"):
-		return _progress.get_tier(spell)
+		var tier: int = _progress.call("get_tier", spell)
+		return tier
 	return 0
 
 func _can_upgrade(spell: Spell) -> bool:
-	return spell != null and is_instance_valid(_progress) \
-		and _progress.has_method("can_upgrade") and _progress.can_upgrade(spell)
+	if spell == null or not is_instance_valid(_progress) \
+			or not _progress.has_method("can_upgrade"):
+		return false
+	var allowed: bool = _progress.call("can_upgrade", spell)
+	return allowed
 
 func _process(delta: float) -> void:
 	_update_objective(delta)
@@ -290,8 +294,9 @@ func reserved_rect() -> Rect2:
 		if c is Label:
 			var font := c.get_theme_font("font")
 			var fs := c.get_theme_font_size("font_size")
-			if font != null and c.text != "":
-				var ts := font.get_string_size(c.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+			var label := c as Label
+			if font != null and label.text != "":
+				var ts := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 				r.size.x = maxf(r.size.x, ts.x)
 				r.size.y = maxf(r.size.y, ts.y)
 		rect = r if first else rect.merge(r)

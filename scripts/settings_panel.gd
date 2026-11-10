@@ -48,7 +48,8 @@ static func load_master_volume(path: String = SETTINGS_PATH) -> float:
 	var cfg := ConfigFile.new()
 	if cfg.load(path) != OK:
 		return DEFAULT_MASTER
-	return clampf(float(cfg.get_value(SECTION, KEY_MASTER, DEFAULT_MASTER)), 0.0, 1.0)
+	var saved: float = cfg.get_value(SECTION, KEY_MASTER, DEFAULT_MASTER)
+	return clampf(saved, 0.0, 1.0)
 
 static func save_master_volume(v: float, path: String = SETTINGS_PATH) -> void:
 	var cfg := ConfigFile.new()
@@ -89,7 +90,7 @@ func _other_modal_open() -> bool:
 	return false
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.is_echo()):
+	if not (event is InputEventKey and (event as InputEventKey).pressed and not event.is_echo()):
 		return
 	if (event as InputEventKey).keycode != KEY_ESCAPE:
 		return
