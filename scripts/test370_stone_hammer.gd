@@ -503,9 +503,14 @@ func _check_tree() -> void:
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
 	for id in IDS:
 		_check(main_src.contains("upgrades/%s.tres" % id), "main.gd registers %s" % id)
-	var table: RewardTable = load("res://resources/rewards/demo_table.tres")
-	var found := false
-	for entry in table.entries:
-		if entry.spell != null and entry.spell.spell_name == "Stone Hammer":
-			found = true
-	_check(found, "demo loot table can drop Stone Hammer")
+	# #465 (Daniel, 2026-11-09: regular mobs drop currency only): the
+	# production mob table no longer carries spells, so the Stone Hammer
+	# reward wiring is pinned with an in-code fixture entry.
+	var table := RewardTable.new()
+	var sh_entry := RewardEntry.new()
+	sh_entry.kind = RewardEntry.Kind.SPELL
+	sh_entry.spell = load("res://resources/spells/stone_hammer.tres")
+	sh_entry.weight = 1.0
+	var sh_entries: Array[RewardEntry] = [sh_entry]
+	table.entries = sh_entries
+	_check(table.roll([]) == sh_entry and sh_entry.spell.spell_name == "Stone Hammer", "fixture reward table rolls the Stone Hammer spell entry")
