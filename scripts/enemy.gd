@@ -97,9 +97,13 @@ func _ready() -> void:
 ## #290: collision exceptions with every Player (plus the resolved target).
 ## #279: also every Summon - enemies spawn continuously, so the late side
 ## pairs itself here (summon.gd covers the cast-time direction).
+## #493: also every other enemy (bosses included) - enemies pass through and
+## stack on each other. The newcomer pairs with everyone already present, so
+## every pair is covered whatever the spawn order. Walls/terrain unchanged.
 func _ignore_player_bodies() -> void:
 	ActorCollision.ignore_group(self, ActorCollision.PLAYER_GROUP)
 	ActorCollision.ignore_group(self, &"summons")
+	ActorCollision.ignore_group(self, ActorCollision.ENEMY_GROUP)
 	if _player != null and is_instance_valid(_player):
 		ActorCollision.ignore_pair(self, _player)
 
