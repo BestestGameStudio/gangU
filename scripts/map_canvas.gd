@@ -48,6 +48,15 @@ var view_id: StringName = &""
 ## (#366) Cleared dungeon picked on the map, or &"".
 var selected_site: StringName = &""
 
+## (#435) Pan the view by dragging with the MIDDLE mouse button, or LEFT +
+## Space held (Daniel, 2026-11-09). Plain LMB / RMB keep their tool, fast
+## travel and erase meanings. Panning is clamped so the view never shows
+## beyond `pan_bounds` (set by the panel for the overworld; an empty rect
+## means no panning). Test seam: `space_override` stands in for the key.
+var pan_bounds: Rect2 = Rect2()
+var space_override := false
+var _panning := false
+
 ## The area being drawn and edited.
 func view() -> StringName:
 	if view_id != &"":
@@ -91,6 +100,7 @@ func _ready() -> void:
 ## Drops any in-progress stroke/erase. Called on open/close, area change,
 ## hide, and whenever the held buttons no longer match the drag.
 func cancel_interaction() -> void:
+	_panning = false
 	_stroke = -1
 	_erasing = false
 	_drag_button = MOUSE_BUTTON_NONE
@@ -98,6 +108,25 @@ func cancel_interaction() -> void:
 
 func is_interacting() -> bool:
 	return _drag_button != MOUSE_BUTTON_NONE
+
+func is_panning() -> bool:
+	return _panning
+
+func _space_down() -> bool:
+	return space_override or Input.is_physical_key_pressed(KEY_SPACE)
+
+## Moves `center` to `c`, kept inside `pan_bounds` (an axis smaller than the
+## view stays centered on the bounds). Without bounds the center is as given.
+func clamp_center(c: Vector2) -> Vector2:
+	if pan_bounds.size.x <= 0.0 or pan_bounds.size.y <= 0.0:
+		return c
+	var half := size * 0.5 / map_scale
+	var lo := pan_bounds.position + half
+	var hi := pan_bounds.end - half
+	var out := c
+	out.x = pan_bounds.get_center().x if lo.x > hi.x else clampf(c.x, lo.x, hi.x)
+	out.y = pan_bounds.get_center().y if lo.y > hi.y else clampf(c.y, lo.y, hi.y)
+	return out
 
 func _start_drag(button: MouseButton) -> void:
 	_drag_button = button
@@ -118,10 +147,20 @@ func _gui_input(event: InputEvent) -> void:
 		cancel_interaction()
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.button_index != MOUSE_BUTTON_LEFT and mb.button_index != MOUSE_BUTTON_RIGHT:
+		if mb.button_index != MOUSE_BUTTON_LEFT and mb.button_index != MOUSE_BUTTON_RIGHT and mb.button_index != MOUSE_BUTTON_MIDDLE:
 			return
 		var w := screen_to_world(mb.position)
 		accept_event()
+		# (#435) Middle drag, or Space + LMB, pans where bounds exist.
+		if mb.pressed and pan_bounds.size.x > 0.0 and (mb.button_index == MOUSE_BUTTON_MIDDLE or (mb.button_index == MOUSE_BUTTON_LEFT and _space_down())):
+			cancel_interaction()
+			_start_drag(mb.button_index)
+			_panning = true
+			return
+		if mb.button_index == MOUSE_BUTTON_MIDDLE:
+			if not mb.pressed and mb.button_index == _drag_button:
+				cancel_interaction()
+			return
 		if not mb.pressed:
 			# Only the button that owns the drag ends it.
 			if mb.button_index == _drag_button:
@@ -155,9 +194,17 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		if not is_interacting():
 			return # hover never draws or erases
-		var held_mask := MOUSE_BUTTON_MASK_LEFT if _drag_button == MOUSE_BUTTON_LEFT else MOUSE_BUTTON_MASK_RIGHT
+		var held_mask := MOUSE_BUTTON_MASK_RIGHT
+		if _drag_button == MOUSE_BUTTON_LEFT:
+			held_mask = MOUSE_BUTTON_MASK_LEFT
+		elif _drag_button == MOUSE_BUTTON_MIDDLE:
+			held_mask = MOUSE_BUTTON_MASK_MIDDLE
 		if (mm.button_mask & held_mask) == 0:
 			cancel_interaction() # the release happened somewhere we never saw
+			return
+		if _panning:
+			center = clamp_center(center - mm.relative / map_scale)
+			queue_redraw()
 			return
 		var w := screen_to_world(mm.position)
 		if _stroke >= 0:
