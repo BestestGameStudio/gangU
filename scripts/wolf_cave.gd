@@ -89,17 +89,19 @@ func spawn_pack() -> Array[Enemy]:
 	var base_angle := randf() * TAU
 	for i in missing:
 		var idx := pack.size()
-		var wolf: Enemy = WOLF_SCENE.instantiate()
-		wolf.player_path = player_path
-		wolf.terrain = terrain
-		wolf.reward_table = WOLF_TABLE
 		var mouth := global_position + Vector2.from_angle(base_angle + TAU * i / maxi(missing, 1)) * 44.0
 		var ctx := WolfContext.new()
 		ctx.anchor = global_position
 		ctx.has_anchor = true
 		ctx.cave = self
 		ctx.index = idx
-		wolf.context = ctx
+		var opts := EnemySpawner.SpawnOptions.new()
+		opts.wire_enemy = true
+		opts.player_path = player_path
+		opts.terrain = terrain
+		opts.reward_table = WOLF_TABLE
+		opts.context = ctx
+		var wolf := EnemySpawner.spawn(WOLF_SCENE, Vector2.ZERO, opts) as Enemy
 		_area.add_child(wolf)
 		wolf.global_position = mouth
 		wolf.died.connect(_on_wolf_died.bind(wolf))
