@@ -7,6 +7,8 @@
 size = Vector2(52, 72)
 
 [node name="ShopVendor" type="Area2D" groups=["shop_vendors"]]
+collision_layer = 64
+collision_mask = 2
 script = ExtResource("1")
 
 [node name="Sprite" type="AnimatedSprite2D" parent="."]
