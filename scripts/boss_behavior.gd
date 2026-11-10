@@ -28,8 +28,25 @@ var _history: Array[int] = []
 var _entered: bool = false
 var _contact_timer: float = 0.0
 
+## Per-boss tuning, set by the subclass in _configure() (called from _init).
+var first_attack_delay: float = 1.0
+var attack_interval: float = 1.8
+var enraged_interval: float = 1.0
+var recover_time: float = 0.5
+var stun_time: float = 1.6
+## Head/Beast stun once at the phase change; Warlord does not.
+var has_stun_phase: bool = false
+var arrival_color: Color = Enemy.SPRITE_BURST_COLOR
+var windup_times: Dictionary = {}
+var windup_anims: Dictionary = {}
+
 func _init() -> void:
-	_attack_timer = _first_attack_delay()
+	_configure()
+	_attack_timer = first_attack_delay
+
+## Per-boss: assign the tuning vars above from the subclass constants.
+func _configure() -> void:
+	pass
 
 ## Shared prologue of every boss step; the per-boss states run via _step.
 func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
@@ -37,13 +54,13 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 	if not _entered:
 		_entered = true
 		# Arrival pop - visual only, same effect family as hits/deaths.
-		CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, _arrival_color())
-	if not phase_two and is_enraged(enemy) and _has_stun_phase():
+		CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, arrival_color)
+	if not phase_two and is_enraged(enemy) and has_stun_phase:
 		_enter_stun(enemy, tele)
 	if state == State.STUN:
 		enemy.velocity = Vector2.ZERO
 		_t += delta
-		if _t >= _stun_time():
+		if _t >= stun_time:
 			_enter_chase(enemy, tele)
 		enemy.terrain_move_and_slide()
 		return
@@ -57,7 +74,7 @@ func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
 	var to_player: Vector2 = player.global_position - enemy.global_position
 	if state == State.RECOVER:
 		enemy.velocity = Vector2.ZERO
-		if _t >= _recover_time():
+		if _t >= recover_time:
 			_enter_chase(enemy, tele)
 	else:
 		_step(enemy, player, to_player, delta, tele)
@@ -71,28 +88,6 @@ func is_enraged(enemy: Enemy) -> bool:
 ## The per-boss state machine (CHASE / WINDUP / the attacks).
 func _step(_enemy: Enemy, _player: Player, _to_player: Vector2, _delta: float, _tele: BossTelegraph) -> void:
 	pass
-
-func _arrival_color() -> Color:
-	return Enemy.SPRITE_BURST_COLOR
-
-## Head/Beast stun once at the phase change; Warlord does not.
-func _has_stun_phase() -> bool:
-	return false
-
-func _first_attack_delay() -> float:
-	return 1.0
-
-func _attack_interval() -> float:
-	return 1.8
-
-func _enraged_interval() -> float:
-	return 1.0
-
-func _recover_time() -> float:
-	return 0.5
-
-func _stun_time() -> float:
-	return 1.6
 
 # --- CHASE -------------------------------------------------------------------
 
@@ -154,11 +149,11 @@ func _windup_reset(_which: int) -> void:
 func _windup_duration() -> float:
 	return _windup_time(attack)
 
-func _windup_time(_which: int) -> float:
-	return 0.0
+func _windup_time(which: int) -> float:
+	return windup_times[which]
 
-func _windup_anim(_which: int) -> StringName:
-	return &""
+func _windup_anim(which: int) -> StringName:
+	return windup_anims[which]
 
 func _show_windup_telegraph(_enemy: Enemy, _which: int, _dur: float, _tele: BossTelegraph) -> void:
 	pass
@@ -200,7 +195,7 @@ func _enter_recover(enemy: Enemy) -> void:
 func _enter_chase(enemy: Enemy, tele: BossTelegraph) -> void:
 	state = State.CHASE
 	_t = 0.0
-	_attack_timer = _enraged_interval() if is_enraged(enemy) else _attack_interval()
+	_attack_timer = enraged_interval if is_enraged(enemy) else attack_interval
 	enemy.clear_action()
 	if tele != null:
 		tele.clear()

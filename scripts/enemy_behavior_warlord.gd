@@ -63,23 +63,13 @@ var _waves_fired: int = 0
 
 # --- BossBehavior hooks ------------------------------------------------------
 
-func _first_attack_delay() -> float:
-	return FIRST_ATTACK_DELAY
-
-func _attack_interval() -> float:
-	return ATTACK_INTERVAL
-
-func _enraged_interval() -> float:
-	return ENRAGED_INTERVAL
-
-func _recover_time() -> float:
-	return RECOVER_TIME
-
-func _windup_time(which: int) -> float:
-	return WINDUP_TIME[which]
-
-func _windup_anim(which: int) -> StringName:
-	return WINDUP_ANIM[which]
+func _configure() -> void:
+	first_attack_delay = FIRST_ATTACK_DELAY
+	attack_interval = ATTACK_INTERVAL
+	enraged_interval = ENRAGED_INTERVAL
+	recover_time = RECOVER_TIME
+	windup_times = WINDUP_TIME
+	windup_anims = WINDUP_ANIM
 
 func _step(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	var dist: float = to_player.length()
