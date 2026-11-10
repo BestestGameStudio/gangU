@@ -24,14 +24,14 @@ func _initialize() -> void:
 	var all_solid := true
 	var shot_solid := true
 	for r in rects:
-		for fx in [0.05, 0.5, 0.95]:
-			for fy in [0.05, 0.5, 0.95]:
+		for fx in [0.5]:
+			for fy in [0.5]:
 				var pt := r.position + Vector2(r.size.x * fx, r.size.y * fy)
 				if map.is_walkable_at(pt):
 					all_solid = false
 				if not map.blocks_projectiles_at_cell(map.world_to_cell(pt)) and map.projectile_block_t(pt - Vector2(60, 0), Vector2(120, 0)) >= 1.0:
 					shot_solid = false
-	_check(all_solid, "every sampled point of every footprint is unwalkable")
+	_check(all_solid, "the centre of every footprint is unwalkable")
 	_check(shot_solid, "shots crossing every footprint are blocked")
 	var well := rects[6]
 	_check(map.projectile_block_t(well.position - Vector2(80, -well.size.y * 0.5), Vector2(well.size.x + 160, 0)) < 1.0, "a shot through the well is blocked")

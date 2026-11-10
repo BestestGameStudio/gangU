@@ -99,10 +99,10 @@ func plant_footprints(map: TerrainMap, cells: Dictionary, blockers: Array[Vector
 		for cx in range(lo.x, hi.x + 1):
 			for cy in range(lo.y, hi.y + 1):
 				var cell := Vector2i(cx, cy)
-				# Any cell whose centre is inside the rect, plus any overlap
-				# by its own square, so the whole footprint is solid.
-				var c := map.cell_to_world(cell)
-				if r.grow(float(map.cell_size) * 0.5).has_point(c):
+				# Cells whose centre is inside the footprint (same rule as
+				# trees: the blocked patch stays at or inside the visual).
+				# Shots use the finer circles below.
+				if r.has_point(map.cell_to_world(cell)):
 					cells[cell] = TerrainTypes.OBSTACLE
 		var step := 36.0
 		var x := r.position.x + 18.0
