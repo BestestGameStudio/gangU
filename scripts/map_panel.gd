@@ -126,6 +126,7 @@ func _set_view(id: StringName) -> void:
 	# (#435) Panning only where the area has overworld bounds, and only in the
 	# player's own area view; the (re)centered view is kept inside them.
 	canvas.pan_bounds = world_map.pan_bounds() if here else Rect2()
+	canvas.pan_outline = world_map.pan_outline() if here else PackedVector2Array()
 	canvas.center = canvas.clamp_center(canvas.center)
 	_last_player_pos = world_map.player.global_position if here else Vector2.INF
 	_refresh()
