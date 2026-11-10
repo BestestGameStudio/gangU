@@ -26,6 +26,7 @@ var _attack_timer: float = 0.0
 var _dir: Vector2 = Vector2.RIGHT
 var _history: Array[int] = []
 var _entered: bool = false
+var _contact_timer: float = 0.0
 
 func _init() -> void:
 	_attack_timer = _first_attack_delay()
@@ -92,6 +93,27 @@ func _recover_time() -> float:
 
 func _stun_time() -> float:
 	return 1.6
+
+# --- CHASE -------------------------------------------------------------------
+
+## Float after the player, bite on contact, and start a wind-up when the
+## attack timer runs out (the attack itself comes from _pick_attack).
+func _chase(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
+	var dist: float = to_player.length()
+	enemy.velocity = to_player.normalized() * enemy.speed if dist > 8.0 else Vector2.ZERO
+	_contact_timer = maxf(0.0, _contact_timer - delta)
+	if dist <= enemy.contact_range and _contact_timer <= 0.0:
+		player.apply_damage(enemy.contact_damage)
+		_contact_timer = enemy.contact_cooldown
+		_face(enemy, to_player.x)
+		enemy.play_action(&"attack")
+	_attack_timer -= delta
+	if _attack_timer <= 0.0:
+		_start_windup(enemy, _pick_attack(dist), to_player, tele)
+
+## Per-boss: which attack to start at this distance.
+func _pick_attack(_dist: float) -> int:
+	return Attack.LUNGE
 
 # --- WIND-UP (telegraph) -----------------------------------------------------
 
