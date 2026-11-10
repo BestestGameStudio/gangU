@@ -12,8 +12,7 @@ class_name HUD
 ## hub).
 ##
 ## Self-contained: mounted by the scene that owns the player, by instancing
-## scenes/hud.tscn and setting player_path, OR via the "player" group
-## fallback.
+## scenes/hud.tscn and setting player_path, OR via the Player.find fallback.
 ##
 ## Consumed contracts:
 ##   Player: hp, max_hp, health_changed(current, max_hp), died(),
@@ -25,7 +24,7 @@ class_name HUD
 ##   Spell: cooldown.
 ##   SpellProgress (discovered by name): can_upgrade(spell), get_tier(spell).
 
-## Set by the mounting scene. If unset, falls back to the "player" group.
+## Set by the mounting scene. If unset, falls back to Player.find.
 @export var player_path: NodePath
 
 const RESERVED_PAD := 8.0
@@ -86,9 +85,9 @@ func _ready() -> void:
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 	if _player == null:
-		_player = get_tree().get_first_node_in_group("player") as Player
+		_player = Player.find(get_tree())
 	if _player == null:
-		push_warning("HUD: no player found (player_path unset, no 'player' group); HUD idle.")
+		push_warning("HUD: no player found (player_path unset, no Player in the tree); HUD idle.")
 		return
 	_caster = _player.get_node_or_null("SpellCaster") as SpellCaster
 	_player.health_changed.connect(_on_health_changed)

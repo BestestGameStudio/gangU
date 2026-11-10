@@ -152,10 +152,13 @@ func _process(delta: float) -> bool:
 			else:
 				print("[211] volley cast spawns 3-projectile fan OK")
 			print("[211] ", "PASS" if ok else "FAIL")
+			quit(0 if ok else 1)
 			return true
 		_:
+			quit(0 if ok else 1)
 			return true
 	if t > 30.0:
-		print("[211] FAIL timeout in phase ", phase)
+		print("[211] FAIL timeout in phase ", phase); ok = false
+		quit(0 if ok else 1)
 		return true
 	return false

@@ -33,9 +33,8 @@ signal run_restarting()
 const RUN_STATE_GROUP := &"run_state"
 
 @export var restart_delay: float = 1.5
-## Production wiring: main.gd passes the shared Player explicitly, because the
-## main.tscn Player is in no group. Test scenes may leave this unset and rely
-## on the "player" group fallback instead.
+## Production wiring: main.gd passes the shared Player explicitly. Test scenes
+## may leave this unset and rely on the Player.find fallback instead.
 @export var player: Player
 
 ## #12 contract: optional. When wired, the satchel gets a synchronous chance to
@@ -48,7 +47,7 @@ var _watched: Player = null
 func _process(_delta: float) -> void:
 	if _watched != null:
 		return
-	var p: Player = player if player != null else get_tree().get_first_node_in_group("player")
+	var p: Player = player if player != null else Player.find(get_tree())
 	if p == null:
 		return
 	_watched = p

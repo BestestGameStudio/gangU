@@ -116,7 +116,6 @@ func _initialize() -> void:
 	root.add_child(_area)
 	current_scene = _area
 	_player = load("res://scenes/player.tscn").instantiate()
-	_player.add_to_group("player")
 	_area.add_child(_player)
 	_player.global_position = Vector2(400, 300)
 	_player.set_invulnerable(true) # only the enemy-contact check lets hits land

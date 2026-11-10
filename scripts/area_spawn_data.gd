@@ -14,8 +14,7 @@ extends Node
 ##   "reward_table": RewardTable - that enemy's per-kill loot table
 ## `player_path` is a header-level setting for the whole carrier: it is
 ## assigned to every spawned enemy BEFORE tree entry, relative to the
-## enemy itself (Main/<Area>/<Enemy> -> Main/Player = "../../Player"),
-## because the production Player is in no group.
+## enemy itself (Main/<Area>/<Enemy> -> Main/Player = "../../Player").
 
 @export var entries: Array[Dictionary] = []
 @export var player_path: NodePath = NodePath("../../Player")

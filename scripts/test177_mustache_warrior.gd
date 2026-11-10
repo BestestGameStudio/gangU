@@ -118,7 +118,6 @@ func _leg_enemy() -> void:
 	e2.position = Vector2(370, 200)
 	e2.collision_layer = 0
 	e2.collision_mask = 0
-	p.add_to_group("player")
 	world.add_child(e2)
 	var swung := false
 	for i in 120:
@@ -129,7 +128,6 @@ func _leg_enemy() -> void:
 	_check(p.hp < p.max_hp, "(D) contact hit landed")
 	_check(swung, "(D) contact hit plays the attack swing")
 	_check(e2.sprite.flip_h == false, "(D) faces right toward a player on the right")
-	p.remove_from_group("player")
 	world.queue_free()
 	await process_frame
 
@@ -202,7 +200,6 @@ func _arena(player_offset: Vector2) -> Array:
 	b.position = Vector2(500, 300)
 	b.collision_layer = 0
 	b.collision_mask = 0
-	p.add_to_group("player")
 	world.add_child(b)
 	return [world, p, b]
 
@@ -246,7 +243,6 @@ func _leg_attacks() -> void:
 	_check(saw_glow, "(H) wind-up glows the sprite")
 	_check(saw_lunge_anim, "(H) dash plays the lunge animation")
 	_check(p.hp == p.max_hp - EnemyBehaviorWarlord.LUNGE_DAMAGE, "(H) lunge hits once (hp %d)" % p.hp)
-	p.remove_from_group("player")
 	world.queue_free()
 	await process_frame
 
@@ -271,7 +267,6 @@ func _leg_attacks() -> void:
 			break
 	_check(saw_ring and saw_spin, "(H) close range: ring telegraph then spin animation")
 	_check(p.hp <= p.max_hp - EnemyBehaviorWarlord.SPIN_DAMAGE, "(H) spin damages the player (hp %d)" % p.hp)
-	p.remove_from_group("player")
 	world.queue_free()
 	await process_frame
 
@@ -301,7 +296,6 @@ func _leg_attacks() -> void:
 		var want: int = 2 * EnemyBehaviorWarlord.VOLLEY_SHOTS_ENRAGED if enraged else EnemyBehaviorWarlord.VOLLEY_SHOTS
 		_check(saw_cone, "(H) volley shows the cone telegraph (enraged=%s)" % enraged)
 		_check(most >= want, "(H) volley fires >= %d orbs (got %d, enraged=%s)" % [want, most, enraged])
-		p.remove_from_group("player")
 		world.queue_free()
 		await process_frame
 
@@ -313,7 +307,6 @@ func _leg_orb_visual() -> void:
 	var p: Player = load("res://scenes/player.tscn").instantiate()
 	p.position = Vector2(800, 300)
 	world.add_child(p)
-	p.add_to_group("player")
 	var b: Enemy = load("res://scenes/mustache_warlord.tscn").instantiate()
 	b.position = Vector2(500, 300)
 	b.collision_layer = 0
@@ -342,7 +335,6 @@ func _leg_orb_visual() -> void:
 	_check(p.hp < p.max_hp, "(I) orb hit damages the player (hp %d)" % p.hp)
 	_check(pops > 0, "(I) orb impact pop spawned")
 	_check(beh != null, "(I) warlord behavior present")
-	p.remove_from_group("player")
 	world.queue_free()
 	await process_frame
 	# Player spells are untouched by the #177 override machinery: no override.

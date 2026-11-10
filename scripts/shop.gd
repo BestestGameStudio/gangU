@@ -48,7 +48,7 @@ signal purchased(entry: ShopEntry)
 signal stock_refreshed()
 
 ## Explicit wiring convention (matches SpellProgress/HUD): set before tree
-## entry; the "player" group fallback applies otherwise.
+## entry; the Player.find fallback applies otherwise.
 @export var caster_path: NodePath
 ## #131: optional explicit provider; lazy resolution supports later mount.
 @export var owned_relics_path: NodePath
@@ -79,7 +79,7 @@ func _ready() -> void:
 	if caster_path != NodePath(""):
 		_caster = get_node_or_null(caster_path) as SpellCaster
 	if _caster == null:
-		var player := get_tree().get_first_node_in_group("player")
+		var player := Player.find(get_tree())
 		if player != null:
 			_caster = player.get_node_or_null("SpellCaster") as SpellCaster
 	if refresh_schedule == null:

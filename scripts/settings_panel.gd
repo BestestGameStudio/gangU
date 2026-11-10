@@ -1,5 +1,5 @@
 class_name SettingsPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#489) Settings panel with a master volume slider. Esc (or the small
 ## "Settings" button in the bottom-right corner) opens / closes it.
 ##
@@ -9,8 +9,8 @@ extends CanvasLayer
 ##   scales everything on top of them. 0% mutes the bus.
 ## - The value is saved to user://settings.cfg and re-applied on every
 ##   _ready, so it survives the per-run scene reload and game restarts.
-## - Does NOT pause (MapPanel / EquipPanel idiom). While open it joins
-##   "modal_ui" so clicks on the slider never cast spells.
+## - Does NOT pause (MapPanel / EquipPanel idiom). A ModalPanel, so clicks
+##   on the slider never cast spells.
 ## - Esc only opens the panel when no other modal UI (map, equip, fast
 ##   travel) is open, so Esc still closes those first.
 
@@ -68,12 +68,14 @@ func is_open() -> bool:
 	return _backdrop != null and _backdrop.visible
 
 func open() -> void:
-	_backdrop.visible = true
-	add_to_group("modal_ui")
+	_set_shown(true)
 
 func close() -> void:
-	_backdrop.visible = false
-	remove_from_group("modal_ui")
+	_set_shown(false)
+
+## The corner button stays on screen; only the backdrop is the panel.
+func _apply_shown(shown: bool) -> void:
+	_backdrop.visible = shown
 
 func toggle() -> void:
 	if is_open():
@@ -83,7 +85,7 @@ func toggle() -> void:
 
 ## True when some other panel (map, equip, fast travel) is open.
 func _other_modal_open() -> bool:
-	for n in get_tree().get_nodes_in_group("modal_ui"):
+	for n in get_tree().get_nodes_in_group(GROUP):
 		if n != self:
 			return true
 	return false

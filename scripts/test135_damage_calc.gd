@@ -147,7 +147,6 @@ func _process(delta: float) -> bool:
 				_e2.queue_free()
 				_target = load("res://scenes/player.tscn").instantiate()
 				_target.position = Vector2(0, 500)
-				_target.add_to_group("player")
 				_root2d.add_child(_target)
 				_target.damage_modifiers.add(DamageModifier.reduction(0.5))
 				_target.health_changed.connect(func(cur: int, _max: int) -> void: _contact_hp.append(cur))

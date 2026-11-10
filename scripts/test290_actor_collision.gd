@@ -5,7 +5,7 @@ extends SceneTree
 ## - an enemy chasing a player overlaps it instead of stopping at the hull,
 ## - a moving player passes straight through an idle enemy (no block/push),
 ## - both spawn orders (player first / enemy first) get the exceptions,
-## - production wiring (player in NO "player" group, player_path target) works,
+## - production wiring (explicit player_path target; Player.find fallback) works,
 ## - controls: player still blocked by a StaticBody2D, contact damage and
 ##   projectile hits unchanged. (e) now asserts #493: enemies pass through
 ##   each other (see test493_enemy_overlap.gd).
@@ -21,10 +21,8 @@ func _frames(n: int) -> void:
 	for i in range(n):
 		await physics_frame
 
-func _player(stage: Node2D, pos: Vector2, in_group := true) -> Player:
+func _player(stage: Node2D, pos: Vector2) -> Player:
 	var p: Player = preload("res://scenes/player.tscn").instantiate()
-	if in_group:
-		p.add_to_group("player")
 	p.position = pos
 	stage.add_child(p)
 	return p
@@ -87,12 +85,11 @@ func _initialize() -> void:
 	p2.queue_free()
 	await _frames(2)
 
-	# --- (c) production wiring: player in NO group, enemy targets via player_path ---
-	var p3 := _player(stage, Vector2(200, 600), false)
+	# --- (c) production wiring: enemy targets via player_path ---
+	var p3 := _player(stage, Vector2(200, 600))
 	await _frames(1)
 	var e3 := _enemy(stage, Vector2(300, 600), NodePath(p3.get_path()))
 	await _frames(2)
-	_check(not p3.is_in_group("player"), "fixture player is outside the legacy 'player' group")
 	_check(e3.get_collision_exceptions().has(p3), "exception added via the player_path target")
 	await _frames(90)
 	_check(e3.global_position.distance_to(p3.global_position) <= 10.0, "production-wired enemy also overlaps the player")

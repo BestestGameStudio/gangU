@@ -48,7 +48,6 @@ func _grass_map() -> TerrainMap:
 
 func _player(at: Vector2, map: TerrainMap) -> Player:
 	var p: Player = load("res://scenes/player.tscn").instantiate()
-	p.add_to_group("player")
 	p.collision_layer = 0
 	p.collision_mask = 0
 	root.add_child(p)

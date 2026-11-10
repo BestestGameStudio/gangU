@@ -39,7 +39,6 @@ func _make_player() -> Player:
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	root.add_child(p)
 	caster.spell_unlocked.connect(func(_s): unlock_count += 1)
 	return p
@@ -117,7 +116,7 @@ func _run() -> void:
 	_check(caster.get_unlocked().size() == n and not caster.get_unlocked().has(other), "reward drop of base after upgrade grants nothing")
 
 	# Fresh run (new caster) acquires normally.
-	player.remove_from_group("player")
+	player.remove_from_group(ActorCollision.PLAYER_GROUP)
 	var p2 := _make_player()
 	caster.unlock_spell(other)
 	_check(caster.get_unlocked().has(other), "fresh run caster acquires the spell again")

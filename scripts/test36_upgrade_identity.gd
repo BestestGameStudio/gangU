@@ -133,5 +133,5 @@ func _process(delta: float) -> bool:
 				if fails == 0:
 					print("[36] ALL PASS")
 				print("[36] DONE")
-				quit()
+				quit(1 if fails > 0 else 0)
 	return false

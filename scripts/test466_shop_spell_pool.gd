@@ -34,7 +34,6 @@ func _make_player() -> Player:
 	var c := SpellCaster.new()
 	c.name = "SpellCaster"
 	p.add_child(c)
-	p.add_to_group("player")
 	p.visible = false
 	root.add_child(p)
 	caster = c

@@ -1,5 +1,5 @@
 class_name SpellDirectoryPanel
-extends CanvasLayer
+extends ModalPanel
 ## (#218) Spell directory panel. Hidden by default; the hub
 ## directory location opens it on walk-up and closes it on walk-away (the
 ## ShopPanel idiom). Lists EVERY spell in the caster's current-run unlock
@@ -55,7 +55,7 @@ func _ready() -> void:
 	add_to_group("spell_directory_panel")
 	layer = 3
 	_build_skeleton()
-	var player := get_tree().get_first_node_in_group("player")
+	var player := Player.find(get_tree())
 	if player != null:
 		_bind_caster(player.get_node_or_null("SpellCaster") as SpellCaster)
 	visible = false
@@ -79,15 +79,13 @@ func open(for_caster: SpellCaster = null) -> void:
 	if for_caster != null:
 		_bind_caster(for_caster)
 	_render()
-	visible = true
-	add_to_group("modal_ui") # caster cast-guard hook (EquipPanel idiom)
+	_set_shown(true)
 
 func close() -> void:
-	visible = false
+	_set_shown(false)
 	_selected = null
 	if _status != null:
 		_status.text = ""
-	remove_from_group("modal_ui")
 
 func _build_skeleton() -> void:
 	var backdrop := Panel.new()

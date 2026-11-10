@@ -8,7 +8,7 @@ var failures := 0
 var check_count := 0
 var caster: SpellCaster
 var panel: SpellDirectoryPanel
-var directory: SpellDirectory
+var directory: PanelStation
 var fireball: Spell = preload("res://resources/spells/fire_ball.tres")
 var mana: Spell = preload("res://resources/spells/mana_shot.tres")
 var bolt: Spell = preload("res://resources/spells/placeholder_bolt.tres")
@@ -41,7 +41,6 @@ func _make_player() -> Player:
 	caster = SpellCaster.new()
 	caster.name = "SpellCaster"
 	p.add_child(caster)
-	p.add_to_group("player")
 	root.add_child(p)
 	return p
 
@@ -130,21 +129,19 @@ func _run_legs() -> void:
 	_check(panel.visible and _rows().get_child_count() == 4, "reopen renders the current unlock set (4 rows)")
 	directory._on_body_exited(p)
 
-	## 8. PRODUCTION composition (real player.tscn, NOT in the "player"
-	## group - the group is a test-only idiom): the panel's group fallback
-	## finds no caster, so the walk-up body must hand its caster over.
+	## 8. PRODUCTION composition (real player.tscn): the panel is still bound
+	## to the freed fixture caster, so the walk-up body must hand its caster over.
 	p.queue_free()
 	stranger.queue_free()
 	panel.close()
 	var real_player: Player = preload("res://scenes/player.tscn").instantiate()
 	real_player.name = "RealPlayer"
 	root.add_child(real_player)
-	_check(not real_player.is_in_group("player"), "real player.tscn is NOT in the player group (production fact)")
 	var real_caster: SpellCaster = real_player.get_node("SpellCaster")
 	_check(real_caster != null and real_caster.get_unlocked().size() >= 2, "real player starts with its scene starting spells")
 	directory._on_body_entered(real_player)
 	_check(panel.visible, "production walk-up opens the panel")
-	_check(_row_named("Fire Ball") != null and _row_named("Mana Shot") != null, "production rows come from the real caster, not the group")
+	_check(_row_named("Fire Ball") != null and _row_named("Mana Shot") != null, "production rows come from the walk-up caster")
 	directory._on_body_exited(real_player)
 	_check(not panel.visible, "production walk-away closes")
 

@@ -25,10 +25,10 @@ var _spawned := 0
 
 func _ready() -> void:
 	run_count += 1
-	_p = get_tree().get_first_node_in_group("player")
+	_p = Player.find(get_tree())
 	_caster = _p.get_node_or_null("SpellCaster")
 	var rm: RunManager = $RunManager
-	rm.player = _p ## production-style explicit wiring (main.tscn Player is in no group)
+	rm.player = _p ## production-style explicit wiring
 	Input.warp_mouse(Vector2(576, 600)) ## aim at empty floor, away from enemies
 	child_entered_tree.connect(func(c): if c is Projectile:
 		_spawned += 1
