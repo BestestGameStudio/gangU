@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=29 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://scripts/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://scripts/terrain_map.gd" id="391_terrain"]
@@ -28,10 +28,16 @@
 [ext_resource type="Script" path="res://scripts/overworld_ambience.gd" id="477_ambience"]
 [ext_resource type="Script" path="res://scripts/overworld_bird.gd" id="478_bird"]
 
+[ext_resource type="Script" path="res://scripts/abandoned_village.gd" id="484_village"]
+
 [node name="Overworld" type="Node2D"]
 
 [node name="Ground" type="Node2D" parent="."]
 script = ExtResource("346_ground")
+
+[node name="AbandonedVillage" type="Area2D" parent="."]
+position = Vector2(576, 1400)
+script = ExtResource("484_village")
 
 [node name="Terrain" type="Node2D" parent="."]
 visible = false
