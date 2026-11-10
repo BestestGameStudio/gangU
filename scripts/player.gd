@@ -141,11 +141,10 @@ func _ready() -> void:
 	base_max_hp = max_hp
 	hp = max_hp
 	damage_rng.randomize()
-	# #290: players never physically block or push enemies. The "players"
-	# group is collision-only (targeting still uses explicit wiring / the
-	# legacy "player" group); deferred so same-frame enemies are registered.
-	add_to_group(ActorCollision.PLAYER_GROUP)
-	ActorCollision.ignore_group.call_deferred(self, ActorCollision.ENEMY_GROUP)
+	# #515: players never block enemies (masks, see PhysicsLayers). The
+	# "players" group is bookkeeping only (targeting uses explicit wiring / the
+	# legacy "player" group).
+	add_to_group(PhysicsLayers.PLAYER_GROUP)
 	stats.changed.connect(_on_stat_changed)
 	# #499: every attack/spell cast from inside tall grass reveals the player.
 	var caster := get_node_or_null("SpellCaster") as SpellCaster
