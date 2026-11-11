@@ -584,6 +584,10 @@ func _mount_regions(area: Node) -> void:
 			spawner.setup(data.entries, path, shared, region.layout)
 			spawner.spawn_initial()
 		_mount_revive_item(region.layout)
+		var host := RegionEncounterHost.new()
+		host.name = "RegionEncounterHost"
+		region.layout.add_child(host)
+		host.mount(region, self)
 		region.set_active(false)
 	var ground := area.get_node_or_null("Ground") as OverworldGround
 	if ground != null:
