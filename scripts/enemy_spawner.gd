@@ -108,14 +108,16 @@ func request_spawn_deferred(entry: Dictionary) -> Enemy:
 func _prepare_spawn(entry: Dictionary) -> Enemy:
 	if not should_spawn(entry):
 		return null
+	var data := SpawnEntry.from_dictionary(entry)
+	if data == null:
+		return null
 	var opts := SpawnOptions.new()
 	opts.wire_enemy = true
 	opts.player_path = player_path
 	opts.terrain = terrain
-	opts.reward_table = entry["reward_table"] as RewardTable
-	if entry.get("definition") is EnemyDefinition:
-		opts.definition = entry["definition"]
-	var e := spawn(entry["enemy"] as PackedScene, entry["position"] as Vector2, opts) as Enemy
+	opts.reward_table = data.reward_table
+	opts.definition = data.definition
+	var e := spawn(data.enemy, data.position, opts) as Enemy
 	var idx := _entry_index(entry)
 	if not _alive.has(idx):
 		_alive[idx] = []
