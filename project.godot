@@ -15,6 +15,12 @@ config/description="2D top-down arcade shooter. Single-player first, co-op later
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 
+[debug]
+
+gdscript/warnings/untyped_declaration=1
+gdscript/warnings/unsafe_property_access=1
+gdscript/warnings/unsafe_method_access=1
+
 [display]
 
 window/stretch/mode="canvas_items"
