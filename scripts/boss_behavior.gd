@@ -125,7 +125,7 @@ func _chase(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele
 	enemy.velocity = to_player.normalized() * enemy.speed if dist > 8.0 else Vector2.ZERO
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if dist <= enemy.contact_range and _contact_timer <= 0.0:
-		player.apply_damage(enemy.contact_damage)
+		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		_contact_timer = enemy.contact_cooldown
 		_face(enemy, to_player.x)
 		enemy.play_action(&"attack")
@@ -313,7 +313,7 @@ func _lunge_step(enemy: Enemy, player: Player, dist: float) -> void:
 	enemy.velocity = _dir * (lunge_data.enraged_speed if is_enraged(enemy) else lunge_data.speed)
 	if _hits == 0 and dist <= lunge_data.hit_range:
 		_hits = 1
-		player.apply_damage(lunge_data.damage)
+		enemy.deal_hit(player, lunge_data.damage, OnHit.DELIVERY_CONTACT)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
 
 ## Beast's first enraged lunge chains; Warlord always recovers.
@@ -348,7 +348,7 @@ func _ring_release(enemy: Enemy, player: Player, to_player: Vector2, radius: flo
 		tele.show_ring(radius, ring_data.display_time, true)
 	CombatEffects.death_burst(enemy.get_parent(), enemy.global_position, ring_data.color)
 	if to_player.length() <= radius:
-		player.apply_damage(ring_data.damage)
+		enemy.deal_hit(player, ring_data.damage, OnHit.DELIVERY_SPLASH)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
 
 ## Counter property names retain the original per-boss reset/test contract.

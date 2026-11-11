@@ -45,8 +45,8 @@ extends RefCounted
 ##
 ## Scope (foundation only): no existing bespoke wiring (damage numbers,
 ## Hammer Reaper, relic passives) has been migrated, and no on-hit effect
-## content exists yet. Hits that bypass DamageCalc (boss lunges/pulses,
-## direct apply_damage calls) do not report.
+## content exists yet. Every enemy hit (bosses included) reports through
+## Enemy.deal_hit; direct apply_damage calls that bypass DamageCalc do not.
 
 signal hit_landed(event: HitEvent)
 
@@ -123,7 +123,7 @@ static func begin(target: Variant) -> Receipt:
 
 ## Receiver side: called at the HP mutation point, BEFORE health_changed /
 ## died are emitted. No-op when no DamageCalc window is open for `target`
-## (direct apply_damage callers such as boss attacks do not report).
+## (direct apply_damage callers do not report).
 static func record(target: Object, hp_before: int, hp_after: int) -> void:
 	if target == null:
 		return

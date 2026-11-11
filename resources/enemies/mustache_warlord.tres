@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="EnemyDefinition" load_steps=4 format=3 uid="uid://bgangu177wdef"]
 
 [ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="1_def"]
-[ext_resource type="Script" path="res://scripts/enemy_behavior_warlord.gd" id="2_beh"]
+[ext_resource type="Resource" path="res://resources/behaviors/mustache_warlord.tres" id="2_beh"]
 [ext_resource type="Resource" path="res://resources/rewards/boss_token_table.tres" id="3_token"]
 
 [resource]

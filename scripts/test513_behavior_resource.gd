@@ -1,5 +1,5 @@
 extends SceneTree
-## #513 H1: authored prototypes and legacy scripts both isolate enemy state.
+## #513 H1: authored behavior prototypes isolate enemy state.
 class TunedBehavior extends EnemyBehavior:
 	@export var interval: float = 1.0
 	var history: Array[int] = []
@@ -32,22 +32,26 @@ func _run() -> void:
 	a._behavior.timer = 9.0
 	_check(b._behavior.history.is_empty() and prototype.history.is_empty(), "mutable history isolated from peer and prototype")
 	_check(b._behavior.timer == 0.0 and prototype.timer == 0.0, "runtime timer isolated")
-	var legacy := EnemyDefinition.new()
-	legacy.behavior = EnemyBehaviorHead
+	var head_proto: EnemyBehavior = (load("res://resources/enemies/head_boss.tres") as EnemyDefinition).behavior
 	var c := scene.instantiate() as Enemy
-	c.definition = legacy
 	root.add_child(c)
 	c.set_physics_process(false)
-	_check(c._behavior is EnemyBehaviorHead and c._behavior != a._behavior, "legacy Script slots still instantiate fresh")
+	_check(c._behavior is EnemyBehaviorHead and c._behavior != head_proto, "head scene duplicates its authored prototype")
 	var fallback := scene.instantiate() as Enemy
 	var unsupported := EnemyDefinition.new()
 	unsupported.behavior = Resource.new()
 	fallback.definition = unsupported
 	root.add_child(fallback)
 	fallback.set_physics_process(false)
-	_check(fallback._behavior is EnemyBehaviorChaseContact, "unsupported Resource uses default behavior")
+	_check(fallback._behavior == null, "non-EnemyBehavior slot gets no fallback behavior")
+	var defaulted := scene.instantiate() as Enemy
+	defaulted.definition = EnemyDefinition.new()
+	root.add_child(defaulted)
+	defaulted.set_physics_process(false)
+	_check(defaulted._behavior is EnemyBehaviorChaseContact, "null slot uses the default chase/contact behavior")
 	a.free()
 	b.free()
 	c.free()
 	fallback.free()
+	defaulted.free()
 	quit(1 if failures else 0)

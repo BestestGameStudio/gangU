@@ -167,7 +167,7 @@ func _leg_b_night_spawn() -> void:
 			fast = false
 		if w.contact_damage < 25:
 			heavy = false
-		if w.definition == null or w.definition.behavior != EnemyBehaviorWolf:
+		if w.definition == null or w.definition.behavior.get_script() != EnemyBehaviorWolf:
 			wolf_def = false
 	_check(fast and cave.pack.size() > 0, "(B) wolves are very fast (speed %.0f vs player 320)" % (cave.pack[0].speed if cave.pack.size() > 0 else 0.0))
 	_check(heavy, "(B) pounce damage stat is heavy (30 vs mob contact 10)")

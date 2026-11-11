@@ -10,6 +10,7 @@ func _run() -> void:
 	var area := Node2D.new()
 	root.add_child(area)
 	var enemy := Enemy.new()
+	enemy.definition = EnemyDefinition.new()
 	enemy.max_hp = 100
 	enemy.hp = 100
 	area.add_child(enemy)

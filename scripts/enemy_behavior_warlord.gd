@@ -95,7 +95,7 @@ func _spin(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele:
 	if _tick_t <= 0.0 and to_player.length() <= SPIN_RADIUS:
 		_tick_t = SPIN_TICK
 		_hits += 1
-		player.apply_damage(SPIN_DAMAGE)
+		enemy.deal_hit(player, SPIN_DAMAGE, OnHit.DELIVERY_MELEE)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
 	if _t >= SPIN_TIME:
 		if tele != null:
