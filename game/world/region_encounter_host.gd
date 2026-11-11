@@ -170,7 +170,7 @@ func _finish(cleared: bool) -> void:
 	_finished = true
 	_active = false
 	for door in doors: door.unlock()
-	if cleared: loader._on_objective_completed(region.encounter_id)
+	if cleared: loader.complete_encounter(region.encounter_id)
 	if loader.music != null:
 		loader.music.on_objective_completed()
 		loader.music.stop_dungeon()
