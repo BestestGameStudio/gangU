@@ -172,7 +172,7 @@ func _windup_anim(which: int) -> StringName:
 	return windup_anims[which]
 
 func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTelegraph) -> void:
-	var p: AttackPresentation = presentations[which]
+	var p: BossAttack = presentations[which]
 	match p.shape:
 		TelegraphShape.LINE:
 			tele.show_line(_dir, p.length, p.width, dur)
@@ -184,7 +184,7 @@ func _show_windup_telegraph(enemy: Enemy, which: int, dur: float, tele: BossTele
 ## Counter reset + transition into the attack state once the wind-up ends.
 func _finish_windup(enemy: Enemy, tele: BossTelegraph) -> void:
 	_attack_begin_reset()
-	var p: AttackPresentation = presentations[attack]
+	var p: BossAttack = presentations[attack]
 	state = p.next_state
 	_attack_begin_count()
 	enemy.play_action(p.animation, true)
@@ -319,27 +319,8 @@ func _ring_release(enemy: Enemy, player: Player, to_player: Vector2, radius: flo
 
 # --- data-driven attack presentation -----------------------------------------
 enum TelegraphShape { LINE, RING, CONE }
-class AttackPresentation extends RefCounted:
-	var next_state: int
-	var animation: StringName
-	var shape: int
-	var length: float
-	var width: float
-	var radius: float
-	var phase_ring: bool = false
-	var clear_on_start: bool = true
-	var start_ring: bool = false
-	var start_duration: float = 0.0
 
 var presentations: Dictionary = {}
-
-func _present(which: int, next: int, anim: StringName, shape: int) -> AttackPresentation:
-	var p := AttackPresentation.new()
-	p.next_state = next
-	p.animation = anim
-	p.shape = shape
-	presentations[which] = p
-	return p
 
 # --- ordered distance-based attack selection ---------------------------------
 class AttackRange extends RefCounted:
