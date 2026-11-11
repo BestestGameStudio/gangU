@@ -114,14 +114,7 @@ func _lunge(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegrap
 	_enter_recover(enemy)
 
 func _scream(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegraph) -> void:
-	enemy.velocity = Vector2.ZERO
-	if _screams == 0:
-		_screams = 1
-		_ring_release(enemy, player, to_player, _scream_radius(enemy), tele)
-	if _t >= SCREAM_TIME:
-		if tele != null:
-			tele.clear()
-		_enter_recover(enemy)
+	_ring_sequence(enemy, player, to_player, tele, &"_screams")
 
 func _scream_radius(enemy: Enemy) -> float:
 	return _ring_radius(enemy)
