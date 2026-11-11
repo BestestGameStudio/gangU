@@ -104,21 +104,7 @@ func _volley(enemy: Enemy, to_player: Vector2) -> void:
 ## starts, and (enraged) a second, wider one PULSE_SECOND_AT later. Each
 ## ring hits the player at most once.
 func _pulse(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegraph) -> void:
-	enemy.velocity = Vector2.ZERO
-	var enraged: bool = is_enraged(enemy)
-	if _pulses == 0:
-		_release_ring(enemy, player, to_player, PULSE_RADIUS, tele)
-	elif _pulses == 1 and enraged and _t >= PULSE_SECOND_AT:
-		enemy.play_action(&"aoe", true)
-		_release_ring(enemy, player, to_player, PULSE_RADIUS_ENRAGED, tele)
-	if _t >= (PULSE_TIME_ENRAGED if enraged else PULSE_TIME):
-		if tele != null:
-			tele.clear()
-		_enter_recover(enemy)
-
-func _release_ring(enemy: Enemy, player: Player, to_player: Vector2, radius: float, tele: BossTelegraph) -> void:
-	_pulses += 1
-	_ring_release(enemy, player, to_player, radius, tele)
+	_ring_sequence(enemy, player, to_player, tele, &"_pulses")
 
 ## The wind-up ring shows the outermost ring the pulse will reach.
 func _pulse_radius(enemy: Enemy) -> float:
