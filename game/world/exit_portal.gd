@@ -1,43 +1,15 @@
 class_name ExitPortal
 extends Area2D
-## #9: exit portal back to the hub. Using it returns the player to the hub in
-## the SAME run: spells, pickups and current HP are retained because the shared
-## Player node is repositioned, never recreated (transport is owned by main.gd,
-## which connects `entered` the same way it connects gates).
-## Normal-gate dungeons mount it unlocked (retreat at any time, objective not
-## required). Red-gate dungeons WITH an objective mount it locked; it opens
-## when the dungeon objective completes (clear-or-die: death restarts the run
-## via RunManager). #55: a red-gate dungeon WITHOUT an objective mounts it
-## unlocked - no objective exists to open a locked one, so a locked mount
-## would soft-lock the run. (DungeonB gained an ELIMINATION objective in
-## #177 / O1, 2026-11-08, and now mounts it locked. The boss-gate arena
-## DungeonC (#173 / O6) mounts it locked until the Head boss dies, and the
-## Beast's den DungeonD (#326 / O7) mounts it locked until the Beast dies.
-## The DEFENSE dungeon DungeonE (#337) is entered through a NORMAL gate and
-## mounts it unlocked; Main also unlocks it if the defense fails.)
-## #204: opt-in portal look (red_portal_look). The RED dungeon's locked gate
-## and exit gate are this same portal in its two states, so both get the
-## #195 gate portal look - desaturated gray while locked, red tint once
-## unlocked. OFF (the default everywhere else) keeps the flat decor every
-## other dungeon and generated-dungeon exit has always had. Visuals only:
-## lock/unlock logic, objective wiring, collision shape and label text are
-## untouched, and the geometry reuses Gate's portal statics (no gate.gd
-## changes).
-## #447: the same opt-in for the BEAST den's exit portal (beast_portal_look),
-## in purple (Daniel 2026-11-09: "exit portal should look like the other
-## portals, purple", "just copy the other portals", locked state: "use the
-## existing locked portal"). Locked = the same LOCKED_TINT gray look as the
-## red mount; unlocked = EXIT_PURPLE, the tint the flat exit decor has always
-## used. Same idle animation, same step-in behavior - visuals only.
+## Legacy reusable portal art component. No production dungeon mounts it
+## after physical folding, and it has no objective dependency. Consumers
+## outside the folded world may still explicitly lock/unlock and connect
+## entered; this class never creates a completion condition.
 
 signal entered(portal: ExitPortal)
 
 ## Locked portals ignore the player. Red dungeons with an objective start
 ## locked and open on completion; normal dungeons leave this false.
 @export var locked: bool = false
-## Optional path to a node with an `objective_completed` signal (the #8
-## DungeonObjective). Duck-typed by signal name so this file stands alone.
-@export var objective_path: NodePath
 ## #204: opt-in #195 portal look for the RED DungeonB mount only. main.gd
 ## turns this on for area DungeonB; every other mount keeps the flat look.
 @export var red_portal_look: bool = false
@@ -58,12 +30,6 @@ var _anim_t := 0.0
 func _ready() -> void:
 	add_to_group("exit_portals")
 	body_entered.connect(_on_body_entered)
-	if objective_path != NodePath(""):
-		var obj := get_node_or_null(objective_path)
-		if obj != null and obj.has_signal("objective_completed"):
-			obj.connect(&"objective_completed", _on_objective_completed)
-		else:
-			push_warning("ExitPortal: objective_path did not resolve to a node with an objective_completed signal.")
 	_refresh_visual()
 
 func unlock() -> void:
@@ -72,9 +38,6 @@ func unlock() -> void:
 	locked = false
 	print("exit portal unlocked")
 	_refresh_visual()
-
-func _on_objective_completed(_dungeon_id: StringName) -> void:
-	unlock()
 
 func _on_body_entered(body: Node2D) -> void:
 	if locked:
