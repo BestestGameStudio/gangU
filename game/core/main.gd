@@ -182,6 +182,13 @@ func _ready() -> void:
 	settings.name = "SettingsPanel"
 	add_child(settings)
 	area_loader._load_hub()
+	# Absent flag: no load, node, callbacks, counter traversal or export.
+	if OS.get_cmdline_user_args().has("--gameperf"):
+		var script: Script = load("res://game/core/game_perf_probe.gd")
+		var probe: Node = script.new()
+		probe.name = "GamePerfProbe"
+		add_child(probe)
+		probe.start(self, area_loader, script.metadata_from_args())
 
 ## #512: the run's services, created in _ready. Public so harnesses (and the
 ## map/world-map wiring above) can reach the moved APIs without forwarders.
