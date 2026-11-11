@@ -11,6 +11,14 @@ func _voices(stream: AudioStream) -> int:
 	for p in get_nodes_in_group(&"fireball_audio"):
 		if p.stream == stream and not p.is_queued_for_deletion(): n += 1
 	return n
+func _quiet_voices(stream: AudioStream) -> bool:
+	var count := 0
+	for v in get_nodes_in_group(&"fireball_audio"):
+		if v.stream == stream and not v.is_queued_for_deletion():
+			count += 1
+			if v.volume_db != -10.0 or v.pitch_scale != 1.0 or v.bus != &"Master":
+				return false
+	return count > 0
 func _shot(stage: Node2D, spell: Spell, source: Node2D) -> Projectile:
 	var p: Projectile = load("res://scenes/projectile.tscn").instantiate()
 	p.setup(spell, Vector2.RIGHT, source)
@@ -41,6 +49,7 @@ func _run() -> void:
 	caster.add_spell(fire)
 	caster.cast()
 	_check(_voices(FireballAudio.CAST) == 1 and is_equal_approx(caster.cooldown_remaining(fire), fire.cooldown), "actual committed cast one cue, cooldown unchanged")
+	_check(_quiet_voices(FireballAudio.CAST), "actual firing cue is quieter at -10 dB")
 	var split: Spell = load("res://resources/spells/fire_ball_split.tres")
 	caster._cast_spell(split)
 	_check(_voices(FireballAudio.CAST) == 2, "split fanout only one extra cast cue")
@@ -59,6 +68,7 @@ func _run() -> void:
 	var hp := enemy.hp
 	p._on_body_entered(enemy)
 	_check(_voices(FireballAudio.IMPACT) == 1 and enemy.hp < hp and p.is_queued_for_deletion(), "real enemy hit sounds with unchanged damage and despawn")
+	_check(_quiet_voices(FireballAudio.IMPACT), "actual impact cue is quieter at -10 dB")
 	p._on_body_entered(enemy)
 	_check(_voices(FireballAudio.IMPACT) == 1, "already-spent shot does not double sound")
 	await process_frame
