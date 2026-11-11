@@ -7,10 +7,10 @@ extends SceneTree
 ##   (0)  seam exists (behavior script loads) - FAILS on base bf71099
 ##        (no seam), PASS here. Early-quits when absent.
 ##   (0b) missing player: enemy idles (velocity ZERO, no movement). REAL.
-##   (1a) no definition -> default chase/contact instance.
+##   (1a) scene definition with no behavior -> default chase/contact instance.
 ##   (1b) definition with slot unset -> default chase/contact instance.
-##   (1c) slot honored: marker subclass script in slot -> instance has marker.
-##   (1d) wrong script (no physics_step) -> warning + working default. REAL.
+##   (1c) slot honored: marker subclass prototype in slot -> instance has marker.
+##   (1d) non-EnemyBehavior slot -> error, no behavior, no contact. REAL.
 ##   (2)  movement parity, fixed placement: velocity (110,0), position
 ##        advanced exactly 110px in 60 fixed frames. REAL.
 ##   (3)  stop within 8px, velocity ZERO, frozen position. REAL.
@@ -144,10 +144,10 @@ func _initialize() -> void:
 	await _drive_real(e0, 5, Vector2.ZERO)
 	_check(e0.velocity == Vector2.ZERO and e0.global_position == Vector2.ZERO, "(0b) missing player -> idle (velocity ZERO, no movement)")
 
-	# (1a) no definition -> default instance.
+	# (1a) scene definition, slot unset -> default instance.
 	var pair := await _spawned_pair("E1a", Vector2(0, 1000), "P1a", Vector2(8, 1000))
 	var ea: Enemy = pair[0]
-	_check(ea.get("definition") == null, "(1a) no definition assigned")
+	_check(ea.definition != null and ea.definition.behavior == null, "(1a) scene definition leaves the slot unset")
 	_check(_is_default_instance(ea.get("_behavior")), "(1a) default chase/contact behavior instance")
 
 	# (1b) definition, slot unset -> default instance.
@@ -156,31 +156,31 @@ func _initialize() -> void:
 	var eb: Enemy = pair[0]
 	_check(_is_default_instance(eb.get("_behavior")), "(1b) slot unset -> default chase/contact behavior instance")
 
-	# (1c) slot honored: in-memory marker subclass in the slot.
+	# (1c) slot honored: in-memory marker subclass prototype in the slot.
 	var marker_script := GDScript.new()
 	marker_script.source_code = "extends EnemyBehaviorChaseContact\nvar marker: int = 1\n"
 	_check(marker_script.reload() == OK, "(1c) marker subclass script compiles")
 	var def_c: Resource = def_script.new()
-	def_c.set("behavior", marker_script)
+	def_c.set("behavior", marker_script.new())
 	pair = await _spawned_pair("E1c", Vector2(0, 3000), "P1c", Vector2(8, 3000), def_c)
 	var ec: Enemy = pair[0]
 	var bc: Variant = ec.get("_behavior")
-	_check(bc != null and bc.get("marker") == 1, "(1c) slot script instantiated (marker present)")
+	_check(bc != null and bc.get("marker") == 1, "(1c) slot prototype duplicated (marker present)")
 
-	# (1d) wrong script (no physics_step) -> warning + working default. REAL frame.
+	# (1d) a slot that is not an EnemyBehavior -> error and no behavior. REAL frame.
 	var def_d: Resource = def_script.new()
 	def_d.set("behavior", load("res://scripts/reward_table.gd"))
 	pair = await _spawned_pair("E1d", Vector2(0, 4000), "P1d", Vector2(8, 4000), def_d)
 	var ed: Enemy = pair[0]
 	var pd: Player = pair[1]
-	_check(_is_default_instance(ed.get("_behavior")), "(1d) wrong script -> fallback default instance")
+	_check(ed.get("_behavior") == null, "(1d) non-EnemyBehavior slot -> no fallback behavior")
 	ed.set_physics_process(true)
-	await physics_frame # settle tick (may itself contact)
-	_reset_contact_state(ed, pd)
+	await physics_frame # settle tick
+	pd.hp = 100
 	ed.global_position = Vector2(0, 4000)
 	await physics_frame # exactly one counted tick
 	ed.set_physics_process(false)
-	_check(pd.hp == 90, "(1d) fallback behavior still contacts (hp 100 -> 90)")
+	_check(pd.hp == 100, "(1d) enemy without a behavior never contacts (hp stays 100)")
 
 	# (2) movement parity, fixed placement: (0,5000) chasing (1008,5000). REAL.
 	pair = await _spawned_pair("E2", Vector2(0, 5000), "P2", Vector2(1008, 5000))

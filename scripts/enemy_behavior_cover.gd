@@ -362,7 +362,7 @@ func _charge(owner: EnemyBehaviorChaseContact, enemy: Enemy, player: Player, del
 	owner._contact_timer = maxf(0.0, owner._contact_timer - delta)
 	var to_player: Vector2 = player.global_position - enemy.global_position
 	if to_player.length() <= enemy.contact_range and owner._contact_timer <= 0.0:
-		player.apply_damage(DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng).amount)
+		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		owner._contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack")
 		_state = State.ENGAGED

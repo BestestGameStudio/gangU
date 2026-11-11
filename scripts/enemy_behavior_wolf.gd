@@ -161,11 +161,7 @@ func _step_pounce(enemy: Enemy, player, alive: bool, delta: float) -> void:
 	if alive and not _pounce_hit \
 			and enemy.global_position.distance_to(player.global_position) <= enemy.contact_range:
 		_pounce_hit = true
-		var hit := DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng)
-		var receipt := OnHit.begin(player)
-		player.apply_damage(hit.amount)
-		OnHit.end(receipt, player)
-		OnHit.report(enemy, null, player, hit, OnHit.DELIVERY_CONTACT, receipt) # #390
+		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 	if _timer <= 0.0 or _pounce_hit:
 		state = RECOVER
 		_timer = RECOVER_TIME

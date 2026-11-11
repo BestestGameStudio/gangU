@@ -177,7 +177,7 @@ func _approach(enemy: Enemy, target: Player, delta: float) -> void:
 		enemy.sprite.face(to.x)
 	# Up close the rod doubles as a club (plain contact hit).
 	if d <= enemy.contact_range and _contact_timer <= 0.0:
-		_deal(enemy, target, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
+		enemy.deal_hit(target, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		_contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack")
 	if _cooldown <= 0.0 and clear and d <= hook_range * 0.95:
@@ -279,7 +279,7 @@ func _hooked(enemy: Enemy, delta: float) -> void:
 	_tick_t -= delta
 	if _tick_t <= 0.0:
 		_tick_t = tick_interval
-		_deal(enemy, p, tick_damage, OnHit.DELIVERY_MELEE)
+		enemy.deal_hit(p, tick_damage, OnHit.DELIVERY_MELEE)
 	_rally_t -= delta
 	if _rally_t <= 0.0:
 		_rally_t = rally_interval
@@ -323,13 +323,6 @@ func _recover(enemy: Enemy, delta: float) -> void:
 		state = State.APPROACH
 
 # --- helpers ----------------------------------------------------------------
-
-func _deal(enemy: Enemy, target: Player, amount: int, delivery: StringName) -> void:
-	var hit := DamageCalc.compute(amount, enemy.damage_modifiers, target.damage_modifiers, enemy.damage_rng)
-	var receipt := OnHit.begin(target)
-	target.apply_damage(hit.amount)
-	OnHit.end(receipt, target)
-	OnHit.report(enemy, null, target, hit, delivery, receipt)
 
 ## Face the target, then aim the line from the rod tip so it runs straight
 ## through the player's centre.

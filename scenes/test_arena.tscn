@@ -3,6 +3,23 @@
 [ext_resource type="Script" path="res://scripts/test_arena.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bgangu2player" path="res://scenes/player.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://scenes/enemy.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/enemy_definition.gd" id="enemy_def_script"]
+
+[sub_resource type="Resource" id="EnemyDefinition_1"]
+script = ExtResource("enemy_def_script")
+max_hp = 30
+speed = 60.0
+contact_damage = 10
+contact_cooldown = 0.8
+contact_range = 40.0
+
+[sub_resource type="Resource" id="EnemyDefinition_2"]
+script = ExtResource("enemy_def_script")
+max_hp = 30
+speed = 0.0
+contact_damage = 10
+contact_cooldown = 0.8
+contact_range = 40.0
 
 [node name="TestArena" type="Node2D"]
 script = ExtResource("1")
@@ -16,16 +33,16 @@ color = Color(0.1, 0.12, 0.16, 1)
 position = Vector2(576, 560)
 
 [node name="Enemy1" parent="." instance=ExtResource("3")]
+definition = SubResource("EnemyDefinition_1")
 position = Vector2(60, 60)
-speed = 60.0
 
 [node name="Enemy2" parent="." instance=ExtResource("3")]
+definition = SubResource("EnemyDefinition_1")
 position = Vector2(1090, 60)
-speed = 60.0
 
 [node name="Enemy3" parent="." instance=ExtResource("3")]
+definition = SubResource("EnemyDefinition_2")
 position = Vector2(576, 120)
-speed = 0.0
 
 [node name="DebugLabel" type="Label" parent="."]
 offset_left = 16.0

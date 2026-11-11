@@ -70,7 +70,7 @@ func _initialize() -> void:
 	# --- (A) opt-in seam ---
 	var probe: Enemy = _enemy_scene.instantiate()
 	_check(probe.cover_seek, "A: mustache warrior scene opts into cover_seek")
-	_check(probe.get("definition") == null, "A: no definition attached (default seam preserved)")
+	_check(probe.definition != null and probe.definition.behavior == null, "A: definition leaves the behavior slot unset (default seam preserved)")
 	probe.free()
 	var slime: Enemy = _slime_scene.instantiate()
 	_check(not slime.cover_seek, "A: slime does not opt into cover_seek")

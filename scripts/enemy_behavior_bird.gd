@@ -173,11 +173,7 @@ func _step_dive(enemy: Enemy, player, alive: bool, delta: float) -> void:
 	_ensure_airborne(enemy, false)
 	enemy.play_action(&"landed", true)
 	if alive and player.global_position.distance_to(_locked) <= DIVE_RADIUS:
-		var hit := DamageCalc.compute(enemy.contact_damage, enemy.damage_modifiers, player.damage_modifiers, enemy.damage_rng)
-		var receipt := OnHit.begin(player)
-		player.apply_damage(hit.amount)
-		OnHit.end(receipt, player)
-		OnHit.report(enemy, null, player, hit, OnHit.DELIVERY_CONTACT, receipt) # #390
+		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		if player.has_method(&"apply_stun"):
 			player.apply_stun(PLAYER_STUN)
 	state = STUNNED

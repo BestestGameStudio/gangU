@@ -15,9 +15,9 @@ Reference implementations: PR #182 (#177) - common enemy `scenes/enemy.tscn` and
 - Balance numbers are placeholders; label them `PLACEHOLDER` in code and list them as open in the PR.
 
 ## Scene structure
-- Root `CharacterBody2D` with `scripts/enemy.gd` (HP, `apply_damage`, `died`, `health_changed` - D7, never bypass). Stats either as exports or an `EnemyDefinition` resource (`resources/enemies/*.tres`, `scripts/enemy_definition.gd`) which applies as a set.
+- Root `CharacterBody2D` with `scripts/enemy.gd` (HP, `apply_damage`, `died`, `health_changed` - D7, never bypass). Stats come only from the required `EnemyDefinition` resource (`resources/enemies/*.tres`, `scripts/enemy_definition.gd`), copied as a set when it is assigned; a scene without one logs an error.
 - Children: `Shadow` (Polygon2D), `Sprite` (AnimatedSprite2D + `scripts/enemy_sprite.gd`, `texture_filter = 1`), `CollisionShape2D`. Bosses add `Telegraph` (`scripts/boss_telegraph.gd`, `z_index = -1`) and `HealthBar` (`scripts/boss_health_bar.gd`). Position the sprite so its feet sit on the collision circle's bottom.
-- Behavior: the #99 slot. `EnemyDefinition.behavior` names a script with `physics_step(enemy, player, delta)`; each enemy instantiates its own instance. Default: `scripts/enemy_behavior_chase_contact.gd`; boss example: `scripts/enemy_behavior_warlord.gd`. Never special-case a type inside `enemy.gd`.
+- Behavior: the #99 slot. `EnemyDefinition.behavior` holds an `EnemyBehavior` resource prototype (`resources/behaviors/*.tres`) overriding `physics_step(enemy, player, delta)`; each enemy duplicates its own instance, and null means the default chase/contact. Land every hit through `enemy.deal_hit(target, base, OnHit.DELIVERY_*)` so DamageCalc and OnHit apply. Default: `scripts/enemy_behavior_chase_contact.gd`; boss example: `scripts/enemy_behavior_warlord.gd`. Never special-case a type inside `enemy.gd`.
 
 ## Animation pattern (`scripts/enemy_sprite.gd`)
 - Locomotion idle/walk from body velocity; `flip_h` from travel/target x (art faces right).

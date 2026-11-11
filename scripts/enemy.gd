@@ -4,7 +4,7 @@ extends CharacterBody2D
 ## Contract: died(), health_changed(), apply_damage() (clamps, emits inside only).
 ## #99 (Foundation E2): chase/contact behavior extracted into a per-enemy
 ## behavior instance (see enemy_behavior_chase_contact.gd); swappable via
-## the definition's behavior slot. Behavior unchanged.
+## the definition's behavior slot.
 ## #177: optional "Sprite" child (EnemySprite, Mustache Warrior art) drives
 ## idle/walk/attack/hurt animation; death hands off to a detached corpse
 ## that plays the death animation. Visual only - the contract is unchanged.
@@ -12,11 +12,12 @@ extends CharacterBody2D
 signal died()
 signal health_changed(current: int, max_hp: int)
 
-@export var max_hp: int = 30
-@export var speed: float = 110.0
-@export var contact_damage: int = 10
-@export var contact_cooldown: float = 0.8
-@export var contact_range: float = 40.0
+## Runtime stats, copied from `definition` when it is assigned.
+var max_hp: int
+var speed: float
+var contact_damage: int
+var contact_cooldown: float
+var contact_range: float
 @export var can_swim: bool = false
 ## #406 (Daniel, 2026-11-09: "moustache men now seek cover... just regular
 ## mobs... any cover"): opt this enemy into the cover-seeking chase (see
@@ -30,14 +31,22 @@ signal health_changed(current: int, max_hp: int)
 ## position. ADDITIVE hook only - no table assigned means no drop. Table
 ## contents, weights and drop chances are human-open (#59); placeholder data.
 @export var reward_table: RewardTable
-## #98 (Foundation E1): optional per-type definition. When assigned, its
-## stats take effect as a set (applied in _ready before hp init; no
-## per-field scalar mixing). Reward precedence: a directly assigned
-## reward_table WINS over the definition's table (instance override); the
-## definition's table applies only when no direct table is assigned.
-## #99 (Foundation E2): the definition's behavior slot picks the behavior
-## Script; unset = the current chase/contact implementation.
-@export var definition: EnemyDefinition
+## Required per-type data: stats, reward table and behavior slot. Every enemy
+## scene carries one; _ready reports an error when it is missing. Reward
+## precedence: a directly assigned reward_table WINS over the definition's
+## table (instance override). A null behavior slot means the default
+## chase/contact behavior.
+## Stats are copied on assignment rather than in _ready, so code that tunes
+## an instance between instantiate() and add_child keeps its values.
+@export var definition: EnemyDefinition:
+	set(value):
+		definition = value
+		if value != null:
+			max_hp = value.max_hp
+			speed = value.speed
+			contact_damage = value.contact_damage
+			contact_cooldown = value.contact_cooldown
+			contact_range = value.contact_range
 
 var hp: int
 var damage_modifiers := DamageModifiers.new()
@@ -54,7 +63,7 @@ var objective_aggro_range: float = 150.0
 var nav: FlowNav = null
 ## #99: per-enemy behavior instance (created in _ready). Owns the contact
 ## cooldown; never shared across enemies.
-var _behavior: RefCounted
+var _behavior: EnemyBehavior
 ## #513: typed spawn context (WolfContext, BirdContext) set by the owner that
 ## spawns this enemy, before add_child; null for ordinary enemies.
 var context: RefCounted = null
@@ -62,29 +71,21 @@ var context: RefCounted = null
 @onready var sprite: EnemySprite = get_node_or_null("Sprite") as EnemySprite
 
 func _ready() -> void:
-	if definition != null:
-		max_hp = definition.max_hp
-		speed = definition.speed
-		contact_damage = definition.contact_damage
-		contact_cooldown = definition.contact_cooldown
-		contact_range = definition.contact_range
+	if definition == null:
+		push_error("Enemy '%s' (%s) has no EnemyDefinition; every enemy scene must carry one." % [name, scene_file_path])
 	hp = max_hp
 	damage_rng.randomize()
 	add_to_group("enemies")
 	# #325: note the encounter in the cross-run hub bestiary (keyed by scene).
 	Bestiary.record_enemy(self)
-	# Each enemy owns fresh runtime state, whether the definition supplies
-	# an authored Resource prototype or a legacy Script slot.
+	# The prototype is duplicated so no runtime state is shared by enemies.
 	var prototype: Resource = definition.behavior if definition != null else null
-	if prototype is EnemyBehavior:
-		_behavior = prototype.duplicate(true)
-	elif prototype is Script:
-		_behavior = prototype.new()
+	if prototype == null:
+		_behavior = EnemyBehaviorChaseContact.new()
+	elif prototype is EnemyBehavior:
+		_behavior = prototype.duplicate(true) as EnemyBehavior
 	else:
-		_behavior = EnemyBehaviorChaseContact.new()
-	if not _behavior is EnemyBehavior:
-		push_warning("Enemy: definition behavior is not an EnemyBehavior; using the default chase/contact behavior.")
-		_behavior = EnemyBehaviorChaseContact.new()
+		push_error("Enemy '%s' (%s): definition behavior %s is not an EnemyBehavior; the enemy has no behavior." % [name, scene_file_path, prototype])
 	if player_path != NodePath(""):
 		_player = get_node_or_null(player_path) as Player
 		if _player == null:
@@ -95,6 +96,17 @@ func _ready() -> void:
 		push_warning("Enemy: no player target (no player_path and no Player in the tree); standing idle.")
 	# #515: players never block enemies (or each other) - layers/masks in the
 	# scene, see PhysicsLayers.
+
+## The one path for every hit an enemy lands: DamageCalc with both sides'
+## modifiers, then the OnHit capture and report. `target` is duck-typed
+## (Player, Summon, DefenseCore): it needs damage_modifiers and
+## apply_damage(amount). Returns the reported event, or null when refused.
+func deal_hit(target, base: int, delivery: StringName) -> HitEvent:
+	var hit := DamageCalc.compute(base, damage_modifiers, target.damage_modifiers, damage_rng)
+	var receipt := OnHit.begin(target)
+	target.apply_damage(hit.amount)
+	OnHit.end(receipt, target)
+	return OnHit.report(self, null, target, hit, delivery, receipt)
 
 ## #109: hit feedback - brief over-bright flash so a registered hit is
 ## visible even when the enemy survives (25 dmg vs 30 hp). Additive only.

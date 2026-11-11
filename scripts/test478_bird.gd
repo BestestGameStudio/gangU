@@ -141,7 +141,7 @@ func _leg_a_scene_data() -> void:
 	await _frames(3)
 	_check(ow.get_node_or_null("OverworldBird") is OverworldBird, "(A) overworld has the OverworldBird driver")
 	var b: Enemy = _bird_scene.instantiate()
-	_check(b.definition != null and b.definition.behavior == EnemyBehaviorBird, "(A) bird definition slots the bird behavior")
+	_check(b.definition != null and b.definition.behavior is EnemyBehaviorBird, "(A) bird definition slots the bird behavior")
 	_check(b.get_node_or_null("Telegraph") is BossTelegraph, "(A) bird carries a ground telegraph")
 	_check(b.get_node_or_null("Shadow") is Polygon2D, "(A) bird carries a ground shadow")
 	b.queue_free()

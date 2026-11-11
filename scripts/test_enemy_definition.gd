@@ -1,10 +1,10 @@
 extends SceneTree
 ## #98 (Foundation E1) harness: EnemyDefinition resource - stats + reward
-## table per enemy type, opt-in with exact current fallback.
+## table per enemy type, required on every enemy scene.
 ##
 ## Legs:
-##   (a) enemy WITHOUT a definition keeps the exact current stats and
-##       reward behavior (export fallback unchanged).
+##   (a) the Mustache Warrior scene carries its definition with the exact
+##       current stats.
 ##   (b) enemy WITH a definition uses the definition's stats as a set.
 ##   (c) definition reward_table rolls identically to a directly assigned
 ##       table (same drop result on death).
@@ -51,18 +51,18 @@ func _initialize() -> void:
 		quit(failures)
 		return
 
-	# (a) fallback: no definition -> exact current stats.
+	# (a) the scene's own definition -> exact current stats.
 	# NOTE: _ready defers to the first frame in a SceneTree harness, so
 	# hp init and definition overrides are read AFTER a process frame.
 	var e1: Node = enemy_scene.instantiate()
 	root.add_child(e1)
 	await process_frame
-	_check(e1.get("definition") == null, "(a) no definition assigned")
-	_check(e1.get("max_hp") == 30 and e1.get("hp") == 30, "(a) fallback max_hp/hp 30 unchanged")
-	_check(is_equal_approx(e1.get("speed"), 110.0), "(a) fallback speed 110 unchanged")
-	_check(e1.get("contact_damage") == 10, "(a) fallback contact_damage 10 unchanged")
-	_check(is_equal_approx(e1.get("contact_cooldown"), 0.8), "(a) fallback contact_cooldown 0.8 unchanged")
-	_check(is_equal_approx(e1.get("contact_range"), 40.0), "(a) fallback contact_range 40 unchanged")
+	_check(e1.get("definition") != null and e1.get("definition").resource_path == "res://resources/enemies/mustache_warrior.tres", "(a) scene carries the mustache_warrior definition")
+	_check(e1.get("max_hp") == 30 and e1.get("hp") == 30, "(a) max_hp/hp 30 unchanged")
+	_check(is_equal_approx(e1.get("speed"), 110.0), "(a) speed 110 unchanged")
+	_check(e1.get("contact_damage") == 10, "(a) contact_damage 10 unchanged")
+	_check(is_equal_approx(e1.get("contact_cooldown"), 0.8), "(a) contact_cooldown 0.8 unchanged")
+	_check(is_equal_approx(e1.get("contact_range"), 40.0), "(a) contact_range 40 unchanged")
 
 	# (b) definition stats take effect as a set (assigned before _ready).
 	var def_b: Resource = def_script.new()

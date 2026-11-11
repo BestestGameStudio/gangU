@@ -1,15 +1,17 @@
-[gd_scene load_steps=5 format=3 uid="uid://bgangu5enemy"]
+[gd_scene load_steps=6 format=3 uid="uid://bgangu5enemy"]
 
 [ext_resource type="SpriteFrames" uid="uid://bgangu177mwframes" path="res://resources/sprites/mustache_warrior_frames.tres" id="3_frames"]
 [ext_resource type="PackedScene" path="res://scenes/enemy_base.tscn" id="base_513"]
 
 [ext_resource type="Script" path="res://scripts/mustache_voice.gd" id="4_voice"]
+[ext_resource type="Resource" path="res://resources/enemies/mustache_warrior.tres" id="5_def"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 13.0
 
 [node name="Enemy" instance=ExtResource("base_513")]
 cover_seek = true
+definition = ExtResource("5_def")
 
 [node name="Shadow" parent="." index="0"]
 position = Vector2(0, 13)

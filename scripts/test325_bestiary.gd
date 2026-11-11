@@ -110,6 +110,7 @@ func _run() -> void:
 	## code-built enemy with no scene is not recorded as junk.
 	_check(Bestiary.encounter_count(&"mustache_warrior") == 2, "record outlives the freed enemies")
 	var bare := Enemy.new()
+	bare.definition = EnemyDefinition.new()
 	root.add_child(bare)
 	_check(Bestiary.seen_count() == 2, "scene-less enemy is not recorded")
 	bare.free()
