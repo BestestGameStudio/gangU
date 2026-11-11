@@ -513,9 +513,53 @@ func _draw() -> void:
 			draw_colored_polygon(rock, STONE_DARK)
 			draw_circle(at + Vector2(-r * 0.2, -r * 0.25), r * 0.45, STONE)
 
+## #614: reserve_regions drops decor trees within a margin wider than a
+## region's footprint, but _plant_tree_collision already marked those trees'
+## cells OBSTACLE on the shared Terrain and regions only restamp cells inside
+## their bounds. Release the cells of every tree about to be removed, so bare
+## grass around a dungeon is not an invisible wall. A cell stays blocked when
+## a surviving tree still covers it, and region-owned cells are left alone.
+func _release_removed_tree_cells(regions: Array[OverworldRegion]) -> void:
+	var map := get_parent().get_node_or_null("Terrain") as TerrainMap
+	if map == null:
+		return
+	var kept := {}
+	var released := {}
+	for d in decor:
+		if d["kind"] != "tree":
+			continue
+		var at: Vector2 = d["at"]
+		var r: float = d["r"]
+		var removed := false
+		for region in regions:
+			if region.bounds.grow(r + 48.0).has_point(at):
+				removed = true
+		var lo := map.world_to_cell(at - Vector2(r, r))
+		var hi := map.world_to_cell(at + Vector2(r, r))
+		var own := map.world_to_cell(at)
+		for cx in range(lo.x, hi.x + 1):
+			for cy in range(lo.y, hi.y + 1):
+				var cell := Vector2i(cx, cy)
+				if cell == own or map.cell_to_world(cell).distance_to(at) <= r:
+					if removed:
+						released[cell] = true
+					else:
+						kept[cell] = true
+	for cell: Vector2i in released:
+		if kept.has(cell) or map.tile_type_at_cell(cell) != TerrainTypes.OBSTACLE:
+			continue
+		var world := map.cell_to_world(cell)
+		var owned := false
+		for region in regions:
+			if region.bounds.has_point(world):
+				owned = true
+		if not owned:
+			map.clear_cell(cell)
+
 ## Region terrain owns its footprint. Delete both visual trees and their
 ## projectile circles there; replacing only sparse cells leaves ghost trees.
 func reserve_regions(regions: Array[OverworldRegion]) -> void:
+	_release_removed_tree_cells(regions)
 	decor = decor.filter(func(d: Dictionary) -> bool:
 		for region in regions:
 			if region.bounds.grow(float(d["r"]) + 48.0).has_point(d["at"]):
