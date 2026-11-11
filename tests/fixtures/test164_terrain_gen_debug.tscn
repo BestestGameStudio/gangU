@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/fixtures/test164_terrain_gen_debug.gd" id="1"]
+[ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="2"]
+
+[node name="Test164TerrainGenDebug" type="Node2D"]
+script = ExtResource("1")
+
+[node name="TerrainMap" type="Node2D" parent="."]
+script = ExtResource("2")
+cell_size = 27
+show_behind_parent = true

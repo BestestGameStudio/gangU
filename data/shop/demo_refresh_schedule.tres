@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="ShopRefreshSchedule" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/economy/shop_refresh_schedule.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+first_price = 1
+second_price = 2

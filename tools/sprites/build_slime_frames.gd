@@ -1,10 +1,10 @@
 extends SceneTree
-## #392: builds resources/sprites/slime_frames.tres from assets/sprites/slime.png
+## #392: builds data/sprites/slime_frames.tres from assets/sprites/slime.png
 ## (drawn by draw_slime.gd). Run after `godot --headless --path . --import`.
 
 const CELL := 32
 const SHEET := "res://assets/sprites/slime.png"
-const OUT := "res://resources/sprites/slime_frames.tres"
+const OUT := "res://data/sprites/slime_frames.tres"
 
 func _initialize() -> void:
 	var tex: Texture2D = load(SHEET)

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 1
+spell_name = "Stone Hammer"
+cooldown = 8.5
+damage = 60.0
+radius = 10.0
+tags = Array[StringName]([&"melee", &"aoe", &"earth"])
+range = 150.0
+projectile_count = 0
+projectile_color = Color(0.72, 0.62, 0.45, 1)
+hammer_radius = 48.0
+hammer_windup = 0.3

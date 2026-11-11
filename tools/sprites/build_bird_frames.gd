@@ -1,10 +1,10 @@
 extends SceneTree
-## #478: builds resources/sprites/bird_frames.tres from assets/sprites/bird.png
+## #478: builds data/sprites/bird_frames.tres from assets/sprites/bird.png
 ## (drawn by draw_bird.gd). Run after `godot --headless --path . --import`.
 
 const CELL := 32
 const SHEET := "res://assets/sprites/bird.png"
-const OUT := "res://resources/sprites/bird_frames.tres"
+const OUT := "res://data/sprites/bird_frames.tres"
 
 func _initialize() -> void:
 	var tex: Texture2D = load(SHEET)

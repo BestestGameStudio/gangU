@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu177orb"]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 5
+spell_name = "Warlord Orb"
+cooldown = 0.0
+damage = 8.0
+radius = 6.0
+tags = Array[StringName]([&"projectile"])
+range = 560.0
+projectile_speed = 290.0
+projectile_color = Color(0.72, 1, 0.26, 1)

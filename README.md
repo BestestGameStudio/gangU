@@ -16,12 +16,13 @@ Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE
 
 - `project.godot` - project config and the shared input actions.
 - `export_presets.cfg` - Web export preset (see "Web export" below).
-- `scenes/main.tscn` - main scene (Player + FollowCamera). `scripts/main.gd` mounts every
+- `game/core/main.tscn` - main scene (Player + FollowCamera). `game/core/main.gd` mounts every
   run service in code (#512: `AreaLoader` mounts and swaps areas, `TravelService` owns
-  fast/map travel, `MusicDirector` owns all music): hub (`scenes/hub.tscn`) <-> overworld
-  (`scenes/overworld.tscn`) <-> dungeons (`scenes/dungeon_*.tscn`).
-- `scripts/` - GDScript sources, plus the core `test*.gd` harnesses.
-- `resources/` - data: spells, enemies, rewards, terrain maps and palettes, gate offering.
+  fast/map travel, `MusicDirector` owns all music): hub (`game/world/hub.tscn`) <-> overworld
+  (`game/world/overworld.tscn`) <-> dungeons (`game/world/dungeon_*.tscn`).
+- `game/` - production scripts grouped by feature, with their scenes alongside them.
+- `tests/<feature>/` - existing core harnesses; `tests/support/` holds shared fixtures.
+- `data/` - data: spells, enemies, rewards, terrain maps and palettes, gate offering.
 - `assets/` - art and audio.
 - `tools/showcase/` - scripted gameplay recordings; `tools/sprites/` - sprite packing tools.
 - `.github/workflows/` - web build/deploy, the test gate and the Claude agent jobs (ARCHITECTURE.md D20).
@@ -40,7 +41,7 @@ Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE
 | Esc                       | Settings                                 |
 
 The movement, `cast` and `dash` actions live in `project.godot`; the slot keys are registered
-at runtime by `scripts/spell_caster.gd`. Manual aim only, no aim assist; keyboard + mouse,
+at runtime by `game/spells/spell_caster.gd`. Manual aim only, no aim assist; keyboard + mouse,
 trackpad friendly.
 
 **Web export contract:**
@@ -87,7 +88,7 @@ The game must load into the hub with no console errors.
 
 ## Testing
 
-Harnesses are `scripts/test*.gd` scripts that `extend SceneTree`. The suite is deliberately small:
+Harnesses are `tests/<feature>/test*.gd` scripts that `extend SceneTree`. The suite is deliberately small:
 core contracts only (runner/uid hygiene, run state, collision layers, spawn and dungeon data, damage and
 on-hit, stats, enemies, spells and progression, shop/currency/relics/rewards, boot and area travel,
 death reset, objectives, terrain generation/motion/pathing, save compatibility). Extend the harness that
@@ -104,9 +105,9 @@ godot --headless --path . --script res://tools/run_tests.gd -- --list           
 ```
 
 Every `.gd` script needs its `.gd.uid` committed next to it (generate it with Godot 4.5.1, e.g.
-`godot --headless --path . --import`). `scripts/test519_uid_files.gd` fails on a tracked `.gd`
+`godot --headless --path . --import`). `tests/unit/test519_uid_files.gd` fails on a tracked `.gd`
 without a tracked `.uid`, or on an orphan `.uid`.
 
 - While iterating locally, pass a filter for the area you changed. The `Tests` workflow
   (`.github/workflows/tests.yml`) runs the whole suite on every pull request and on every push to `main`.
-- One harness by hand: `godot --headless --fixed-fps 60 --path . --script res://scripts/testNNN_topic.gd`.
+- One harness by hand: `godot --headless --fixed-fps 60 --path . --script res://tests/<feature>/testNNN_topic.gd`.

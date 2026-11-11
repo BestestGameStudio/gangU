@@ -10,7 +10,7 @@ warnings, which is why this goes through the language server.
 
 Prints one TSV row per warning (path, line, WARNING_NAME, message) to stdout
 and per-category counts to stderr. By default only production scripts are
-listed: scripts/test*.gd, tools/ and tests/ are skipped (--all keeps them).
+listed: tools/ and tests/ are skipped (--all keeps them).
 """
 import argparse
 import json
@@ -26,7 +26,7 @@ PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def is_harness(rel):
-    return re.match(r"scripts/test[^/]*\.gd$", rel) or rel.startswith(("tools/", "tests/"))
+    return rel.startswith(("tools/", "tests/"))
 
 
 class Lsp:

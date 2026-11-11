@@ -82,7 +82,7 @@ func _cast_toward(target: Vector2) -> void:
 	caster._cooldowns[spell] = spell.cooldown
 	caster.cooldown_started.emit(spell, spell.cooldown)
 	caster.spell_cast.emit(spell)
-	preload("res://scripts/combat_effects.gd").muzzle(current_scene, caster.global_position, dir.angle(), spell.projectile_color)
+	preload("res://game/combat/combat_effects.gd").muzzle(current_scene, caster.global_position, dir.angle(), spell.projectile_color)
 
 func _in_area() -> bool:
 	return scene.area_loader.current_area != null and scene.area_loader.current_area.name == AREA_NAME
@@ -170,7 +170,7 @@ func _bait_pulse() -> bool:
 	return false
 
 func _initialize() -> void:
-	scene = load("res://scenes/main.tscn").instantiate()
+	scene = load("res://game/core/main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
 	p = scene.get_node("Player")

@@ -24,7 +24,7 @@ Levels (`ffmpeg -af volumedetect`):
 Re-running the two commands above on the attachments reproduces the committed
 files' decoded audio exactly (matching `ffmpeg -f md5` of the decoded PCM).
 
-At runtime `MusicDirector.BOSS_VOLUME_DB` (`scripts/music_director.gd`) applies a
+At runtime `MusicDirector.BOSS_VOLUME_DB` (`game/audio/music_director.gd`) applies a
 further -6 dB. Looping is set in code (`MusicDirector.start_boss`), not in the import.
 
 # Overworld soft piano (#487)
@@ -56,7 +56,7 @@ The track is quiet on purpose. Levels (`ffmpeg -af volumedetect` on the Ogg):
 mean -37.3 dB, peak -15.1 dB. **Do not normalize or loudness-match it up.**
 It starts from silence and fades to silence over the last 4 s, so the loop
 restarts after a short natural pause. `MusicDirector`
-(`scripts/music_director.gd`, `start_overworld`) plays it at 0 dB, with no trim. Looping is set
+(`game/audio/music_director.gd`, `start_overworld`) plays it at 0 dB, with no trim. Looping is set
 in code, not in the import. The lossless WAV master is not committed.
 
 Checksums of the delivered files: OGG md5 `31a6a511540334b7109de61b73fa2bcc`,
@@ -72,7 +72,7 @@ saw bass, chiptune drums, quiet low drone; D minor, 140 BPM, 32 bars, 54.857 s,
 
 The committed file is the delivered OGG unchanged (no trimming, no gain edit).
 Levels (`ffmpeg -af volumedetect`): mean -14.9 dB, peak -0.1 dB. At runtime
-`MusicDirector.DUNGEON_VOLUME_DB` (`scripts/music_director.gd`, -13 dB) brings it
+`MusicDirector.DUNGEON_VOLUME_DB` (`game/audio/music_director.gd`, -13 dB) brings it
 near the boss themes' effective level (about -21.5 dB mean, then their -6 dB).
 Looping is set in code (`MusicDirector.start_dungeon`), not in the import. The lossless
 WAV master is not committed.

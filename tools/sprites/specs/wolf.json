@@ -1,5 +1,5 @@
 {
- "_comment": "#476 wolf sheet (Mitra's artist, PR #476 comment attachment) -> assets/sprites/wolf.png (+ resources/sprites/wolf_frames.tres). The board labels claim Idle 4 / Run 6 / Bite 6; the drawn rows actually count 4 / 5 / 5 - only the drawn frames are packed. 8 directions per row (S SE E NE N NW W SW); EnemySprite picks <anim>_<dir> by travel direction. Run: python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/wolf.json <source-sheet.png> assets/sprites/wolf.png --tres resources/sprites/wolf_frames.tres",
+ "_comment": "#476 wolf sheet (Mitra's artist, PR #476 comment attachment) -> assets/sprites/wolf.png (+ data/sprites/wolf_frames.tres). The board labels claim Idle 4 / Run 6 / Bite 6; the drawn rows actually count 4 / 5 / 5 - only the drawn frames are packed. 8 directions per row (S SE E NE N NW W SW); EnemySprite picks <anim>_<dir> by travel direction. Run: python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/wolf.json <source-sheet.png> assets/sprites/wolf.png --tres data/sprites/wolf_frames.tres",
  "scale": 3,
  "cell_w": 56,
  "cell_h": 22,

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangumsvoly"]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 5
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"mana"
+icon_upgraded = true
+spell_name = "Mana Volley"
+cooldown = 0.5
+damage = 6.0
+radius = 3.0
+tags = Array[StringName]([&"projectile", &"mana"])
+range = 560.0
+projectile_speed = 1000.0
+projectile_color = Color(0.75, 0.6, 1, 1)
+projectile_count = 3
+spread_degrees = 14.0
+visual_scale = 1.7
+glow = true
+trail_length = 4
+glow_tint = Color(0.25, 0.7, 1, 1)

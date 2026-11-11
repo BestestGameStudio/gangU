@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangu4mana"]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 5
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"mana"
+spell_name = "Mana Shot"
+cooldown = 0.35
+damage = 8.0
+radius = 5.0
+tags = Array[StringName]([&"projectile", &"mana"])
+range = 640.0
+projectile_speed = 650.0
+projectile_color = Color(0.6, 0.45, 1, 1)
+visual_scale = 2.4
+glow = true
+trail_length = 10
+glow_tint = Color(0.25, 0.7, 1, 1)

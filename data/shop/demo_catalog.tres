@@ -1,0 +1,62 @@
+[gd_resource type="Resource" script_class="ShopCatalog" load_steps=21 format=3 uid="uid://bgangurshopcat"]
+
+[ext_resource type="Script" path="res://game/economy/shop_catalog.gd" id="1"]
+[ext_resource type="Script" path="res://game/economy/shop_entry.gd" id="2"]
+[ext_resource type="Spell" uid="uid://bgangu4fire" path="res://data/spells/fire_ball.tres" id="6"]
+[ext_resource type="Spell" path="res://data/spells/frost_shard.tres" id="15"]
+[ext_resource type="Spell" uid="uid://bgangu4mana" path="res://data/spells/mana_shot.tres" id="18"]
+[ext_resource type="Spell" uid="uid://bgangu3bolt" path="res://data/spells/placeholder_bolt.tres" id="21"]
+[ext_resource type="Spell" path="res://data/spells/spirit_punch.tres" id="22"]
+[ext_resource type="Spell" uid="uid://bgangu216blk" path="res://data/spells/stone_block.tres" id="26"]
+[ext_resource type="Spell" path="res://data/spells/stone_hammer.tres" id="27"]
+[ext_resource type="Spell" uid="uid://bgangu212sum" path="res://data/spells/summon_ally.tres" id="34"]
+[ext_resource type="Spell" path="res://data/spells/water_ball.tres" id="37"]
+
+[sub_resource type="Resource" id="6"]
+script = ExtResource("2")
+good = ExtResource("6")
+price = 10
+
+[sub_resource type="Resource" id="15"]
+script = ExtResource("2")
+good = ExtResource("15")
+price = 10
+
+[sub_resource type="Resource" id="18"]
+script = ExtResource("2")
+good = ExtResource("18")
+price = 10
+
+[sub_resource type="Resource" id="21"]
+script = ExtResource("2")
+good = ExtResource("21")
+price = 10
+
+[sub_resource type="Resource" id="22"]
+script = ExtResource("2")
+good = ExtResource("22")
+price = 10
+
+[sub_resource type="Resource" id="26"]
+script = ExtResource("2")
+good = ExtResource("26")
+price = 10
+
+[sub_resource type="Resource" id="27"]
+script = ExtResource("2")
+good = ExtResource("27")
+price = 10
+
+[sub_resource type="Resource" id="34"]
+script = ExtResource("2")
+good = ExtResource("34")
+price = 10
+
+[sub_resource type="Resource" id="37"]
+script = ExtResource("2")
+good = ExtResource("37")
+price = 10
+
+[resource]
+script = ExtResource("1")
+entries = Array[ExtResource("2")]([SubResource("6"), SubResource("15"), SubResource("18"), SubResource("21"), SubResource("22"), SubResource("26"), SubResource("27"), SubResource("34"), SubResource("37")])

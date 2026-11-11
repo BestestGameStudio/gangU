@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangu4fire"]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 5
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"fireball"
+spell_name = "Fire Ball"
+cooldown = 1.2
+damage = 25.0
+radius = 9.0
+tags = Array[StringName]([&"projectile", &"burn"])
+range = 420.0
+projectile_speed = 520.0
+projectile_color = Color(1, 0.45, 0.1, 1)
+visual_scale = 1.8
+glow = true
+trail_length = 10

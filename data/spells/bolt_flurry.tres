@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangu265bf"]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 5
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"bolt"
+icon_upgraded = true
+spell_name = "Bolt Flurry"
+cooldown = 0.35
+damage = 7.0
+radius = 5.0
+tags = Array[StringName]([&"projectile"])
+range = 520.0
+projectile_speed = 700.0
+projectile_color = Color(0.55, 0.9, 1, 1)
+visual_scale = 1.4
+glow = true
+trail_length = 4
+glow_tint = Color(0.92, 0.74, 0.28, 1)

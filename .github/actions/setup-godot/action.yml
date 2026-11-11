@@ -55,7 +55,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: .godot
-        key: godot-import-${{ inputs.version }}-${{ hashFiles('project.godot', 'assets/**', 'resources/**', 'scenes/**') }}
+        key: godot-import-${{ inputs.version }}-${{ hashFiles('project.godot', 'assets/**', 'data/**', 'game/**') }}
         restore-keys: godot-import-${{ inputs.version }}-
 
     - name: Import project

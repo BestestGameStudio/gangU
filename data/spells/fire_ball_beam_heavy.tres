@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangum2bh"]
+
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
+
+[resource]
+script = ExtResource("1_spell")
+mode = 5
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"fireball"
+icon_upgraded = true
+spell_name = "Fire Ball Beam Heavy"
+cooldown = 1.6
+damage = 50.0
+radius = 20.0
+tags = Array[StringName]([&"projectile", &"burn"])
+range = 700.0
+projectile_speed = 1400.0
+projectile_color = Color(1, 0.8, 0.2, 1)
+visual_scale = 0.85
+glow = true
+trail_length = 5
+glow_tint = Color(1, 0.5, 0.12, 1)

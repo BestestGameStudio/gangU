@@ -21,7 +21,7 @@ Two voices:
   deliberately not shipped.
 
 Each state folder of the source pack maps to a cue family in
-`scripts/mustache_voice.gd` (`ALIASES`); `combat/combat_spotted` plays once
+`game/enemies/mustache_voice.gd` (`ALIASES`); `combat/combat_spotted` plays once
 per engagement, the other combat cues are random chatter.
 
 At runtime `MustacheVoice.VOLUME_DB` applies a further -6 dB, with a small

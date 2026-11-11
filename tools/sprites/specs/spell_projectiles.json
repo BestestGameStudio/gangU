@@ -1,5 +1,5 @@
 {
-  "_comment": "#210 spell projectile sheet -> assets/sprites/spell_projectiles.png (+ resources/sprites/spell_projectiles_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_projectiles.json <board.png> assets/sprites/spell_projectiles.png --tres resources/sprites/spell_projectiles_frames.tres",
+  "_comment": "#210 spell projectile sheet -> assets/sprites/spell_projectiles.png (+ data/sprites/spell_projectiles_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_projectiles.json <board.png> assets/sprites/spell_projectiles.png --tres data/sprites/spell_projectiles_frames.tres",
   "scale": 4,
   "cell_w": 64,
   "cell_h": 48,
