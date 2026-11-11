@@ -37,6 +37,7 @@ var stun_time: float = 1.6
 ## Head/Beast stun once at the phase change; Warlord does not.
 var has_stun_phase: bool = false
 var arrival_color: Color = Enemy.SPRITE_BURST_COLOR
+var clear_glow_on_stun: bool = false
 var windup_times: Dictionary = {}
 var windup_anims: Dictionary = {}
 
@@ -57,6 +58,7 @@ func _apply_tuning(tuning: BossTuning) -> void:
 	stun_time = tuning.stun_time
 	has_stun_phase = tuning.has_stun_phase
 	arrival_color = tuning.arrival_color
+	clear_glow_on_stun = tuning.clear_glow_on_stun
 	windup_times = tuning.windup_times.duplicate(true)
 	windup_anims = tuning.windup_anims.duplicate(true)
 
@@ -232,6 +234,8 @@ func _enter_stun(enemy: Enemy, tele: BossTelegraph) -> void:
 	_t = 0.0
 	enemy.velocity = Vector2.ZERO
 	enemy.clear_action()
+	if clear_glow_on_stun and enemy.sprite != null:
+		enemy.sprite.set_glow(false)
 	enemy.play_action(&"stun", true)
 	if tele != null:
 		tele.clear()
@@ -311,6 +315,24 @@ func _lunge_step(enemy: Enemy, player: Player, dist: float) -> void:
 		_hits = 1
 		player.apply_damage(lunge_data.damage)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
+
+## Beast's first enraged lunge chains; Warlord always recovers.
+## Do movement/contact first, including the frame that ends the lunge.
+func _lunge_sequence(enemy: Enemy, player: Player, dist: float, tele: BossTelegraph, completed: int = 0) -> void:
+	_lunge_step(enemy, player, dist)
+	if _t < lunge_data.duration:
+		return
+	if lunge_data.enraged_chain and is_enraged(enemy) and completed < 2:
+		state = State.WINDUP
+		_t = 0.0
+		enemy.velocity = Vector2.ZERO
+		enemy.play_action(lunge_data.chain_animation, true)
+		if enemy.sprite != null:
+			enemy.sprite.set_glow(true)
+		if tele != null:
+			tele.show_line(_dir, lunge_data.chain_length, lunge_data.hit_range * 0.6, lunge_data.chain_pause)
+		return
+	_enter_recover(enemy)
 
 # --- shared ring attack ------------------------------------------------------
 

@@ -9,3 +9,7 @@ enraged_speed = 740.0
 duration = 0.34
 hit_range = 60.0
 damage = 18
+enraged_chain = true
+chain_pause = 0.22
+chain_length = 210.0
+chain_animation = &"windup_bite"

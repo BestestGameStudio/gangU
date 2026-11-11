@@ -86,10 +86,8 @@ func _attack_begin_reset() -> void:
 
 # --- ATTACKS -----------------------------------------------------------------
 
-func _lunge(enemy: Enemy, player: Player, dist: float, _tele: BossTelegraph) -> void:
-	_lunge_step(enemy, player, dist)
-	if _t >= LUNGE_TIME:
-		_enter_recover(enemy)
+func _lunge(enemy: Enemy, player: Player, dist: float, tele: BossTelegraph) -> void:
+	_lunge_sequence(enemy, player, dist, tele)
 
 func _spin(enemy: Enemy, player: Player, to_player: Vector2, delta: float, tele: BossTelegraph) -> void:
 	enemy.velocity = to_player.normalized() * enemy.speed * SPIN_DRIFT if to_player.length() > 8.0 else Vector2.ZERO
