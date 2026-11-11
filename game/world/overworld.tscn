@@ -1,4 +1,4 @@
-[gd_scene load_steps=62 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=63 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
@@ -29,6 +29,8 @@
 
 [ext_resource type="Script" path="res://game/world/abandoned_village.gd" id="484_village"]
 [ext_resource type="Script" uid="uid://kq19zfwepvmzr" path="res://game/world/spawn_entry.gd" id="518_spawn_entry"]
+
+[ext_resource type="Script" path="res://game/world/overworld_region.gd" id="548_region"]
 
 [sub_resource type="Resource" id="Resource_spawn_guardsnormal_0"]
 script = ExtResource("518_spawn_entry")
@@ -331,42 +333,48 @@ gate_type = 3
 target_path = "res://game/world/hub.tscn"
 label_text = "HUB"
 
-[node name="GateNormal" parent="." instance=ExtResource("346_gate")]
-position = Vector2(-1100, 50)
-target_dungeon = ExtResource("346_dna")
-offering = ExtResource("350_offer")
+[node name="GateNormal" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"dungeon_a"
+layout_scene = ExtResource("346_dna")
+approach = Vector2(-1100, 50)
 
-[node name="GateRed" parent="." instance=ExtResource("346_gate")]
-position = Vector2(2252, 50)
-gate_type = 1
-target_dungeon = ExtResource("346_dnb")
-offering = ExtResource("350_offer")
+[node name="GateRed" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"dungeon_b"
+layout_scene = ExtResource("346_dnb")
+approach = Vector2(2252, 50)
 
-[node name="GateGenerated" parent="." instance=ExtResource("346_gate")]
-position = Vector2(-700, 1050)
-target_dungeon = ExtResource("346_dng")
-label_text = "GENERATED"
+[node name="GateGenerated" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"generated"
+layout_scene = ExtResource("346_dng")
+approach = Vector2(-700, 1050)
+door_direction = Vector2(1, 0)
 
-[node name="GateBoss" parent="." instance=ExtResource("346_gate")]
-position = Vector2(1850, -1200)
-gate_type = 2
-target_dungeon = ExtResource("346_dnc")
+[node name="GateBoss" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"dungeon_c"
+layout_scene = ExtResource("346_dnc")
+approach = Vector2(1850, -1200)
 
-[node name="GateBeast" parent="." instance=ExtResource("346_gate")]
-position = Vector2(-700, -1200)
-gate_type = 2
-target_dungeon = ExtResource("346_dnd")
-label_text = "BEAST"
+[node name="GateBeast" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"dungeon_d"
+layout_scene = ExtResource("346_dnd")
+approach = Vector2(-700, -1200)
 
-[node name="GateDefense" parent="." instance=ExtResource("346_gate")]
-position = Vector2(1850, 1050)
-target_dungeon = ExtResource("337_dne")
-label_text = "DEFENSE"
+[node name="GateDefense" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"dungeon_e"
+layout_scene = ExtResource("337_dne")
+approach = Vector2(1850, 1050)
 
-[node name="GateMaze" parent="." instance=ExtResource("346_gate")]
-position = Vector2(576, -1650)
-target_dungeon = ExtResource("367_maze")
-label_text = "MAZE"
+[node name="GateMaze" type="Node2D" parent="."]
+script = ExtResource("548_region")
+encounter_id = &"dungeon_maze"
+layout_scene = ExtResource("367_maze")
+approach = Vector2(576, -2200)
 
 [node name="EntranceGuards" type="Node" parent="."]
 
