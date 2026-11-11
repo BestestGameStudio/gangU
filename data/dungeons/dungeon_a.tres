@@ -8,5 +8,4 @@ area_name = &"DungeonA"
 id = &"dungeon_a"
 label = "Dungeon A"
 scene = "res://game/world/dungeon_a.tscn"
-default_exit_portal = true
 revive_item = true
