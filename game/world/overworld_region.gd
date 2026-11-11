@@ -12,6 +12,10 @@ var bounds := Rect2()
 var active := true
 var arrival := Vector2.ZERO
 var entry := Vector2.ZERO
+## #615: the doorway this region opens through its wall (global rect of the
+## carved cells that were walls) and the wall art id of its own palette.
+var door_gap := Rect2()
+var wall_art: StringName = &""
 var _collision_state: Dictionary = {}
 var _source: TerrainMap
 var _syncing_terrain := false
@@ -66,6 +70,8 @@ func mount(shared: TerrainMap) -> void:
 	layout.position = approach - entry_local
 	entry = to_global(approach)
 	arrival = entry - door_direction * 96.0
+	var wall_tile: TerrainTile = source.palette.tile(TerrainTypes.OBSTACLE) if source.palette != null else null
+	wall_art = TerrainArt.art_for(TerrainTypes.OBSTACLE, source.season, wall_tile)
 	_open_source_door(source)
 	_stamp_terrain(source)
 	# Each original region terrain draws its palette/art. Shared terrain is
@@ -132,6 +138,17 @@ func _open_source_door(source: TerrainMap) -> void:
 	var depth := 2
 	while depth < 40 and not source.is_walkable_at_cell(center - forward*depth):
 		depth += 1
+	var gap := Rect2i()
+	var walls := 0
+	for across in range(-1, 2):
+		for along in range(-depth, 4):
+			var cell := center + side * across + forward * along
+			if source.is_walkable_at_cell(cell):
+				continue
+			gap = Rect2i(cell, Vector2i.ONE) if walls == 0 else gap.merge(Rect2i(cell, Vector2i.ONE))
+			walls += 1
+	if walls > 0:
+		door_gap = Rect2(source.to_global(Vector2(gap.position) * source.cell_size), Vector2(gap.size) * source.cell_size)
 	for across in range(-1,2):
 		for along in range(-depth,4):
 			cells[center + side*across + forward*along] = TerrainTypes.GROUND
