@@ -49,6 +49,7 @@ static func hit_spark(parent: Node, pos: Vector2) -> void:
 static func damage_number(parent: Node, at: Vector2, amount: int, crit_tier: int = 0) -> void:
 	if amount <= 0:
 		return
+	if parent is CanvasItem: at = (parent as CanvasItem).to_local(at) # global to parent-local
 	parent.call_deferred("add_child", DamageNumber.create(at, amount, crit_tier))
 
 ## Muzzle accent at the cast point, rotated to the cast direction and tinted
