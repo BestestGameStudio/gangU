@@ -69,7 +69,7 @@ func _ready() -> void:
 	if offering != null and gate_type != GateType.BOSS:
 		var host := _offering_host()
 		if host != null:
-			gate_type = host.offering_type_for(name, gate_type, offering, offering_rng)
+			gate_type = host.call("offering_type_for", name, gate_type, offering, offering_rng)
 		else:
 			gate_type = offering.roll(gate_type, offering_rng)
 	var label: Label = $TypeLabel
@@ -90,14 +90,16 @@ func _ready() -> void:
 
 ## #350: the run's AreaLoader (a Main child since #512) caches one roll per
 ## gate so an offering stays fixed until death; a bare gate outside a Main
-## (unit tests) rolls directly.
-func _offering_host() -> AreaLoader:
+## (unit tests) rolls directly. Duck-typed on purpose: AreaLoader preloads
+## hub.tscn, which holds gates, so naming AreaLoader here is a load cycle that
+## makes gate.tscn fail to load.
+func _offering_host() -> Node:
 	var n := get_parent()
 	while n != null:
-		if n is AreaLoader:
+		if n.has_method("offering_type_for"):
 			return n
-		var loader := n.get_node_or_null("AreaLoader") as AreaLoader
-		if loader != null:
+		var loader := n.get_node_or_null("AreaLoader")
+		if loader != null and loader.has_method("offering_type_for"):
 			return loader
 		n = n.get_parent()
 	return null
