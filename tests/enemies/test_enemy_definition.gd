@@ -146,8 +146,67 @@ func _initialize() -> void:
 	labels = _drop_labels(area)
 	_check(labels.size() == 3, "(e) null definition table + no direct table -> no drop (null behavior preserved)")
 
+	await _test_fishy_audio()
+
 	if failures == 0:
 		print("[98] PASS")
 	else:
 		print("[98] DONE failures=", failures)
 	quit(failures)
+
+
+func _test_fishy_audio() -> void:
+	var p: Player = load("res://game/player/player.tscn").instantiate()
+	root.add_child(p)
+	var fish: Enemy = load("res://game/enemies/enemy_fishy.tscn").instantiate()
+	root.add_child(fish)
+	var second: Enemy = load("res://game/enemies/enemy_fishy.tscn").instantiate()
+	root.add_child(second)
+	fish.set_physics_process(false)
+	second.set_physics_process(false)
+	var audio := fish.get_node("FishyAudio") as FishyAudio
+	var other := second.get_node("FishyAudio") as FishyAudio
+	audio.set_physics_process(false)
+	other.set_physics_process(false)
+	await process_frame
+	fish._player = p
+	second._player = p
+	fish.position = p.position + Vector2(200, 0)
+	second.position = fish.position
+	var behavior := fish._behavior as EnemyBehaviorFishy
+	var other_behavior := second._behavior as EnemyBehaviorFishy
+	behavior.notice_radius = 100.0
+	behavior.leash_radius = 500.0
+	behavior.home = fish.global_position
+	behavior._update_engaged(fish, p, true)
+	other_behavior.engaged = false
+	audio._idle_left = 0.0
+	other._idle_left = 0.0
+	audio.step(0.01)
+	other.step(0.01)
+	_check(audio.whistle_count == 1 and audio._whistle.playing, "Fishy: actual unaware guard starts full whistle nearby")
+	_check(other.whistle_count == 0, "Fishy: global one-whistler cap")
+	_check(not audio._whistle.stream.loop and absf(audio._whistle.stream.get_length() - 16.4) < 0.02, "Fishy: approved full nonlooping B2 melody")
+	_check(audio._idle_left >= 46.3 and audio._idle_left <= 66.4, "Fishy: full cue plus 30-50s quiet spacing")
+	behavior.notice_radius = INF
+	behavior._update_engaged(fish, p, true)
+	audio.step(0.01)
+	_check(not audio._whistle.playing, "Fishy: real dungeon awareness stops whistle")
+	behavior.notice_radius = 100.0
+	behavior.engaged = false
+	audio._idle_left = 0.0
+	audio.step(0.01)
+	p.position += Vector2(1000, 0)
+	audio.step(0.01)
+	_check(not audio._whistle.playing, "Fishy: range exit stops whistle")
+	p.position = Vector2.ZERO
+	p.hp = 0
+	audio.step(0.01)
+	_check(not audio._whistle.playing, "Fishy: player death silences whistle")
+	p.hp = 100
+	fish.hp = 0
+	audio.step(0.01)
+	_check(not audio._whistle.playing, "Fishy: enemy death silences whistle")
+	fish.free()
+	second.free()
+	p.free()
