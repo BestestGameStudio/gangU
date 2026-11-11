@@ -55,6 +55,9 @@ signal progress_changed(current: int, target: int)
 ## #367: grid pathfinding handed to every wave enemy (maze defense). Null -
 ## DungeonE - keeps the straight-line chase.
 @export var wave_nav: FlowNav
+## The folded overworld uses one shared map outside this region.
+## Null retains the legacy sibling Terrain fallback for isolated layouts.
+@export var wave_terrain: TerrainMap
 
 
 var _current: int = 0
@@ -179,7 +182,10 @@ func _setup_defense() -> void:
 	_spawner.name = "WaveSpawner"
 	add_child(_spawner)
 	var area := get_parent()
-	_spawner.setup([], wave_player_path, area.get_node_or_null("Terrain") as TerrainMap if area else null, area)
+	var terrain := wave_terrain
+	if terrain == null and area != null:
+		terrain = area.get_node_or_null("Terrain") as TerrainMap
+	_spawner.setup([], wave_player_path, terrain, area)
 
 func _physics_process(delta: float) -> void:
 	if not _active:
