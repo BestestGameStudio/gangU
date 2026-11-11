@@ -9,3 +9,6 @@ enraged_radius = 180.0
 damage = 15
 display_time = 0.55
 color = Color(0.72, 1, 0.26, 1)
+duration = 0.55
+enraged_duration = 0.55
+phase_first_radius = true
