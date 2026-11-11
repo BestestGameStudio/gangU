@@ -84,6 +84,29 @@ func _run() -> void:
 		last = now
 	samples.sort()
 	print('[world-perf] frame-cadence-us p50=', samples[60], ' p90=', samples[108], ' headless, not browser FPS')
+	# Clearing keeps the cached world: live approach guards must be removed
+	# explicitly, while an uncleared neighboring approach stays guarded.
+	var a := loader.region_for(&'dungeon_a')
+	var b := loader.region_for(&'dungeon_b')
+	var a_spawner := a.layout.get_node('ApproachSpawner') as EnemySpawner
+	var b_spawner := b.layout.get_node('ApproachSpawner') as EnemySpawner
+	var a_guards: Array = []
+	var b_guards: Array = []
+	for group in a_spawner._alive.values(): a_guards.append_array(group)
+	for group in b_spawner._alive.values(): b_guards.append_array(group)
+	_check(not a_guards.is_empty() and not b_guards.is_empty(), 'both uncleared approaches initially guarded')
+	var host := a.layout.get_node('RegionEncounterHost') as RegionEncounterHost
+	for round in 8:
+		for e in host._alive.duplicate():
+			if is_instance_valid(e): e.apply_damage(999999)
+		await _frames(2)
+	_check(loader.is_cleared(&'dungeon_a'), 'actual A mob clear records victory')
+	loader._load_hub()
+	await _frames(2)
+	loader.enter_overworld()
+	await _frames(2)
+	_check(a_guards.all(func(e): return not is_instance_valid(e)), 'cleared A approach guards absent after cached hub trip')
+	_check(b_guards.all(func(e): return is_instance_valid(e) and e.hp > 0), 'uncleared B approach guard control unchanged')
 	# Full reload is the death-reset path. No cached region may survive it.
 	var old_id := ow.get_instance_id()
 	reload_current_scene()
