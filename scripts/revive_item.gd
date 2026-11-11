@@ -11,7 +11,7 @@ func _ready() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if not body is Player:
 		return
-	var satchel := get_tree().get_first_node_in_group("revive_satchel")
-	if satchel != null and satchel.has_method(&"collect"):
+	var satchel := get_tree().get_first_node_in_group("revive_satchel") as ReviveSatchel
+	if satchel != null:
 		satchel.collect()
 		queue_free()

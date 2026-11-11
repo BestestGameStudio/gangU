@@ -20,10 +20,8 @@ var world_map: WorldMap = null
 ## #512: the run's MusicDirector; area swaps, boss spawns and objective
 ## completions drive it.
 var music: MusicDirector = null
-## #512: the run's TravelService; refreshed after swaps and clears. Untyped on
-## purpose: a typed AreaLoader <-> TravelService pair would be a cyclic class
-## reference, and GDScript resolves calls on a Variant at runtime.
-var travel = null
+## #512: the run's TravelService; refreshed after swaps and clears.
+var travel: TravelService = null
 
 var current_area: Node = null
 
@@ -137,7 +135,7 @@ func _swap(area: Node) -> void:
 	var p := player
 	var spawn := current_area.get_node_or_null("PlayerSpawn")
 	if p and spawn:
-		p.global_position = spawn.global_position
+		p.global_position = (spawn as Node2D).global_position
 	if p:
 		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
 	if world_map:
@@ -336,7 +334,7 @@ func _on_objective_failed(dungeon_id: StringName) -> void:
 ## Boss -> Main/<Area>/<Boss>, so the Player is "../../Player" (AreaSpawnData idiom).
 func _on_boss_spawned(boss: Node) -> void:
 	if boss is Enemy:
-		boss.player_path = NodePath("../../Player")
+		(boss as Enemy).player_path = NodePath("../../Player")
 	# #359: boss theme (random of the two tracks) for RED-entered dungeon bosses
 	# and the boss arenas (Head, Beast). A NORMAL-rolled dungeon's boss is silent.
 	if music and current_area:

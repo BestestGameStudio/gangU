@@ -13,17 +13,17 @@ var _phase := ""
 const CENTER := Vector2(560, 600)
 
 func _initialize() -> void:
-	var area: Node2D = load("res://scenes/overworld.tscn").instantiate()
+	var area: Node2D = (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
 	root.add_child(area)
 	current_scene = area
-	_p = load("res://scenes/player.tscn").instantiate()
+	_p = (load("res://scenes/player.tscn") as PackedScene).instantiate()
 	_p.name = "Player"
 	_p.add_to_group("player")
 	area.add_child(_p)
 	_p.global_position = CENTER
 	_p.set_physics_process(false)
 	for i in 6:
-		var e: Enemy = load("res://scenes/enemy.tscn").instantiate()
+		var e: Enemy = (load("res://scenes/enemy.tscn") as PackedScene).instantiate()
 		e.player_path = NodePath("../Player")
 		e.contact_damage = 0
 		area.add_child(e)

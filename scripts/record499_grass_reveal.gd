@@ -14,7 +14,7 @@ var _phase := ""
 var _open: Enemy
 
 func _initialize() -> void:
-	var area: Node2D = load("res://scenes/overworld.tscn").instantiate()
+	var area: Node2D = (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
 	root.add_child(area)
 	current_scene = area
 	await physics_frame
@@ -27,7 +27,7 @@ func _initialize() -> void:
 	var at: Vector2 = patch["at"]
 	var r: float = patch["r"]
 
-	_p = load("res://scenes/player.tscn").instantiate()
+	_p = (load("res://scenes/player.tscn") as PackedScene).instantiate()
 	_p.name = "Player"
 	_p.add_to_group("player")
 	area.add_child(_p)
@@ -35,7 +35,7 @@ func _initialize() -> void:
 	_p.set_physics_process(false)
 	_p.global_position = at
 
-	_open = load("res://scenes/enemy.tscn").instantiate()
+	_open = (load("res://scenes/enemy.tscn") as PackedScene).instantiate()
 	area.add_child(_open)
 	_open.terrain = map
 	_open.cover_seek = false

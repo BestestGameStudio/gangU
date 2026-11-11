@@ -199,7 +199,7 @@ func _player_within(radius: float) -> bool:
 func _is_engaged() -> bool:
 	var b: RefCounted = _enemy._behavior
 	if b != null and "engaged" in b:
-		return b.engaged # guard/patrol: the behavior's own flag is authoritative
+		return b.get(&"engaged") # guard/patrol: the behavior's own flag is authoritative
 	return _player_within(ENGAGE_RADIUS)
 
 func _cue_voice() -> StringName:
@@ -219,7 +219,7 @@ func _play_cue(state: StringName, forced_alias: StringName = &"") -> void:
 	var alias := forced_alias
 	if alias == &"":
 		var options: Array = []
-		for a in ALIASES[state]:
+		for a: StringName in ALIASES[state]:
 			# The spotted bark is reserved for the engage rising edge
 			# (forced); it is never random chatter.
 			if state == &"combat" and a == &"combat_spotted":

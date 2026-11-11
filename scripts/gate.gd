@@ -91,13 +91,13 @@ func _ready() -> void:
 ## #350: the run's AreaLoader (a Main child since #512) caches one roll per
 ## gate so an offering stays fixed until death; a bare gate outside a Main
 ## (unit tests) rolls directly.
-func _offering_host() -> Node:
+func _offering_host() -> AreaLoader:
 	var n := get_parent()
 	while n != null:
-		if n.has_method("offering_type_for"):
+		if n is AreaLoader:
 			return n
-		var loader := n.get_node_or_null("AreaLoader")
-		if loader != null and loader.has_method("offering_type_for"):
+		var loader := n.get_node_or_null("AreaLoader") as AreaLoader
+		if loader != null:
 			return loader
 		n = n.get_parent()
 	return null
@@ -256,7 +256,7 @@ func _update_label_placement() -> void:
 		gate_screen + Vector2(-label_size.x - 26.0 - LABEL_GAP, -label_size.y / 2.0),
 	]
 	var pool: Array[Vector2] = []
-	for tl in candidates:
+	for tl: Vector2 in candidates:
 		if _clear_of_gates(Rect2(tl, label_size), other_gate_rects):
 			pool.append(tl)
 	if pool.is_empty():

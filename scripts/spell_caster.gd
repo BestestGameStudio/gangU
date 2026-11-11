@@ -118,11 +118,11 @@ func has_logical_spell(spell: Spell) -> bool:
 		return false
 	if unlocked.has(spell) or spells.has(spell):
 		return true
-	var progress := get_tree().get_first_node_in_group("spell_progress") if is_inside_tree() else null
-	if progress == null or not ("upgrades" in progress):
+	var progress := get_tree().get_first_node_in_group("spell_progress") as SpellProgress if is_inside_tree() else null
+	if progress == null:
 		return false
 	var parent_of: Dictionary = {}
-	for u in progress.upgrades:
+	for u: SpellUpgrade in progress.upgrades:
 		if u != null and u.result_spell != null and u.source_spell != null:
 			parent_of[u.result_spell] = u.source_spell
 	for held in unlocked:
@@ -290,7 +290,7 @@ func can_cast() -> bool:
 	return equipped_spell != null and cooldown_remaining(equipped_spell) <= 0.0
 
 func _process(delta: float) -> void:
-	for s in _cooldowns.keys():
+	for s: Spell in _cooldowns.keys():
 		_cooldowns[s] = maxf(_cooldowns[s] - delta, 0.0)
 	_tick_hammer(delta)
 	if not _vortexes.is_empty():
@@ -346,8 +346,9 @@ func live_shots(spell: Spell) -> Array[Projectile]:
 	var out: Array[Projectile] = []
 	if spell == null:
 		return out
-	for p in get_tree().get_nodes_in_group(&"projectiles"):
-		if p is Projectile and p.spell == spell and p.source == get_parent() and not p.is_queued_for_deletion():
+	for n in get_tree().get_nodes_in_group(&"projectiles"):
+		var p := n as Projectile
+		if p != null and p.spell == spell and p.source == get_parent() and not p.is_queued_for_deletion():
 			out.append(p)
 	return out
 
@@ -387,8 +388,9 @@ func active_shield() -> WaterShield:
 	if owner_node == null:
 		return null
 	for c in owner_node.get_children():
-		if c is WaterShield and c.is_active() and not c.is_queued_for_deletion():
-			return c
+		var shield := c as WaterShield
+		if shield != null and shield.is_active() and not shield.is_queued_for_deletion():
+			return shield
 	return null
 
 ## Spawns (or refreshes) the shield, or - Big Ball with a shield up - fires
@@ -498,7 +500,7 @@ func _owner_alive() -> bool:
 ## Drops vortexes whose spell left every cast key (unequipped, upgraded) or
 ## whose caster died, so none is left pulling with no key to release it.
 func _prune_charges() -> void:
-	for s in _vortexes.keys():
+	for s: Spell in _vortexes.keys():
 		if not is_charging(s) or not _owner_alive() or not (_slots.has(s) or equipped_spell == s):
 			cancel_charge(s)
 
@@ -569,7 +571,7 @@ func _cast_spell(spell: Spell) -> void:
 	var cast_pos := global_position
 	var dir := global_position.direction_to(aim_point())
 	if dir.length_squared() == 0.0:
-		dir = Vector2.RIGHT.rotated(get_parent().rotation)
+		dir = Vector2.RIGHT.rotated((get_parent() as Node2D).rotation)
 	# #216: terrain-block spells place their tile BEFORE anything else; a
 	# refused placement returns here, so it costs no cooldown and emits nothing.
 	if spell.terrain_block != &"":
@@ -651,7 +653,7 @@ func _run_burst(spell: Spell, remaining: int) -> void:
 			return
 		var dir := global_position.direction_to(aim_point())
 		if dir.length_squared() == 0.0:
-			dir = Vector2.RIGHT.rotated(get_parent().rotation)
+			dir = Vector2.RIGHT.rotated((get_parent() as Node2D).rotation)
 		_spawn_fanout(spell, dir)
 
 
@@ -682,7 +684,7 @@ func _on_launch_ended(spell: Spell, player: Player) -> void:
 	# from the settled post-launch position.
 	var dir := global_position.direction_to(aim_point())
 	if dir.length_squared() == 0.0:
-		dir = Vector2.RIGHT.rotated(get_parent().rotation)
+		dir = Vector2.RIGHT.rotated((get_parent() as Node2D).rotation)
 	if spell.projectile_count > 0:
 		_spawn_fanout(spell, dir)
 		if spell.burst_count > 1:

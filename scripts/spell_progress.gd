@@ -10,7 +10,7 @@ extends Node
 ## caster atomically. XP is observed READ-ONLY from the caster's spell_cast
 ## signal - no XP spending or qualification policy is invented here.
 
-signal upgrades_changed(spell)
+signal upgrades_changed(spell: Spell)
 
 ## Explicit caster wiring (no-group convention from #34).
 @export var caster_path: NodePath
@@ -20,12 +20,12 @@ signal upgrades_changed(spell)
 
 var _cast_counts: Dictionary = {} # Spell -> int, read-only XP observation
 var _tiers: Dictionary = {} # Spell -> int tier, written ONLY on successful apply (#36)
-var _caster: Node
+var _caster: SpellCaster
 
 func _ready() -> void:
 	add_to_group("spell_progress")
-	_caster = get_node_or_null(caster_path) if not caster_path.is_empty() else null
-	if _caster != null and _caster.has_signal("spell_cast"):
+	_caster = get_node_or_null(caster_path) as SpellCaster if not caster_path.is_empty() else null
+	if _caster != null:
 		_caster.spell_cast.connect(_on_spell_cast)
 
 func _on_spell_cast(spell: Spell) -> void:
@@ -52,7 +52,7 @@ func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
 ## second copy of the base is looted later. Other spell trees keep their
 ## existing duplicate-copy behavior. False without a caster.
 func route_taken(spell: Spell) -> bool:
-	if _caster == null or not _caster.has_method("get_unlocked"):
+	if _caster == null:
 		return false
 	var parent_of: Dictionary = {} # result Spell -> source Spell
 	for u in upgrades:
@@ -74,7 +74,7 @@ func route_taken(spell: Spell) -> bool:
 		one_route = roots.has(ancestor)
 	if not one_route:
 		return false
-	for held in _caster.get_unlocked():
+	for held: Spell in _caster.get_unlocked():
 		if held == spell:
 			continue
 		var cur: Spell = held
@@ -93,7 +93,7 @@ func get_tier(spell: Spell) -> int:
 	return int(_tiers.get(spell, 0))
 
 func can_upgrade(spell: Spell) -> bool:
-	if _caster == null or not _caster.has_method("get_unlocked"):
+	if _caster == null:
 		return false
 	if spell not in _caster.get_unlocked():
 		return false
@@ -112,7 +112,7 @@ func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
 		return false
 	for u in get_upgrade_paths(spell):
 		if u.id == upgrade_id:
-			if _caster == null or not _caster.has_method("replace_spell"):
+			if _caster == null:
 				push_warning("SpellProgress: replace_spell seam not landed yet (Mitra post-#63 follow-up); refusing.")
 				return false
 			if u.result_spell == null:
@@ -164,7 +164,7 @@ func path_needs_token(spell: Spell, u: SpellUpgrade) -> bool:
 
 ## A token could advance this spell one tier right now.
 func can_token_upgrade(spell: Spell) -> bool:
-	if _upgrade_tokens <= 0 or _caster == null or not _caster.has_method("get_unlocked"):
+	if _upgrade_tokens <= 0 or _caster == null:
 		return false
 	if spell not in _caster.get_unlocked():
 		return false
@@ -179,7 +179,7 @@ func apply_upgrade_with_token(spell: Spell, upgrade_id: StringName) -> bool:
 	if _upgrade_tokens <= 0:
 		push_warning("SpellProgress: no upgrade token held; refusing.")
 		return false
-	if _caster == null or not _caster.has_method("get_unlocked") or spell not in _caster.get_unlocked():
+	if _caster == null or spell not in _caster.get_unlocked():
 		push_warning("SpellProgress: token target spell not held; refusing.")
 		return false
 	if not apply_upgrade(spell, upgrade_id):

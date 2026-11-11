@@ -467,7 +467,7 @@ func _build_layers() -> void:
 	# Art layers: 64 px TileSet scaled to this map's cell size, drawn over
 	# the color layers (child order).
 	var k := float(cell_size) / float(TerrainArt.CELL)
-	for layer_name in ["ArtFloor", "ArtWalls", "ArtObjects"]:
+	for layer_name: String in ["ArtFloor", "ArtWalls", "ArtObjects"]:
 		var layer := TileMapLayer.new()
 		layer.name = layer_name
 		layer.tile_set = TerrainArt.tile_set()
@@ -592,7 +592,7 @@ func _draw_art(c: Vector2i, art: StringName, same: Callable) -> void:
 			_art_walls.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(m, TerrainArt.row(art) + alt))
 
 func _set_floor(c: Vector2i, art: StringName) -> void:
-	var col := 0 if TerrainArt.SETS[art].get("animated", false) else TerrainArt.variant(c, 1)
+	var col := 0 if (TerrainArt.SETS[art] as Dictionary).get("animated", false) else TerrainArt.variant(c, 1)
 	_art_floor.set_cell(c, TerrainArt.TILES_SOURCE, Vector2i(col, TerrainArt.row(art)))
 
 ## Tree / block break: the art's 4-frame destroy one-shot (ends on the
@@ -608,7 +608,7 @@ func _play_destroy(cell: Vector2i, art: StringName) -> void:
 	s.scale = Vector2(k, k)
 	_art_fx.add_child(s)
 	s.play()
-	s.animation_finished.connect(func():
+	s.animation_finished.connect(func() -> void:
 		var tw := s.create_tween()
 		tw.tween_interval(0.8)
 		tw.tween_property(s, "modulate:a", 0.0, 0.6)

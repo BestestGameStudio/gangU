@@ -155,6 +155,9 @@ const GLOW_PULSE_AMP: float = 0.2 ## +/-20% halo pulse
 const SPRITE_PULSE_AMP: float = 0.1 ## +/-10% sprite pulse
 var _glow: Polygon2D = null
 var _trail: Line2D = null
+@onready var _shape_node: CollisionShape2D = $CollisionShape2D
+@onready var _visual: Polygon2D = $Visual
+@onready var _dart: Polygon2D = $Dart
 
 func setup(p_spell: Spell, p_direction: Vector2, p_source: Node2D) -> void:
 	spell = p_spell
@@ -238,20 +241,21 @@ func _ready() -> void:
 	# #331: lets casters find their live shots (steer redirect) and lets the
 	# Water Bubble find hostile shots to absorb.
 	add_to_group(&"projectiles")
-	$CollisionShape2D.shape = $CollisionShape2D.shape.duplicate() # per-spell radius must not leak across instances (#4 gate)
-	$CollisionShape2D.shape.radius = spell.radius
-	$Visual.color = spell.projectile_color
+	var circle := _shape_node.shape.duplicate() as CircleShape2D # per-spell radius must not leak across instances (#4 gate)
+	circle.radius = spell.radius
+	_shape_node.shape = circle
+	_visual.color = spell.projectile_color
 	# #96: direction-legible dart - same per-spell tint and radius scale as the
 	# core. Points +X; the root's rotation already faces the flight direction.
-	$Dart.color = spell.projectile_color
-	$Dart.scale = Vector2(spell.radius / 4.0, spell.radius / 4.0)
+	_dart.color = spell.projectile_color
+	_dart.scale = Vector2(spell.radius / 4.0, spell.radius / 4.0)
 	var _vis_scale := spell.radius / 4.0 # Visual polygon is authored at radius 4
-	$Visual.scale = Vector2(_vis_scale, _vis_scale)
+	_visual.scale = Vector2(_vis_scale, _vis_scale)
 	body_entered.connect(_on_body_entered)
-	_vis_base = $Visual.scale
+	_vis_base = _visual.scale
 	if visual_override != null:
-		$Dart.visible = false
-		$Visual.visible = false
+		_dart.visible = false
+		_visual.visible = false
 		visual_override.name = "VisualOverride"
 		add_child(visual_override)
 	else:
@@ -348,8 +352,8 @@ func _wire_sprite() -> void:
 	add_child(_sprite)
 	_sprite.animation_finished.connect(_sprite.play.bind(anim), CONNECT_ONE_SHOT)
 	_sprite.play(StringName("%s_start" % anim))
-	$Dart.visible = false
-	$Visual.visible = false
+	_dart.visible = false
+	_visual.visible = false
 
 func _physics_process(delta: float) -> void:
 	if _spawn_claim_pending:
@@ -360,7 +364,7 @@ func _physics_process(delta: float) -> void:
 		# inside-spawn is claimed with zero motion (Area2D registration lags
 		# a frame, so the bubble's scan alone can miss a mid-frame spawn).
 		_spawn_claim_pending = false
-		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+		for bubble: FreezeBubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
 	if freeze.is_frozen():
 		return
@@ -406,9 +410,9 @@ func _physics_process(delta: float) -> void:
 	# (#210: kept running even while a supplied-art sprite hides the diamond,
 	# so the feel state stays live if the visual is ever swapped back.)
 	_vis_t += delta
-	$Visual.rotation += SPIN_RATE * delta
+	_visual.rotation += SPIN_RATE * delta
 	var pulse: float = 1.0 + PULSE_AMP * sin(_vis_t * PULSE_RATE)
-	$Visual.scale = _vis_base * pulse
+	_visual.scale = _vis_base * pulse
 	_update_feel()
 
 ## #263: sprite/halo pulse and trail follow (visual only).
@@ -426,7 +430,7 @@ func _update_feel() -> void:
 func _steer(delta: float) -> void:
 	var best: Node2D = null
 	var best_d2: float = HOMING_RANGE * HOMING_RANGE
-	for e in get_tree().get_nodes_in_group(&"enemies"):
+	for e: Enemy in get_tree().get_nodes_in_group(&"enemies"):
 		if not is_instance_valid(e):
 			continue
 		if e.hp <= 0: # living enemies only
@@ -505,7 +509,7 @@ func _on_body_entered(body: Node2D) -> void:
 	# counts and _hit_bodies are untouched - the summon simply never happened.
 	if body is Summon:
 		var s := body as Summon
-		if is_instance_valid(s.player) and s.player is Player and is_instance_valid(source) and (source is Player or (source is Summon and source.player == s.player)):
+		if is_instance_valid(s.player) and s.player is Player and is_instance_valid(source) and (source is Player or (source is Summon and (source as Summon).player == s.player)):
 			return
 	if body.has_method(&"apply_damage"):
 		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, body.get(&"damage_modifiers") as DamageModifiers, _attacker_rng)
@@ -520,11 +524,11 @@ func _on_body_entered(body: Node2D) -> void:
 		# (accepted? killed? hp lost?) before hit/hit_resolved listeners run.
 		var receipt := OnHit.begin(body)
 		if body.has_method(&"apply_damage_from"):
-			body.apply_damage_from(result.amount, self, result.crit_tier)
+			body.call(&"apply_damage_from", result.amount, self, result.crit_tier)
 		elif body is Enemy:
-			body.apply_damage(result.amount, result.crit_tier)
+			(body as Enemy).apply_damage(result.amount, result.crit_tier)
 		else:
-			body.apply_damage(result.amount)
+			body.call(&"apply_damage", result.amount)
 		OnHit.end(receipt, body)
 		_hit_bodies.append(body)
 		_hit_times[body] = _life_t
@@ -616,7 +620,7 @@ func _cell_entry_t(from: Vector2, motion: Vector2, cell: Vector2i) -> float:
 func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	var params := PhysicsShapeQueryParameters2D.new()
-	params.shape = $CollisionShape2D.shape
+	params.shape = _shape_node.shape
 	params.transform = Transform2D(direction.angle(), from)
 	params.motion = motion
 	params.collision_mask = collision_mask

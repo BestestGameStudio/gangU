@@ -433,7 +433,7 @@ func _clearance_penalty(map: TerrainMap, cell: Vector2i, goal: Vector2i, can_swi
 	if cell == goal:
 		return 0.0
 	var blocked := 0
-	for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+	for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 		if not _passable(map, cell + d, can_swim):
 			blocked += 1
 	return 0.75 * blocked

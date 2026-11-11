@@ -106,7 +106,7 @@ func _ready() -> void:
 	if objective_type == ObjectiveType.DEFEAT_BOSS:
 		_target = 1
 		for boss in get_tree().get_nodes_in_group("boss"):
-			boss.died.connect(_on_target_died)
+			boss.connect(&"died", _on_target_died)
 	elif objective_type == ObjectiveType.ELIMINATION:
 		var mobs := get_tree().get_nodes_in_group("enemies")
 		_mob_target = target_count if target_count > 0 else mobs.size()
@@ -127,14 +127,14 @@ func _ready() -> void:
 ## (EnemySlime.children_spawned, emitted before this objective sees the death),
 ## also count each child. Scoped to enemies this objective already watches.
 func _watch(e: Node) -> void:
-	e.died.connect(_on_target_died)
-	if e.has_signal("children_spawned"):
-		e.children_spawned.connect(_on_children_spawned)
+	e.connect(&"died", _on_target_died)
+	if e is EnemySlime:
+		(e as EnemySlime).children_spawned.connect(_on_children_spawned)
 
 func _on_children_spawned(kids: Array) -> void:
 	if _is_completed:
 		return
-	for k in kids:
+	for k: Node in kids:
 		_target += 1
 		if objective_type == ObjectiveType.ELIMINATION:
 			_mob_target += 1
@@ -165,14 +165,14 @@ func _spawn_boss() -> void:
 	# #396: a boss moves on its area's terrain like the mobs do (spawned
 	# mobs get it from EnemySpawner); no Terrain node = flat, as before.
 	if boss is Enemy and get_parent() != null:
-		boss.terrain = get_parent().get_node_or_null("Terrain") as TerrainMap
+		(boss as Enemy).terrain = get_parent().get_node_or_null("Terrain") as TerrainMap
 	# Group consistency with the shipped convention (test_dungeon_boss.tscn,
 	# DEFEAT_BOSS ready-scan): the boss joins the "boss" group. Its own
 	# script may also add "enemies" on ready; mob connections were already
 	# made at objective ready, so no double-count is possible here.
 	boss.add_to_group("boss")
 	if boss.has_signal("died"):
-		boss.died.connect(_on_target_died)
+		boss.connect(&"died", _on_target_died)
 	else:
 		push_error("DungeonObjective: ELIMINATION boss_scene root lacks a `died` signal; the objective can never complete.")
 	get_parent().call_deferred("add_child", boss)
@@ -282,8 +282,8 @@ func spawn_next_wave() -> void:
 		# #392: a splitting wave enemy's descendants stay in its wave.
 		# children_spawned fires before the parent's died, so the wave count
 		# rises before it falls and a wave never reads cleared early.
-		if e.has_signal("children_spawned"):
-			e.children_spawned.connect(_on_wave_children_spawned.bind(wave))
+		if e is EnemySlime:
+			(e as EnemySlime).children_spawned.connect(_on_wave_children_spawned.bind(wave))
 	if is_boss_wave(wave) and wave_boss_scene != null and wave_boss_count > 0:
 		_wave_alive[wave - 1] += wave_boss_count
 		_pending_bosses.append([wave_boss_delay, wave])
@@ -311,8 +311,8 @@ func _spawn_wave_bosses(wave: int) -> void:
 			boss.objective_target = defense_core
 		boss.add_to_group("boss")
 		boss.died.connect(_on_wave_enemy_died.bind(wave))
-		if boss.has_signal("children_spawned"):
-			boss.children_spawned.connect(_on_wave_children_spawned.bind(wave))
+		if boss is EnemySlime:
+			(boss as EnemySlime).children_spawned.connect(_on_wave_children_spawned.bind(wave))
 		boss_spawned.emit(boss)
 
 ## #368: counts down pending boss arrivals and spawns the due ones. Runs from
@@ -321,7 +321,7 @@ func _tick_pending_bosses(delta: float) -> void:
 	if _pending_bosses.is_empty() or _failed or _is_completed:
 		return
 	var due: Array[int] = []
-	for p in _pending_bosses:
+	for p: Array in _pending_bosses:
 		p[0] -= delta
 		if p[0] <= 0.0:
 			due.append(p[1])
@@ -362,13 +362,14 @@ func _on_wave_enemy_died(wave: int) -> void:
 func _on_wave_children_spawned(kids: Array, wave: int) -> void:
 	if wave < 1 or wave > _wave_alive.size():
 		return
-	for k in kids:
-		if not (k is Enemy):
+	for k: Node in kids:
+		var kid := k as Enemy
+		if kid == null:
 			continue
 		_wave_alive[wave - 1] += 1
-		k.died.connect(_on_wave_enemy_died.bind(wave))
-		if k.has_signal("children_spawned"):
-			k.children_spawned.connect(_on_wave_children_spawned.bind(wave))
+		kid.died.connect(_on_wave_enemy_died.bind(wave))
+		if kid is EnemySlime:
+			(kid as EnemySlime).children_spawned.connect(_on_wave_children_spawned.bind(wave))
 
 func _on_core_destroyed() -> void:
 	if _is_completed or _failed:

@@ -27,7 +27,8 @@ var terrain: TerrainMap = null
 ## #212: per-entity damage rolls for behavior attacks, same idiom as Enemy.
 var damage_rng := RandomNumberGenerator.new()
 
-var _behavior = null
+## A SummonDefinition.behavior script instance; any script with physics_step.
+var _behavior: Object = null
 
 func setup(def: SummonDefinition) -> void:
 	definition = def
@@ -43,7 +44,7 @@ func _ready() -> void:
 	# #212: each Summon instantiates its OWN behavior instance, so per-summon
 	# state (contact cooldown) is never shared across summons.
 	if definition != null and definition.behavior != null:
-		_behavior = definition.behavior.new()
+		_behavior = (definition.behavior as GDScript).new()
 
 ## #305: Signature freeze. While held, the behavior physics_step (which
 ## accumulates ALL behavior clocks from delta) never runs, so the whole
@@ -61,12 +62,12 @@ func _physics_process(delta: float) -> void:
 		# hook would claim against a stale position. Here the position is
 		# final and movement has not started - zero-motion inside-spawns.
 		_spawn_claim_pending = false
-		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
+		for bubble: FreezeBubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
 	if freeze.is_frozen():
 		return
 	if _behavior != null and hp > 0:
-		_behavior.physics_step(self, player, delta)
+		_behavior.call(&"physics_step", self, player, delta)
 
 func apply_damage(amount: int) -> void:
 	if hp <= 0:
@@ -91,8 +92,8 @@ func apply_damage(amount: int) -> void:
 ## crit_tier (#208) is accepted for dispatch parity; summons show no numbers.
 func apply_damage_from(amount: int, projectile: Node2D, _crit_tier: int = 0) -> void:
 	if is_instance_valid(player) and player is Player and projectile is Projectile:
-		var src: Node2D = projectile.source
-		if is_instance_valid(src) and (src is Player or (src is Summon and src.player == player)):
+		var src: Node2D = (projectile as Projectile).source
+		if is_instance_valid(src) and (src is Player or (src is Summon and (src as Summon).player == player)):
 			return
 	apply_damage(amount)
 

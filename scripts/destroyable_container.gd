@@ -41,7 +41,7 @@ func _ready() -> void:
 	if definition != null:
 		hp = maxi(definition.max_hp, 0)
 		if has_node("Visual"):
-			$Visual.color = definition.body_color
+			get_node("Visual").set(&"color", definition.body_color)
 
 ## #5 duck-type outer guard: source unknown -> rejected (Daniel's gate).
 func apply_damage(amount: int) -> void:

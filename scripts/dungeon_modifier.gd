@@ -38,7 +38,7 @@ func is_valid_definition() -> bool:
 func matches(event: StringName, payload: Dictionary) -> bool:
 	if event != trigger_event:
 		return false
-	for key in trigger_filter:
+	for key: Variant in trigger_filter:
 		if not payload.has(key) or payload[key] != trigger_filter[key]:
 			return false
 	return true

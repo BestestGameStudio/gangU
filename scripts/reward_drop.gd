@@ -10,6 +10,8 @@ extends Area2D
 signal collected(drop: RewardDrop, entry: RewardEntry)
 
 var entry: RewardEntry
+@onready var _name_label: Label = $NameLabel
+@onready var _visual: Polygon2D = $Visual
 
 const TOKEN_COLOR := Color(0.75, 0.45, 1.0)
 const RELIC_COLOR := Color(0.3, 0.95, 0.85)
@@ -24,26 +26,26 @@ func _ready() -> void:
 		return
 	if entry.kind == RewardEntry.Kind.CURRENCY:
 		# #128 placeholder presentation: gold diamond labeled with the amount.
-		$NameLabel.text = "%dc" % entry.currency_amount
-		$Visual.color = Color(1.0, 0.85, 0.2)
+		_name_label.text = "%dc" % entry.currency_amount
+		_visual.color = Color(1.0, 0.85, 0.2)
 	elif entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
 		# #315 placeholder presentation (art is human-open): violet diamond.
-		$NameLabel.text = "Upgrade Token"
-		$Visual.color = TOKEN_COLOR
+		_name_label.text = "Upgrade Token"
+		_visual.color = TOKEN_COLOR
 	elif entry.kind == RewardEntry.Kind.RELIC:
 		# #426 placeholder presentation (art is human-open): teal diamond
 		# labeled with the relic name.
 		if entry.relic == null:
 			push_warning("RewardDrop: no relic entry assigned.")
 			return
-		$NameLabel.text = entry.relic.display_name
-		$Visual.color = RELIC_COLOR
+		_name_label.text = entry.relic.display_name
+		_visual.color = RELIC_COLOR
 	elif entry.spell == null:
 		push_warning("RewardDrop: no spell entry assigned.")
 		return
 	else:
-		$NameLabel.text = entry.spell.spell_name
-		$Visual.color = entry.spell.projectile_color
+		_name_label.text = entry.spell.spell_name
+		_visual.color = entry.spell.projectile_color
 	body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node2D) -> void:
@@ -60,16 +62,16 @@ func _on_body_entered(body: Node2D) -> void:
 	if entry.kind == RewardEntry.Kind.SPELL and entry.spell != null:
 		# #383: the player already holds this logical spell (any source, or
 		# an upgraded form): consume without grant, pool change or signal.
-		var holder := body.get_node_or_null("SpellCaster")
-		if holder != null and holder.has_method("has_logical_spell") and holder.has_logical_spell(entry.spell):
+		var holder := body.get_node_or_null("SpellCaster") as SpellCaster
+		if holder != null and holder.has_logical_spell(entry.spell):
 			print("[rewards] duplicate spell floor copy consumed (#383)")
 			queue_free()
 			return
 	if pool != null:
 		pool.remove_on_grant(entry)
 	if entry.kind == RewardEntry.Kind.SPELL:
-		var caster := body.get_node_or_null("SpellCaster")
-		if caster != null and caster.has_method("unlock_spell"):
+		var caster := body.get_node_or_null("SpellCaster") as SpellCaster
+		if caster != null:
 			caster.unlock_spell(entry.spell)
 		else:
 			# Defensive fallback only: unlock_spell is live on main. If the

@@ -165,7 +165,7 @@ func build_from(area: Node) -> void:
 	_collect_patrols(area)
 	_build_patches()
 	_build_decor()
-	var village := area.get_node_or_null("AbandonedVillage")
+	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
 		village.shape_decor(self)
 	_plant_tree_collision(area)
@@ -205,7 +205,7 @@ func _road(from: Vector2, to: Vector2, salt: int) -> PackedVector2Array:
 	var side := (to - from).orthogonal().normalized()
 	var length := from.distance_to(to)
 	var bend := clampf(length * 0.12, 0.0, 120.0)
-	for k in [1, 2]:
+	for k: int in [1, 2]:
 		var t: float = k / 3.0
 		var off := (_hash01(salt, k, 7) - 0.5) * 2.0 * bend
 		pts.append(from.lerp(to, t) + side * off)
@@ -266,7 +266,7 @@ func _plant_tree_collision(area: Node) -> void:
 		# circle: its own cell is blocked regardless, so no tree is
 		# walkable at its own position.
 		cells[map.world_to_cell(at)] = TerrainTypes.OBSTACLE
-	var village := area.get_node_or_null("AbandonedVillage")
+	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
 		village.plant_footprints(map, cells, blockers) # #546 houses + well
 	map.set_cells(cells)
@@ -287,7 +287,7 @@ func _build_tall_grass() -> void:
 			if not Geometry2D.is_point_in_polygon(at, inner):
 				continue
 			var r := 64.0 + _hash01(gx, gy, 44) * 64.0
-			var village := get_parent().get_node_or_null("AbandonedVillage") if get_parent() != null else null
+			var village := get_parent().get_node_or_null("AbandonedVillage") as AbandonedVillage if get_parent() != null else null
 			if village != null and at.distance_to(village.position) < 550.0 + r:
 				continue
 			if at.distance_to(spawn) < GRASS_CLEAR + r:

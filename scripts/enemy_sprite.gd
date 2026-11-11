@@ -60,7 +60,7 @@ func _ready() -> void:
 		return
 	var body := get_parent()
 	if body != null and body.has_signal("health_changed"):
-		body.health_changed.connect(_on_health_changed)
+		body.connect(&"health_changed", _on_health_changed)
 	play(&"idle")
 
 ## Current one-shot / held action, or &"" while on locomotion.

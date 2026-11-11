@@ -140,7 +140,7 @@ func _begin_release() -> void:
 	monitorable = false
 	for node in _frozen:
 		if is_instance_valid(node):
-			node.set_frozen(false)
+			node.call(&"set_frozen", false)
 	_frozen.clear()
 	var tween := create_tween()
 	tween.tween_property(_visual, "modulate:a", 0.0, fade_time)
@@ -180,7 +180,7 @@ func is_frozen_actor(node: Node) -> bool:
 func claim(node: Node) -> void:
 	if _releasing:
 		return
-	if node is Node2D and global_position.distance_to(node.global_position) <= _shape.radius:
+	if node is Node2D and global_position.distance_to((node as Node2D).global_position) <= _shape.radius:
 		_try_freeze(node)
 
 
@@ -202,7 +202,7 @@ func _try_freeze(node: Node) -> void:
 	if _frozen.has(node):
 		return
 	_frozen.append(node)
-	node.set_frozen(true)
+	node.call(&"set_frozen", true)
 	node.tree_exiting.connect(_on_frozen_tree_exiting.bind(node), CONNECT_ONE_SHOT)
 
 
@@ -211,7 +211,7 @@ func _unfreeze(node: Node) -> void:
 		return
 	_frozen.erase(node)
 	if is_instance_valid(node):
-		node.set_frozen(false)
+		node.call(&"set_frozen", false)
 
 
 func _on_frozen_tree_exiting(node: Node) -> void:

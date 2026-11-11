@@ -32,16 +32,17 @@ class SpawnOptions extends RefCounted:
 static func spawn(scene: PackedScene, pos: Vector2, opts: SpawnOptions) -> Node:
 	var node := scene.instantiate()
 	if node is Node2D:
-		node.position = pos
-	if node is Enemy:
+		(node as Node2D).position = pos
+	var enemy := node as Enemy
+	if enemy != null:
 		if opts.wire_enemy:
-			node.player_path = opts.player_path
-			node.terrain = opts.terrain
-			node.reward_table = opts.reward_table
+			enemy.player_path = opts.player_path
+			enemy.terrain = opts.terrain
+			enemy.reward_table = opts.reward_table
 		if opts.definition != null:
-			node.definition = opts.definition
+			enemy.definition = opts.definition
 		if opts.context != null:
-			node.context = opts.context
+			enemy.context = opts.context
 	return node
 
 signal spawned(enemy: Enemy, entry: SpawnEntry)
@@ -123,8 +124,8 @@ func _prepare_spawn(entry: SpawnEntry) -> Enemy:
 	e.died.connect(_on_enemy_died.bind(e, entry, idx))
 	# #392: splitting enemies (EnemySlime) route their death-spawned
 	# descendants back through this spawner's policy/bookkeeping seam.
-	if "spawner" in e:
-		e.set("spawner", self)
+	if e is EnemySlime:
+		(e as EnemySlime).spawner = self
 	return e
 
 func _finish_spawn(e: Enemy, entry: SpawnEntry) -> void:
@@ -138,13 +139,14 @@ func _finish_spawn(e: Enemy, entry: SpawnEntry) -> void:
 ## the behavior AFTER tree entry (the behavior is created in Enemy._ready),
 ## converted to global space. Behaviors without configure_route ignore it.
 func _apply_route(e: Enemy, entry: SpawnEntry) -> void:
-	if entry.route.is_empty() or e._behavior == null or not e._behavior.has_method("configure_route"):
+	var guard := e._behavior as EnemyBehaviorGuard
+	if entry.route.is_empty() or guard == null:
 		return
 	var pts := PackedVector2Array()
 	var area_2d := parent_area as Node2D
 	for p in entry.route:
 		pts.append(area_2d.to_global(p) if area_2d != null else p)
-	e._behavior.configure_route(pts)
+	guard.configure_route(pts)
 
 ## Index of this exact entry (identity, not content), so two
 ## entries with identical content keep separate bookkeeping. -1 = an entry
@@ -160,7 +162,7 @@ func alive_count(entry: SpawnEntry) -> int:
 	if not _alive.has(idx):
 		return 0
 	var n := 0
-	for e in _alive[idx]:
+	for e: Variant in _alive[idx]:
 		if is_instance_valid(e):
 			n += 1
 	return n
@@ -168,7 +170,7 @@ func alive_count(entry: SpawnEntry) -> int:
 func total_alive() -> int:
 	var n := 0
 	for idx in _alive:
-		for e in _alive[idx]:
+		for e: Variant in _alive[idx]:
 			if is_instance_valid(e):
 				n += 1
 	return n

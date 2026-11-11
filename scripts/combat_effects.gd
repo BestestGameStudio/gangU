@@ -75,9 +75,9 @@ static func summon_circle(parent: Node, pos: Vector2) -> void:
 
 static func _make(kind: int, color: Color, life: float) -> Node2D:
 	var fx: Node2D = new()
-	fx._kind = kind
-	fx._color = color
-	fx._life = life
+	fx.set(&"_kind", kind)
+	fx.set(&"_color", color)
+	fx.set(&"_life", life)
 	fx.add_to_group(&"combat_fx")
 	fx.set_meta("kind", Kind.keys()[kind])
 	fx.set_meta("life", life)
