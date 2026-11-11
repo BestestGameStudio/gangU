@@ -117,7 +117,14 @@ func _set_barriers(locked: bool) -> void:
 			barrier.set_locked(locked)
 
 func _on_player_died() -> void:
-	if _active:
+	# Player.died is the lethal hit, not a confirmed run death. RunManager
+	# gives ReviveSatchel a synchronous chance to restore HP. Resolve after
+	# every listener, regardless of connection order, without stopping waves
+	# or unlocking a living player's encounter.
+	_resolve_player_death.call_deferred()
+
+func _resolve_player_death() -> void:
+	if _active and is_instance_valid(_player) and _player.hp <= 0:
 		_finish(false)
 
 func _finish(cleared: bool) -> void:
