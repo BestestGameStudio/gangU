@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="PackedScene" path="res://game/enemies/enemy_base.tscn" id="base_513"]
 
@@ -6,6 +6,8 @@
 [ext_resource type="Resource" path="res://data/enemies/fishy.tres" id="4_def"]
 [ext_resource type="Script" path="res://game/enemies/bosses/boss_telegraph.gd" id="5_tele"]
 [ext_resource type="Script" path="res://game/enemies/fishing_line.gd" id="6_line"]
+
+[ext_resource type="Script" path="res://game/enemies/fishy_audio.gd" id="7_audio"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 15.0
@@ -36,3 +38,6 @@ script = ExtResource("6_line")
 
 [node name="CollisionShape2D" parent="." index="4"]
 shape = SubResource("1")
+
+[node name="FishyAudio" type="Node2D" parent="." index="5"]
+script = ExtResource("7_audio")
