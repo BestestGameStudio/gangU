@@ -69,13 +69,17 @@ var home := Vector2.INF
 var engaged := false
 var _last_hp := -1
 
+## #513: authored post/notice variant, INF preserves dungeon behavior.
+@export var notice_radius: float = INF
+@export var leash_radius: float = INF
+
 ## Distance at which the Fishy notices the player. INF (dungeons): always.
 func _notice_radius() -> float:
-	return INF
+	return notice_radius
 
 ## Give-up distance from home. INF (dungeons): never.
 func _leash_radius() -> float:
-	return INF
+	return leash_radius
 
 func physics_step(enemy: Enemy, player, delta: float) -> void:
 	if home == Vector2.INF:
