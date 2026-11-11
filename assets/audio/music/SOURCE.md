@@ -76,3 +76,11 @@ Levels (`ffmpeg -af volumedetect`): mean -14.9 dB, peak -0.1 dB. At runtime
 near the boss themes' effective level (about -21.5 dB mean, then their -6 dB).
 Looping is set in code (`MusicDirector.start_dungeon`), not in the import. The lossless
 WAV master is not committed.
+
+## #597 overworld remix preview (not integrated)
+
+Candidate percussion source: **"Loop - Night Run.mp3" by McChaffe**, Freesound sound330411, published2015-12-07.
+- Source: https://freesound.org/people/McChaffe/sounds/330411/
+- License: Creative Commons Attribution3.0 Unported, https://creativecommons.org/licenses/by/3.0/ . Remixing and redistribution are permitted with attribution, a license link and a description of changes. No endorsement is implied.
+- Preview source: the page's public HQ MP3 preview, https://cdn.freesound.org/previews/330/330411_4263416-hq.mp3 . This is not the login-required original download.
+- Planned processing: blend a quieter percussion bed with the existing original overworld piano, align phrase timing and preserve a soft ending. A listening preview must be approved before replacing the in-game asset. This attribution entry alone changes no game audio.
