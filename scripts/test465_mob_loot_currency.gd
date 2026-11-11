@@ -71,7 +71,7 @@ func _leg_b_mob_contexts() -> void:
 		var found := 0
 		for sd in area.find_children("*", "AreaSpawnData", true, false):
 			for entry in sd.entries:
-				var rt: RewardTable = entry.get("reward_table")
+				var rt := (entry as SpawnEntry).reward_table
 				if rt != null:
 					found += 1
 					if not _currency_only(rt):

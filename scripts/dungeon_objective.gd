@@ -269,7 +269,7 @@ func spawn_next_wave() -> void:
 		@warning_ignore("integer_division")
 		var ring := i / pts
 		var at: Vector2 = wave_spawn_points[(i + wave) % pts] + Vector2.from_angle(float(i) * 2.4) * (18.0 * ring)
-		var e := _spawner.request_spawn({"position": at, "enemy": wave_enemy_scene, "reward_table": wave_reward_table})
+		var e := _spawner.request_spawn(SpawnEntry.new(at, wave_enemy_scene, wave_reward_table))
 		if e == null:
 			continue
 		e.nav = wave_nav
@@ -302,7 +302,7 @@ func _spawn_wave_bosses(wave: int) -> void:
 	var pts := wave_spawn_points.size()
 	for b in wave_boss_count:
 		var at: Vector2 = wave_spawn_points[(wave + b * 2 + 1) % pts]
-		var boss := _spawner.request_spawn({"position": at, "enemy": wave_boss_scene, "reward_table": null})
+		var boss := _spawner.request_spawn(SpawnEntry.new(at, wave_boss_scene))
 		if boss == null:
 			_on_wave_enemy_died(wave)
 			continue

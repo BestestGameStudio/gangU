@@ -2,10 +2,9 @@ class_name EntranceGuards
 extends AreaSpawnData
 ## #346: enemies posted around ONE overworld dungeon entrance.
 ##
-## Same entry format as AreaSpawnData ("position" in the overworld's local
-## space, "enemy", "reward_table"), plus an optional "definition"
-## (EnemyDefinition) that EnemySpawner assigns before tree entry - the
-## overworld uses it to give guards the leashed EnemyBehaviorGuard.
+## Same SpawnEntry entries as AreaSpawnData (position in the overworld's local
+## space); the overworld sets each entry's definition to give guards the
+## leashed EnemyBehaviorGuard.
 ##
 ## Main mounts these on every overworld load, but ONLY while the dungeon
 ## named by dungeon_id is uncleared this run (Colin, 2026-11-08: "enemies

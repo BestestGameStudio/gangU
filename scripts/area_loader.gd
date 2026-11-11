@@ -166,8 +166,8 @@ func _mount_dungeon_modifiers(area: Node) -> void:
 	host.bind(area, main_host.get_node_or_null("Player/SpellCaster") as SpellCaster, main_host.get_node_or_null("RunManager") as RunManager)
 
 ## #100 generic mounter: every area swap reads the area's "SpawnData" child
-## (AreaSpawnData). Entries are plain scene data - position, enemy scene and
-## reward table per spawn. The carrier's player_path is assigned BEFORE
+## (AreaSpawnData). Entries are SpawnEntry scene data - position, enemy scene
+## and reward table per spawn. The carrier's player_path is assigned BEFORE
 ## add_child so Enemy._ready resolves it (D6 explicit wiring).
 ## Children of the area so a gate swap frees them.
 func _mount_area_spawns(area: Node) -> void:
@@ -239,7 +239,7 @@ func _mount_entrance_guards(area: Node) -> void:
 	var holder := area.get_node_or_null("EntranceGuards")
 	if holder == null:
 		return
-	var entries: Array = []
+	var entries: Array[SpawnEntry] = []
 	var player_path := NodePath("../../Player")
 	for g in holder.get_children():
 		var guards := g as EntranceGuards

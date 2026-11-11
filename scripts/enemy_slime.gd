@@ -91,12 +91,7 @@ func _split() -> void:
 	for i in SPLIT_COUNT:
 		var side := -1.0 if i == 0 else 1.0
 		var local: Vector2 = (area as Node2D).to_local(pos + Vector2(side * SPLIT_OFFSET, 0.0)) if area is Node2D else pos
-		var entry := {
-			"position": local,
-			"enemy": scene,
-			"reward_table": reward_table,
-			"definition": halved_definition(self),
-		}
+		var entry := SpawnEntry.new(local, scene, reward_table, halved_definition(self))
 		var child: Enemy = null
 		if spawner != null:
 			child = spawner.request_spawn_deferred(entry)
@@ -106,7 +101,7 @@ func _split() -> void:
 			opts.player_path = player_path
 			opts.terrain = terrain
 			opts.reward_table = reward_table
-			opts.definition = entry["definition"]
+			opts.definition = entry.definition
 			child = EnemySpawner.spawn(scene, local, opts) as Enemy
 			area.call_deferred("add_child", child)
 		if child == null:

@@ -56,8 +56,8 @@ func _ambush() -> AmbushEvent:
 	var enemy: PackedScene = load("res://scenes/enemy.tscn")
 	var table: RewardTable = load("res://resources/rewards/demo_table.tres")
 	a.entries = [
-		{"position": Vector2(-140, -100), "enemy": enemy, "reward_table": table},
-		{"position": Vector2(140, -100), "enemy": enemy, "reward_table": table},
+		SpawnEntry.new(Vector2(-140, -100), enemy, table),
+		SpawnEntry.new(Vector2(140, -100), enemy, table),
 	]
 	return a
 

@@ -69,8 +69,8 @@ func _by_role(main: Node, role: String) -> Array[Enemy]:
 			out.append(n)
 	return out
 
-func _def_role(entry: Dictionary) -> String:
-	var d := entry.get("definition") as EnemyDefinition
+func _def_role(entry: SpawnEntry) -> String:
+	var d := entry.definition
 	if d == null or d.behavior == null:
 		return "none"
 	if (d.behavior is EnemyBehaviorPatrol and d.behavior.get_script() == EnemyBehaviorPatrol and d.behavior.aggro_radius == 220.0 and d.behavior.leash_radius == 520.0 and d.behavior.home_epsilon == 6.0 and d.behavior.stroll_fraction == 0.45 and d.behavior.pause_time == 0.8 and d.behavior.patrol_leash_radius == 900.0 and d.behavior.mustache_leash_radius == 1350.0):
@@ -102,17 +102,17 @@ func _scene_legs() -> void:
 		var g := node as EntranceGuards
 		var guards := 0
 		var patrols_ok := true
-		for entry: Dictionary in g.entries:
+		for entry: SpawnEntry in g.entries:
 			var role := _def_role(entry)
 			counts[role] = counts.get(role, 0) + 1
 			if role == "guard":
 				guards += 1
-				_check(not entry.has("route"), "(A) %s gate guard has no route" % g.name)
+				_check(entry.route.is_empty(), "(A) %s gate guard has no route" % g.name)
 			elif role == "fishy":
-				_check(not entry.has("route"), "(A) %s Fishy (#464) holds a post, no route" % g.name)
+				_check(entry.route.is_empty(), "(A) %s Fishy (#464) holds a post, no route" % g.name)
 			elif role == "patrol":
-				var r: Array = entry.get("route", [])
-				if r.size() < 3 or (r[0] as Vector2) != entry["position"]:
+				var r := entry.route
+				if r.size() < 3 or r[0] != entry.position:
 					patrols_ok = false
 				for p: Vector2 in r:
 					on_field = on_field and ground.covers(p)
@@ -127,16 +127,16 @@ func _scene_legs() -> void:
 	var clear_of_spawn := true
 	var long_paths := true
 	if roamers:
-		for entry: Dictionary in roamers.entries:
+		for entry: SpawnEntry in roamers.entries:
 			var role := _def_role(entry)
 			counts[role] = counts.get(role, 0) + 1
-			_check(role == "migrant", "(A) roamer at %s is a migrant" % entry["position"])
-			var r: Array = entry.get("route", [])
+			_check(role == "migrant", "(A) roamer at %s is a migrant" % entry.position)
+			var r := entry.route
 			var length := 0.0
 			for i in r.size():
 				on_field = on_field and ground.covers(r[i])
 				if i > 0:
-					length += (r[i] as Vector2).distance_to(r[i - 1])
+					length += r[i].distance_to(r[i - 1])
 					var q := Geometry2D.get_closest_point_to_segment(spawn, r[i - 1], r[i])
 					clear_of_spawn = clear_of_spawn and q.distance_to(spawn) > EnemyBehaviorGuard.AGGRO_RADIUS + 150.0
 			long_paths = long_paths and length > 900.0

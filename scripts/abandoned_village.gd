@@ -47,8 +47,7 @@ func _ready() -> void:
 	ambush.relative_to_trigger = true
 	for i in AMBUSH_COUNT:
 		var angle := TAU * float(i) / AMBUSH_COUNT
-		ambush.entries.append({"position": Vector2.from_angle(angle) * SPAWN_RADIUS,
-			"enemy": ENEMY, "reward_table": LOOT})
+		ambush.entries.append(SpawnEntry.new(Vector2.from_angle(angle) * SPAWN_RADIUS, ENEMY, LOOT))
 	ambush.ambush_started.connect(_begin)
 	event = ambush
 	_caption = Label.new()

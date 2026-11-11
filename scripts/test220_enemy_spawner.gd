@@ -2,7 +2,7 @@ extends SceneTree
 ## #220 harness: enemy spawner foundation (headless).
 ## Proves: parity with the old mount flow (count/positions/reward tables/
 ## player_path/terrain/parenting), one request_spawn seam, died bookkeeping,
-## policy refusal, unknown entry keys tolerated, per-mount spawning (re-entry
+## policy refusal, per-mount spawning (re-entry
 ## respawns) and teardown with the area.
 
 var failures := 0
@@ -13,21 +13,21 @@ func _check(cond: bool, name: String) -> void:
 	print("[220] ", name, " -> ", "PASS" if cond else "FAIL")
 
 class RefusingSpawner extends EnemySpawner:
-	func should_spawn(_entry: Dictionary) -> bool:
+	func should_spawn(_entry: SpawnEntry) -> bool:
 		return false
 
 class CountingSpawner extends EnemySpawner:
 	var requests := 0
-	func request_spawn(entry: Dictionary) -> Enemy:
+	func request_spawn(entry: SpawnEntry) -> Enemy:
 		requests += 1
 		return super.request_spawn(entry)
 
 func _initialize() -> void:
 	var enemy_scene := load("res://scenes/enemy.tscn") as PackedScene
 	var table := RewardTable.new()
-	var entries: Array = [
-		{ "position": Vector2(10, 20), "enemy": enemy_scene, "reward_table": table, "future_key": 42 },
-		{ "position": Vector2(300, 40), "enemy": enemy_scene, "reward_table": table },
+	var entries: Array[SpawnEntry] = [
+		SpawnEntry.new(Vector2(10, 20), enemy_scene, table),
+		SpawnEntry.new(Vector2(300, 40), enemy_scene, table),
 	]
 	var path := NodePath("../../Player")
 
@@ -61,8 +61,8 @@ func _initialize() -> void:
 	root.add_child(areaR)
 	var tm := TerrainMap.new()
 	areaR.add_child(tm)
-	var dup_a := { "position": Vector2(5, 5), "enemy": enemy_scene, "reward_table": table }
-	var dup_b := { "position": Vector2(5, 5), "enemy": enemy_scene, "reward_table": table }
+	var dup_a := SpawnEntry.new(Vector2(5, 5), enemy_scene, table)
+	var dup_b := SpawnEntry.new(Vector2(5, 5), enemy_scene, table)
 	var spR := EnemySpawner.new()
 	areaR.add_child(spR)
 	spR.setup([dup_a, dup_b], path, tm, areaR)

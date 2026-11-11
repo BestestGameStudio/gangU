@@ -15,16 +15,15 @@ var run_fire_count := 0
 
 var _spawner: EnemySpawner = null
 
-## Spawns AreaSpawnData-format entries ("position" in the area's local space,
-## "enemy", "reward_table", optional "definition"/"route") through the area's
-## event EnemySpawner (#220 seam), created on first use and parented to the
+## Spawns SpawnEntry resources (position in the area's local space) through
+## the area's event EnemySpawner (#220 seam), created on first use and parented to the
 ## area so leaving it frees the spawner and its enemies.
-func spawn(entries: Array) -> Array[Enemy]:
+func spawn(entries: Array[SpawnEntry]) -> Array[Enemy]:
 	var out: Array[Enemy] = []
 	if area == null or entries.is_empty():
 		return out
 	var spawner := _event_spawner()
-	for entry: Dictionary in entries:
+	for entry: SpawnEntry in entries:
 		spawner.entries.append(entry)
 		var e := spawner.request_spawn(entry)
 		if e != null:

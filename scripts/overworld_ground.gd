@@ -363,10 +363,9 @@ func _collect_patrols(area: Node) -> void:
 	for g in holder.get_children():
 		if not g is AreaSpawnData:
 			continue
-		for entry: Dictionary in (g as AreaSpawnData).entries:
-			var loop := PackedVector2Array([entry.get("position", Vector2.ZERO)])
-			for q in entry.get("route", []):
-				loop.append(q)
+		for entry: SpawnEntry in (g as AreaSpawnData).entries:
+			var loop := PackedVector2Array([entry.position])
+			loop.append_array(entry.route)
 			patrols.append(loop)
 
 ## Distance from p to the nearest entrance-guard post or patrol loop.

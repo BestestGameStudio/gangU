@@ -55,7 +55,7 @@ func _static_checks() -> void:
 		var all_ok: bool = sd != null and not sd.entries.is_empty()
 		if sd != null:
 			for entry in sd.entries:
-				var rt: RewardTable = entry.get("reward_table")
+				var rt := (entry as SpawnEntry).reward_table
 				if rt == null or rt.resource_path != TABLE_PATH:
 					all_ok = false
 		_check(all_ok, "%s enemies use the currency-bearing table" % path.get_file())
