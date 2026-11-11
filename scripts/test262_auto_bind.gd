@@ -44,7 +44,7 @@ func _process(delta: float) -> bool:
 	match phase:
 		0:
 			# Main._ready (hub load + slot seeding) runs on the first frame.
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			phase = 1; t = 0
 		1:
@@ -73,7 +73,7 @@ func _process(delta: float) -> bool:
 			# Walk-over pickup (SpellPickup -> add_spell) binds first empty.
 			var pickup: SpellPickup = load("res://scenes/spell_pickup.tscn").instantiate()
 			pickup.spell_path = "res://resources/spells/placeholder_bolt.tres"
-			scene.current_area.add_child(pickup)
+			scene.area_loader.current_area.add_child(pickup)
 			pickup._on_body_entered(p)
 			if caster.get_slots()[2] == bolt:
 				_pass("walk-over pickup binds first empty slot (3)")
@@ -87,7 +87,7 @@ func _process(delta: float) -> bool:
 			entry.spell = summon
 			var drop: RewardDrop = load("res://scenes/reward_drop.tscn").instantiate()
 			drop.setup(entry)
-			scene.current_area.add_child(drop)
+			scene.area_loader.current_area.add_child(drop)
 			drop._on_body_entered(p)
 			if caster.get_slots()[3] == summon:
 				_pass("reward-drop spell binds first empty slot (4)")

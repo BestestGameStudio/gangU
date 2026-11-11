@@ -47,40 +47,40 @@ func _run() -> void:
 
 	_check(FastTravelRoutes.id_for_scene("res://scenes/dungeon_a.tscn") == &"dungeon_a" and FastTravelRoutes.id_for_scene("res://scenes/hub.tscn") == &"", "scene -> dungeon id lookup")
 
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames()
-	var ow: StringName = main.current_area.name
+	var ow: StringName = main.area_loader.current_area.name
 	var sites := wm.sites(ow)
 	_check(sites.has(&"dungeon_a") and sites.has(&"dungeon_e") and sites.size() == 6, "overworld entrances recorded for the 6 catalog dungeons")
-	_check((sites[&"dungeon_a"] as Vector2) == (main.current_area.get_node("GateNormal") as Node2D).global_position, "site sits at its gate")
-	_check((sites[&"dungeon_maze"] as Vector2) == (main.current_area.get_node("GateMaze") as Node2D).global_position, "GateMaze site sits at its gate (#367)")
+	_check((sites[&"dungeon_a"] as Vector2) == (main.area_loader.current_area.get_node("GateNormal") as Node2D).global_position, "site sits at its gate")
+	_check((sites[&"dungeon_maze"] as Vector2) == (main.area_loader.current_area.get_node("GateMaze") as Node2D).global_position, "GateMaze site sits at its gate (#367)")
 	_check(wm.cleared_sites(ow).is_empty(), "nothing cleared -> nothing marked (uncleared stays hidden)")
 	panel.open()
 	_check(canvas.site_at(canvas.world_to_screen(sites[&"dungeon_a"])) == &"", "uncleared entrance not selectable")
 	panel.close()
 
-	main._on_gate_entered(main.current_area.get_node("GateNormal"))
+	main.area_loader._on_gate_entered(main.area_loader.current_area.get_node("GateNormal"))
 	await _frames()
-	_check(not main.can_map_travel_to(&"dungeon_a"), "uncleared dungeon not a destination")
+	_check(not main.travel.can_map_travel_to(&"dungeon_a"), "uncleared dungeon not a destination")
 	await _kill_all()
-	_check(main.is_cleared(&"dungeon_a"), "DungeonA cleared")
+	_check(main.area_loader.is_cleared(&"dungeon_a"), "DungeonA cleared")
 	_check(wm.cleared_sites(ow).keys() == [&"dungeon_a"], "cleared DungeonA now marked on the overworld map")
-	_check(not main.can_map_travel_to(&"dungeon_a"), "cannot map-travel to the dungeon you are in")
+	_check(not main.travel.can_map_travel_to(&"dungeon_a"), "cannot map-travel to the dungeon you are in")
 
 	# Go to an uncleared dungeon: map travel must not escape it.
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames()
-	main._on_gate_entered(main.current_area.get_node("GateBoss"))
+	main.area_loader._on_gate_entered(main.area_loader.current_area.get_node("GateBoss"))
 	await _frames()
-	_check(main.current_area.name == "DungeonC", "in uncleared DungeonC")
-	_check(not main.can_map_travel_to(&"dungeon_a"), "origin inside an uncleared dungeon is refused")
-	main._request_map_travel(&"dungeon_a")
+	_check(main.area_loader.current_area.name == "DungeonC", "in uncleared DungeonC")
+	_check(not main.travel.can_map_travel_to(&"dungeon_a"), "origin inside an uncleared dungeon is refused")
+	main.travel._request_map_travel(&"dungeon_a")
 	await _frames()
-	_check(main.current_area.name == "DungeonC", "forced request from uncleared dungeon is rechecked and denied")
+	_check(main.area_loader.current_area.name == "DungeonC", "forced request from uncleared dungeon is rechecked and denied")
 
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames()
-	_check(main.current_area.name == "Hub", "back in Hub")
+	_check(main.area_loader.current_area.name == "Hub", "back in Hub")
 	panel.open()
 	_check(canvas.view() == &"Hub", "map opens on current area")
 	_check(panel.world_view_id() == ow and panel._world_button.visible, "World toggle offered from the Hub")
@@ -98,35 +98,35 @@ func _run() -> void:
 	panel.request_travel()
 	_check(not panel.visible, "Travel closes the map")
 	await _frames()
-	_check(main.current_area.name == "DungeonA", "map travel mounts DungeonA")
+	_check(main.area_loader.current_area.name == "DungeonA", "map travel mounts DungeonA")
 	_check(main.get_node("Player") == player and player.hp == hp, "same Player and HP")
-	_check(not main.current_area.get_node("DungeonObjective").is_cleared(), "re-entry gets a fresh objective (same as #349)")
+	_check(not main.area_loader.current_area.get_node("DungeonObjective").is_cleared(), "re-entry gets a fresh objective (same as #349)")
 
 	# PR #371 review fix 1: map travel keeps the #349 Hub-spoke policy.
 	# (a) No direct dungeon -> dungeon hop, even from a cleared dungeon.
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames()
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames()
-	main._on_gate_entered(main.current_area.get_node("GateDefense"))
+	main.area_loader._on_gate_entered(main.area_loader.current_area.get_node("GateDefense"))
 	await _frames()
-	var defense := main.current_area.get_node("DungeonObjective") as DungeonObjective
+	var defense := main.area_loader.current_area.get_node("DungeonObjective") as DungeonObjective
 	while defense.waves_spawned() < defense.wave_count:
 		defense.spawn_next_wave()
 	await _frames(int(defense.wave_boss_delay * 60.0) + 4) # #368: final-wave boss arrives
 	await _kill_all()
-	_check(main.is_cleared(&"dungeon_e"), "DungeonE cleared")
+	_check(main.area_loader.is_cleared(&"dungeon_e"), "DungeonE cleared")
 	_check(wm.cleared_sites(ow).size() == 2, "both cleared dungeons marked")
-	_check(not main.can_map_travel_to(&"dungeon_a"), "cleared dungeon -> other cleared dungeon refused (no direct hop)")
-	main._request_map_travel(&"dungeon_a")
+	_check(not main.travel.can_map_travel_to(&"dungeon_a"), "cleared dungeon -> other cleared dungeon refused (no direct hop)")
+	main.travel._request_map_travel(&"dungeon_a")
 	await _frames()
-	_check(main.current_area.name == "DungeonE", "forced dungeon -> dungeon request denied at commit")
-	_check(main.can_fast_return(), "#349 return-to-Hub path from a cleared dungeon still offered")
+	_check(main.area_loader.current_area.name == "DungeonE", "forced dungeon -> dungeon request denied at commit")
+	_check(main.travel.can_fast_return(), "#349 return-to-Hub path from a cleared dungeon still offered")
 
 	# (b) No escape from the guarded, spawn-capable overworld.
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames()
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames()
 	_check(not get_nodes_in_group("enemies").is_empty(), "overworld has live entrance guards")
 	panel.open()
@@ -145,32 +145,32 @@ func _run() -> void:
 	panel.request_travel()
 	_check(emitted[0] == 0 and panel.visible, "Travel click from the overworld is refused at click time")
 	panel.close()
-	main._request_map_travel(&"dungeon_e")
+	main.travel._request_map_travel(&"dungeon_e")
 	await _frames()
-	_check(main.current_area.name == ow, "forced overworld -> dungeon request denied at commit")
+	_check(main.area_loader.current_area.name == ow, "forced overworld -> dungeon request denied at commit")
 
 	# (c) Click-time revalidation: a selection valid when made is re-asked on
 	# the click, and the commit rechecks again.
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames()
 	panel.open()
 	panel.toggle_world_view()
 	panel.select_dungeon(&"dungeon_e")
 	_check(panel.can_travel_selected(), "Hub -> DungeonE allowed")
-	main.cleared_dungeons.erase(&"dungeon_e") # synthetic invalidation after selecting
+	main.area_loader.cleared_dungeons.erase(&"dungeon_e") # synthetic invalidation after selecting
 	panel.request_travel()
 	_check(emitted[0] == 0 and panel.visible, "stale selection refused on the Travel click")
 	_check(panel._travel_button.visible, "selection row still shown after refusal")
 	panel._refresh()
 	_check(panel._travel_button.disabled, "stale selection greys out Travel")
 	panel.close()
-	main._request_map_travel(&"dungeon_e")
+	main.travel._request_map_travel(&"dungeon_e")
 	await _frames()
-	_check(main.current_area.name == "Hub", "stale forced request denied at commit")
+	_check(main.area_loader.current_area.name == "Hub", "stale forced request denied at commit")
 	panel.travel_requested.disconnect(count_emit)
 
 	# PR #371 review fix 2: the World view draws the VIEWED area's terrain.
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames()
 	var probe := WorldMap.world_to_cell(main.get_node("Player").global_position)
 	_check(wm.is_explored(ow, probe), "overworld probe cell explored")
@@ -178,9 +178,9 @@ func _run() -> void:
 	var ow_cells := {}
 	for cell: Vector2i in wm.explored_cells(ow):
 		ow_cells[cell] = wm.cell_color(ow, cell)
-	main._on_gate_entered(main.current_area.get_node("GateGenerated"))
+	main.area_loader._on_gate_entered(main.area_loader.current_area.get_node("GateGenerated"))
 	await _frames()
-	var gen_terrain := main.current_area.get_node_or_null("Terrain") as TerrainMap
+	var gen_terrain := main.area_loader.current_area.get_node_or_null("Terrain") as TerrainMap
 	_check(gen_terrain != null, "generated dungeon has a TerrainMap")
 	var gen_color := WorldMap.terrain_color(gen_terrain, probe)
 	_check(gen_color != ow_color, "generated dungeon colours that cell differently (test is meaningful)")
@@ -193,11 +193,11 @@ func _run() -> void:
 		same = same and wm.cell_color(ow, cell) == ow_cells[cell]
 	_check(same, "every explored overworld cell keeps its own colour in World view")
 	panel.close()
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames()
 	_check(wm.cell_color(ow, probe) == ow_color, "overworld colours survive the generated dungeon being freed")
 
-	main.cleared_dungeons.clear()
+	main.area_loader.cleared_dungeons.clear()
 	_check(wm.cleared_sites(ow).is_empty(), "marks follow the canonical clear record")
 
 	main.queue_free()

@@ -53,7 +53,7 @@ func _process(delta: float) -> bool:
 	match phase:
 		0:
 			# Main._ready (hub load + slot seeding + action registration).
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			phase = 1; t = 0
 		1:

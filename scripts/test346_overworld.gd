@@ -26,7 +26,7 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: String) -> void:
-	var gate: Gate = main.current_area.get_node(gate_name)
+	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 	gate._on_body_entered(main.get_node("Player"))
 	await _frames(3)
 
@@ -36,7 +36,7 @@ func _enter(main: Node, gate_name: String) -> void:
 ## and counts as an area enemy. These flow legs assert #414 entrance
 ## guards/patrols only, so the bird and its driver are removed on entry.
 func _remove_bird(main: Node) -> void:
-	var mgr: OverworldBird = main.current_area.get_node_or_null("OverworldBird") as OverworldBird
+	var mgr: OverworldBird = main.area_loader.current_area.get_node_or_null("OverworldBird") as OverworldBird
 	if mgr == null:
 		return
 	if mgr.bird != null and is_instance_valid(mgr.bird):
@@ -45,7 +45,7 @@ func _remove_bird(main: Node) -> void:
 
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
-	for n in main.current_area.get_children():
+	for n in main.area_loader.current_area.get_children():
 		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate):
 			out.append(n)
 	return out
@@ -135,9 +135,9 @@ func _flow_legs() -> void:
 	current_scene = main
 	await _frames(3)
 	var p: Player = main.get_node("Player")
-	_check(main.current_area.name == "Hub", "(C) boots into the hub")
+	_check(main.area_loader.current_area.name == "Hub", "(C) boots into the hub")
 	await _enter(main, "GateOverworld")
-	var ow: Node = main.current_area
+	var ow: Node = main.area_loader.current_area
 	_remove_bird(main) # #478: guard/patrol legs only
 	_check(ow.name == "Overworld", "(C) hub GateOverworld -> Overworld (got %s)" % ow.name)
 	_check(p.global_position == (ow.get_node("PlayerSpawn") as Node2D).global_position, "(C) player placed at the overworld PlayerSpawn")
@@ -191,7 +191,7 @@ func _flow_legs() -> void:
 	# (E) clear DungeonA, its entrance guards are gone next visit
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _enter(main, "GateNormal")
-	_check(main.current_area.name == "DungeonA", "(E) overworld GateNormal -> DungeonA")
+	_check(main.area_loader.current_area.name == "DungeonA", "(E) overworld GateNormal -> DungeonA")
 	# #392: DungeonA slimes split, so keep killing until no enemy is left.
 	for _round in 8:
 		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
@@ -200,20 +200,20 @@ func _flow_legs() -> void:
 		for e in alive:
 			e.apply_damage(999) # synthetic kills
 		await _frames(3)
-	_check(main.cleared_dungeons.has(&"dungeon_a"), "(E) clearing DungeonA records it as cleared")
-	var portal: ExitPortal = main.current_area.get_node("ExitPortal")
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(E) clearing DungeonA records it as cleared")
+	var portal: ExitPortal = main.area_loader.current_area.get_node("ExitPortal")
 	portal._on_body_entered(p)
 	await _frames(3)
 	# #378: the exit portal now lands at DungeonA's overworld entrance.
-	_check(main.current_area.name == "Overworld", "(E) the exit portal returns to the overworld")
-	ow = main.current_area
+	_check(main.area_loader.current_area.name == "Overworld", "(E) the exit portal returns to the overworld")
+	ow = main.area_loader.current_area
 	_remove_bird(main) # #478
 	guards = _guards(main)
 	_check(guards.size() == 23, "(E) 23 entrance enemies after clearing DungeonA (#414, #490: its 4 + 2 Fishy gone, got %d)" % guards.size())
 	_check(_near(guards, ow.get_node("GateNormal").global_position, 200.0) == 0, "(E) the cleared DungeonA entrance has no guards")
 	_check(_near(guards, ow.get_node("GateRed").global_position, 160.0) == 3, "(E) the uncleared DungeonB entrance keeps its 3 enemies (#414: guard + 2 patrols)")
 	await _enter(main, "GateHub")
-	_check(main.current_area.name == "Hub", "(E) overworld GateHub -> Hub")
+	_check(main.area_loader.current_area.name == "Hub", "(E) overworld GateHub -> Hub")
 	_check(get_nodes_in_group("enemies").size() == 0, "(E) leaving the overworld frees its guards")
 
 	# (F) death restart forgets cleared dungeons
@@ -223,9 +223,9 @@ func _flow_legs() -> void:
 		if current_scene != main and current_scene != null:
 			break
 	var fresh: Node = current_scene
-	_check(fresh != main and fresh.current_area.name == "Hub", "(F) death restarts the run in the hub")
-	_check(fresh.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
-	fresh.enter_overworld()
+	_check(fresh != main and fresh.area_loader.current_area.name == "Hub", "(F) death restarts the run in the hub")
+	_check(fresh.area_loader.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
+	fresh.area_loader.enter_overworld()
 	await _frames(3)
 	_remove_bird(fresh) # #478
 	_check(_guards(fresh).size() == 29, "(F) every entrance is guarded again (#414 mix + #490 Fishy, got %d)" % _guards(fresh).size())

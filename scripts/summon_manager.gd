@@ -86,8 +86,12 @@ func _on_spell_cast(spell: Spell) -> void:
 ## Current area first (production Main), then the scene root (harnesses).
 func _spawn_parent() -> Node:
 	var main := get_parent()
-	if main != null and main.get("current_area") != null:
-		return main.current_area
+	if main != null:
+		var loader: Node = main.get("area_loader") # #512: areas are owned by Main's AreaLoader
+		if loader != null and loader.get("current_area") != null:
+			return loader.get("current_area")
+		if main.get("current_area") != null:
+			return main.get("current_area")
 	if get_tree().current_scene != null:
 		return get_tree().current_scene
 	return get_tree().root

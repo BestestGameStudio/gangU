@@ -85,7 +85,7 @@ func _cast_toward(target: Vector2) -> void:
 	preload("res://scripts/combat_effects.gd").muzzle(current_scene, caster.global_position, dir.angle(), spell.projectile_color)
 
 func _in_area() -> bool:
-	return scene.current_area != null and scene.current_area.name == AREA_NAME
+	return scene.area_loader.current_area != null and scene.area_loader.current_area.name == AREA_NAME
 
 func _clamp_arena(v: Vector2) -> Vector2:
 	return v.clamp(ARENA.position, ARENA.end)
@@ -187,12 +187,12 @@ func _initialize() -> void:
 	# --- Beat 1: hub, walk into the gate -----------------------------------
 	say("hub")
 	await _wait(1.3)
-	var gate: Node2D = scene.current_area.get_node_or_null(GATE_NAME)
-	if gate == null and scene.has_method("enter_overworld"):
+	var gate: Node2D = scene.area_loader.current_area.get_node_or_null(GATE_NAME)
+	if gate == null and scene.get("area_loader") != null: # #512: Main delegates to its AreaLoader
 		# #346: dungeon entrances live in the overworld. Start the walk just
 		# south of the entrance (the waypoint below is hub-relative).
-		scene.enter_overworld()
-		gate = scene.current_area.get_node_or_null(GATE_NAME)
+		scene.area_loader.enter_overworld()
+		gate = scene.area_loader.current_area.get_node_or_null(GATE_NAME)
 		if gate != null:
 			p.global_position = gate.global_position + Vector2(0, 140)
 			focus.global_position = p.global_position
@@ -201,7 +201,7 @@ func _initialize() -> void:
 		push_error("record_showcase: hub has no gate '%s' (edit GATE_NAME)" % GATE_NAME)
 		quit(1)
 		return
-	if scene.current_area.name == &"Hub":
+	if scene.area_loader.current_area.name == &"Hub":
 		move_target = HUB_WAYPOINT
 		await _wait(0.8)
 	move_target = gate.global_position
@@ -240,12 +240,12 @@ func _initialize() -> void:
 	say("boss dead")
 	move_target = null
 	await _wait(2.2)
-	var portal: Node2D = scene.current_area.get_node_or_null("ExitPortal")
+	var portal: Node2D = scene.area_loader.current_area.get_node_or_null("ExitPortal")
 	if portal != null:
 		move_target = portal.global_position + Vector2(0, 60)
 		await _wait(1.6)
 		move_target = portal.global_position
-		await _wait_until(func(): return scene.current_area.name == "Overworld", 3.0) # #378: exit lands at the entrance
+		await _wait_until(func(): return scene.area_loader.current_area.name == "Overworld", 3.0) # #378: exit lands at the entrance
 	move_target = null
 	cam.zoom = Vector2(1, 1)
 	await _wait(1.2)

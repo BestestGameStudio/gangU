@@ -36,7 +36,7 @@ func _process(delta: float) -> bool:
 		0:
 			# In a SceneTree driver, Main._ready (hub load) runs on the first
 			# frame, not during add_child - wait for current_area first.
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			# Deterministic fixture table: one bolt entry, built in code (no
 			# new resource file). The SAME fixture table feeds the harness
@@ -65,7 +65,7 @@ func _process(delta: float) -> bool:
 			enemy.position = Vector2(576, 300)
 			enemy.player_path = NodePath("../../Player")
 			enemy.reward_table = table
-			scene.current_area.add_child(enemy)
+			scene.area_loader.current_area.add_child(enemy)
 			caster = p.get_node_or_null("SpellCaster")
 			bolt = load("res://resources/spells/placeholder_bolt.tres")
 			if caster == null:

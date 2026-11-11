@@ -12,7 +12,7 @@ extends SceneTree
 ##   (F) same close -> re-arm loop through a RED-rolled gate: the RED
 ##       clear-or-die exit portal stays locked until the fresh boss clear,
 ##       and that clear also starts the entrance-gate cooldown
-## The cooldown is shortened via main.gate_reentry_cooldown_seconds so the
+## The cooldown is shortened via main.area_loader.gate_reentry_cooldown_seconds so the
 ## harness does not wait a real minute. Kills are synthetic apply_damage
 ## calls - NOT player combat proof (the PR's demo video carries that).
 ## #350: the offering roll is pinned per leg (test9 idiom) so both the
@@ -47,7 +47,7 @@ func _require(ok: bool, label: String) -> bool:
 func _wait_rearmed(main: Node, id: StringName, gate: Gate) -> void:
 	var give_up := Time.get_ticks_msec() + 10000
 	while Time.get_ticks_msec() < give_up:
-		var wall_expired := Time.get_ticks_msec() >= int(main._gate_cooldown_until.get(id, 0))
+		var wall_expired := Time.get_ticks_msec() >= int(main.area_loader._gate_cooldown_until.get(id, 0))
 		if wall_expired and not gate.is_disabled():
 			return
 		await physics_frame
@@ -57,7 +57,7 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: String, pin_type: int = -1) -> void:
-	var gate: Gate = main.current_area.get_node(gate_name)
+	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 	if pin_type >= 0:
 		gate.gate_type = pin_type # #350 pin, before entry (test9 idiom)
 	gate._on_body_entered(main.get_node("Player"))
@@ -81,23 +81,23 @@ func _initialize() -> void:
 	current_scene = main
 	await _frames(3)
 	var p: Player = main.get_node("Player")
-	main.gate_reentry_cooldown_seconds = 0.5 # shortened; production default is 60s
+	main.area_loader.gate_reentry_cooldown_seconds = 0.5 # shortened; production default is 60s
 
 	# into the overworld, then clear DungeonA through a NORMAL-pinned gate
 	await _enter(main, "GateOverworld")
-	if not _require(main.current_area.name == "Overworld", "TRAVEL gate -> overworld"): return
-	main._offering_rolls[&"GateNormal"] = Gate.GateType.NORMAL # #350 pin: fresh gate instances read the cached roll
+	if not _require(main.area_loader.current_area.name == "Overworld", "TRAVEL gate -> overworld"): return
+	main.area_loader._offering_rolls[&"GateNormal"] = Gate.GateType.NORMAL # #350 pin: fresh gate instances read the cached roll
 	await _enter(main, "GateNormal", Gate.GateType.NORMAL)
-	if not _require(main.current_area.name == "DungeonA", "GateNormal -> DungeonA"): return
-	if not _require(not (main.current_area.get_node("ExitPortal") as ExitPortal).locked, "NORMAL mount: exit portal unlocked"): return
+	if not _require(main.area_loader.current_area.name == "DungeonA", "GateNormal -> DungeonA"): return
+	if not _require(not (main.area_loader.current_area.get_node("ExitPortal") as ExitPortal).locked, "NORMAL mount: exit portal unlocked"): return
 	await _drain_enemies()
-	if not _require(main.cleared_dungeons.has(&"dungeon_a"), "DungeonA cleared"): return
+	if not _require(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "DungeonA cleared"): return
 
 	# exit portal -> back at the overworld entrance (#378)
-	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
+	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	if not _require(main.current_area.name == "Overworld", "exit portal returns to the overworld (#378)"): return
-	var ow: Node = main.current_area
+	if not _require(main.area_loader.current_area.name == "Overworld", "exit portal returns to the overworld (#378)"): return
+	var ow: Node = main.area_loader.current_area
 	var gate_normal: Gate = ow.get_node("GateNormal")
 	var gate_red: Gate = ow.get_node("GateRed")
 
@@ -108,7 +108,7 @@ func _initialize() -> void:
 	# (B) walking into the closed gate swaps nothing
 	gate_normal._on_body_entered(p)
 	await _frames(3)
-	if not _require(main.current_area.name == "Overworld", "(B) closed gate ignores the player"): return
+	if not _require(main.area_loader.current_area.name == "Overworld", "(B) closed gate ignores the player"): return
 
 	# (C)
 	_check(not gate_red.is_disabled() and gate_red.monitoring, "(C) uncleared DungeonB gate stays open")
@@ -117,16 +117,16 @@ func _initialize() -> void:
 
 	# (E) deliberate travel is unaffected: hub FAST TRAVEL still reaches the
 	# cleared dungeon during the cooldown
-	main._load_hub()
+	main.area_loader._load_hub()
 	await _frames(3)
-	if not _require(main.current_area.name == "Hub", "(E) back in the hub"): return
-	main._commit_fast_travel(&"dungeon_a")
+	if not _require(main.area_loader.current_area.name == "Hub", "(E) back in the hub"): return
+	main.travel._commit_fast_travel(&"dungeon_a")
 	await _frames(3)
-	if not _require(main.current_area.name == "DungeonA", "(E) fast travel enters the cleared dungeon during the cooldown"): return
-	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
+	if not _require(main.area_loader.current_area.name == "DungeonA", "(E) fast travel enters the cleared dungeon during the cooldown"): return
+	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	if not _require(main.current_area.name == "Overworld", "(E) exit portal back to the overworld"): return
-	ow = main.current_area
+	if not _require(main.area_loader.current_area.name == "Overworld", "(E) exit portal back to the overworld"): return
+	ow = main.area_loader.current_area
 	gate_normal = ow.get_node("GateNormal")
 
 	# (D) cooldown expiry re-arms the gate (0.5s set before the clear)
@@ -136,27 +136,27 @@ func _initialize() -> void:
 	_check(gate_normal.monitoring, "(D) monitoring restored")
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _enter(main, "GateNormal", Gate.GateType.NORMAL)
-	if not _require(main.current_area.name == "DungeonA", "(D) entry works again after re-arming"): return
+	if not _require(main.area_loader.current_area.name == "DungeonA", "(D) entry works again after re-arming"): return
 
 	# (F) RED-rolled gate: clear-or-die locked exit, and the boss clear
 	# starts the cooldown too
-	main._offering_rolls[&"GateNormal"] = Gate.GateType.RED
-	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
+	main.area_loader._offering_rolls[&"GateNormal"] = Gate.GateType.RED
+	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	if not _require(main.current_area.name == "Overworld", "(F) back in the overworld"): return
-	var gate_red_rolled: Gate = main.current_area.get_node("GateNormal")
+	if not _require(main.area_loader.current_area.name == "Overworld", "(F) back in the overworld"): return
+	var gate_red_rolled: Gate = main.area_loader.current_area.get_node("GateNormal")
 	_check(gate_red_rolled.gate_type == Gate.GateType.RED, "(F) fresh gate instance rolled RED from the pinned cache")
 	await _enter(main, "GateNormal", Gate.GateType.RED)
-	if not _require(main.current_area.name == "DungeonA", "(F) RED gate -> RED DungeonA"): return
-	var red_portal: ExitPortal = main.current_area.get_node("ExitPortal")
+	if not _require(main.area_loader.current_area.name == "DungeonA", "(F) RED gate -> RED DungeonA"): return
+	var red_portal: ExitPortal = main.area_loader.current_area.get_node("ExitPortal")
 	_check(red_portal.locked, "(F) RED mount: exit portal locked (clear-or-die)")
 	await _drain_enemies()
-	if not _require(main.cleared_dungeons.has(&"dungeon_a"), "(F) RED DungeonA cleared"): return
+	if not _require(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(F) RED DungeonA cleared"): return
 	_check(not red_portal.locked, "(F) clear unlocks the RED exit portal")
 	red_portal._on_body_entered(p)
 	await _frames(3)
-	if not _require(main.current_area.name == "Overworld", "(F) RED exit returns to the overworld"): return
-	gate_normal = main.current_area.get_node("GateNormal")
+	if not _require(main.area_loader.current_area.name == "Overworld", "(F) RED exit returns to the overworld"): return
+	gate_normal = main.area_loader.current_area.get_node("GateNormal")
 	_check(gate_normal.is_disabled(), "(F) RED clear closes the entrance gate too")
 	await _wait_rearmed(main, &"dungeon_a", gate_normal)
 	await _frames(3)

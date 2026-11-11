@@ -79,7 +79,7 @@ func run() -> void:
 	var on_clear := Recorder.new()
 	var on_cast := Recorder.new()
 	var on_custom := Recorder.new()
-	var warlord_path: String = main.WARLORD_SCENE.resource_path
+	var warlord_path: String = main.area_loader.WARLORD_SCENE.resource_path
 	host.modifiers = [
 		modifier(&"entry", DungeonModifierHost.DUNGEON_ENTERED, on_entry),
 		modifier(&"any_death", DungeonModifierHost.ENEMY_DIED, on_any_death),
@@ -94,7 +94,7 @@ func run() -> void:
 		modifier(&"", &"broken", Recorder.new()),
 	]
 	area.add_child(host)
-	main._swap(area)
+	main.area_loader._swap(area)
 	await process_frame
 
 	check(on_entry.log.size() == 1, "dungeon_entered fired once on mount")
@@ -146,7 +146,7 @@ func run() -> void:
 
 	# Leaving the dungeon frees the host (per-mount lifetime).
 	var host_ref: WeakRef = weakref(host)
-	main._swap(load("res://scenes/hub.tscn").instantiate())
+	main.area_loader._swap(load("res://scenes/hub.tscn").instantiate())
 	await process_frame
 	check(host_ref.get_ref() == null, "host freed with its area on swap")
 	(main.get_node("Player/SpellCaster") as SpellCaster).spell_cast.emit(spell)

@@ -66,9 +66,9 @@ func _countdown_secs(bar: DefenseWaveBar) -> int:
 	return label.text.trim_prefix("Next wave in ").trim_suffix("s").to_int()
 
 func _enter_defense(main: Node) -> void:
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _physics(4)
-	var gate := main.current_area.get_node("GateDefense") as Gate
+	var gate := main.area_loader.current_area.get_node("GateDefense") as Gate
 	gate._on_body_entered(main.get_node("Player"))
 	await _physics(4)
 
@@ -85,7 +85,7 @@ func _leg_flow() -> void:
 	var bar := hud.get_node("DefenseWaveBar") as DefenseWaveBar
 	_check(not bar.visible, "(A) bar hidden in the overworld (no defense objective)")
 	await _enter_defense(main)
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	_check(area.name == "DungeonE", "(B) GateDefense enters DungeonE (got %s)" % area.name)
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	if obj == null:
@@ -137,7 +137,7 @@ func _leg_flow() -> void:
 	_check(_countdown_secs(bar) == -1, "(D) no countdown after completion")
 
 	# (F) leaving the dungeon hides the bar.
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _physics(30)
 	_check(not bar.visible, "(F) bar hidden again after leaving the defense")
 	main.queue_free()
@@ -153,7 +153,7 @@ func _leg_failure() -> void:
 	p.max_hp = 100000
 	p.hp = 100000
 	await _enter_defense(main)
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	var obj := area.get_node("DungeonObjective") as DungeonObjective
 	var hud := main.find_child("HUD", true, false)
 	var bar := hud.get_node("DefenseWaveBar") as DefenseWaveBar

@@ -42,7 +42,7 @@ func _initialize() -> void:
 	node_added.connect(_on_node_added)
 
 func _on_node_added(n: Node) -> void:
-	if n is Enemy and scene != null and n.get_parent() == scene.current_area:
+	if n is Enemy and scene != null and n.get_parent() == scene.area_loader.current_area:
 		mounted_positions.append(n.position)
 
 func _check(label: String, ok: bool) -> void:
@@ -51,12 +51,12 @@ func _check(label: String, ok: bool) -> void:
 	print("[100] ", label, " -> ", "PASS" if ok else "FAIL")
 
 func _enter_gate(gate_name: String, pin_type: int = -1) -> void:
-	if scene.current_area.get_node_or_null(gate_name) == null:
-		scene.enter_overworld() # #346: dungeon entrances live in the overworld
+	if scene.area_loader.current_area.get_node_or_null(gate_name) == null:
+		scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
 	# drop the overworld guards (mounted by enter_overworld or, since #378, by
 	# the exit portal landing here); the legs measure the dungeon mount
 	mounted_positions.clear()
-	var g: Gate = scene.current_area.get_node(gate_name)
+	var g: Gate = scene.area_loader.current_area.get_node(gate_name)
 	# #350 pin (test350 covers the roll): after the gate's own _ready roll,
 	# before entry, so main.gd's RED lock-in follows the pinned type.
 	if pin_type >= 0:
@@ -66,7 +66,7 @@ func _enter_gate(gate_name: String, pin_type: int = -1) -> void:
 func _area_enemies() -> Array:
 	var out: Array = []
 	for e in get_nodes_in_group("enemies"):
-		if scene.current_area != null and e.get_parent() == scene.current_area:
+		if scene.area_loader.current_area != null and e.get_parent() == scene.area_loader.current_area:
 			out.append(e)
 	return out
 
@@ -80,7 +80,7 @@ func _process(delta: float) -> bool:
 				phase = 1; t = 0
 		1:
 			if t > 0.4:
-				var area: Node = scene.current_area
+				var area: Node = scene.area_loader.current_area
 				_check("DA: gate swap entered DungeonA", area.name == "DungeonA")
 				var sd: Node = area.get_node_or_null("SpawnData")
 				_check("DA carrier: SpawnData child present", sd != null)
@@ -127,7 +127,7 @@ func _process(delta: float) -> bool:
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
-				var obj: DungeonObjective = scene.current_area.get_node("DungeonObjective")
+				var obj: DungeonObjective = scene.area_loader.current_area.get_node("DungeonObjective")
 				# #392: each slime (80 HP) leaves 2 + 4 descendants, so the area
 				# is cleared only after every one of them is killed.
 				var leftover := _area_enemies()
@@ -140,17 +140,17 @@ func _process(delta: float) -> bool:
 				_check("completion: progress 19/19 (3 + 2 Fishy + 2 slimes x 7 descendants)", obj.progress() == Vector2i(19, 19))
 				_check("completion: dungeon_a cleared", obj.is_cleared())
 				_check("completion: killed enemies freed", _area_enemies().size() == 0)
-				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
+				var portal: ExitPortal = scene.area_loader.current_area.get_node("ExitPortal")
 				portal._on_body_entered(p) # retreat to the DungeonA entrance (#378)
 				phase = 3; t = 0
 		3:
 			if t > 0.4:
-				_check("retreat: back at the overworld entrance, same run", scene.current_area.name == "Overworld")
+				_check("retreat: back at the overworld entrance, same run", scene.area_loader.current_area.name == "Overworld")
 				_enter_gate("GateRed", Gate.GateType.RED) # #350 pin
 				phase = 4; t = 0
 		4:
 			if t > 0.4:
-				var area: Node = scene.current_area
+				var area: Node = scene.area_loader.current_area
 				_check("DB: red gate entered DungeonB", area.name == "DungeonB")
 				var sd: Node = area.get_node_or_null("SpawnData")
 				_check("DB carrier: SpawnData child present", sd != null)
@@ -175,16 +175,16 @@ func _process(delta: float) -> bool:
 					var boss: Enemy = bosses[0] as Enemy
 					_check("DB boss: is the Mustache Warlord",
 						boss != null and boss.scene_file_path == "res://scenes/mustache_warlord.tscn")
-					_check("DB boss: in DungeonB", boss != null and boss.get_parent() == scene.current_area)
+					_check("DB boss: in DungeonB", boss != null and boss.get_parent() == scene.area_loader.current_area)
 					_check("DB boss: targets the production Player", boss != null and boss._player == p)
 					if boss != null:
 						boss.apply_damage(9999)
 				phase = 6; t = 0
 		6:
 			if t > 0.3:
-				var obj: DungeonObjective = scene.current_area.get_node("DungeonObjective")
+				var obj: DungeonObjective = scene.area_loader.current_area.get_node("DungeonObjective")
 				_check("DB clear: dungeon_b cleared by the boss kill", obj.is_cleared() and obj.progress() == Vector2i(6, 6))
-				var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
+				var portal: ExitPortal = scene.area_loader.current_area.get_node("ExitPortal")
 				_check("DB clear: red portal unlocked", not portal.locked)
 				if fails == 0:
 					print("[100] ALL PASS")

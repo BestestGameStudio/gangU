@@ -40,17 +40,17 @@ func _initialize() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 	var caster := p.get_node("SpellCaster")
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _frames(3)
-	_check(main.current_area.name == "Overworld", "setup: in the overworld")
+	_check(main.area_loader.current_area.name == "Overworld", "setup: in the overworld")
 
 	for gate_name: String in DUNGEON_GATES:
-		var gate: Gate = main.current_area.get_node(gate_name)
+		var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 		var gate_pos := gate.global_position
 		p.hp = p.max_hp
 		gate._on_body_entered(p)
 		await _frames(3)
-		var area: Node = main.current_area
+		var area: Node = main.area_loader.current_area
 		var expected: String = DUNGEON_GATES[gate_name]
 		var dname := String(area.name) # area is freed once we exit
 		_check(dname == expected, "%s leads into %s (got %s)" % [gate_name, expected, dname])
@@ -63,37 +63,37 @@ func _initialize() -> void:
 		p.hp = 77
 		portal._on_body_entered(p)
 		await _frames(3)
-		var spot: Vector2 = gate_pos + main.ENTRANCE_EXIT_OFFSET
+		var spot: Vector2 = gate_pos + main.area_loader.ENTRANCE_EXIT_OFFSET
 		# (A)
-		_check(main.current_area.name == "Overworld", "(A) exiting %s returns to the overworld (got %s)" % [dname, main.current_area.name])
+		_check(main.area_loader.current_area.name == "Overworld", "(A) exiting %s returns to the overworld (got %s)" % [dname, main.area_loader.current_area.name])
 		_check(p.global_position.distance_to(spot) < 4.0, "(A) exiting %s lands in front of %s (at %s, want %s)" % [dname, gate_name, p.global_position, spot])
 		# (B)
-		var gate_now: Gate = main.current_area.get_node(gate_name)
+		var gate_now: Gate = main.area_loader.current_area.get_node(gate_name)
 		var half := ((gate_now.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D).size / 2.0
 		_check(absf(p.global_position.y - gate_now.global_position.y) > half.y + 10.0, "(B) landing spot is clear of the %s footprint" % gate_name)
 		# (C)
 		_check(p.hp == 77 and p.get_node("SpellCaster") == caster, "(C) %s exit keeps HP and SpellCaster" % dname)
 		await _frames(20)
-		_check(main.current_area.name == "Overworld", "(B) still in the overworld 20 frames after exiting %s" % dname)
+		_check(main.area_loader.current_area.name == "Overworld", "(B) still in the overworld 20 frames after exiting %s" % dname)
 
 	# (D) no overworld entrance -> hub fallback
-	main._exit_dungeon("res://scenes/test_dungeon_clear.tscn")
+	main.area_loader._exit_dungeon("res://scenes/test_dungeon_clear.tscn")
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "(D) dungeon without an overworld entrance falls back to the hub")
-	main._exit_dungeon("")
+	_check(main.area_loader.current_area.name == "Hub", "(D) dungeon without an overworld entrance falls back to the hub")
+	main.area_loader._exit_dungeon("")
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "(D) unknown dungeon falls back to the hub")
+	_check(main.area_loader.current_area.name == "Hub", "(D) unknown dungeon falls back to the hub")
 
 	# (E) fast return still goes to the hub
-	main.cleared_dungeons[&"dungeon_a"] = true
-	main.enter_overworld()
+	main.area_loader.cleared_dungeons[&"dungeon_a"] = true
+	main.area_loader.enter_overworld()
 	await _frames(3)
-	(main.current_area.get_node("GateNormal") as Gate)._on_body_entered(p)
+	(main.area_loader.current_area.get_node("GateNormal") as Gate)._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "DungeonA" and main.can_fast_return(), "(E) cleared DungeonA re-entry can fast return")
-	main._request_fast_return()
+	_check(main.area_loader.current_area.name == "DungeonA" and main.travel.can_fast_return(), "(E) cleared DungeonA re-entry can fast return")
+	main.travel._request_fast_return()
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "(E) fast return still goes to the hub")
+	_check(main.area_loader.current_area.name == "Hub", "(E) fast return still goes to the hub")
 
 	print("[378] DONE failures=", failures)
 	if failures == 0:

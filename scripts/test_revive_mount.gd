@@ -36,9 +36,9 @@ func _grab_refs() -> void:
 	satchel = scene.get_node("ReviveSatchel")
 
 func _enter_gate(gate_name: String) -> void:
-	if scene.current_area.get_node_or_null(gate_name) == null:
-		scene.enter_overworld() # #346: dungeon entrances live in the overworld
-	var g: Gate = scene.current_area.get_node(gate_name)
+	if scene.area_loader.current_area.get_node_or_null(gate_name) == null:
+		scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+	var g: Gate = scene.area_loader.current_area.get_node(gate_name)
 	# #350 pin (test350 covers the roll): this driver's unclaimed-revive
 	# retreats need DungeonA's unlocked portal, so the entered gate is
 	# pinned NORMAL after its own _ready roll, before entry.
@@ -46,13 +46,13 @@ func _enter_gate(gate_name: String) -> void:
 	g._on_body_entered(p)
 
 func _retreat() -> void:
-	var portal: ExitPortal = scene.current_area.get_node("ExitPortal")
+	var portal: ExitPortal = scene.area_loader.current_area.get_node("ExitPortal")
 	portal._on_body_entered(p)
 
 func _item() -> ReviveItem:
-	if scene.current_area == null:
+	if scene.area_loader.current_area == null:
 		return null
-	return scene.current_area.get_node_or_null("ReviveItem")
+	return scene.area_loader.current_area.get_node_or_null("ReviveItem")
 
 func _check(label: String, ok: bool) -> void:
 	if not ok:
@@ -72,13 +72,13 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				var it := _item()
 				_check("found: one revive item in DungeonA at (900,480)",
-					scene.current_area.name == "DungeonA" and it != null
+					scene.area_loader.current_area.name == "DungeonA" and it != null
 					and it.position == Vector2(900, 480))
 				_retreat() # leave UNclaimed
 				phase = 2; t = 0
 		2:
 			if t > 0.4:
-				_check("retreat to the overworld entrance same run (#378)", scene.current_area.name == "Overworld")
+				_check("retreat to the overworld entrance same run (#378)", scene.area_loader.current_area.name == "Overworld")
 				_enter_gate("GateNormal")
 				phase = 3; t = 0
 		3:
@@ -87,7 +87,7 @@ func _process(delta: float) -> bool:
 				_check("unclaimed re-entry: item available again", it != null)
 				it._on_body_entered(p) # claim
 				_check("carried: satchel collected once", satchel.carried == 1)
-				_check("claimed: per-run flag latched", scene._revive_claimed)
+				_check("claimed: per-run flag latched", scene.area_loader._revive_claimed)
 				phase = 4; t = 0
 		4:
 			if t > 0.4:
@@ -101,7 +101,7 @@ func _process(delta: float) -> bool:
 		6:
 			if t > 0.4:
 				_check("claimed re-entry: no respawn while carried",
-					scene.current_area.name == "DungeonA" and _item() == null)
+					scene.area_loader.current_area.name == "DungeonA" and _item() == null)
 				p.apply_damage(999) # lethal with carried=1 -> revive path
 				phase = 7; t = 0
 		7:
@@ -117,7 +117,7 @@ func _process(delta: float) -> bool:
 		9:
 			if t > 0.4:
 				_check("claimed+consumed re-entry: still no respawn this run",
-					scene.current_area.name == "DungeonA" and _item() == null)
+					scene.area_loader.current_area.name == "DungeonA" and _item() == null)
 				p.apply_damage(999) # contact re-kill with carried=0 -> normal restart
 				phase = 10; t = 0
 		10:
@@ -126,7 +126,7 @@ func _process(delta: float) -> bool:
 				scene = current_scene
 				_grab_refs()
 				_check("contact re-kill: full restart to hub hp=100 carried=0",
-					scene != old and scene.current_area.name == "Hub"
+					scene != old and scene.area_loader.current_area.name == "Hub"
 					and p.hp == 100 and satchel.carried == 0)
 				_enter_gate("GateNormal")
 				phase = 11; t = 0
@@ -134,7 +134,7 @@ func _process(delta: float) -> bool:
 			if t > 0.4:
 				var it := _item()
 				_check("new-run reset: item available again after reload",
-					scene.current_area.name == "DungeonA" and it != null)
+					scene.area_loader.current_area.name == "DungeonA" and it != null)
 				it._on_body_entered(p)
 				_check("new-run claim works", satchel.carried == 1)
 				if fails == 0:

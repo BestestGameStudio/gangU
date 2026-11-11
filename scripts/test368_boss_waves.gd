@@ -68,9 +68,9 @@ func _leg_scene() -> void:
 	await process_frame
 
 func _enter(main: Node, gate_name: String) -> void:
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _physics(4)
-	var gate := main.current_area.get_node(gate_name) as Gate
+	var gate := main.area_loader.current_area.get_node(gate_name) as Gate
 	gate._on_body_entered(main.get_node("Player"))
 	await _physics(4)
 
@@ -87,7 +87,7 @@ func _new_main() -> Node:
 func _leg_flow() -> void:
 	var main: Node = await _new_main()
 	await _enter(main, "GateDefense")
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	_check(area.name == "DungeonE" and obj != null, "(B) GateDefense enters DungeonE with an objective")
 	if obj == null:
@@ -170,7 +170,7 @@ func _leg_maze() -> void:
 	MazeDefenseDungeon.forced_seed = 7
 	var main: Node = await _new_main()
 	await _enter(main, "GateMaze")
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	_check(area.name == "DungeonMaze" and obj != null and obj.boss_waves == [obj.total_waves()], "(F) maze defense has a final boss wave")
 	if obj != null:

@@ -23,13 +23,13 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: String) -> void:
-	var gate: Gate = main.current_area.get_node(gate_name)
+	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 	gate._on_body_entered(main.get_node("Player"))
 	await _frames(3)
 
 func _guards(main: Node) -> Array[Enemy]:
 	var out: Array[Enemy] = []
-	for n in main.current_area.get_children():
+	for n in main.area_loader.current_area.get_children():
 		if n is Enemy and not _roams((n as Enemy)):
 			out.append(n)
 	return out
@@ -71,12 +71,12 @@ func _initialize() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 	_check(main.get_node_or_null("DungeonClearRecord") == null, "no second store: Main.cleared_dungeons is the only clear state")
-	_check(main.cleared_dungeons.is_empty(), "run starts with nothing cleared")
-	main.gate_reentry_cooldown_seconds = 0.2 # #400: shortened so re-entry legs wait moments, not a real minute
+	_check(main.area_loader.cleared_dungeons.is_empty(), "run starts with nothing cleared")
+	main.area_loader.gate_reentry_cooldown_seconds = 0.2 # #400: shortened so re-entry legs wait moments, not a real minute
 
 	# uncleared baseline
 	await _enter(main, "GateOverworld")
-	var ow: Node = main.current_area
+	var ow: Node = main.area_loader.current_area
 	var before := _guards(main)
 	# #414 mix: 5 posted guards + 14 patrollers (Normal 1+3, Red 1+2, Generated/Beast/Boss 1+3 each);
 	# #490: 2 camp Fishy at each of the 5 entrances.
@@ -84,16 +84,16 @@ func _initialize() -> void:
 	_check(_near(before, ow.get_node("GateNormal").global_position, 200.0) == 4, "uncleared: 4 at the DungeonA entrance (guard, 2 patrols, #414 slime patroller)")
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _clear_dungeon_a(main)
-	_check(main.current_area.name == "DungeonA", "overworld GateNormal -> DungeonA")
+	_check(main.area_loader.current_area.name == "DungeonA", "overworld GateNormal -> DungeonA")
 	# (A)
-	_check(main.cleared_dungeons.has(&"dungeon_a"), "(A) clearing DungeonA records dungeon_a")
-	_check(not main.cleared_dungeons.has(&"dungeon_b"), "(A) dungeon_b is not recorded")
-	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(A) clearing DungeonA records dungeon_a")
+	_check(not main.area_loader.cleared_dungeons.has(&"dungeon_b"), "(A) dungeon_b is not recorded")
+	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "Overworld", "exit portal returns to the overworld (#378)")
+	_check(main.area_loader.current_area.name == "Overworld", "exit portal returns to the overworld (#378)")
 
 	# (B)
-	ow = main.current_area
+	ow = main.area_loader.current_area
 	var after := _guards(main)
 	_check(_near(after, ow.get_node("GateNormal").global_position, 200.0) == 0, "(B) cleared DungeonA entrance has no guards")
 	_check(_near(after, ow.get_node("GateRed").global_position, 160.0) == 3, "(B) uncleared DungeonB entrance keeps its guards (guard + 2 patrols, #414)")
@@ -106,7 +106,7 @@ func _initialize() -> void:
 	await _frames(3)
 	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
 	await _enter(main, "GateNormal")
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	var enemies := get_nodes_in_group("enemies").size()
 	_check(area.name == "DungeonA", "(C) re-entry lands in DungeonA")
@@ -122,11 +122,11 @@ func _initialize() -> void:
 	_check(_drops(area) > 0, "(C) re-entry kills drop rewards (%d)" % _drops(area))
 	_check(obj.is_cleared(), "(C) re-entry objective clears again")
 	# (D)
-	_check(main.cleared_dungeons.size() == 1 and main.cleared_dungeons.has(&"dungeon_a"), "(D) still a single dungeon_a entry")
+	_check(main.area_loader.cleared_dungeons.size() == 1 and main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(D) still a single dungeon_a entry")
 	(area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "Overworld", "(D) exit lands back in the overworld (#378)")
-	_check(_near(_guards(main), main.current_area.get_node("GateNormal").global_position, 200.0) == 0, "(D) DungeonA entrance stays unguarded")
+	_check(main.area_loader.current_area.name == "Overworld", "(D) exit lands back in the overworld (#378)")
+	_check(_near(_guards(main), main.area_loader.current_area.get_node("GateNormal").global_position, 200.0) == 0, "(D) DungeonA entrance stays unguarded")
 
 	# (E) death restart forgets clears
 	p.apply_damage(9999)
@@ -135,9 +135,9 @@ func _initialize() -> void:
 		if current_scene != main and current_scene != null:
 			break
 	var fresh: Node = current_scene
-	_check(fresh != main and fresh.current_area.name == "Hub", "(E) death restarts the run in the hub")
-	_check(fresh.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
-	fresh.enter_overworld()
+	_check(fresh != main and fresh.area_loader.current_area.name == "Hub", "(E) death restarts the run in the hub")
+	_check(fresh.area_loader.cleared_dungeons.is_empty(), "(E) cleared dungeons reset with the run")
+	fresh.area_loader.enter_overworld()
 	await _frames(3)
 	_check(_guards(fresh).size() == 29, "(E) every entrance is guarded again, all 29 (#414 + #490) (got %d)" % _guards(fresh).size())
 	print("[348] DONE failures=", failures)

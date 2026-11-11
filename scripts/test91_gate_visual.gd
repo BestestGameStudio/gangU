@@ -84,10 +84,10 @@ func _process(delta: float) -> bool:
 		0:
 			if scene.get_node_or_null("Player") != null and t > 0.4:
 				p = scene.get_node("Player")
-				_check("hub boot", scene.current_area.name == "Hub")
-				scene.enter_overworld() # #346: dungeon entrances live in the overworld
-				var normal: Node = scene.current_area.get_node_or_null("GateNormal")
-				var red: Node = scene.current_area.get_node_or_null("GateRed")
+				_check("hub boot", scene.area_loader.current_area.name == "Hub")
+				scene.area_loader.enter_overworld() # #346: dungeon entrances live in the overworld
+				var normal: Node = scene.area_loader.current_area.get_node_or_null("GateNormal")
+				var red: Node = scene.area_loader.current_area.get_node_or_null("GateRed")
 				_check("overworld: both gates present", normal != null and red != null)
 				_gate_structure(normal, "GateNormal")
 				_gate_structure(red, "GateRed")
@@ -101,8 +101,8 @@ func _process(delta: float) -> bool:
 		1:
 			if t > 0.4:
 				_check("dungeon boot: real normal-gate entry into DungeonA",
-					scene.current_area.name == "DungeonA")
-				var portal: Node = scene.current_area.get_node_or_null("ExitPortal")
+					scene.area_loader.current_area.name == "DungeonA")
+				var portal: Node = scene.area_loader.current_area.get_node_or_null("ExitPortal")
 				_check("portal present", portal != null)
 				if portal != null:
 					var tint: Node = portal.get_node_or_null("ColorRect")

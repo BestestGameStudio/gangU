@@ -142,7 +142,7 @@ func _scene_leg_a() -> void:
 # --- production-mount helpers (test373 idiom) ---------------------------------
 
 func _enter(main: Node, gate_name: String) -> void:
-	var gate: Gate = main.current_area.get_node(gate_name)
+	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 	gate._on_body_entered(main.get_node("Player"))
 	await _frames(3)
 
@@ -157,7 +157,7 @@ func _role(e: Enemy) -> String:
 
 func _by_role(main: Node, role: String) -> Array[Enemy]:
 	var out: Array[Enemy] = []
-	for n in main.current_area.get_children():
+	for n in main.area_loader.current_area.get_children():
 		if n is Enemy and _role(n) == role:
 			out.append(n)
 	return out
@@ -172,7 +172,7 @@ func _production_legs_cd() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 	await _enter(main, "GateOverworld")
-	var ow: Node2D = main.current_area
+	var ow: Node2D = main.area_loader.current_area
 	_check(ow.name == "Overworld", "(C/D) in the overworld")
 
 	# (C) the stationary guard keeps its 520 post leash and walks home.

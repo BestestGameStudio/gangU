@@ -258,12 +258,12 @@ func _leg_flow(maze_seed: int) -> void:
 	var p: Player = main.get_node("Player")
 	p.max_hp = 100000
 	p.hp = 100000
-	main.enter_overworld()
+	main.area_loader.enter_overworld()
 	await _physics(4)
-	var gate := main.current_area.get_node("GateMaze") as Gate
+	var gate := main.area_loader.current_area.get_node("GateMaze") as Gate
 	gate._on_body_entered(p)
 	await _physics(4)
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	_check(area.name == "DungeonMaze", "(E) GateMaze enters DungeonMaze (got %s)" % area.name)
 	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
 	_check(obj != null and obj.objective_type == DungeonObjective.ObjectiveType.DEFENSE and obj.dungeon_id == &"dungeon_maze",
@@ -366,11 +366,11 @@ func _leg_crowded() -> void:
 	root.add_child(main)
 	current_scene = main
 	await process_frame
-	main._swap((load("res://scenes/dungeon_maze.tscn") as PackedScene).instantiate())
+	main.area_loader._swap((load("res://scenes/dungeon_maze.tscn") as PackedScene).instantiate())
 	var p: Player = main.get_node("Player")
 	p.max_hp = 100000
 	p.hp = 100000
-	var area: Node = main.current_area
+	var area: Node = main.area_loader.current_area
 	await physics_frame
 	var obj := area.get_node("DungeonObjective") as DungeonObjective
 	var core := obj.core()
@@ -432,14 +432,14 @@ func _leg_unchanged() -> void:
 	root.add_child(main)
 	current_scene = main
 	await process_frame
-	main._swap((load("res://scenes/dungeon_e.tscn") as PackedScene).instantiate())
+	main.area_loader._swap((load("res://scenes/dungeon_e.tscn") as PackedScene).instantiate())
 	await _physics(2)
-	var obj := main.current_area.get_node("DungeonObjective") as DungeonObjective
+	var obj := main.area_loader.current_area.get_node("DungeonObjective") as DungeonObjective
 	_check(obj.wave_nav == null, "(F) DungeonE objective has no FlowNav")
 	obj.spawn_next_wave()
 	await _physics(2)
 	var ok := true
-	for e in _wave_enemies(main.current_area):
+	for e in _wave_enemies(main.area_loader.current_area):
 		ok = ok and e.nav == null
 	_check(ok, "(F) DungeonE wave enemies carry no nav (straight chase as before)")
 	main.queue_free()

@@ -102,12 +102,12 @@ func _flow_legs() -> void:
 
 	# (B) production village trigger does not fire at the arrival point
 	var heard: Array = []
-	main.location_event_triggered.connect(func(id, _t): heard.append(id))
-	main.enter_overworld()
+	main.area_loader.location_event_triggered.connect(func(id, _t): heard.append(id))
+	main.area_loader.enter_overworld()
 	await _frames(3)
-	var placed := get_nodes_in_group("location_triggers").filter(func(n): return main.current_area.is_ancestor_of(n))
+	var placed := get_nodes_in_group("location_triggers").filter(func(n): return main.area_loader.current_area.is_ancestor_of(n))
 	_check(placed.size() == 1 and placed[0].id() == &"abandoned_village", "(B) production overworld places the abandoned village trigger")
-	_check(main.current_area.get_node_or_null("EventSpawner") == null and heard.is_empty(), "(B) entering it fires no event")
+	_check(main.area_loader.current_area.get_node_or_null("EventSpawner") == null and heard.is_empty(), "(B) entering it fires no event")
 
 	# (C) overworld with an authored ambush trigger, mounted the production way
 	var ow: Node2D = (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
@@ -116,16 +116,16 @@ func _flow_legs() -> void:
 	var started: Array = []
 	ambush.ambush_started.connect(func(_ctx, enemies): started.append(enemies))
 	ow.add_child(_make_trigger(spot, 40.0, ambush, &"test_ambush"))
-	main._swap(ow)
+	main.area_loader._swap(ow)
 	await _frames(3)
 	var trig: LocationTrigger = ow.get_node("AmbushSpot")
-	_check(trig.triggered.is_connected(main._on_location_triggered), "(C) Main wired the area's trigger on mount")
+	_check(trig.triggered.is_connected(main.area_loader._on_location_triggered), "(C) Main wired the area's trigger on mount")
 	_check(trig.fire_count == 0 and heard.is_empty(), "(C) nothing fires while the player stands at the arrival point")
 	p.global_position = ow.to_global(spot)
 	await _frames(4)
 	_check(trig.fire_count == 1, "(C) walking into the trigger shape fires it once (got %d)" % trig.fire_count)
 	_check(heard == [&"test_ambush"], "(C) Main emitted location_event_triggered with the trigger id (%s)" % [heard])
-	_check(main.location_event_fire_count(&"test_ambush") == 1, "(C) Main recorded one run fire")
+	_check(main.area_loader.location_event_fire_count(&"test_ambush") == 1, "(C) Main recorded one run fire")
 	var spawner := ow.get_node_or_null("EventSpawner") as EnemySpawner
 	_check(spawner != null, "(C) the event spawned through an EventSpawner in the area")
 	_check(started.size() == 1 and (started[0] as Array).size() == 2, "(C) the ambush started once with its 2 entries")
@@ -150,7 +150,7 @@ func _flow_legs() -> void:
 	await _frames(3)
 	p.global_position = ow.to_global(spot)
 	await _frames(4)
-	_check(trig.fire_count == 2 and main.location_event_fire_count(&"test_ambush") == 2, "(D) re-entering fires again by default (%d)" % trig.fire_count)
+	_check(trig.fire_count == 2 and main.area_loader.location_event_fire_count(&"test_ambush") == 2, "(D) re-entering fires again by default (%d)" % trig.fire_count)
 	_check(started.size() == 2, "(D) and starts the event again")
 	trig.disarm()
 	p.global_position = ow.to_global(spot + Vector2(0, 300))
@@ -167,16 +167,16 @@ func _flow_legs() -> void:
 	await _frames(2)
 	(ow.get_node("GateHub") as Gate)._on_body_entered(p)
 	await _frames(3)
-	_check(main.current_area.name == "Hub", "(E) left through GateHub")
+	_check(main.area_loader.current_area.name == "Hub", "(E) left through GateHub")
 	_check(all_ambushers.all(func(e): return not is_instance_valid(e)), "(E) leaving the area frees every ambusher")
-	_check(main.location_event_fire_count(&"test_ambush") == 2, "(E) the run-scoped fire history survives the area swap")
+	_check(main.area_loader.location_event_fire_count(&"test_ambush") == 2, "(E) the run-scoped fire history survives the area swap")
 
 	# (F) trigger with no event only signals
 	var ow2: Node2D = (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
 	ow2.add_child(_make_trigger(spot, 40.0, null, &"bare_spot"))
-	main._swap(ow2)
+	main.area_loader._swap(ow2)
 	await _frames(3)
 	p.global_position = ow2.to_global(spot)
 	await _frames(4)
-	_check(main.location_event_fire_count(&"bare_spot") == 1 and heard.has(&"bare_spot"), "(F) an event-less trigger still signals and is recorded")
+	_check(main.area_loader.location_event_fire_count(&"bare_spot") == 1 and heard.has(&"bare_spot"), "(F) an event-less trigger still signals and is recorded")
 	_check(ow2.get_node_or_null("EventSpawner") == null, "(F) and spawns nothing")

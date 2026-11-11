@@ -6,18 +6,18 @@ extends Area2D
 ## authored in the scene - any shape, any size) and WHAT (an OverworldEvent
 ## resource). It does not decide repeat or reset rules: those are open design
 ## questions, so they live behind the should_fire() seam (same role as
-## EnemySpawner.should_spawn) and the armed flag, and the host (Main) keeps
+## EnemySpawner.should_spawn) and the armed flag, and the host (Main's AreaLoader, #512) keeps
 ## the run-scoped history a later rule would read.
 ##
 ## Default behaviour: a Player body entering an armed trigger fires it. Every
 ## entry fires again; nothing is consumed. A one-shot, per-visit or per-run
 ## rule is a should_fire override, a subclass, or the host calling disarm().
 ##
-## Main wires every LocationTrigger of a mounted area (group
+## AreaLoader wires every LocationTrigger of a mounted area (group
 ## "location_triggers"): on `triggered` it builds an OverworldEventContext and
 ## starts the event, so the trigger itself stays free of game wiring.
 
-## Stable name for this trigger. Main's run-scoped fire history is keyed by
+## Stable name for this trigger. AreaLoader's run-scoped fire history is keyed by
 ## it; empty falls back to the node name.
 @export var trigger_id: StringName = &""
 ## What happens when the trigger fires. Null = the trigger only emits

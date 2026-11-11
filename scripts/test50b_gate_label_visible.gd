@@ -129,14 +129,14 @@ func _process(_d: float) -> bool:
 		25: # #346: the dungeon gates live in the overworld, laid out exactly as
 			# they were in the hub around the same spawn. Its entrance guards are
 			# removed: this harness measures labels, not combat.
-			main.enter_overworld()
+			main.area_loader.enter_overworld()
 			for e in get_nodes_in_group("enemies"):
 				e.free()
 			# #446: production gates are spread across the field, off screen
 			# from the spawn. This harness measures label placement, so the
 			# two gates go back to their pre-#446 spots beside the spawn.
-			(main.current_area.get_node("GateNormal") as Node2D).position = Vector2(300, 380)
-			(main.current_area.get_node("GateRed") as Node2D).position = Vector2(852, 380)
+			(main.area_loader.current_area.get_node("GateNormal") as Node2D).position = Vector2(300, 380)
+			(main.area_loader.current_area.get_node("GateRed") as Node2D).position = Vector2(852, 380)
 			_cam_stable = 0
 			_cam_last = Vector2.INF
 			_stage = 3
@@ -144,7 +144,7 @@ func _process(_d: float) -> bool:
 		3: # overworld spawn at real viewport, camera settled
 			if not _cam_settled() or frame < 20:
 				return false
-			var hub = main.current_area
+			var hub = main.area_loader.current_area
 			var gn: Gate = hub.get_node("GateNormal")
 			var gr: Gate = hub.get_node("GateRed")
 			var rr: Rect2 = hud.reserved_rect()
@@ -164,7 +164,7 @@ func _process(_d: float) -> bool:
 		4: # camera sweep: gate slides under the plate zone
 			if not _cam_settled():
 				return false
-			var gn: Gate = main.current_area.get_node("GateNormal")
+			var gn: Gate = main.area_loader.current_area.get_node("GateNormal")
 			var rr: Rect2 = hud.reserved_rect()
 			var rn := _label_screen_rect(gn)
 			print("[50b] sweep: plate=", rr, " gateN_screen=", root.get_canvas_transform() * gn.global_position, " labelN=", rn)
@@ -181,8 +181,8 @@ func _process(_d: float) -> bool:
 				return false
 			if not _cam_settled():
 				return false
-			var gnO: Gate = main.current_area.get_node("GateNormal")
-			var grO: Gate = main.current_area.get_node("GateRed")
+			var gnO: Gate = main.area_loader.current_area.get_node("GateNormal")
+			var grO: Gate = main.area_loader.current_area.get_node("GateRed")
 			var canvasO := root.get_canvas_transform()
 			var bodyO: ColorRect = gnO.get_node("ColorRect")
 			var rbO := Rect2(canvasO * (gnO.global_position + bodyO.position), bodyO.size)
@@ -196,7 +196,7 @@ func _process(_d: float) -> bool:
 		46: # #106: back on screen - visible + attached again
 			if not _cam_settled():
 				return false
-			var gnB: Gate = main.current_area.get_node("GateNormal")
+			var gnB: Gate = main.area_loader.current_area.get_node("GateNormal")
 			_check(gnB.get_node("TypeLabel").visible, "#106 label visible again when its gate returns on screen")
 			_check(_attached(_label_screen_rect(gnB), gnB), "#106 label attached again after the round trip")
 			_stage = 5
@@ -211,7 +211,7 @@ func _process(_d: float) -> bool:
 				return false # let the plate rebuild first
 			if _84_aimed == false:
 				var rr2: Rect2 = hud.reserved_rect()
-				var gn2: Gate = main.current_area.get_node("GateNormal")
+				var gn2: Gate = main.area_loader.current_area.get_node("GateNormal")
 				var view2: Vector2 = root.get_visible_rect().size
 				# Both gates into the plate's x-band (RED sits a fixed 552 world
 				# px right of NORMAL).
@@ -223,8 +223,8 @@ func _process(_d: float) -> bool:
 				return false
 			if not _cam_settled():
 				return false
-			var gn3: Gate = main.current_area.get_node("GateNormal")
-			var gr3: Gate = main.current_area.get_node("GateRed")
+			var gn3: Gate = main.area_loader.current_area.get_node("GateNormal")
+			var gr3: Gate = main.area_loader.current_area.get_node("GateRed")
 			var rn3 := _label_screen_rect(gn3)
 			var rred3 := _label_screen_rect(gr3)
 			print("[50b] #106 plate pair: labelN=", rn3, " labelRED=", rred3)
@@ -248,8 +248,8 @@ func _process(_d: float) -> bool:
 			# FUNCTION of the camera - they settle to a fixed point for 30
 			# consecutive frames (per-frame movement < 1px once the camera
 			# settles), never oscillate between candidates, never intersect.
-			var gn3: Gate = main.current_area.get_node("GateNormal")
-			var gr3: Gate = main.current_area.get_node("GateRed")
+			var gn3: Gate = main.area_loader.current_area.get_node("GateNormal")
+			var gr3: Gate = main.area_loader.current_area.get_node("GateRed")
 			var rn3 := _label_screen_rect(gn3)
 			var rred3 := _label_screen_rect(gr3)
 			var dn := rn3.position.distance_to(_87_rn.position)
@@ -292,7 +292,7 @@ func _process(_d: float) -> bool:
 				if c.visible and not rr.encloses(c.get_global_rect()):
 					covered = false
 			_check(covered, "plate still covers HUD rows after viewport change")
-			var gn: Gate = main.current_area.get_node("GateNormal")
+			var gn: Gate = main.area_loader.current_area.get_node("GateNormal")
 			var rn := _label_screen_rect(gn)
 			print("[50b] portrait: labelN=", rn, " gateN_screen=", root.get_canvas_transform() * gn.global_position, " view=", root.get_visible_rect().size)
 			_check(_attached(rn, gn), "#106 GateNormal label attached (portrait)")
@@ -303,15 +303,15 @@ func _process(_d: float) -> bool:
 			if _entered:
 				return false
 			hub_plate_h = hud.reserved_rect().size.y
-			var g: Gate = main.current_area.get_node("GateNormal")
+			var g: Gate = main.area_loader.current_area.get_node("GateNormal")
 			g._on_body_entered(main.get_node("Player"))
 			_entered = true
 			_stage = 8
 		8: # condition wait: objective discovered + label visible (no frame budget)
-			if main.current_area.name == "DungeonA" and not _check_done_objective:
+			if main.area_loader.current_area.name == "DungeonA" and not _check_done_objective:
 				var lbl: Label = hud.get_node("Root/ObjectiveLabel")
 				if lbl.visible:
-					_check(main.current_area.name == "DungeonA", "entered DungeonA via real gate")
+					_check(main.area_loader.current_area.name == "DungeonA", "entered DungeonA via real gate")
 					_check(true, "objective row became visible after real entry")
 					_check_done_objective = true
 					_stable_plate = hud.reserved_rect().size.y
@@ -326,7 +326,7 @@ func _process(_d: float) -> bool:
 					var plate_h: float = hud.reserved_rect().size.y
 					print("[50b] objective growth: hub plate_h=", hub_plate_h, " dungeon plate_h=", plate_h)
 					_check(plate_h > hub_plate_h, "plate grew with objective row in DungeonA (%.0f -> %.0f)" % [hub_plate_h, plate_h])
-					var portal = main.current_area.get_node_or_null("ExitPortal")
+					var portal = main.area_loader.current_area.get_node_or_null("ExitPortal")
 					_check(portal != null, "exit portal mounted (regression)")
 					_stage = 9
 		9:

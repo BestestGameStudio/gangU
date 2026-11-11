@@ -27,12 +27,12 @@ func _record() -> void:
 	root.add_child(scene)
 	current_scene = scene
 	await _frames(4)
-	scene.enter_overworld()
+	scene.area_loader.enter_overworld()
 	await _frames(4)
 	p = scene.get_node("Player")
 	p.max_hp = 10000
 	p.hp = 10000
-	var village: AbandonedVillage = scene.current_area.get_node("AbandonedVillage")
+	var village: AbandonedVillage = scene.area_loader.current_area.get_node("AbandonedVillage")
 	var c := village.global_position
 	var focus := Node2D.new()
 	scene.add_child(focus)

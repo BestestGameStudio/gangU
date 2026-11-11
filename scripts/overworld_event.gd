@@ -5,7 +5,7 @@ extends Resource
 ## FOUNDATION ONLY. Subclass it and override start(). The resource is shared
 ## data (one .tres can sit on many triggers), so keep per-run or per-visit
 ## state out of it: the context carries the live nodes, and Main keeps the
-## run-scoped fire history (Main.location_event_fire_count).
+## run-scoped fire history (AreaLoader.location_event_fire_count).
 ##
 ## AmbushEvent is the first example. No production area places an event yet:
 ## trigger spots, repeat/reset rules, ambush composition and rewards are

@@ -81,8 +81,8 @@ func _leg_b_mob_contexts() -> void:
 	var gen: Script = load("res://scripts/generated_dungeon.gd")
 	var gen_table: RewardTable = gen.get_script_constant_map().get("REWARD_TABLE")
 	_check(_currency_only(gen_table), "(B) generated-dungeon mobs use a currency-only table")
-	var main_src: Script = load("res://scripts/main.gd")
-	var wave_table: RewardTable = main_src.get_script_constant_map().get("DEFENSE_WAVE_TABLE")
+	var loader_src: Script = load("res://scripts/area_loader.gd")
+	var wave_table: RewardTable = loader_src.get_script_constant_map().get("DEFENSE_WAVE_TABLE")
 	_check(_currency_only(wave_table), "(B) DungeonE defense-wave mobs use a currency-only table")
 
 func _leg_c_bosses_unchanged() -> void:
@@ -103,10 +103,10 @@ func _leg_d_end_to_end(table: RewardTable) -> void:
 	current_scene = scene
 	p = scene.get_node("Player")
 	for i in 60:
-		if scene.current_area != null:
+		if scene.area_loader != null and scene.area_loader.current_area != null:
 			break
 		await _frames(1)
-	_check(scene.current_area != null, "(D) Main mounted")
+	_check(scene.area_loader.current_area != null, "(D) Main mounted")
 	var wallet := Run.wallet()
 	_check(wallet != null, "(D) Main mounts the run wallet")
 	# A real mob carrying the production table dies in the hub area.
@@ -114,7 +114,7 @@ func _leg_d_end_to_end(table: RewardTable) -> void:
 	enemy.position = Vector2(576, 300)
 	enemy.player_path = NodePath("../../Player")
 	enemy.reward_table = table
-	scene.current_area.add_child(enemy)
+	scene.area_loader.current_area.add_child(enemy)
 	await _frames(10)
 	# Park AFTER the settle frames: the hub's deferred player placement runs
 	# during the first frames and would overwrite an earlier park.

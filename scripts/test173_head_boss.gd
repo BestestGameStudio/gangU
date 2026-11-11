@@ -156,14 +156,14 @@ func _leg_production() -> void:
 	current_scene = scene
 	await process_frame
 	var p: Player = scene.get_node("Player")
-	scene.enter_overworld() # #346
-	var gate := scene.current_area.get_node_or_null("GateBoss") as Gate
+	scene.area_loader.enter_overworld() # #346
+	var gate := scene.area_loader.current_area.get_node_or_null("GateBoss") as Gate
 	_check(gate != null, "(D) production overworld mounts GateBoss")
 	if gate == null:
 		return
 	gate._on_body_entered(p)
 	await _physics(6)
-	var area: Node = scene.current_area
+	var area: Node = scene.area_loader.current_area
 	_check(area.name == "DungeonC", "(D) GateBoss enters DungeonC (area=%s)" % area.name)
 	var bosses := get_nodes_in_group(&"boss")
 	var boss: Enemy = bosses[0] if bosses.size() == 1 else null
@@ -185,13 +185,13 @@ func _leg_production() -> void:
 		return
 	portal._on_body_entered(p)
 	await _physics(4)
-	_check(scene.current_area == area, "(D) locked portal entry ignored")
+	_check(scene.area_loader.current_area == area, "(D) locked portal entry ignored")
 	boss.apply_damage(9999) # synthetic kill
 	await _physics(4)
 	_check(obj.is_cleared() and not portal.locked, "(D) boss death clears the arena and unlocks the portal")
 	portal._on_body_entered(p)
 	await _physics(4)
-	_check(scene.current_area.name == "Overworld", "(D) unlocked portal returns to the overworld entrance (#378)")
+	_check(scene.area_loader.current_area.name == "Overworld", "(D) unlocked portal returns to the overworld entrance (#378)")
 	scene.queue_free()
 	current_scene = null
 	await process_frame

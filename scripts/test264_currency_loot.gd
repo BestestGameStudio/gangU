@@ -78,7 +78,7 @@ func _spawn_enemy() -> void:
 	enemy.position = Vector2(576, 300)
 	enemy.player_path = NodePath("../../Player")
 	enemy.reward_table = table
-	scene.current_area.add_child(enemy)
+	scene.area_loader.current_area.add_child(enemy)
 
 func _initialize() -> void:
 	_static_checks()
@@ -96,7 +96,7 @@ func _process(delta: float) -> bool:
 	t += delta
 	match phase:
 		0:
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			pool = Run.reward_pool()
 			wallet = Run.wallet()

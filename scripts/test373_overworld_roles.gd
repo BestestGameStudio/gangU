@@ -28,7 +28,7 @@ func _frames(n: int) -> void:
 		await physics_frame
 
 func _enter(main: Node, gate_name: String) -> void:
-	var gate: Gate = main.current_area.get_node(gate_name)
+	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
 	gate._on_body_entered(main.get_node("Player"))
 	await _frames(3)
 
@@ -55,7 +55,7 @@ func _open_ground(viewer: Enemy, from: Vector2, dist: float) -> Vector2:
 ## own clock. These flow legs assert #414 guard/patrol/migrant roles only,
 ## so the bird and its driver are removed on entry.
 func _remove_bird(main: Node) -> void:
-	var mgr: OverworldBird = main.current_area.get_node_or_null("OverworldBird") as OverworldBird
+	var mgr: OverworldBird = main.area_loader.current_area.get_node_or_null("OverworldBird") as OverworldBird
 	if mgr == null:
 		return
 	if mgr.bird != null and is_instance_valid(mgr.bird):
@@ -64,7 +64,7 @@ func _remove_bird(main: Node) -> void:
 
 func _by_role(main: Node, role: String) -> Array[Enemy]:
 	var out: Array[Enemy] = []
-	for n in main.current_area.get_children():
+	for n in main.area_loader.current_area.get_children():
 		if n is Enemy and _role(n) == role:
 			out.append(n)
 	return out
@@ -155,7 +155,7 @@ func _flow_legs() -> void:
 	await _frames(3)
 	var p: Player = main.get_node("Player")
 	await _enter(main, "GateOverworld")
-	var ow: Node2D = main.current_area
+	var ow: Node2D = main.area_loader.current_area
 	_remove_bird(main) # #478: role legs only
 	_check(ow.name == "Overworld", "(B) in the overworld")
 	var guards := _by_role(main, "guard")
@@ -269,10 +269,10 @@ func _flow_legs() -> void:
 		for e in alive:
 			e.apply_damage(9999)
 		await _frames(3)
-	_check(main.cleared_dungeons.has(&"dungeon_a"), "(F) DungeonA cleared")
-	(main.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
+	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(F) DungeonA cleared")
+	(main.area_loader.current_area.get_node("ExitPortal") as ExitPortal)._on_body_entered(p)
 	await _frames(3) # #378: the exit lands back in the overworld at the DungeonA entrance
-	var gate_a: Vector2 = main.current_area.get_node("GateNormal").global_position
+	var gate_a: Vector2 = main.area_loader.current_area.get_node("GateNormal").global_position
 	var near_a := 0
 	for e in _by_role(main, "guard") + _by_role(main, "patrol"):
 		if e.global_position.distance_to(gate_a) <= 260.0:

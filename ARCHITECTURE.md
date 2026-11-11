@@ -25,12 +25,12 @@ Viewport 1152x648, stretch mode `canvas_items`, aspect `expand`. Layout claims a
 *Where:* `project.godot`, `scripts/spell_caster.gd` (`SLOT_KEYCODES`), `scripts/player.gd`.
 
 ### D4. One Main scene; systems are code-mounted, not scene-edited
-`scenes/main.tscn` stays minimal (Player + FollowCamera). `main.gd._ready()` mounts the run's services in code (BackgroundGrid, RunManager, HUD, music, ReviveSatchel, wallet, reward pool, shop, panels, WorldMap, settings...); `_swap()` mounts per-area content (spawns, objective, exit portal, triggers). Keeps shared scene files out of merge contention and mount order explicit.
-*Where:* `scripts/main.gd`.
+`scenes/main.tscn` stays minimal (Player + FollowCamera). `main.gd._ready()` mounts the run's services in code (BackgroundGrid, RunManager, HUD, ReviveSatchel, wallet, reward pool, shop, panels, WorldMap, settings...) and, since #512, three service children reached as public vars: `main.area_loader` (`AreaLoader`: `_swap()` mounts per-area content - spawns, entrance guards, triggers, objective, exit portal, revive item, modifiers - and keeps the run's clear/cooldown/offering/location-event records), `main.travel` (`TravelService`: #349/#366 fast and map travel) and `main.music` (`MusicDirector`: boss, dungeon and overworld music). Areas stay `Main/<Area>` children so relative NodePaths are unchanged. Keeps shared scene files out of merge contention and mount order explicit.
+*Where:* `scripts/main.gd`, `scripts/area_loader.gd`, `scripts/travel_service.gd`, `scripts/music_director.gd`.
 
 ### D5. The shared Player is never recreated during a run
 Area swaps reposition the existing Player at the area's `PlayerSpawn`; HP, spells and items persist across travel. The only reset is RunManager's full scene reload on death (D10). Transport is deferred because it starts inside physics callbacks (D14).
-*Where:* `scripts/main.gd` (`_swap`, `_on_gate_entered`, `_on_exit_portal_entered`).
+*Where:* `scripts/area_loader.gd` (`_swap`, `_on_gate_entered`, `_on_exit_portal_entered`), `scripts/travel_service.gd` (fast/map travel commits).
 
 ### D6. Explicit wiring beats group lookups in production
 Cross-node references are exported NodePaths (`player_path`, `objective_path`) set **before** the node enters the tree, resolved in `_ready`. Every Player joins the `players` group (`ActorCollision.PLAYER_GROUP`) in `_ready`; when a node has no explicit wiring (test fixtures), `Player.find(tree)` is the one fallback lookup. There is no other player group. ReviveSatchel has no fallback at all (accepted #6/#12 contract - a missing `player_path` is an error, not a silent idle).
@@ -55,20 +55,20 @@ Death is a FULL reset (#351): world, cleared dungeons, spells, upgrades, coins a
 *Where:* `scripts/run_manager.gd`, `scripts/revive_satchel.gd`.
 
 ### D11. Objectives are data-driven, one node per dungeon, mounted after enemies
-`DungeonObjective` types: `CLEAR_ALL_ENEMIES` (target 0 = every enemy present at ready), `DEFEAT_BOSS`, `ELIMINATION` (mobs, then a boss) and `DEFENSE` (protect a `DefenseCore` through waves the objective spawns; a destroyed core emits `objective_failed`). It scans the `enemies` group in `_ready`, so Main mounts it **after** the area's enemies. Completion emits `objective_completed(dungeon_id)`. Per dungeon: A CLEAR_ALL; B ELIMINATION (mobs + Mustache Warlord, O1); C and D ELIMINATION with zero mobs (Head, O6; Beast, O7); E and Maze DEFENSE (O10, O12, boss waves O14).
-*Where:* `scripts/dungeon_objective.gd`, `scripts/main.gd` (`_mount_objective`).
+`DungeonObjective` types: `CLEAR_ALL_ENEMIES` (target 0 = every enemy present at ready), `DEFEAT_BOSS`, `ELIMINATION` (mobs, then a boss) and `DEFENSE` (protect a `DefenseCore` through waves the objective spawns; a destroyed core emits `objective_failed`). It scans the `enemies` group in `_ready`, so AreaLoader mounts it **after** the area's enemies. Completion emits `objective_completed(dungeon_id)`. Per dungeon: A CLEAR_ALL; B ELIMINATION (mobs + Mustache Warlord, O1); C and D ELIMINATION with zero mobs (Head, O6; Beast, O7); E and Maze DEFENSE (O10, O12, boss waves O14).
+*Where:* `scripts/dungeon_objective.gd`, `scripts/area_loader.gd` (`_mount_objective`).
 
 ### D12. Exit portals: retreat-anytime on normal, clear-or-die on red
 Normal-gate dungeons mount the portal **unlocked**; red-gate dungeons (by the type of the gate actually entered, #350) and the boss arenas (C, D) mount it **locked** until `objective_completed`. A locked portal also opens on `objective_failed` so a failed defense cannot soft-lock. Using a portal returns the player to that dungeon's overworld entrance in the same run (#378).
-*Where:* `scripts/exit_portal.gd`, `scripts/main.gd` (`_mount_exit_portal`).
+*Where:* `scripts/exit_portal.gd`, `scripts/area_loader.gd` (`_mount_exit_portal`).
 
 ### D13. Gates are typed transport only
-`Gate` carries `gate_type` (NORMAL/RED/BOSS/TRAVEL), tint and label, and emits `entered`; it owns no lock-in rules. TRAVEL gates name their target by `target_path` (hub and overworld point at each other; PackedScene refs would be a cyclic load). There is **no rank system** (#350): a gate with a `GateOffering` rolls NORMAL vs RED once per run (Main caches it per gate until death). BOSS gates never roll.
-*Where:* `scripts/gate.gd`, `scripts/gate_offering.gd`, `scripts/main.gd` (`offering_type_for`), `resources/gate_offering.tres`.
+`Gate` carries `gate_type` (NORMAL/RED/BOSS/TRAVEL), tint and label, and emits `entered`; it owns no lock-in rules. TRAVEL gates name their target by `target_path` (hub and overworld point at each other; PackedScene refs would be a cyclic load). There is **no rank system** (#350): a gate with a `GateOffering` rolls NORMAL vs RED once per run (Main's AreaLoader caches it per gate until death). BOSS gates never roll.
+*Where:* `scripts/gate.gd`, `scripts/gate_offering.gd`, `scripts/area_loader.gd` (`offering_type_for`), `resources/gate_offering.tres`.
 
 ### D14. Never mutate the tree synchronously inside physics callbacks
 Scene swaps, pickup consumption and portal returns use `call_deferred` / `set_deferred`; nothing is freed or swapped inside `body_entered`.
-*Where:* `scripts/main.gd`, `scripts/spell_pickup.gd`, `scripts/exit_portal.gd`.
+*Where:* `scripts/area_loader.gd`, `scripts/travel_service.gd`, `scripts/spell_pickup.gd`, `scripts/exit_portal.gd`.
 
 ### D15. Camera: smoothed follow on physics ticks
 The follow camera uses frame-rate-independent exponential smoothing in `_physics_process` (render-frame sampling jittered, #29) and snaps only on ready.
@@ -79,8 +79,8 @@ The HUD connects to explicit player/caster signals, renders nothing it cannot so
 *Where:* `scripts/hud.gd`.
 
 ### D17. Area enemies are scene data, mounted generically
-Each area's enemies live in its own `SpawnData` child (`AreaSpawnData`) and Main's generic mounter (`_mount_area_spawns`, #100) spawns them on every swap; no area-name checks or hardcoded positions in code. Overworld guards and roamers use the same entry format (D21). Current content: DungeonA - 3 plain enemies, 2 splitting slimes (#392) and 2 Fishies (#464, #522); DungeonB - 3 plain enemies and 2 Fishies, then the Warlord; DungeonC/D - no mobs; DungeonE/Maze - no SpawnData (waves come from DEFENSE). Enemy stats are PLACEHOLDER.
-*Where:* `scripts/area_spawn_data.gd`, `scripts/main.gd` (`_mount_area_spawns`), `scenes/dungeon_*.tscn` (`SpawnData`).
+Each area's enemies live in its own `SpawnData` child (`AreaSpawnData`) and AreaLoader's generic mounter (`_mount_area_spawns`, #100) spawns them on every swap; no area-name checks or hardcoded positions in code. Overworld guards and roamers use the same entry format (D21). Current content: DungeonA - 3 plain enemies, 2 splitting slimes (#392) and 2 Fishies (#464, #522); DungeonB - 3 plain enemies and 2 Fishies, then the Warlord; DungeonC/D - no mobs; DungeonE/Maze - no SpawnData (waves come from DEFENSE). Enemy stats are PLACEHOLDER.
+*Where:* `scripts/area_spawn_data.gd`, `scripts/area_loader.gd` (`_mount_area_spawns`), `scenes/dungeon_*.tscn` (`SpawnData`).
 
 ### D18. Projectiles duplicate their collision shape per instance
 `Projectile._ready` duplicates its collision shape before applying the spell's radius, so radii never leak across instances. Projectiles despawn at max range, never hit their source, and damage anything with `apply_damage`.
@@ -95,12 +95,12 @@ Mechanics land with headless SceneTree harness drivers plus, for player-visible 
 *Where:* `.github/workflows/deploy.yml`, `.github/workflows/tests.yml`, `tools/run_tests.gd`, `.github/workflows/claude.yml`, `.github/workflows/claude-code-review.yml`.
 
 ### D21. Overworld between the hub and the dungeons (#346)
-Hub (services: shop, spell directory, bestiary, fast travel) -> TRAVEL gate `GateOverworld` -> `scenes/overworld.tscn`, which holds every dungeon entrance (GateNormal, GateRed, GateGenerated, GateBoss, GateBeast, GateDefense, GateMaze) and `GateHub` back. Each guarded entrance has an `EntranceGuards` carrier (AreaSpawnData + `dungeon_id`); Main mounts only the sets whose dungeon is uncleared this run (`cleared_dungeons`, filled from `objective_completed`). Behaviors: one posted guard per entrance (`EnemyBehaviorGuard`, leashed chase), patrols on closed routes (`EnemyBehaviorPatrol`, 900 px leash, returns to its route, #414) and overworld-wide `Roamers` migrants (`EnemyBehaviorMigrate`, never suppressed). Routes are an optional `"route"` entry key. Route shapes, counts, speeds and leash radii are provisional.
-*Where:* `scenes/overworld.tscn`, `scripts/overworld_ground.gd`, `scripts/entrance_guards.gd`, `scripts/enemy_behavior_{guard,patrol,migrate}.gd`, `scripts/enemy_spawner.gd`, `scripts/main.gd` (`_mount_entrance_guards`).
+Hub (services: shop, spell directory, bestiary, fast travel) -> TRAVEL gate `GateOverworld` -> `scenes/overworld.tscn`, which holds every dungeon entrance (GateNormal, GateRed, GateGenerated, GateBoss, GateBeast, GateDefense, GateMaze) and `GateHub` back. Each guarded entrance has an `EntranceGuards` carrier (AreaSpawnData + `dungeon_id`); AreaLoader mounts only the sets whose dungeon is uncleared this run (`cleared_dungeons`, filled from `objective_completed`). Behaviors: one posted guard per entrance (`EnemyBehaviorGuard`, leashed chase), patrols on closed routes (`EnemyBehaviorPatrol`, 900 px leash, returns to its route, #414) and overworld-wide `Roamers` migrants (`EnemyBehaviorMigrate`, never suppressed). Routes are an optional `"route"` entry key. Route shapes, counts, speeds and leash radii are provisional.
+*Where:* `scenes/overworld.tscn`, `scripts/overworld_ground.gd`, `scripts/entrance_guards.gd`, `scripts/enemy_behavior_{guard,patrol,migrate}.gd`, `scripts/enemy_spawner.gd`, `scripts/area_loader.gd` (`_mount_entrance_guards`).
 
 ### D22. Location-triggered events, foundation only (#365)
-A `LocationTrigger` (Area2D, group `location_triggers`, shape from its CollisionShape2D children) holds a `trigger_id` and an `OverworldEvent`. Main wires every trigger in the mounted area; a fire bumps the run-scoped `location_event_fire_count(id)`, emits `location_event_triggered` and starts the event deferred with an `OverworldEventContext` (spawning through an area-owned `EventSpawner`). `AmbushEvent` is the example. Rules go behind `LocationTrigger.should_fire`, `arm()`/`disarm()`. No production scene places a trigger yet. `test365_location_events` covers it.
-*Where:* `scripts/location_trigger.gd`, `scripts/overworld_event.gd`, `scripts/overworld_event_context.gd`, `scripts/ambush_event.gd`, `scripts/main.gd` (`_mount_location_triggers`).
+A `LocationTrigger` (Area2D, group `location_triggers`, shape from its CollisionShape2D children) holds a `trigger_id` and an `OverworldEvent`. AreaLoader wires every trigger in the mounted area; a fire bumps the run-scoped `AreaLoader.location_event_fire_count(id)` (the abandoned village's run-once guard reads it), emits `location_event_triggered` and starts the event deferred with an `OverworldEventContext` (spawning through an area-owned `EventSpawner`). `AmbushEvent` is the example. Rules go behind `LocationTrigger.should_fire`, `arm()`/`disarm()`. No production scene places a trigger yet. `test365_location_events` covers it.
+*Where:* `scripts/location_trigger.gd`, `scripts/overworld_event.gd`, `scripts/overworld_event_context.gd`, `scripts/ambush_event.gd`, `scripts/area_loader.gd` (`_mount_location_triggers`), `scripts/abandoned_village.gd`.
 
 ### D23. Tall grass hides characters (#461)
 `TALL_GRASS` terrain is walkable and the only type with `conceals`. One sight rule, `TallGrass.can_see(map, viewer, target)`: a target outside grass is always visible; a target in grass is visible only to a viewer also in grass within `SIGHT_RADIUS` (96 px). Enemies lose a hidden player/summon target (falling back to their "no player" path), `Enemy.visible` follows `seen_by_player()`, summon guards and homing shots skip hidden enemies, and the player draws translucent while concealed. Only sight changes, never hits or collision. The overworld lays out the patches; dungeons have none. Radius and patch layout are implementer defaults. `test461_tall_grass` covers it.
@@ -138,7 +138,7 @@ The hub `Shop` never sells a spell the player owns; the offerable set is derived
   *Where:* `scripts/world_map.gd`, `scripts/map_panel.gd`, `scripts/map_canvas.gd`, `scripts/main.gd`.
 - **O10. Defense mission (#337).** Settled: a fixed number of waves; mixed targeting. DungeonE (overworld `GateDefense`, NORMAL, no roll, no guards): half of each wave goes for the `DefenseCore` (turning on the player within 150 px), the rest hunt the player; a destroyed core fails the mission and leaves the portal open. Numbers (core 800 HP, 5 waves of 3-7, 15 s cadence) are implementer defaults. Open: balance, success rewards, failure cost, whether the gate should roll.
 - **O11. Map dungeon marks + fast travel (#366).** Only CLEARED dungeons show on the map automatically; clicking one and Travel fast-travels through the #349 Hub-spoke policy (`FastTravelRoutes.scene_from_hub`: origin must be the Hub, target cleared this run), rechecked on commit. Marks showing under fog and being run-scoped are implementer defaults. `test366_map_travel` covers it.
-  *Where:* `scripts/world_map.gd`, `scripts/map_panel.gd`, `scripts/map_canvas.gd`, `scripts/fast_travel_routes.gd`, `scripts/main.gd`.
+  *Where:* `scripts/world_map.gd`, `scripts/map_panel.gd`, `scripts/map_canvas.gd`, `scripts/fast_travel_routes.gd`, `scripts/travel_service.gd`.
 - **O12. Maze defense (#367).** `DungeonMaze` (overworld `GateMaze`) runs DEFENSE on a seeded `MazeGen` maze; wave enemies route with `FlowNav` (opt-in per enemy via `Enemy.nav`) and are clamped out of walls with `TerrainMotion.clamp_displacement`. Size, entrances, loop rate and a fresh seed per visit are implementer defaults. Open: balance (far entrances are slow), crowding, breakable walls, whether the maze replaces DungeonE.
   *Where:* `scripts/maze_gen.gd`, `scripts/flow_nav.gd`, `scripts/maze_defense_dungeon.gd`, `scenes/dungeon_maze.tscn`.
 - **O13. Gated dungeon maps are terrain (#396).** DungeonA-D carry fixed ASCII layouts (`TerrainFixedLayout`, `resources/terrain_maps/`) with per-dungeon wall palettes (placeholder look); DungeonE stays flat. Bosses move through `Enemy.terrain_move_and_slide`, and knockback is clamped on every terrain grid. Non-destroyable solid walls stop shots at the cell face, piercing included (#433); destroyable tiles, water and pits keep their own rules. `test396_dungeon_terrain` covers it.

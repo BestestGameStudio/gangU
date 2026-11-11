@@ -33,7 +33,7 @@ func _process(delta: float) -> bool:
 	t += delta
 	match phase:
 		0:
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			prog = SpellProgress.new()
 			prog.name = "SpellProgress211"

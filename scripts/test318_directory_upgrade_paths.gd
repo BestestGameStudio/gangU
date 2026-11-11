@@ -56,7 +56,7 @@ func _text(line: Control, label: String) -> String:
 func _process(_delta: float) -> bool:
 	match phase:
 		0:
-			if scene.current_area == null:
+			if scene.area_loader.current_area == null:
 				return false
 			p = scene.get_node("Player")
 			caster = p.get_node("SpellCaster")
@@ -72,7 +72,7 @@ func _process(_delta: float) -> bool:
 	return false
 
 func _run() -> void:
-	var dir_node := scene.current_area.get_node_or_null("SpellDirectory") as PanelStation
+	var dir_node := scene.area_loader.current_area.get_node_or_null("SpellDirectory") as PanelStation
 	_check(dir_node != null, "hub has a spell directory location")
 	var directory: Array[PanelStation] = [dir_node]
 	var unlocked_before := caster.get_unlocked().duplicate()
