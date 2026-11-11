@@ -90,4 +90,17 @@ peak, 8ms right-channel delay, no pitch/time change. Full 16.4s melody
 plays only while unaware near a living player, 30-50s quiet spacing,
 one whistler globally. Stops on awareness, range exit or death.
 
-Encoded from approved 44.1kHz 16-bit stereo WAV using Vorbis q6, no added gain, pitch change or looping. Spatial attenuation applies.
+Approved cast v3: el_boss, CC0
+https://freesound.org/people/el_boss/sounds/853287/ .
+1.7s, trim/fades, stereo, -10dBFS peak. Source is public 128kbps MP3
+preview, NOT the original lossless master. Plays once at actual CAST edge.
+
+Approved reel v1: Joseph Sardin, CC0
+https://bigsoundbank.com/fishing-reel-fast-s1435.html .
+Excerpt 0.62-1.78s, 40ms in/250ms out fades, -10dBFS peak, 8ms
+right-channel delay, no pitch/time change. Two crank bursts with a gap,
+NOT a seamless loop. Repeated one-shots with 0.25s extra gap while HOOKED
+only; stops on every hook exit, player death or enemy death.
+
+All three encoded from approved 44.1kHz 16-bit stereo WAVs using Vorbis q6,
+no added gain, pitch change or looping. Spatial attenuation applies.
