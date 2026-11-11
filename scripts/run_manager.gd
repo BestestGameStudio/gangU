@@ -61,6 +61,7 @@ func _on_player_died() -> void:
 		return
 	_restarting = true
 	_disable_casting()
+	PlayerDeathPresentation.begin(get_parent(), _watched, restart_delay)
 	run_restarting.emit()
 	get_tree().create_timer(restart_delay).timeout.connect(_restart)
 
