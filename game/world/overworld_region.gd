@@ -13,6 +13,8 @@ var active := true
 var arrival := Vector2.ZERO
 var entry := Vector2.ZERO
 var _collision_state: Dictionary = {}
+var _source: TerrainMap
+var _syncing_terrain := false
 
 func mount(shared: TerrainMap) -> void:
 	terrain = shared
@@ -59,6 +61,8 @@ func mount(shared: TerrainMap) -> void:
 	source.visible = true
 	# Presentation must rebuild after movement; its _ready ran at origin.
 	source.art_enabled = true
+	_source = source
+	terrain.cell_changed.connect(_on_shared_cell_changed)
 
 	set_active(false)
 
@@ -152,3 +156,26 @@ func _sync_collisions(node: Node, enabled: bool) -> void:
 		body.collision_mask = original[1] if enabled else 0
 	for child in node.get_children():
 		_sync_collisions(child, enabled)
+
+## Physical edits (destroyed blocks/terrain spells) update the original
+## palette renderer and maze navigation too. A source tile can span several
+## shared cells; keep that tile's physical footprint coherent with its art.
+func _on_shared_cell_changed(cell: Vector2i, _old: StringName, type: StringName) -> void:
+	if _syncing_terrain or _source == null:
+		return
+	var world := terrain.cell_to_world(cell)
+	if not bounds.has_point(world):
+		return
+	_syncing_terrain = true
+	var source_cell := _source.world_to_cell(world)
+	var source_type := TerrainTypes.OBSTACLE if type == StringName(String(encounter_id)+"_wall") else type
+	if _source.is_valid_type(source_type):
+		_source.set_cell(source_cell, source_type)
+		var origin := _source.to_global(Vector2(source_cell) * _source.cell_size)
+		var lo := terrain.world_to_cell(origin)
+		var hi := terrain.world_to_cell(origin + Vector2.ONE * (_source.cell_size-1))
+		var cells := {}
+		for x in range(lo.x,hi.x+1):
+			for y in range(lo.y,hi.y+1): cells[Vector2i(x,y)] = type
+		terrain.set_cells(cells)
+	_syncing_terrain = false
