@@ -13,3 +13,4 @@ has_stun_phase = true
 arrival_color = Color(0.72,1,0.26,1)
 windup_times = {0: 0.65, 4: 0.75}
 windup_anims = {0: &"windup_bite", 4: &"windup_aoe"}
+clear_glow_on_stun = true
