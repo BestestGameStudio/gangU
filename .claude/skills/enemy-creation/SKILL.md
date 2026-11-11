@@ -40,15 +40,13 @@ Reference implementations: PR #182 (#177) - common enemy `scenes/enemy.tscn` and
 - A brand-new area or gate: follow the dungeon-creation skill's checklist.
 
 ## Tests
-- SceneTree harness `scripts/testNNN_<topic>.gd` (NNN = issue): prints `[NNN] label -> PASS|FAIL`, `quit(failures)`. Example: `scripts/test177_mustache_warrior.gd` (anims, hurt, death corpse, ELIMINATION spawn, each boss attack with collisions off like test99, projectile visual override).
-- Optional playable fixture `scenes/testNNN_*.tscn` (labelled TEST-ONLY) - e.g. `scenes/test177_warlord.tscn`; autotest fixtures read `GANGU_AUTOTEST=1`.
-- Production flows: extend `scripts/test100_spawn_data.gd` / `scripts/test9_exit_flow.gd` when spawns, objectives or portals change.
-- When visuals change, update tests that assert the old look (test89, test90 asserted the orange polygon).
+- Extend the core harnesses instead of adding a per-issue one: `scripts/test_enemy_definition.gd` (definition data), `scripts/test220_enemy_spawner.gd` (spawning), `scripts/test513_boss_damage_path.gd` (boss hits), `scripts/test518_spawn_entry_typed.gd` (spawn data). Add a new `scripts/test_<system>.gd` only for a genuinely new system.
+- No playable fixture scenes or record scripts in the repo; keep them in scratch space.
 
 ## Verify
 1. Engine: `project.godot` pins 4.5.1 (CI image `barichello/godot-ci:4.5.1`). A newer local Godot (4.7.x) regenerates `.uid` files for untouched scripts: commit only the `.uid` files of scripts you added, and name the Godot version you used in the PR.
 2. `godot --headless --path . --import` - read the output for errors.
-3. While iterating, run only the touched harness: `godot --headless --path . --script res://scripts/testNNN.gd` (macOS: wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`). Once at the end, run the full suite (README "Testing") and compare `-> FAIL` / `SCRIPT ERROR` counts against its **known baseline noise** (~190 errors from the `test_objective_flow` fixture, flaky `test_run_restart`); do not rebuild main to re-baseline.
+3. While iterating, run only the touched harness: `godot --headless --path . --script res://scripts/test<name>.gd` (macOS: wrap with `perl -e 'alarm 150; exec @ARGV' godot ...`). Once at the end, run the full suite (README "Testing") - it must report `RESULT: ALL PASS`.
 4. Look at it: windowed run of a scratch SceneTree script that saves `root.get_texture().get_image().save_png(...)` at each boss state; Read the PNGs.
 5. Demo clip for the PR: the showcase-video skill (`tools/showcase/record_showcase.gd`). Disclose demo-only tweaks (boss HP floor, player autoheal).
 

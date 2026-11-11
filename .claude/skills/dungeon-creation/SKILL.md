@@ -13,12 +13,12 @@ Reference: PR #213 (#173) - boss-gate arena `DungeonC` behind the violet `GateBo
 ## Checklist (everything that must be touched)
 - [ ] **Area scene** `scenes/dungeon_X.tscn`: root `Node2D` named `DungeonX` (main.gd matches on the node name), `PlayerSpawn` marker, `SpawnData` child (`scripts/area_spawn_data.gd`) with mob entries (empty for a boss-only arena). Copy `scenes/dungeon_b.tscn`.
 - [ ] **Hub gate** in `scenes/hub.tscn`: instance `scenes/gate.tscn` with `gate_type` and `target_dungeon = ExtResource(...)`. Give the new `ext_resource` a **unique id string** (e.g. `id="7_dnc"`, not the next integer) so parallel PRs do not collide on merge, and bump `load_steps`.
-- [ ] **Gate placement**: keep it off test106's scripted movement path and clear of the other gates' labels (`GateBoss` had to move to (712, 250)). Run test106, test50b, test91 and test189.
+- [ ] **Gate placement**: keep it clear of the other gates and their labels.
 - [ ] **Gate type** (if new): `scripts/gate.gd` `GateType` enum + tint constant + label text in `_ready`. Gates stay transport-only (D13).
 - [ ] **`scripts/main.gd`**: add an `area.name == "DungeonX"` branch in `_mount_objective` (dungeon_id, objective type, `boss_scene`, `boss_spawn_position`, `boss_spawned.connect(_on_boss_spawned)`), and add the name to both lists in `_mount_exit_portal` (mount list; locked list for clear-or-die). These name branches are hard-coded - a known refactor candidate (per-area config on the area scene); do not refactor inside a content PR.
 - [ ] **`scripts/exit_portal.gd`** header comment: say how the new area mounts the portal.
 - [ ] **ARCHITECTURE.md**: a dated decision entry (O-entry) naming who decided, plus D11/D12/D13/D17 sentences that list the areas.
-- [ ] **Tests**: a `scripts/testNNN_*.gd` leg that walks gate -> area -> objective -> portal; extend `scripts/test9_exit_flow.gd` / `scripts/test100_spawn_data.gd` when flows change; check tests that enumerate gates (test106, test50b, test91, test189).
+- [ ] **Tests**: extend the core harnesses, not a new per-issue one: `scripts/test512_dungeon_definitions.gd` (definition), `scripts/test306_gate_swap.gd` / `scripts/test378_exit_to_entrance.gd` (gate and exit travel), `scripts/test337_defense_objective.gd` (objectives).
 
 ## Verify and PR
 - Engine/`.uid` rules, full-suite baseline and the PR convention are in the enemy-creation skill ("Verify", "PR etiquette") and README "Testing".

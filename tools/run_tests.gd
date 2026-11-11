@@ -3,20 +3,12 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/run_tests.gd -- [filter ...] [-j N] [--timeout S] [--list]
 ##
-## A harness is a scripts/test*.gd that `extends SceneTree`, or a scene in
-## SCENE_TESTS (run with GANGU_AUTOTEST=1). Each child runs with
+## A harness is a scripts/test*.gd that `extends SceneTree`. Each child runs with
 ## `--headless --fixed-fps 60` and its own user:// dir (XDG_DATA_HOME, Linux).
 ## A filter keeps tests whose name contains any of the given substrings.
 ## Pass = exit code 0 before the timeout, with no script diagnostics. Exits 1 if anything failed.
 
 const TEST_DIR := "res://scripts"
-const SCENE_TESTS: Array[String] = [
-	"res://scenes/test146_elimination.tscn",
-]
-const NOT_HARNESSES: Array[String] = [
-	"test245_visual",
-	"test290_visual",
-]
 const TAIL_LINES := 40
 ## Godot exits 0 when the --script itself fails to parse or load.
 const LOAD_FAILURES: Array[String] = [
@@ -97,11 +89,9 @@ func _discover() -> Array[Dictionary]:
 			continue
 		var name := f.get_basename()
 		var path := TEST_DIR.path_join(f)
-		if name in NOT_HARNESSES or not _is_scene_tree_script(path):
+		if not _is_scene_tree_script(path):
 			continue
 		tests.append({name = name, args = ["--script", path]})
-	for scene in SCENE_TESTS:
-		tests.append({name = scene.get_file().get_basename() + ".tscn", args = [scene]})
 	return tests.filter(_matches)
 
 func _is_scene_tree_script(path: String) -> bool:

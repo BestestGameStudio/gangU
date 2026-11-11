@@ -18,6 +18,6 @@ Notes for Claude agents working on gangU. Keep this short; the details live in t
 - `scenes/main.tscn` stays minimal; mount systems from `scripts/main.gd` (D4). Area content is scene data (`SpawnData`, D17).
 - No tree mutation inside physics callbacks (D14); HP only changes through `apply_damage` / `heal` (D7).
 - Run state outside the reloaded scene joins the `run_state` group and implements `reset_run_state()` (D10).
-- Tests: `timeout 300 godot --headless --path . --script res://scripts/testNNN_topic.gd`. New behaviour gets a new `scripts/test<issue>_<topic>.gd` harness. Run the harnesses for the area you touched and report the real results.
+- Tests: never add a test unless it is truly essential and adds value (INSTINCT.md section 12). The suite is a small core set (README "Testing"). Do not add a harness per issue: extend the core harness that owns the system you changed, and add a new `scripts/test_<system>.gd` only for a new core system or contract. No one-off tests, debug scenes or record scripts in the repo; keep those in your scratch space. Run the harnesses for the area you touched and report the real results.
 - Commit the `.uid` files of scripts you add; never commit `.godot/` or build output.
 - When a change alters a rule in `ARCHITECTURE.md`, update that entry in the same PR.

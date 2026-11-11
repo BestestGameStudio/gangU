@@ -77,7 +77,7 @@ func _initialize() -> void:
 		_check(main.area_loader.current_area.name == "Overworld", "(B) still in the overworld 20 frames after exiting %s" % dname)
 
 	# (D) no overworld entrance -> hub fallback
-	main.area_loader._exit_dungeon("res://scenes/test_dungeon_clear.tscn")
+	main.area_loader._exit_dungeon("res://scenes/hub.tscn")
 	await _frames(3)
 	_check(main.area_loader.current_area.name == "Hub", "(D) dungeon without an overworld entrance falls back to the hub")
 	main.area_loader._exit_dungeon("")

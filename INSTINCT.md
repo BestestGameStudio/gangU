@@ -140,3 +140,15 @@ with the right word.
   only if their owner says so.
 - The one-line `test407` relax merged in #547 was Daniel's explicit one-off decision
   (2026-11-10), not a precedent.
+
+## 12. Add a test only when it is truly essential
+
+- Colin's instruction (2026-11-10), for every contributor: never add a test unless it is
+  truly essential and adds value. The suite is a small core set (README "Testing") and
+  stays that way.
+- A test earns its place only if it guards a core system contract that would otherwise
+  break silently. Per-issue tests, tuning-constant or content-count pins, visual or
+  polish checks, debug scenes, demo drivers and record scripts do not qualify.
+- Prefer extending the core harness that owns the system over adding a new file. One-off
+  verification stays in your scratch space and is cited as PR evidence, not committed.
+- If you think a new test is essential, say why in the PR description.

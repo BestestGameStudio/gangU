@@ -20,8 +20,7 @@ Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE
   run service in code (#512: `AreaLoader` mounts and swaps areas, `TravelService` owns
   fast/map travel, `MusicDirector` owns all music): hub (`scenes/hub.tscn`) <-> overworld
   (`scenes/overworld.tscn`) <-> dungeons (`scenes/dungeon_*.tscn`).
-- `scripts/` - GDScript sources, plus `test*.gd` harnesses and `record*.gd` capture drivers.
-- `scenes/test*.tscn` - evidence fixtures for harnesses (never production).
+- `scripts/` - GDScript sources, plus the core `test*.gd` harnesses.
 - `resources/` - data: spells, enemies, rewards, terrain maps and palettes, gate offering.
 - `assets/` - art and audio.
 - `tools/showcase/` - scripted gameplay recordings; `tools/sprites/` - sprite packing tools.
@@ -88,8 +87,11 @@ The game must load into the hub with no console errors.
 
 ## Testing
 
-Harnesses are `scripts/test*.gd` scripts that `extend SceneTree`, plus the fixture scenes listed in
-`SCENE_TESTS` in `tools/run_tests.gd`. A harness passes when its process exits 0 with no script diagnostics.
+Harnesses are `scripts/test*.gd` scripts that `extend SceneTree`. The suite is deliberately small:
+core contracts only (runner/uid hygiene, run state, collision layers, spawn and dungeon data, damage and
+on-hit, stats, enemies, spells and progression, shop/currency/relics/rewards, boot and area travel,
+death reset, objectives, terrain generation/motion/pathing, save compatibility). Extend the harness that
+owns a system instead of adding a per-issue one. A harness passes when its process exits 0 with no script diagnostics.
 
 Run them with the runner. It runs each harness in its own `--headless --fixed-fps 60` process, in
 parallel, with a per-test timeout, then prints a summary. It exits 1 if any harness fails, times out
@@ -107,6 +109,4 @@ without a tracked `.uid`, or on an orphan `.uid`.
 
 - While iterating locally, pass a filter for the area you changed. The `Tests` workflow
   (`.github/workflows/tests.yml`) runs the whole suite on every pull request and on every push to `main`.
-- Debug maps, demo drivers and movie drivers (the `extends Node2D` scripts behind `scenes/test*.tscn`,
-  plus `test245_visual` and `test290_visual`) are not harnesses, and the runner skips them.
 - One harness by hand: `godot --headless --fixed-fps 60 --path . --script res://scripts/testNNN_topic.gd`.

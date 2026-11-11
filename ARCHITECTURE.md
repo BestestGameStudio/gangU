@@ -87,8 +87,8 @@ Each area's enemies live in its own `SpawnData` child (`AreaSpawnData`) and Area
 *Where:* `scripts/projectile.gd`.
 
 ### D19. Evidence standard for gameplay PRs
-Mechanics land with headless SceneTree harness drivers plus, for player-visible claims, a browser recording of the exact pushed head with zero console errors, made with real input (synthetic `apply_damage` calls are a named headless complement only). Fixture scenes are labeled evidence fixtures, never described as production.
-*Where:* `scripts/test*.gd`, `scenes/test*.tscn`.
+Mechanics land with headless SceneTree harness drivers plus, for player-visible claims, a browser recording of the exact pushed head with zero console errors, made with real input (synthetic `apply_damage` calls are a named headless complement only). One-off evidence drivers and recordings stay out of the repo.
+*Where:* `scripts/test*.gd`.
 
 ### D20. CI/CD: web build and test gate; only main deploys
 `deploy.yml` exports the web build in a pinned `barichello/godot-ci:4.5.1` container using the image's checksum-verified nothreads templates. PRs get build-only runs; GitHub Pages deploys only on main pushes. Concurrency is per ref (`pages-${{ github.ref }}`, no cancel) so PR activity cannot cancel a main deploy (#52). `claude.yml` (the `@claude` / `claude`-label agent job) and `claude-code-review.yml` (automatic PR review) are agent workflows, not build gates. `tests.yml` runs `tools/run_tests.gd` on pull requests and main pushes with pinned Godot 4.5.1; it fails on failed, timed-out, unloadable or script-error harnesses.
