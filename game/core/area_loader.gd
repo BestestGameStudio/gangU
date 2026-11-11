@@ -325,8 +325,8 @@ func _enter_dungeon(dungeon_id: StringName, path: String) -> void:
 ## second way to pick the same Hub -> cleared-dungeon trip, so the trip is
 ## only committed from the Hub (FastTravelRoutes.scene_from_hub). No new
 ## origins: no escape from a guarded/spawn-capable overworld and no direct
-## dungeon -> dungeon hop. The way back stays the existing #349 return-to-Hub
-## path (FastTravelPanel / can_fast_return), untouched here.
+## dungeon -> dungeon hop. There is no fast way back (#616): players leave
+## through the normal exit.
 ## Implementer defaults (issue left open): marks show even under map fog
 ## (clearing implies discovery); run-scoped like cleared_dungeons/WorldMap.
 func _dungeon_sites(area: Node) -> Dictionary:

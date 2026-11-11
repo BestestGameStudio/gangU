@@ -3,7 +3,6 @@ extends ModalPanel
 ## #349: view only. Main supplies live eligibility and handles requests.
 ## The panel has no clear record or origin policy of its own.
 signal destination_requested(dungeon_id: StringName)
-signal hub_requested
 
 var _open_button: Button
 var _backdrop: PanelContainer
@@ -41,11 +40,11 @@ func _ready() -> void:
 	close_button.pressed.connect(close)
 	box.add_child(close_button)
 	close()
-	set_choices([], false)
+	set_choices([])
 
 ## Called by Main on area/clear changes. Requests are advisory: Main must
 ## revalidate at click time. Closing also drops modal cast suppression.
-func set_choices(ids: Array[StringName], can_return: bool) -> void:
+func set_choices(ids: Array[StringName]) -> void:
 	for row in _rows.get_children():
 		_rows.remove_child(row)
 		row.queue_free()
@@ -55,13 +54,6 @@ func set_choices(ids: Array[StringName], can_return: bool) -> void:
 		button.text = FastTravelRoutes.label_for(id)
 		UiStyle.style_button(button, UiStyle.B_ACCENT, 8)
 		button.pressed.connect(_request_destination.bind(id))
-		_rows.add_child(button)
-	if can_return:
-		var button := Button.new()
-		button.name = "ReturnHub"
-		button.text = "Return to Hub"
-		UiStyle.style_button(button, UiStyle.B_ACCENT, 8)
-		button.pressed.connect(_request_hub)
 		_rows.add_child(button)
 	_open_button.visible = _rows.get_child_count() > 0
 	if not _open_button.visible:
@@ -80,10 +72,6 @@ func _apply_shown(shown: bool) -> void:
 func _request_destination(id: StringName) -> void:
 	close()
 	destination_requested.emit(id)
-
-func _request_hub() -> void:
-	close()
-	hub_requested.emit()
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if _backdrop.visible and event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
