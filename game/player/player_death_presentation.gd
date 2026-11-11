@@ -3,6 +3,9 @@ extends CanvasLayer
 ## #591: presentation only. RunManager owns revival, timing and the full reset.
 ## Created only AFTER the revive interception has declined the death.
 
+const DEATH_CUE := preload("res://assets/audio/sfx/player_death_v7.ogg")
+var _audio: AudioStreamPlayer
+
 const TITLE := "YOU DIED"
 const TITLE_COLOR := Color(0.72, 0.15, 0.12)
 var _elapsed := 0.0
@@ -31,6 +34,11 @@ static func begin(host: Node, player: Player, duration: float) -> PlayerDeathPre
 	effect._duration = maxf(duration, 0.01)
 	host.add_child(effect)
 	effect._capture_pose(player)
+	effect._audio = AudioStreamPlayer.new()
+	effect._audio.name = "DeathCue"
+	effect._audio.stream = DEATH_CUE
+	effect.add_child(effect._audio)
+	effect._audio.play()
 	return effect
 
 func _ready() -> void:
@@ -106,6 +114,8 @@ func _capture_pose(player: Player) -> void:
 
 func _process(delta: float) -> void:
 	_elapsed += delta
+	if _elapsed >= _duration and _audio != null:
+		_audio.stop()
 	_update_presentation()
 
 func _update_presentation() -> void:
