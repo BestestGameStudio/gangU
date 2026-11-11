@@ -78,15 +78,7 @@ func _configure() -> void:
 	default_fallback = Attack.PULSE
 	_range(PULSE_RANGE, false, Attack.PULSE, Attack.VOLLEY)
 	attack_steps = {State.VOLLEY: _dispatch_volley, State.PULSE: _dispatch_pulse}
-	first_attack_delay = FIRST_ATTACK_DELAY
-	attack_interval = ATTACK_INTERVAL
-	enraged_interval = ENRAGED_INTERVAL
-	recover_time = RECOVER_TIME
-	stun_time = STUN_TIME
-	has_stun_phase = true
-	arrival_color = HEAD_RED
-	windup_times = WINDUP_TIME
-	windup_anims = WINDUP_ANIM
+	_apply_tuning(load("res://resources/boss_attacks/head_tuning.tres"))
 	ring_data = load("res://resources/boss_attacks/head_ring.tres")
 	volley_data = load("res://resources/boss_attacks/head_volley.tres")
 
