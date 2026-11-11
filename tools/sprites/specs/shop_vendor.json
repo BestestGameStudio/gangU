@@ -1,5 +1,5 @@
 {
- "_comment": "#217 Shop Sprite Update board -> assets/sprites/shop_vendor.png (+ shop_vendor_frames.tres body). Board pre-keyed: exterior background flood-filled to magenta (see assets/sprites/SOURCE.md). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres resources/sprites/shop_vendor_frames.tres",
+ "_comment": "#217 Shop Sprite Update board -> assets/sprites/shop_vendor.png (+ shop_vendor_frames.tres body). Board pre-keyed: exterior background flood-filled to magenta (see assets/sprites/SOURCE.md). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres data/sprites/shop_vendor_frames.tres",
  "scale": 2,
  "cell_w": 224,
  "cell_h": 224,

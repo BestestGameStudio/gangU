@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgangu7satchel"]
+
+[ext_resource type="Script" path="res://game/player/revive_satchel.gd" id="1_satchel"]
+
+[node name="ReviveSatchel" type="Node"]
+script = ExtResource("1_satchel")

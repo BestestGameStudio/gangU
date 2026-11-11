@@ -1,0 +1,85 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgangu337dne"]
+
+[ext_resource type="Script" path="res://game/world/defense_core.gd" id="337_core"]
+
+[node name="DungeonE" type="Node2D"]
+
+[node name="Background" type="Node2D" parent="."]
+z_index = -50
+
+[node name="ArenaFrameTop" type="ColorRect" parent="Background"]
+offset_left = 150.0
+offset_top = 84.0
+offset_right = 1002.0
+offset_bottom = 88.0
+color = Color(0.22, 0.42, 0.52, 1)
+
+[node name="ArenaFrameBottom" type="ColorRect" parent="Background"]
+offset_left = 150.0
+offset_top = 652.0
+offset_right = 1002.0
+offset_bottom = 656.0
+color = Color(0.22, 0.42, 0.52, 1)
+
+[node name="ArenaFrameLeft" type="ColorRect" parent="Background"]
+offset_left = 150.0
+offset_top = 84.0
+offset_right = 154.0
+offset_bottom = 656.0
+color = Color(0.22, 0.42, 0.52, 1)
+
+[node name="ArenaFrameRight" type="ColorRect" parent="Background"]
+offset_left = 998.0
+offset_top = 84.0
+offset_right = 1002.0
+offset_bottom = 656.0
+color = Color(0.22, 0.42, 0.52, 1)
+
+[node name="CoreRing" type="Line2D" parent="Background"]
+position = Vector2(576, 380)
+points = PackedVector2Array(70, 0, 49, 49, 0, 70, -49, 49, -70, 0, -49, -49, 0, -70, 49, -49, 70, 0)
+width = 3.0
+default_color = Color(0.22, 0.42, 0.52, 1)
+
+[node name="TitleLayer" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Title" type="Label" parent="TitleLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -700.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 28
+text = "DEFENSE"
+horizontal_alignment = 2
+
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(576, 540)
+
+[node name="DefenseCore" type="Node2D" parent="."]
+position = Vector2(576, 380)
+script = ExtResource("337_core")
+
+[node name="WaveSpawns" type="Node2D" parent="."]
+
+[node name="NW" type="Marker2D" parent="WaveSpawns"]
+position = Vector2(220, 150)
+
+[node name="NE" type="Marker2D" parent="WaveSpawns"]
+position = Vector2(932, 150)
+
+[node name="W" type="Marker2D" parent="WaveSpawns"]
+position = Vector2(200, 400)
+
+[node name="E" type="Marker2D" parent="WaveSpawns"]
+position = Vector2(952, 400)
+
+[node name="SW" type="Marker2D" parent="WaveSpawns"]
+position = Vector2(220, 620)
+
+[node name="SE" type="Marker2D" parent="WaveSpawns"]
+position = Vector2(932, 620)

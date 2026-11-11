@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BossAttack" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/enemies/bosses/boss_attack.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+next_state = 6
+animation = &"aoe"
+shape = 1
+phase_ring = true
+clear_on_start = false

@@ -1,5 +1,5 @@
 {
- "_comment": "#302 bolt upgrade sprites -> append rows 14-15 to assets/sprites/spell_upgrades.png (+ resources/sprites/spell_upgrades_frames.tres). Strip: image attached to issue #302 by Mitravasu (1774x887 RGBA, 2 rows x 4 gold lightning frames, real transparency). Run: python3 -I tools/sprites/append_sheet_rows.py pack tools/sprites/specs/spell_upgrades_bolt_rows.json <issue-302-strip.png> assets/sprites/spell_upgrades.png --tres resources/sprites/spell_upgrades_frames.tres",
+ "_comment": "#302 bolt upgrade sprites -> append rows 14-15 to assets/sprites/spell_upgrades.png (+ data/sprites/spell_upgrades_frames.tres). Strip: image attached to issue #302 by Mitravasu (1774x887 RGBA, 2 rows x 4 gold lightning frames, real transparency). Run: python3 -I tools/sprites/append_sheet_rows.py pack tools/sprites/specs/spell_upgrades_bolt_rows.json <issue-302-strip.png> assets/sprites/spell_upgrades.png --tres data/sprites/spell_upgrades_frames.tres",
  "scale": 6,
  "cell_w": 64,
  "cell_h": 72,

@@ -1,5 +1,5 @@
 {
- "_comment": "#174 Beast boss board -> assets/sprites/beast_boss.png (+ resources/sprites/beast_boss_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/beast_boss.json <board.png> assets/sprites/beast_boss.png --tres resources/sprites/beast_boss_frames.tres",
+ "_comment": "#174 Beast boss board -> assets/sprites/beast_boss.png (+ data/sprites/beast_boss_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/beast_boss.json <board.png> assets/sprites/beast_boss.png --tres data/sprites/beast_boss_frames.tres",
  "scale": 3,
  "cell_w": 48,
  "cell_h": 48,

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/behaviors/wolf.tres" id="2_beh"]
+
+[resource]
+script = ExtResource("1_def")
+max_hp = 40
+speed = 300.0
+contact_damage = 30
+contact_cooldown = 1.4
+contact_range = 46.0
+behavior = ExtResource("2_beh")

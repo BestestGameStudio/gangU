@@ -1,14 +1,14 @@
 [gd_resource type="Resource" script_class="DungeonDefinition" load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/dungeon_definition.gd" id="1_def"]
-[ext_resource type="PackedScene" path="res://scenes/beast_boss.tscn" id="2_boss"]
+[ext_resource type="Script" path="res://game/world/dungeon_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://game/enemies/bosses/beast_boss.tscn" id="2_boss"]
 
 [resource]
 script = ExtResource("1_def")
 area_name = &"DungeonD"
 id = &"dungeon_d"
 label = "Beast's Den"
-scene = "res://scenes/dungeon_d.tscn"
+scene = "res://game/world/dungeon_d.tscn"
 objective_type = 2
 boss_scene = ExtResource("2_boss")
 boss_spawn = Vector2(576, 280)

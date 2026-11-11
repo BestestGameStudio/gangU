@@ -114,7 +114,7 @@ here is cut from it by `tools/sprites/extract_frames.py` with
 - The board's "Variants" and "Directional Sprites (4 dir)" panels are not
   extracted yet (no consumer); the board labels Lunge (4) / Spin (6) /
   Ranged (4) but draws 2 / 3 / 3 frames - the drawn frames are used.
-- SpriteFrames: resources/sprites/mustache_warrior_frames.tres.
+- SpriteFrames: data/sprites/mustache_warrior_frames.tres.
 
 # head_boss.png - the Head (boss of DungeonC, #173)
 
@@ -125,7 +125,7 @@ panels drawn at different character sizes), so it is NOT shipped as-is; the
 engine sheet here is cut from it by `tools/sprites/extract_frames.py` with
 `tools/sprites/specs/head_boss.json` (background keyed out, 3:1
 alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
-`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/head_boss.json <board.png> assets/sprites/head_boss.png --tres resources/sprites/head_boss_frames.tres`.
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/head_boss.json <board.png> assets/sprites/head_boss.png --tres data/sprites/head_boss_frames.tres`.
 
 ## Layout
 - Cell: 48x48 px, chin on row 44, head ~24 px tall (the scene draws it 3x).
@@ -133,7 +133,7 @@ alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
 - Rows (frames drawn on the board -> packed): 0 idle (6), 1 walk (7),
   2 projectile attack (8), 3 AoE pulse (8), 4 hurt (4), 5 stun (4),
   6 death (11).
-- Animations (resources/sprites/head_boss_frames.tres): idle 6 (loop),
+- Animations (data/sprites/head_boss_frames.tres): idle 6 (loop),
   walk 7 (loop), attack 4 (projectile frames 3-6, contact bite),
   windup_projectile 4 + projectile 4 (projectile row split at the scream),
   windup_aoe 4 + aoe 4 (AoE row split at the release), hurt 4, stun 4
@@ -168,14 +168,14 @@ It is a presentation board, so it is NOT shipped as-is; the engine sheet is
 cut from it by `tools/sprites/extract_frames.py` with
 `tools/sprites/specs/beast_boss.json` (background keyed out, 3:1
 alpha-weighted downsample, hard alpha cut). Reproduce:
-`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/beast_boss.json <board.png> assets/sprites/beast_boss.png --tres resources/sprites/beast_boss_frames.tres`.
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/beast_boss.json <board.png> assets/sprites/beast_boss.png --tres data/sprites/beast_boss_frames.tres`.
 
 ## Layout
 - Cell: 48x48 px, feet on row 44, body ~29 px tall (the scene draws it
   2.5x). Sheet: 11 cols x 7 rows (528x336).
 - Rows (frames drawn -> packed): 0 idle (6), 1 walk (7), 2 bite/lunge (8),
   3 AoE scream (8), 4 hurt (4), 5 stun (4), 6 death (11).
-- Animations (resources/sprites/beast_boss_frames.tres): idle 6 (loop),
+- Animations (data/sprites/beast_boss_frames.tres): idle 6 (loop),
   walk 7 (loop), attack 4 (bite frames 3-6, contact bite), windup_bite 4 +
   bite 4 (bite row split at the snap), windup_aoe 3 + aoe 5 (scream row split
   where the mouth opens wide), hurt 4, stun 4 (loop), death 11 (last three
@@ -208,13 +208,13 @@ flood-filled to magenta before extraction (interior whites preserved), then
 cut by `tools/sprites/extract_frames.py` with
 `tools/sprites/specs/shop_vendor.json` (magenta keyed out, bbox-anchored,
 2:1 alpha-weighted downsample, hard alpha cut for crisp pixels). Reproduce:
-`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres resources/sprites/shop_vendor_frames.tres`.
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/shop_vendor.json <keyed-board.png> assets/sprites/shop_vendor.png --tres data/sprites/shop_vendor_frames.tres`.
 
 ## Layout
 - Cell: 224x224 px, baseline row 220 (stall base). Sheet: 3 cols x 2 rows
   (672x448), one stall per cell; the scene draws it at 0.5 scale (~112 px).
 - Frames are the board's six idle variants (potion sparkle / lighting
-  positions). SpriteFrames (resources/sprites/shop_vendor_frames.tres):
+  positions). SpriteFrames (data/sprites/shop_vendor_frames.tres):
   idle, 6 frames, 4 fps loop.
 # spell_icons.png - player spell HUD icons (#207)
 
@@ -226,14 +226,14 @@ key_dist 54 matches nothing) and every pixel was kept. Cut by
 `tools/sprites/extract_frames.py` with
 `tools/sprites/specs/spell_icons.json` (bbox-anchored to the exact tile
 windows, 4:1 downsample to the 47x48 cells). Reproduce:
-`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_icons.json <issue-207-sheet.png> assets/sprites/spell_icons.png --tres resources/sprites/spell_icons_frames.tres`.
+`python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_icons.json <issue-207-sheet.png> assets/sprites/spell_icons.png --tres data/sprites/spell_icons_frames.tres`.
 
 ## Layout
 - Cell: 47x48 px, baseline row 48. Sheet: 7 cols x 3 rows (329x144).
 - Rows: fireball, mana, bolt. Cols: 0 base icon, 1 green-chevron upgrade
   icon, 2 alternate base (extracted, unused), 3-6 gray cooldown sweep at
   increasing coverage (~15/40/60/85%). SpriteFrames
-  (resources/sprites/spell_icons_frames.tres): `<row>_base` (1 frame),
+  (data/sprites/spell_icons_frames.tres): `<row>_base` (1 frame),
   `<row>_upgraded` (1 frame), `<row>_sweep` (4 frames, cols 3-6).
 - Since #238 the `<row>_sweep` frames are packed but unused: cooldown is a
   code-drawn wipe in `SpellIcon`. `<row>_upgraded` is used only by surfaces
@@ -249,12 +249,12 @@ cut with `tools/sprites/pack_alpha_strip.py` and
 `extract_frames.py`: fixed 384x384 windows, 12:1 premultiplied box downsample,
 source alpha below 32 dropped as generator noise (mostly around frame 3).
 Reproduce:
-`python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/upgrade_chevron.json <issue-238-strip.png> assets/sprites/upgrade_chevron.png --tres resources/sprites/upgrade_chevron_frames.tres`.
+`python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/upgrade_chevron.json <issue-238-strip.png> assets/sprites/upgrade_chevron.png --tres data/sprites/upgrade_chevron_frames.tres`.
 
 ## Layout
 - Cell: 32x32 px. Sheet: 4 cols x 1 row (128x32). Frames drawn at their
   sheet position, with no re-anchoring.
-- SpriteFrames (resources/sprites/upgrade_chevron_frames.tres): `pulse`, 4
+- SpriteFrames (data/sprites/upgrade_chevron_frames.tres): `pulse`, 4
   frames, 8 fps loop.
 
 # HP bar (hp_bar_frame / hp_bar_track / hp_bar_fill)
@@ -300,7 +300,7 @@ background). Extracted with `tools/sprites/extract_frames.py` and spec
 baseline 63). Faint pixels below alpha 100 were dropped before flattening,
 so the semi-transparent edge blend never reaches the pack.
 
-Row -> animation map (`resources/sprites/terrain_block_frames.tres`):
+Row -> animation map (`data/sprites/terrain_block_frames.tres`):
 - row 0 (6 frames) -> `create` (10 fps, one-shot): the wall builds up.
 - row 1 (4 frames) -> frame 0 is `intact` (looping stand); all four are the
   `damage` crack progression (8 fps, one-shot) kept for a future
@@ -316,7 +316,7 @@ overhang their cell sideways so adjacent blocks read as one connected wall.
 # slime.png - original code-drawn Slime sheet (#392)
 
 Original art drawn by `tools/sprites/draw_slime.gd` (procedural pixel drawing,
-no external assets, no traced or generated images). `resources/sprites/slime_frames.tres`
+no external assets, no traced or generated images). `data/sprites/slime_frames.tres`
 is built from it by `tools/sprites/build_slime_frames.gd`. Placeholder-quality
 style pass; replaceable if Daniel supplies concept art (sprite-sheet-pipeline).
 
@@ -396,7 +396,7 @@ art (direction headers, row labels, grid lines); the game sheet is packed from
 it by `tools/sprites/pack_alpha_strip.py` with spec
 `tools/sprites/specs/wolf.json` (clip windows drop the grid lines/labels;
 3x premultiplied box downsample), which also writes
-`resources/sprites/wolf_frames.tres`.
+`data/sprites/wolf_frames.tres`.
 
 - Cell 56x22 (3x downsample), feet baseline at the cell bottom.
 - 8 directions per row: S, SE, E, NE, N, NW, W, SW; EnemySprite plays the
@@ -425,7 +425,7 @@ Extracted with `tools/sprites/pack_alpha_strip.py` + `tools/sprites/specs/fishy.
 (alpha_floor 215 drops the glow/smoke and the thin partial-alpha fishing
 lines), downsampled 3x into 64x52 cells, 8 columns, feet on cell row ~51.
 Origins were measured per frame (body centre = green-hair centroid, feet =
-lowest boot pixel). `resources/sprites/fishy_frames.tres` is generated by the
+lowest boot pixel). `data/sprites/fishy_frames.tres` is generated by the
 same command.
 
 - sheet frames 0-2 (board row 6, cols 5-7, front stand) -> `idle` (5 fps loop, 0-1-2-1)
@@ -435,7 +435,7 @@ same command.
 - frames 12-15 (board row 5, cols 4-7) -> `reel` (10 fps loop)
 - frames 16-19 (board row 6, cols 1-4) -> `retract` (one-shot); 18-19 also `attack`
 - frame 20 (the hook from board row 4, col 6) -> `hook`, drawn at the line tip
-  by `scripts/fishing_line.gd` (cell centre offset (37, 26))
+  by `game/enemies/fishing_line.gd` (cell centre offset (37, 26))
 
 Not drawn on the board, so reused frames: `hurt` = walk frames 5, 4; `death` =
 walk frames 4, 5 (held, then the corpse fades). Not extracted: the other

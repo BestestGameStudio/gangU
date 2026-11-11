@@ -1,0 +1,38 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://game/enemies/enemy_base.tscn" id="base_513"]
+
+[ext_resource type="SpriteFrames" path="res://data/sprites/fishy_frames.tres" id="3_frames"]
+[ext_resource type="Resource" path="res://data/enemies/fishy.tres" id="4_def"]
+[ext_resource type="Script" path="res://game/enemies/bosses/boss_telegraph.gd" id="5_tele"]
+[ext_resource type="Script" path="res://game/enemies/fishing_line.gd" id="6_line"]
+
+[sub_resource type="CircleShape2D" id="1"]
+radius = 15.0
+
+[node name="Fishy" instance=ExtResource("base_513")]
+definition = ExtResource("4_def")
+
+[node name="Telegraph" type="Node2D" parent="." index="0"]
+z_index = -1
+script = ExtResource("5_tele")
+warn_color = Color(0.85, 0.95, 1, 1)
+
+[node name="Shadow" parent="." index="1"]
+position = Vector2(0, 14)
+color = Color(0, 0, 0, 0.32)
+polygon = PackedVector2Array(-14, 0, -10, -3.5, 0, -4.5, 10, -3.5, 14, 0, 10, 3.5, 0, 4.5, -10, 3.5)
+
+[node name="Sprite" parent="." index="2"]
+texture_filter = 1
+position = Vector2(0, -11)
+sprite_frames = ExtResource("3_frames")
+animation = &"idle"
+burst_color = Color(0.45, 0.82, 0.3, 1)
+
+[node name="FishingLine" type="Node2D" parent="." index="3"]
+texture_filter = 1
+script = ExtResource("6_line")
+
+[node name="CollisionShape2D" parent="." index="4"]
+shape = SubResource("1")

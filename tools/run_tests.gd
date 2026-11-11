@@ -3,12 +3,12 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tools/run_tests.gd -- [filter ...] [-j N] [--timeout S] [--list]
 ##
-## A harness is a scripts/test*.gd that `extends SceneTree`. Each child runs with
+## A harness is a tests/<feature>/test*.gd that `extends SceneTree`. Each child runs with
 ## `--headless --fixed-fps 60` and its own user:// dir (XDG_DATA_HOME, Linux).
 ## A filter keeps tests whose name contains any of the given substrings.
 ## Pass = exit code 0 before the timeout, with no script diagnostics. Exits 1 if anything failed.
 
-const TEST_DIR := "res://scripts"
+const TEST_DIR := "res://tests"
 const TAIL_LINES := 40
 ## Godot exits 0 when the --script itself fails to parse or load.
 const LOAD_FAILURES: Array[String] = [
@@ -80,18 +80,24 @@ func _parse_args(args: PackedStringArray) -> bool:
 		i += 1
 	return true
 
-func _discover() -> Array[Dictionary]:
+func _discover(dir_path: String = TEST_DIR) -> Array[Dictionary]:
 	var tests: Array[Dictionary] = []
-	var files := DirAccess.get_files_at(TEST_DIR)
+	var dirs := DirAccess.get_directories_at(dir_path)
+	dirs.sort()
+	for sub in dirs:
+		if not sub.begins_with(".") and sub != "support" and sub != "fixtures":
+			tests.append_array(_discover(dir_path.path_join(sub)))
+	var files := DirAccess.get_files_at(dir_path)
 	files.sort()
 	for f in files:
 		if not (f.begins_with("test") and f.ends_with(".gd")):
 			continue
 		var name := f.get_basename()
-		var path := TEST_DIR.path_join(f)
+		var path := dir_path.path_join(f)
 		if not _is_scene_tree_script(path):
 			continue
 		tests.append({name = name, args = ["--script", path]})
+	tests.sort_custom(func(a, b): return a.name < b.name)
 	return tests.filter(_matches)
 
 func _is_scene_tree_script(path: String) -> bool:

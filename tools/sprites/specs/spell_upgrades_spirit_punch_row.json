@@ -1,5 +1,5 @@
 {
- "_comment": "#305 Spirit Punch fist -> append row 16 to assets/sprites/spell_upgrades.png (+ resources/sprites/spell_upgrades_frames.tres). Strip: code-drawn opaque white fist (side-view pointing +X, same facing as the other rows), 4 windows of 384x432. Run: python3 -I tools/sprites/append_sheet_rows.py pack tools/sprites/specs/spell_upgrades_spirit_punch_row.json <fist-strip.png> assets/sprites/spell_upgrades.png --tres resources/sprites/spell_upgrades_frames.tres",
+ "_comment": "#305 Spirit Punch fist -> append row 16 to assets/sprites/spell_upgrades.png (+ data/sprites/spell_upgrades_frames.tres). Strip: code-drawn opaque white fist (side-view pointing +X, same facing as the other rows), 4 windows of 384x432. Run: python3 -I tools/sprites/append_sheet_rows.py pack tools/sprites/specs/spell_upgrades_spirit_punch_row.json <fist-strip.png> assets/sprites/spell_upgrades.png --tres data/sprites/spell_upgrades_frames.tres",
  "scale": 6,
  "cell_w": 64,
  "cell_h": 72,

@@ -1,5 +1,5 @@
 {
- "_comment": "#173 Head boss board -> assets/sprites/head_boss.png (+ resources/sprites/head_boss_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/head_boss.json <board.png> assets/sprites/head_boss.png --tres resources/sprites/head_boss_frames.tres",
+ "_comment": "#173 Head boss board -> assets/sprites/head_boss.png (+ data/sprites/head_boss_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/head_boss.json <board.png> assets/sprites/head_boss.png --tres data/sprites/head_boss_frames.tres",
  "scale": 3,
  "cell_w": 48,
  "cell_h": 48,

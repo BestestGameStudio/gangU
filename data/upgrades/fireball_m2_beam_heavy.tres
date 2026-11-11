@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SpellUpgrade" load_steps=4 format=3 uid="uid://bgangum2ubh"]
+
+[ext_resource type="Script" path="res://game/spells/spell_upgrade.gd" id="1"]
+[ext_resource type="Spell" uid="uid://bgangubeam" path="res://data/spells/fire_ball_beam.tres" id="2"]
+[ext_resource type="Spell" uid="uid://bgangum2bh" path="res://data/spells/fire_ball_beam_heavy.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"fireball_m2_beam_heavy"
+display_name = "Heavy beam"
+source_spell = ExtResource("2")
+result_spell = ExtResource("3")
+xp_threshold = 15
+tier = 2

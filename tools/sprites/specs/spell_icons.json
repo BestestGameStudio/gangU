@@ -1,5 +1,5 @@
 {
- "_comment": "#207 Spell icon sheet -> assets/sprites/spell_icons.png (+ resources/sprites/spell_icons_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_icons.json <issue-207-sheet.png> assets/sprites/spell_icons.png --tres resources/sprites/spell_icons_frames.tres. Supplied art is a regular 3x7 grid of opaque framed tiles (no keying): bg is a colour absent from the sheet so every pixel keeps, windows are the exact tile bounds. Rows: fireball, mana, bolt. Cols: 0 base, 1 green-chevron upgraded, 2 alternate base (unused), 3-6 gray cooldown sweep (~15/40/60/85% covered).",
+ "_comment": "#207 Spell icon sheet -> assets/sprites/spell_icons.png (+ data/sprites/spell_icons_frames.tres). Run: python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_icons.json <issue-207-sheet.png> assets/sprites/spell_icons.png --tres data/sprites/spell_icons_frames.tres. Supplied art is a regular 3x7 grid of opaque framed tiles (no keying): bg is a colour absent from the sheet so every pixel keeps, windows are the exact tile bounds. Rows: fireball, mana, bolt. Cols: 0 base, 1 green-chevron upgraded, 2 alternate base (unused), 3-6 gray cooldown sweep (~15/40/60/85% covered).",
  "scale": 4,
  "cell_w": 47,
  "cell_h": 48,

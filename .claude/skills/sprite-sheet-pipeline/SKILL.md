@@ -42,7 +42,7 @@ Spec keys are documented in the script docstring. Guidance from #177/#173:
    "frames": [[849, 892, 870.5]]}
   ```
   Full example: `tools/sprites/specs/head_boss.json` (lands with PR #213).
-- Pack: `python3 -I tools/sprites/extract_frames.py pack spec.json board.png assets/sprites/<name>.png --tres resources/sprites/<name>_frames.tres`.
+- Pack: `python3 -I tools/sprites/extract_frames.py pack spec.json board.png assets/sprites/<name>.png --tres data/sprites/<name>_frames.tres`.
 - Render a checker preview with a centre line + baseline per cell and Read it: every frame should share the feet line and centre, no background halo, no clipping. Iterate anchors until it is steady.
 - Animations in the spec: looping idle (~6 fps), walk (~12), spin; one-shot attack/hurt (~14), death (~9, hold the last frames longer via per-frame `duration`), plus held wind-up poses for bosses.
 - If you change the extractor, re-pack `mustache_warrior.json` and `cmp` it against the committed PNG: it must stay byte-identical.
@@ -51,7 +51,7 @@ Spec keys are documented in the script docstring. Guidance from #177/#173:
 - **Engine version:** `project.godot` pins 4.5.1 (CI: `barichello/godot-ci:4.5.1`). A newer local Godot (e.g. 4.7.x) regenerates `.uid` files for untouched scripts: commit only the `.uid` files of scripts you added, and name the Godot version you used in the PR.
 - **Never hand-write UIDs** (not in `.import`, `.tres`, `.tscn` or `.uid`). Godot 4.7 rejected `uid://bgangu177mwsheet` and generated a new one, breaking the reference. Let `--import` create the `.import`, then reference the texture by path (the generator emits no uid attributes; that loads fine).
 - `godot --headless --path . --import` writes `assets/sprites/<name>.png.import` (lossless, mipmaps off - matches `main_character.png.import`). Commit that generated file.
-- Nearest filtering is set on the node: `texture_filter = 1` on the AnimatedSprite2D (see `scenes/enemy.tscn`, `WizardSprite` in `scenes/main.tscn`).
+- Nearest filtering is set on the node: `texture_filter = 1` on the AnimatedSprite2D (see `game/enemies/enemy.tscn`, `WizardSprite` in `game/core/main.tscn`).
 - Art faces one way; mirror with `flip_h`, do not pack mirrored rows.
 
 ## 5. Provenance

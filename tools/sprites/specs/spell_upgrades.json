@@ -1,5 +1,5 @@
 {
- "_comment": "#289 spell + upgrade sheet -> assets/sprites/spell_upgrades.png (+ resources/sprites/spell_upgrades_frames.tres). Run: python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/spell_upgrades.json <issue-289-board.png> assets/sprites/spell_upgrades.png --tres resources/sprites/spell_upgrades_frames.tres",
+ "_comment": "#289 spell + upgrade sheet -> assets/sprites/spell_upgrades.png (+ data/sprites/spell_upgrades_frames.tres). Run: python3 -I tools/sprites/pack_alpha_strip.py pack tools/sprites/specs/spell_upgrades.json <issue-289-board.png> assets/sprites/spell_upgrades.png --tres data/sprites/spell_upgrades_frames.tres",
  "scale": 2,
  "cell_w": 64,
  "cell_h": 72,

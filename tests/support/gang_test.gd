@@ -108,7 +108,7 @@ func until(cond: Callable, max_frames: int = 120, label: String = "") -> bool:
 
 ## Boot the real main scene as a fixture; returns the instance.
 func boot_main() -> Node:
-	var scene: PackedScene = load("res://scenes/main.tscn")
+	var scene: PackedScene = load("res://game/core/main.tscn")
 	var main: Node = scene.instantiate()
 	root.add_child(main)
 	return main

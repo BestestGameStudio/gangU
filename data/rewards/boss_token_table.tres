@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RewardTable" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://game/economy/reward_table.gd" id="1"]
+[ext_resource type="Script" path="res://game/economy/reward_entry.gd" id="2"]
+
+[sub_resource type="Resource" id="1"]
+script = ExtResource("2")
+kind = 3
+weight = 1.0
+
+[resource]
+script = ExtResource("1")
+entries = Array[ExtResource("2")]([SubResource("1")])

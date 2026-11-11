@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://game/enemies/bosses/boss_base.tscn" id="base_513"]
+
+[ext_resource type="Resource" path="res://data/enemies/head_boss.tres" id="2_def"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/head_boss_frames.tres" id="4_frames"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_head"]
+radius = 26.0
+
+[node name="HeadBoss" instance=ExtResource("base_513")]
+definition = ExtResource("2_def")
+
+[node name="Telegraph" parent="." index="0"]
+z_index = -1
+warn_color = Color(1, 0.22, 0.32, 1)
+
+[node name="Shadow" parent="." index="1"]
+position = Vector2(0, 34)
+color = Color(0, 0, 0, 0.35)
+polygon = PackedVector2Array(-22, 0, -15, -5, 0, -7, 15, -5, 22, 0, 15, 5, 0, 7, -15, 5)
+
+[node name="Sprite" parent="." index="2"]
+texture_filter = 1
+position = Vector2(0, -34)
+scale = Vector2(3, 3)
+sprite_frames = ExtResource("4_frames")
+animation = &"idle"
+art_faces_left = true
+burst_color = Color(1, 0.22, 0.32, 1)
+
+[node name="HealthBar" parent="." index="3"]
+position = Vector2(0, -92)
+fill_color = Color(0.86, 0.3, 0.42, 1)
+fill_enraged_color = Color(1, 0.12, 0.2, 1)
+
+[node name="CollisionShape2D" parent="." index="4"]
+shape = SubResource("CircleShape2D_head")
