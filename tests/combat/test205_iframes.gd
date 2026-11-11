@@ -32,6 +32,7 @@ func _initialize() -> void:
 	await process_frame
 	_check(not p.is_invulnerable(), "window defaults OFF")
 	p.apply_damage(10)
+	_check(p._hurt_audio != null and p._hurt_audio.play_count == 1 and p._hurt_audio.playing, "actual HP loss plays approved hurt once")
 	_check(p.hp == 90 and _one(90), "OFF: apply_damage(10) -> HP 90, one health_changed(90)")
 
 	_changes.clear()
@@ -44,6 +45,7 @@ func _initialize() -> void:
 	p.apply_damage(9999)
 	_check(p.hp == 90 and _died == 0 and _changes.is_empty(), "ON: lethal damage ignored (HP 90, no died, no signal)")
 
+	_check(p._hurt_audio.play_count == 1, "iframes including lethal add no hurt cue")
 	p.heal(5)
 	_check(p.hp == 95 and _one(95), "ON: heal still works (HP 95, health_changed(95))")
 
@@ -53,7 +55,9 @@ func _initialize() -> void:
 	p.apply_damage(10)
 	_check(p.hp == 85 and _one(85), "OFF again: damage applies (HP 85, health_changed(85))")
 
+	_check(p._hurt_audio.play_count == 1, "rapid hits cooldown changes only audio, not damage")
 	p.apply_damage(9999)
+	_check(p._hurt_audio.play_count == 1 and not p._hurt_audio.playing, "lethal damage stops hurt without another grunt")
 	_check(p.hp == 0 and _died == 1, "OFF: lethal damage clamps to 0 and emits died once")
 	p.set_invulnerable(true)
 	p.heal(30)
@@ -68,6 +72,19 @@ func _initialize() -> void:
 	_check(not b.is_invulnerable(), "fresh Player instance starts OFF while another instance is ON")
 	b.apply_damage(10)
 	_check(b.hp == 90, "fresh instance takes damage normally")
+	var count := b._hurt_audio.play_count
+	b._hurt_audio._remaining = 0.0
+	b.add_shield(20)
+	b.apply_damage(5)
+	b.apply_damage(0)
+	b.apply_damage(-1)
+	_check(b._hurt_audio.play_count == count, "shield-only, zero and healing hits stay silent")
+	b.apply_damage(20)
+	_check(b._hurt_audio.play_count == count + 1, "shield overflow HP loss plays after cooldown")
+	b._hurt_audio._remaining = 0.0
+	b.health_changed.connect(func(_cur, _max): b.heal(100) if b.hp == 0 else null)
+	b.apply_damage(9999)
+	_check(b._hurt_audio.play_count == count + 1, "synchronous revival cannot turn lethal hit into hurt cue")
 	a.free()
 	b.free()
 

@@ -67,3 +67,15 @@ and Joseph Sardin https://bigsoundbank.com/1-church-bell-s0830.html .
 Bell pitched down 14 semitones in the approved master. Encoded from the
 approved 44.1kHz 16-bit stereo WAV with Vorbis q6, no added processing.
 The presentation owns playback and stops/frees it on expiry or scene exit.
+
+
+# Player hurt (#596)
+
+Approved oof v1, 0.38s, 44.1kHz 16-bit stereo WAV master, -10dBFS peak.
+CC0 source: qdo https://freesound.org/people/qdo/sounds/528732/ .
+Excerpt 2.84-3.22s from the 14.8s public 128kbps MP3 preview, NOT the
+original lossless recording. 60ms raised-cosine tail fade, peak normalized
+to -10dBFS, no pitch/timbre change. Vorbis q6 from approved master.
+Plays only on actual nonlethal HP loss; no random pitch or volume boost.
+Audio-only 0.15s cooldown and one voice prevent stacking without gating hits.
+Lethal damage stops a prior grunt so the death cue stays distinct.

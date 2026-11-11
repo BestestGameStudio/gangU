@@ -5,6 +5,8 @@ class_name Player
 ## Consumes shared input actions from project.godot:
 ## move_up/move_down/move_left/move_right (WASD).
 
+var _hurt_audio: PlayerHurtAudio
+
 signal died()
 signal health_changed(current: int, max_hp: int)
 ## #388: shields - temporary health beyond max HP. Emitted ONLY from
@@ -188,6 +190,15 @@ func apply_damage(amount: int) -> void:
 	var before := hp
 	hp = clampi(hp - amount, 0, max_hp)
 	OnHit.record(self, before, hp) # #390: outcome captured before died()/revive
+	# Capture nonlethal outcome BEFORE health_changed/revive callbacks.
+	if hp > 0 and hp < before:
+		if _hurt_audio == null:
+			_hurt_audio = PlayerHurtAudio.new()
+			_hurt_audio.name = "HurtCue"
+			add_child(_hurt_audio)
+		_hurt_audio.cue()
+	elif hp == 0 and _hurt_audio != null:
+		_hurt_audio.silence()
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
 		died.emit()
