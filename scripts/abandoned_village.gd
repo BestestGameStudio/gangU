@@ -129,13 +129,9 @@ func _begin(context: OverworldEventContext, enemies: Array[Enemy]) -> void:
 func _physics_process(_delta: float) -> void:
 	if not active:
 		return
+	# #573: no escape mechanic - leaving the village never ends the ambush and
+	# the mustache men never despawn; only the hero dying ends it early.
 	if not is_instance_valid(_hero) or _hero.hp <= 0:
-		_end(false)
-		return
-	var local := to_local(_hero.global_position)
-	# Both road mouths; the outer-radius guard also handles forced movement
-	# or teleport escapes instead of leaving an orphan encounter running.
-	if (absf(local.x) > FOREST_RADIUS + 24.0 and absf(local.y) < ROAD_HALF_WIDTH + 20.0) or local.length() > FOREST_RADIUS + 100.0:
 		_end(false)
 
 func _enemy_died() -> void:
@@ -155,14 +151,16 @@ func _end(cleared: bool) -> void:
 		status = "VILLAGE CLEARED - +%dc" % CLEAR_COINS
 		_drop_reward.call_deferred()
 	else:
-		status = "AMBUSH ESCAPED - NO CLEAR REWARD"
+		# Hero died (or the spawn was incomplete) - not an escape: there is no
+		# escape. Survivors are cleaned up only because the run is over.
+		status = "AMBUSH FAILED - NO CLEAR REWARD"
 		for enemy in ambushers:
 			if is_instance_valid(enemy) and enemy.hp > 0:
 				enemy.queue_free()
 	_caption.text = status
 
 func _update_caption() -> void:
-	status = "AMBUSH - %d LEFT | road exits open" % _remaining
+	status = "AMBUSH - %d LEFT" % _remaining
 	_caption.text = status
 
 func _drop_reward() -> void:
