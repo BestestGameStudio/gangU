@@ -1,7 +1,7 @@
 extends CanvasLayer
 class_name HUD
 ## Player health, spirit and six equipped spell slots. Encounters have no
-## objective row, wave panel or success/failure display.
+## legacy objective system. The shipped defense wave bar remains.
 ##
 ## Self-contained: mounted by the scene that owns the player, by instancing
 ## game/ui/hud.tscn and setting player_path, OR via the Player.find fallback.
@@ -43,6 +43,9 @@ const SHIELD_TRACK := Color(0.08, 0.08, 0.1, 0.75)
 const SPIRIT_FILLING := Color(0.3, 0.65, 0.85, 1.0)
 const SPIRIT_READY := Color(0.55, 1.0, 0.75, 1.0)
 const SPIRIT_TRACK := Color(0.06, 0.1, 0.14, 0.75)
+var _defense: DefenseEncounter
+var _area_loader: AreaLoader
+@onready var _defense_bar: DefenseWaveBar = $DefenseWaveBar
 var _player: Player
 var _caster: SpellCaster
 var _spirit: SpiritMeter
@@ -64,6 +67,7 @@ var _progress_elapsed := 0.0
 @onready var _spell_grid: GridContainer = $Root/SpellGrid
 
 func _ready() -> void:
+	_area_loader = get_parent().get_node_or_null("AreaLoader") as AreaLoader
 	_spirit_bar.visible = false
 	_hp_bar.add_theme_stylebox_override("background", _hp_bar_style(HP_TRACK_TEXTURE, HP_TRACK_CAP))
 	_hp_bar.add_theme_stylebox_override("fill", _hp_bar_style(HP_FILL_TEXTURE, HP_FILL_CAP))
@@ -151,6 +155,7 @@ func _can_upgrade(spell: Spell) -> bool:
 	return allowed
 
 func _process(delta: float) -> void:
+	_update_defense()
 	_update_progress(delta)
 	_update_slot_icons()
 
@@ -235,3 +240,37 @@ func reserved_rect() -> Rect2:
 		rect = r if first else rect.merge(r)
 		first = false
 	return rect.grow(RESERVED_PAD) if not first else rect
+
+## Preserve the shipped #369 wave icons, fill and countdown, sourced from
+## the physical encounter instead of the retired DungeonObjective class.
+func _update_defense() -> void:
+	if not is_instance_valid(_area_loader):
+		_area_loader = get_parent().get_node_or_null("AreaLoader") as AreaLoader
+	var found: DefenseEncounter
+	if is_instance_valid(_area_loader) and _area_loader.current_area == _area_loader._run_overworld:
+		for region in _area_loader.regions:
+			var host := region.layout.get_node_or_null("RegionEncounterHost") as RegionEncounterHost
+			if host != null and host.defense != null and host.defense.is_active():
+				found = host.defense
+				break
+	if found == _defense:
+		return
+	if is_instance_valid(_defense):
+		_defense.progress_changed.disconnect(_on_defense_progress)
+		_defense.wave_started.disconnect(_on_defense_wave)
+		_defense.encounter_finished.disconnect(_on_defense_finished)
+	_defense = found
+	_defense_bar.show_encounter(_defense)
+	if _defense != null:
+		_defense.progress_changed.connect(_on_defense_progress)
+		_defense.wave_started.connect(_on_defense_wave)
+		_defense.encounter_finished.connect(_on_defense_finished)
+
+func _on_defense_progress(_current: int, _target: int) -> void:
+	_defense_bar.queue_redraw()
+
+func _on_defense_wave(_wave: int, _total: int) -> void:
+	_defense_bar.queue_redraw()
+
+func _on_defense_finished(_id: StringName, _cleared: bool) -> void:
+	_defense_bar.show_encounter(null)
