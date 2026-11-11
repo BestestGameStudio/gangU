@@ -24,10 +24,10 @@ func _run() -> void:
 	loader.complete_encounter(&'dungeon_a')
 	_check(not travel.can_map_travel_to(&'dungeon_a'), 'map travel remains hub-origin only')
 	p.global_position = region.arrival
-	_check(travel.can_fast_return(), 'cleared physical region can return to hub')
+	_check(not travel.has_method('can_fast_return'), 'no fast return from a cleared region (#616)')
 	p.hp = 77
 	var caster := p.get_node('SpellCaster')
-	travel._commit_fast_return()
+	loader._load_hub()
 	_check(loader.current_area.name == &'Hub', 'cleared region returns to hub')
 	_check(travel.can_map_travel_to(&'dungeon_a'), 'cleared route available from hub')
 	travel._commit_map_travel(&'dungeon_a')
