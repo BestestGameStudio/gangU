@@ -149,6 +149,7 @@ func _swap(area: Node) -> void:
 			# Keep nodes in-tree: removing an active encounter from the tree
 			# would abort it. Hub travel is refused while an encounter runs.
 			_set_overworld_collisions(false)
+			_set_overworld_layers(false)
 			_run_overworld.hide()
 			_run_overworld.process_mode = Node.PROCESS_MODE_DISABLED
 		else:
@@ -161,6 +162,7 @@ func _swap(area: Node) -> void:
 	if current_area.scene_file_path == OVERWORLD_SCENE:
 		_run_overworld = current_area as Node2D
 		_set_overworld_collisions(true)
+		_set_overworld_layers(true)
 		_run_overworld.show()
 		_run_overworld.process_mode = Node.PROCESS_MODE_INHERIT
 	if music:
@@ -621,3 +623,11 @@ func _set_overworld_collisions(enabled: bool) -> void:
 			body.collision_mask = state[1]
 	if enabled:
 		_parked_collisions.clear()
+
+## CanvasLayers do not inherit Node2D visibility. Park screen-space area
+## titles too, without touching the shared player HUD.
+func _set_overworld_layers(enabled: bool) -> void:
+	if not is_instance_valid(_run_overworld):
+		return
+	for node in _run_overworld.find_children("*", "CanvasLayer", true, false):
+		(node as CanvasLayer).visible = enabled
