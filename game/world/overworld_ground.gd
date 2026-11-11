@@ -160,6 +160,8 @@ func build_from(area: Node) -> void:
 		for c in area.get_children():
 			if c is Gate:
 				landmarks.append((c as Node2D).position)
+			elif c is OverworldRegion:
+				landmarks.append((c as OverworldRegion).approach)
 	for i in landmarks.size():
 		roads.append(_road(spawn, landmarks[i], i))
 	_collect_patrols(area)
@@ -480,3 +482,25 @@ func _draw() -> void:
 				rock.append(at + Vector2(cos(a), sin(a) * 0.75) * r)
 			draw_colored_polygon(rock, STONE_DARK)
 			draw_circle(at + Vector2(-r * 0.2, -r * 0.25), r * 0.45, STONE)
+
+## Region terrain owns its footprint. Delete both visual trees and their
+## projectile circles there; replacing only sparse cells leaves ghost trees.
+func reserve_regions(regions: Array[OverworldRegion]) -> void:
+	decor = decor.filter(func(d: Dictionary) -> bool:
+		for region in regions:
+			if region.bounds.grow(float(d["r"]) + 48.0).has_point(d["at"]):
+				return false
+		return true)
+	var map := get_parent().get_node_or_null("Terrain") as TerrainMap
+	if map != null:
+		var circles: Array[Vector3] = []
+		for d in decor:
+			if d["kind"] == "tree":
+				var at: Vector2 = d["at"]
+				circles.append(Vector3(at.x, at.y, d["r"]))
+		map.set_projectile_blockers(circles)
+		grass_cells = grass_cells.filter(func(cell: Vector2i) -> bool:
+			return map.tile_type_at_cell(cell) == TerrainTypes.TALL_GRASS)
+	queue_redraw()
+	_canopy.queue_redraw()
+	_grass_top.queue_redraw()
