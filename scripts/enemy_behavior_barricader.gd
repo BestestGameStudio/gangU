@@ -47,6 +47,24 @@ const STALL_TIME: float = 1.0
 const MAX_RUN_TIME: float = 3.0 ## give up running and build where it stands (PLACEHOLDER)
 const BUILD_TIME: float = 0.4 ## stands still placing the barricade (PLACEHOLDER)
 
+## #513: authored tuning; constants remain compatibility defaults.
+@export var deploy_range: float = DEPLOY_RANGE
+@export var min_deploy_dist: float = MIN_DEPLOY_DIST
+@export var deploy_cooldown: float = DEPLOY_COOLDOWN
+@export var scan_interval: float = SCAN_INTERVAL
+@export var barricade_ahead: float = BARRICADE_AHEAD
+@export var open_radius: float = OPEN_RADIUS
+@export var spot_min: float = SPOT_MIN
+@export var spot_max: float = SPOT_MAX
+@export var spot_rings: int = SPOT_RINGS
+@export var spot_rays: int = SPOT_RAYS
+@export var spot_cone: float = SPOT_CONE
+@export var fast_mult: float = FAST_MULT
+@export var arrive_eps: float = ARRIVE_EPS
+@export var stall_time: float = STALL_TIME
+@export var max_run_time: float = MAX_RUN_TIME
+@export var build_time: float = BUILD_TIME
+
 var _deploy_cd: float = 0.0
 var _scan_t: float = 0.0
 var _running := false
@@ -77,7 +95,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		_run(enemy, player, delta)
 		return
 	if _scan_t <= 0.0 and _wants_barricade(enemy, player):
-		_scan_t = SCAN_INTERVAL
+		_scan_t = scan_interval
 		if not _cover.viable_cover_exists(enemy, player):
 			_start_run(enemy, player)
 			if _running:
@@ -94,14 +112,14 @@ func _wants_barricade(enemy: Enemy, player: Player) -> bool:
 	if not _cover.is_uncovered():
 		return false
 	var d := enemy.global_position.distance_to(player.global_position)
-	return d >= MIN_DEPLOY_DIST and d <= DEPLOY_RANGE
+	return d >= min_deploy_dist and d <= deploy_range
 
 # --- run to open space ------------------------------------------------------
 
 func _start_run(enemy: Enemy, player: Player) -> void:
 	var spot: Variant = find_open_spot(enemy, player)
 	if spot == null:
-		_deploy_cd = SCAN_INTERVAL * 2.0 # nowhere to build: retry a little later
+		_deploy_cd = scan_interval * 2.0 # nowhere to build: retry a little later
 		return
 	_spot = spot
 	_running = true
@@ -111,9 +129,9 @@ func _start_run(enemy: Enemy, player: Player) -> void:
 func _run(enemy: Enemy, player: Player, delta: float) -> void:
 	_run_t += delta
 	var to := _spot - enemy.global_position
-	var arrived := to.length() <= ARRIVE_EPS
+	var arrived := to.length() <= arrive_eps
 	if not arrived:
-		var speed := enemy.speed * FAST_MULT
+		var speed := enemy.speed * fast_mult
 		enemy.velocity = _run_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, to.normalized() * speed, _spot, speed, delta, enemy.can_swim)
 		EnemyBehaviorChaseContact._slide(enemy)
 		if enemy.velocity.length_squared() < 1.0:
@@ -123,7 +141,7 @@ func _run(enemy: Enemy, player: Player, delta: float) -> void:
 	else:
 		enemy.velocity = Vector2.ZERO
 		EnemyBehaviorChaseContact._slide(enemy)
-	if arrived or _stall_t >= STALL_TIME or _run_t >= MAX_RUN_TIME:
+	if arrived or _stall_t >= stall_time or _run_t >= max_run_time:
 		_running = false
 		deploy(enemy, player.global_position)
 
@@ -137,15 +155,15 @@ func find_open_spot(enemy: Enemy, player: Player) -> Variant:
 	var base := to_p.angle()
 	if _is_open_spot(enemy, origin, player.global_position):
 		return origin
-	for r in SPOT_RINGS:
-		var dist := lerpf(SPOT_MIN, SPOT_MAX, float(r) / float(maxi(SPOT_RINGS - 1, 1)))
+	for r in spot_rings:
+		var dist := lerpf(spot_min, spot_max, float(r) / float(maxi(spot_rings - 1, 1)))
 		# Rays fan out from the player direction (centre first).
-		for k in SPOT_RAYS:
+		for k in spot_rays:
 			var side := 1.0 if k % 2 == 1 else -1.0
 			var step := floorf((k + 1) * 0.5)
-			var a := base + side * step * (SPOT_CONE / (float(SPOT_RAYS - 1) * 0.5))
+			var a := base + side * step * (spot_cone / (float(spot_rays - 1) * 0.5))
 			var p := origin + Vector2.from_angle(a) * dist
-			if p.distance_to(player.global_position) < MIN_DEPLOY_DIST:
+			if p.distance_to(player.global_position) < min_deploy_dist:
 				continue
 			if _is_open_spot(enemy, p, player.global_position):
 				return p
@@ -153,13 +171,13 @@ func find_open_spot(enemy: Enemy, player: Player) -> Variant:
 
 func _is_open_spot(enemy: Enemy, p: Vector2, target: Vector2) -> bool:
 	var dir := (target - p).normalized()
-	var wall := p + dir * BARRICADE_AHEAD
+	var wall := p + dir * barricade_ahead
 	var map := enemy.terrain
 	if map != null:
 		if not _walkable(map, p, enemy.can_swim) or not _walkable(map, wall, false):
 			return false
 		for i in 8:
-			var q := p + Vector2.from_angle(TAU * i / 8.0) * OPEN_RADIUS
+			var q := p + Vector2.from_angle(TAU * i / 8.0) * open_radius
 			if not _walkable(map, q, enemy.can_swim):
 				return false
 		# The run itself must not cut through blocking terrain.
@@ -167,7 +185,7 @@ func _is_open_spot(enemy: Enemy, p: Vector2, target: Vector2) -> bool:
 			return false
 	for n in enemy.get_tree().get_nodes_in_group(&"cover"):
 		var s := n as Node2D
-		if s != null and is_instance_valid(s) and (s.global_position.distance_to(p) < OPEN_RADIUS or s.global_position.distance_to(wall) < OPEN_RADIUS):
+		if s != null and is_instance_valid(s) and (s.global_position.distance_to(p) < open_radius or s.global_position.distance_to(wall) < open_radius):
 			return false
 	return true
 
@@ -184,11 +202,11 @@ static func _line_walkable(map: TerrainMap, a: Vector2, b: Vector2, can_swim: bo
 
 # --- deploy -----------------------------------------------------------------
 
-## Places this enemy's barricade BARRICADE_AHEAD toward `target`, facing it,
+## Places this enemy's barricade barricade_ahead toward `target`, facing it,
 ## and hands back to the cover machine. Returns the barricade (null when the
 ## enemy is not in an area).
 func deploy(enemy: Enemy, target: Vector2) -> Barricade:
-	_deploy_cd = DEPLOY_COOLDOWN
+	_deploy_cd = deploy_cooldown
 	var area: Node = enemy.get_parent()
 	if area == null:
 		return null
@@ -196,7 +214,7 @@ func deploy(enemy: Enemy, target: Vector2) -> Barricade:
 	dir = dir.normalized() if dir.length_squared() > 1.0 else Vector2.RIGHT
 	var b: Barricade = BARRICADE_SCENE.instantiate()
 	b.deployer = enemy
-	var world := enemy.global_position + dir * BARRICADE_AHEAD
+	var world := enemy.global_position + dir * barricade_ahead
 	var area2d := area as Node2D
 	b.position = area2d.to_local(world) if area2d != null else world
 	b.rotation = dir.angle() - (area2d.global_rotation if area2d != null else 0.0)
@@ -207,6 +225,6 @@ func deploy(enemy: Enemy, target: Vector2) -> Barricade:
 	enemy.velocity = Vector2.ZERO
 	enemy.play_action(&"attack")
 	# Stand still while building: the barricade joins the "cover" group only
-	# once the deferred add lands, so the cover rescan waits for BUILD_TIME.
-	_build_t = BUILD_TIME
+	# once the deferred add lands, so the cover rescan waits for build_time.
+	_build_t = build_time
 	return b
