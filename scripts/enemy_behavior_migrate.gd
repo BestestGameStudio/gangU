@@ -15,6 +15,9 @@ const TRAVEL := 0.55
 ## Seconds spent resting at either end of the path before turning around.
 const REST := 6.0
 
+@export var travel_fraction: float = TRAVEL
+@export var rest_time: float = REST
+
 var waypoint := 0
 ## +1 = outbound (toward the last point), -1 = homebound.
 var direction := 1
@@ -33,7 +36,7 @@ func _idle_step(enemy: Enemy, delta: float) -> void:
 		_walk_to(enemy, enemy.global_position, 0.0, delta)
 		return
 	resting = false
-	if not _walk_to(enemy, route[waypoint], enemy.speed * TRAVEL, delta):
+	if not _walk_to(enemy, route[waypoint], enemy.speed * travel_fraction, delta):
 		return
 	var next := waypoint + direction
 	if next < 0 or next >= route.size():
@@ -41,5 +44,5 @@ func _idle_step(enemy: Enemy, delta: float) -> void:
 		direction = -direction
 		next = waypoint + direction
 		resting = true
-		_rest = REST
+		_rest = rest_time
 	waypoint = clampi(next, 0, route.size() - 1)

@@ -19,6 +19,10 @@ const AGGRO_RADIUS := 220.0
 const LEASH_RADIUS := 520.0
 const HOME_EPSILON := 6.0
 
+@export var aggro_radius: float = AGGRO_RADIUS
+@export var leash_radius: float = LEASH_RADIUS
+@export var home_epsilon: float = HOME_EPSILON
+
 var home := Vector2.INF
 var engaged := false
 var _last_hp := -1
@@ -49,7 +53,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 	var alive: bool = player != null and is_instance_valid(player) and player.hp > 0
 	if alive:
 		var target_pos: Vector2 = player.global_position
-		if not engaged and enemy.global_position.distance_to(target_pos) <= AGGRO_RADIUS:
+		if not engaged and enemy.global_position.distance_to(target_pos) <= aggro_radius:
 			engaged = true
 		if engaged and not was_engaged:
 			engaged_from = enemy.global_position
@@ -73,7 +77,7 @@ func _leash_anchor() -> Vector2:
 ## up, and #463 farther still for the basic mustache men. Takes the enemy
 ## so overrides can pick the radius per enemy type.
 func _leash_radius(_enemy: Enemy) -> float:
-	return LEASH_RADIUS
+	return leash_radius
 
 ## What the enemy does while not engaged. A guard walks back to its post.
 func _idle_step(enemy: Enemy, delta: float) -> void:
@@ -86,7 +90,7 @@ func _idle_step(enemy: Enemy, delta: float) -> void:
 ## (or a clear straight line) the walk is exactly as #346/#373.
 func _walk_to(enemy: Enemy, at: Vector2, speed: float, delta: float) -> bool:
 	var to := at - enemy.global_position
-	var arrived := to.length() <= HOME_EPSILON
+	var arrived := to.length() <= home_epsilon
 	# Never overshoot the point in one step (fast movers would orbit it).
 	var walk := Vector2.ZERO if arrived else to.normalized() * minf(speed, to.length() / maxf(delta, 0.0001))
 	enemy.velocity = _walk_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, walk, at, speed, delta, enemy.can_swim)

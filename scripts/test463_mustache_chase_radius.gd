@@ -89,7 +89,7 @@ func _leg_a_radius_selection() -> void:
 	_check(g._leash_radius(mustache) == EnemyBehaviorGuard.LEASH_RADIUS, "(A) the posted guard keeps its 520 leash")
 	mustache.free()
 	slime.free()
-	_check(patrol_def.behavior == EnemyBehaviorPatrol and slime_patrol_def.behavior == EnemyBehaviorPatrol, "(A) both definitions use the patrol behavior")
+	_check(patrol_def.behavior is EnemyBehaviorPatrol and slime_patrol_def.behavior is EnemyBehaviorPatrol and patrol_def.behavior.patrol_leash_radius == 900.0 and slime_patrol_def.behavior.patrol_leash_radius == 900.0 and patrol_def.behavior.mustache_leash_radius == 1350.0 and slime_patrol_def.behavior.mustache_leash_radius == 1350.0 and patrol_def.behavior.stroll_fraction == 0.45 and slime_patrol_def.behavior.stroll_fraction == 0.45 and patrol_def.behavior.pause_time == 0.8 and slime_patrol_def.behavior.pause_time == 0.8 and patrol_def.behavior.aggro_radius == 220.0 and slime_patrol_def.behavior.aggro_radius == 220.0 and patrol_def.behavior.leash_radius == 520.0 and slime_patrol_def.behavior.leash_radius == 520.0 and patrol_def.behavior.home_epsilon == 6.0 and slime_patrol_def.behavior.home_epsilon == 6.0, "(A) both definitions use the patrol behavior")
 
 # --- (B) mustache patroller keeps chasing past 900, gives up past 1350 ---------
 

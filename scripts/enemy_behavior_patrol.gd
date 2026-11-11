@@ -34,13 +34,18 @@ const PATROL_LEASH_RADIUS := 900.0
 ## screen. Other patrollers (the slime) keep PATROL_LEASH_RADIUS.
 const MUSTACHE_LEASH_RADIUS := 1350.0
 
+@export var stroll_fraction: float = STROLL
+@export var pause_time: float = PAUSE
+@export var patrol_leash_radius: float = PATROL_LEASH_RADIUS
+@export var mustache_leash_radius: float = MUSTACHE_LEASH_RADIUS
+
 var waypoint := 0
 var _pause := 0.0
 
 func _leash_radius(enemy: Enemy) -> float:
 	if enemy.cover_seek:
-		return MUSTACHE_LEASH_RADIUS
-	return PATROL_LEASH_RADIUS
+		return mustache_leash_radius
+	return patrol_leash_radius
 
 func _leash_anchor() -> Vector2:
 	return engaged_from if engaged_from != Vector2.INF else home
@@ -53,6 +58,6 @@ func _idle_step(enemy: Enemy, delta: float) -> void:
 		_pause -= delta
 		_walk_to(enemy, enemy.global_position, 0.0, delta)
 		return
-	if _walk_to(enemy, route[waypoint], enemy.speed * STROLL, delta):
+	if _walk_to(enemy, route[waypoint], enemy.speed * stroll_fraction, delta):
 		waypoint = (waypoint + 1) % route.size()
-		_pause = PAUSE
+		_pause = pause_time
