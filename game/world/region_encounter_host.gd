@@ -60,6 +60,12 @@ func _mount_doors() -> void:
 		door.name = 'EncounterDoor%d' % i
 		door.position = region.layout.to_local(points[i])
 		door.size = Vector2(192,32)
+		if i == 0 and region.door_gap.size != Vector2.ZERO:
+			# #615: seal the real wall opening, not the room interior at the
+			# old PlayerSpawn, and draw it with the region's own wall art.
+			door.position = region.layout.to_local(region.door_gap.get_center())
+			door.size = region.door_gap.size
+			door.wall_art = region.wall_art
 		if i > 0:
 			var local := door.position
 			var map := region.layout.get_node('Terrain') as TerrainMap
