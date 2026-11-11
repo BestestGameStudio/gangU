@@ -51,10 +51,6 @@ func is_active() -> bool:
 
 func _mount_doors() -> void:
 	var points: Array[Vector2] = [region.entry]
-	if region.layout is MazeDefenseDungeon:
-		for point: Vector2 in (region.layout as MazeDefenseDungeon).maze['entrances']:
-			var world := region.layout.to_global(point)
-			if world.distance_to(region.entry) > 32.0: points.append(world)
 	for i in points.size():
 		var door: EncounterBarrier = preload('res://game/world/encounter_barrier.tscn').instantiate()
 		door.name = 'EncounterDoor%d' % i
