@@ -15,6 +15,12 @@ extends Node2D
 ## - Success: unlock ONCE, when ALL registered bosses are dead. Accounting is
 ##   local (Enemy.died connections made in register_boss); no global scans.
 ## - Player death: unlock WITHOUT clear (the run restarts via RunManager).
+## - Abort: a registered boss that LEAVES THE TREE without dying (unload,
+##   dormancy, direct queue_free) while the encounter is active aborts it -
+##   unlock WITHOUT clear. A vanished boss never counts as a kill, so no fake
+##   victory; an unfinishable encounter never traps the player. The normal
+##   died path (apply_damage -> died -> queue_free) stays a success: died
+##   fires first and unregisters, so the later tree_exited is a no-op.
 ## - A boss registered after entry never retro-locks an open lair; the host
 ##   owns late-registration policy (e.g. re-fire the trigger or lock itself).
 ## - Encounter-agnostic state only: no art, AI, music, spawn or balance
@@ -26,15 +32,15 @@ extends Node2D
 ## LocationTrigger the player walks into to start the encounter. Its event
 ## stays null: AreaLoader's null-event guard lets it emit `triggered` only.
 @export var trigger: NodePath
-## EncounterBarrier doors (or anything with set_locked / lock / unlock).
+## EncounterBarrier doors that lock while the encounter is active.
 @export var barriers: Array[NodePath] = []
 ## Bosses registered from the start; the host can register more later
 ## (delayed DungeonB Warlord) via register_boss().
 @export var bosses: Array[NodePath] = []
 
 ## Emitted exactly once per activation: cleared=true on all bosses dead,
-## cleared=false on player death. Consumers (549 cleared flag, map marks)
-## are host-side; nothing here persists run state.
+## cleared=false on player death or abort. Consumers (549 cleared flag, map
+## marks) are host-side; nothing here persists run state.
 signal encounter_finished(id: StringName, cleared: bool)
 ## Forwarded when a live boss is registered, for hosts that route it to the
 ## existing boss_spawned consumers (player_path assignment, boss theme).
@@ -68,6 +74,7 @@ func register_boss(boss: Enemy) -> void:
 	_registered.append(boss)
 	if boss.hp > 0:
 		boss.died.connect(_on_boss_died.bind(boss), CONNECT_ONE_SHOT)
+		boss.tree_exited.connect(_on_boss_gone.bind(boss))
 		boss_spawned.emit(boss)
 
 
@@ -97,6 +104,18 @@ func _on_boss_died(boss: Enemy) -> void:
 		_finish(true)
 
 
+## A boss leaving the tree WITHOUT dying (still registered = no died) is a
+## vanish, not a kill: abort the active encounter without clear. Runs after
+## _on_boss_died on the normal kill path, where the boss is already
+## unregistered, so it is a no-op there.
+func _on_boss_gone(boss: Enemy) -> void:
+	if not _registered.has(boss):
+		return
+	_registered.erase(boss)
+	if _active:
+		_finish(false)
+
+
 func _on_player_died() -> void:
 	if _active:
 		_finish(false)
@@ -119,6 +138,6 @@ func _alive_bosses() -> Array[Enemy]:
 
 func _set_barriers_locked(locked_state: bool) -> void:
 	for path in barriers:
-		var b := get_node_or_null(path)
-		if b != null and b.has_method("set_locked"):
+		var b := get_node_or_null(path) as EncounterBarrier
+		if b != null:
 			b.set_locked(locked_state)
