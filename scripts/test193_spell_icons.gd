@@ -18,6 +18,7 @@ func _check(ok: bool, label: String) -> void:
 
 func _spell(n: String, icon: Texture2D) -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.spell_name = n
 	s.icon = icon
 	return s

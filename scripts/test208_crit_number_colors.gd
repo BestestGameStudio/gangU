@@ -34,6 +34,7 @@ func _area(stage: Node2D) -> Node2D:
 
 func _spell(p_damage: float) -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.spell_name = "Fixture Bolt"
 	s.damage = p_damage
 	s.radius = 4.0

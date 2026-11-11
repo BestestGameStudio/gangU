@@ -128,6 +128,7 @@ func run() -> void:
 	check(on_clear.log.size() == 1, "objective_completed bridged")
 
 	var spell := Spell.new()
+	spell.mode = Spell.CastMode.PROJECTILE
 	spell.spell_name = "Fixture"
 	(main.get_node("Player/SpellCaster") as SpellCaster).spell_cast.emit(spell)
 	check(on_cast.log.size() == 1 and on_cast.log[0]["payload"]["spell_name"] == "Fixture", "spell_cast bridged")

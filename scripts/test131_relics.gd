@@ -75,6 +75,7 @@ func run() -> void:
 	other.scalar_effects = {&"fixture_scalar": 2.0}
 	check(owned.add(other), "equally named distinct id remains distinct")
 	var spell := Spell.new()
+	spell.mode = Spell.CastMode.PROJECTILE
 	spell.tags = [SpellTags.PROJECTILE]
 	spell.damage = 20
 	var mods := owned.modifiers_for(spell)
@@ -92,6 +93,7 @@ func run() -> void:
 	var c := crit.to_modifier()
 	check(c.stage == DamageModifier.Stage.CRIT and c.chance == 1.0 and c.multiplier == 2.0, "adapter supports non-AMP stages")
 	var untagged := Spell.new()
+	untagged.mode = Spell.CastMode.PROJECTILE
 	check(owned.modifiers_for(untagged).is_empty(), "untagged spell unchanged")
 	check(owned.modifiers_for(null).is_empty(), "null query empty")
 

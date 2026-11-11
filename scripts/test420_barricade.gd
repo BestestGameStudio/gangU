@@ -101,6 +101,7 @@ func _barricade(stage: Node2D, pos: Vector2, decay: bool = false) -> Barricade:
 
 func _spell(dmg: float, tags: Array[StringName] = []) -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.spell_name = "Fixture Bolt"
 	s.damage = dmg
 	s.radius = 4.0

@@ -103,6 +103,7 @@ func _initialize() -> void:
 
 func _check_defaults() -> void:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	_check(not s.recast_redirect and s.cursor_chase_time == 0.0 and s.pierce_hits == 0 and s.redirect_limit == 0, "steer fields default off")
 	_check(_spell("water_ball_guided").redirect_limit == 1, "guided: turns only once per shot (Daniel 2026-11-09)")
 	_check(_spell("water_ball_tidal").cursor_turn_rate > _spell("water_ball_seeking").cursor_turn_rate, "tidal: signature turn is tighter than the mastery's (Daniel 2026-11-09)")

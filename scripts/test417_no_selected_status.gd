@@ -86,9 +86,11 @@ func _initialize() -> void:
 	upg.name = "UpgraderStub"
 	root.add_child(upg)
 	var fire: Spell = load("res://resources/spells/fire_ball.tres") if ResourceLoader.exists("res://resources/spells/fire_ball.tres") else Spell.new()
+	fire.mode = Spell.CastMode.PROJECTILE
 	if fire.spell_name.is_empty():
 		fire.spell_name = "AlphaBolt"
 	var beta := Spell.new()
+	beta.mode = Spell.CastMode.PROJECTILE
 	beta.spell_name = "BetaBolt"
 	caster.fake_unlocked = [fire, beta]
 	caster.fake_slots = [fire, beta, null, null, null, null]

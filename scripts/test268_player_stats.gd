@@ -113,6 +113,7 @@ func run() -> void:
 
 	# Damage amp + armor reach DamageCalc.
 	var spell := Spell.new()
+	spell.mode = Spell.CastMode.PROJECTILE
 	spell.damage = 20
 	var target := Target.new()
 	main.add_child(target)
@@ -148,6 +149,7 @@ func run() -> void:
 	# Cooldown reduction on SpellCaster + HUD ratio source.
 	var caster := player.get_node("SpellCaster") as SpellCaster
 	var cd_spell := Spell.new()
+	cd_spell.mode = Spell.CastMode.PROJECTILE
 	cd_spell.cooldown = 2.0
 	caster.add_spell(cd_spell)
 	var started: Array = []

@@ -45,6 +45,7 @@ func _ready() -> void:
 	print("[run] start run=", run_count, " hp=", _p.hp, " enemies=", get_tree().get_nodes_in_group("enemies").size(), " spells=", _caster.spells.size())
 	if run_count == 1:
 		var picked := Spell.new()
+		picked.mode = Spell.CastMode.PROJECTILE
 		picked.spell_name = "PickedUpTestSpell"
 		_caster.add_spell(picked)
 		print("[run] collected extra spell, spells=", _caster.spells.size())

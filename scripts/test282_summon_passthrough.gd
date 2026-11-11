@@ -31,6 +31,7 @@ func _frames(n: int) -> void:
 
 func _spell(p_damage: float, p_range: float = 600.0, p_speed: float = 500.0) -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.spell_name = "Fixture Bolt"
 	s.damage = p_damage
 	s.radius = 4.0

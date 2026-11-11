@@ -28,6 +28,7 @@ func _lm(scene: String) -> Array:
 
 func _spell() -> Spell:
 	var s := Spell.new()
+	s.mode = Spell.CastMode.PROJECTILE
 	s.spell_name = "Fixture Bolt"
 	s.damage = 7.0
 	s.radius = 4.0

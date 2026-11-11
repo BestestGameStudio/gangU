@@ -104,6 +104,7 @@ func _run_legs() -> void:
 	var entries: Array[ShopEntry] = []
 	for i in range(6):
 		var s := Spell.new()
+		s.mode = Spell.CastMode.PROJECTILE
 		s.spell_name = "Harness Spell %d" % (i + 1)
 		spells.append(s)
 		entries.append(_entry(s, 10))
@@ -215,6 +216,7 @@ func _run_legs() -> void:
 	var solo := Shop.new()
 	var solo_catalog := ShopCatalog.new()
 	var lone_spell := Spell.new()
+	lone_spell.mode = Spell.CastMode.PROJECTILE
 	lone_spell.spell_name = "Lone Harness Spell"
 	var lone_entry := _entry(lone_spell, 10)
 	solo_catalog.entries = [lone_entry]

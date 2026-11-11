@@ -173,29 +173,16 @@ class_name Spell
 @export var hammer_dice_every: int = 0
 @export var hammer_dice_tables: Array[RewardTable] = []
 
-## #514: authored spells choose their cast shape explicitly in resource data.
-## Keep the existing numeric values stable for consumers of CastMode.
-## LEGACY_INFERRED supports code-built Spell specs during caller migration;
-## every authored spell resource sets a concrete mode instead.
-enum CastMode { LEGACY_INFERRED = -1, NONE = 0, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE }
+## #514: authored and code-built spells choose their cast shape explicitly.
+## Numeric values are stable for serialized resource data. A bare Spell is a
+## projectile, matching its default projectile_count of one; non-projectile
+## specs must set their mode rather than rely on unrelated optional fields.
+enum CastMode { NONE, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE }
 
-@export var mode: CastMode = CastMode.LEGACY_INFERRED
+@export var mode: CastMode = CastMode.PROJECTILE
 
 func cast_mode() -> CastMode:
-	if mode != CastMode.LEGACY_INFERRED:
-		return mode
-	# Compatibility for code-built specs only: preserve the old precedence.
-	if hammer_radius > 0.0:
-		return CastMode.HAMMER
-	if shield_radius > 0.0:
-		return CastMode.SHIELD
-	if rain_duration > 0.0:
-		return CastMode.RAIN
-	if splash_radius > 0.0:
-		return CastMode.SPLASH
-	if projectile_count > 0:
-		return CastMode.PROJECTILE
-	return CastMode.NONE
+	return mode
 
 ## #514: the spell's stable identity: its .tres file name (fire_ball,
 ## water_ball_guided, ...). Display names are not unique (all Spirit Punch

@@ -98,6 +98,7 @@ func _initialize() -> void:
 	img2.fill(Color(1.0, 0.2, 0.6, 1.0))
 	var tex := ImageTexture.create_from_image(img2)
 	var legacy := Spell.new()
+	legacy.mode = Spell.CastMode.PROJECTILE
 	legacy.spell_name = "Legacy"
 	legacy.icon = tex
 	icon.show_spell(legacy)
@@ -105,6 +106,7 @@ func _initialize() -> void:
 	icon.set_cooldown_fraction(0.5)
 	_check(icon.texture == tex and wipe.visible, "static icon also gets the wipe")
 	var bare := Spell.new()
+	bare.mode = Spell.CastMode.PROJECTILE
 	icon.show_spell(bare)
 	_check(icon.texture == SpellIcon.NO_ICON_TEXTURE and not icon.get_node("Placeholder").visible, "no art -> placeholder sprite (#257)")
 	_check(icon.custom_minimum_size == Vector2(20, 20), "placeholder size unchanged")
