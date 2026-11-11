@@ -59,6 +59,11 @@ const SHADOW := Color(0.04, 0.06, 0.05)
 ## damage numbers (5).
 const CANOPY_Z := 3
 
+## Presentation-only viewport culling. The world, terrain, collisions and
+## actor lifetime do not stream. Padding plus cell-bucket updates prevents
+## popping while avoiding a redraw for every subpixel of camera movement.
+var _view := Rect2(Vector2(-100000,-100000), Vector2(200000,200000))
+var _view_bucket := Vector2i(2147483647,2147483647)
 var outline: PackedVector2Array
 var spawn := Vector2(576, 480)
 var landmarks: Array[Vector2] = []
@@ -111,6 +116,25 @@ func _init() -> void:
 
 func _ready() -> void:
 	build_from(get_parent())
+	_update_view()
+	queue_redraw()
+	_canopy.queue_redraw()
+	_grass_top.queue_redraw()
+
+func _process(_delta: float) -> void:
+	_update_view()
+
+func _update_view() -> void:
+	var inverse := get_canvas_transform().affine_inverse()
+	var screen := get_viewport_rect().size
+	var a := inverse * Vector2.ZERO
+	var b := inverse * screen
+	var bucket := Vector2i((a / 64.0).floor())
+	var next := Rect2(a.min(b), (b-a).abs()).grow(192.0)
+	if bucket == _view_bucket and _view.size.distance_to(next.size) < 1.0:
+		return
+	_view_bucket = bucket
+	_view = next
 	queue_redraw()
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
@@ -136,6 +160,7 @@ func _draw_canopy(c: Node2D) -> void:
 			continue
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
+		if not _view.grow(r*2.0).has_point(at): continue
 		# The sprite's crown is ~70 of its 80 px and centred ~38 px down:
 		# scale it so the crown spans the collision circle (slightly over).
 		var sz := TerrainArt.OBJ_CELL * (2.0 * r * 1.15) / 70.0
@@ -337,12 +362,14 @@ func _grass_rect(cell: Vector2i) -> Rect2:
 ## Floor layer: the dark mat under each tall-grass cell.
 func _draw_grass_floor() -> void:
 	for cell in grass_cells:
-		draw_rect(_grass_rect(cell).grow(2.0), TALL_GRASS)
+		if _view.intersects(_grass_rect(cell)):
+			draw_rect(_grass_rect(cell).grow(2.0), TALL_GRASS)
 
 ## Above characters: a few hashed blades per cell.
 func _draw_grass_top() -> void:
 	for cell in grass_cells:
 		var rect := _grass_rect(cell)
+		if not _view.intersects(rect): continue
 		for k in 4:
 			var base := rect.position + Vector2(_hash01(cell.x, cell.y, 50 + k), 0.55 + 0.45 * _hash01(cell.x, cell.y, 60 + k)) * rect.size
 			var h := rect.size.y * (0.45 + 0.35 * _hash01(cell.x, cell.y, 70 + k))
@@ -431,6 +458,8 @@ func _draw_grass_tiles() -> void:
 	var grown := _blob(cell * 0.5)
 	var lo := Vector2i(((CENTER - RADII * 1.1) / cell).floor())
 	var hi := Vector2i(((CENTER + RADII * 1.1) / cell).ceil())
+	lo = lo.max(Vector2i((_view.position / cell).floor()))
+	hi = hi.min(Vector2i((_view.end / cell).ceil()))
 	var grass := TerrainArt.row(&"grass_summer") * TerrainArt.CELL
 	var meadow := TerrainArt.row(&"meadow") * TerrainArt.CELL
 	for y in range(lo.y, hi.y + 1):
@@ -471,6 +500,7 @@ func _draw() -> void:
 	for d in decor:
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
+		if not _view.grow(r*2.0).has_point(at): continue
 		if d["kind"] == "tree":
 			# #418: only the ground shadow stays on the floor layer; the
 			# canopy itself is drawn by the Canopy child, above characters.
