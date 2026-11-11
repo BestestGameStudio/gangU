@@ -9,3 +9,4 @@ enraged_speed = 700.0
 duration = 0.32
 hit_range = 58.0
 damage = 18
+enraged_chain = false
