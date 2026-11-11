@@ -73,15 +73,14 @@ func _configure() -> void:
 	windup_anims = WINDUP_ANIM
 	ring_data = load("res://resources/boss_attacks/beast_ring.tres")
 	lunge_data = load("res://resources/boss_attacks/beast_lunge.tres")
-	var lunge := _present(Attack.LUNGE, State.LUNGE, &"bite", TelegraphShape.LINE)
-	lunge.length = LUNGE_LENGTH
-	lunge.width = LUNGE_HIT_RANGE * 0.6
-	var scream := _present(Attack.SCREAM, State.SCREAM, &"aoe", TelegraphShape.RING)
-	scream.phase_ring = true
-	scream.clear_on_start = false
+	presentations = {
+		Attack.LUNGE: load("res://resources/boss_attacks/beast_lunge_presentation.tres"),
+		Attack.SCREAM: load("res://resources/boss_attacks/beast_scream_presentation.tres"),
+	}
 
 
-## Enraged chain: the second lunge's "wind-up" is just the re-aim pause.
+## Enraged chain: second lunge uses the original short re-aim pause.
+
 func _windup_duration() -> float:
 	if attack == Attack.LUNGE and _lunges > 0:
 		return LUNGE_CHAIN_PAUSE

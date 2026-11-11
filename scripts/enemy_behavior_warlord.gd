@@ -74,15 +74,11 @@ func _configure() -> void:
 	lunge_data = load("res://resources/boss_attacks/warlord_lunge.tres")
 	volley_data = load("res://resources/boss_attacks/warlord_volley.tres")
 
-	var lunge := _present(Attack.LUNGE, State.LUNGE, &"lunge", TelegraphShape.LINE)
-	lunge.length = LUNGE_LENGTH
-	lunge.width = LUNGE_HIT_RANGE * 0.6
-	var spin := _present(Attack.SPIN, State.SPIN, &"spin", TelegraphShape.RING)
-	spin.radius = SPIN_RADIUS
-	spin.start_ring = true
-	spin.start_duration = SPIN_TIME
-	var volley := _present(Attack.VOLLEY, State.VOLLEY, &"ranged", TelegraphShape.CONE)
-	volley.length = 220.0
+	presentations = {
+		Attack.LUNGE: load("res://resources/boss_attacks/warlord_lunge_presentation.tres"),
+		Attack.SPIN: load("res://resources/boss_attacks/warlord_spin_presentation.tres"),
+		Attack.VOLLEY: load("res://resources/boss_attacks/warlord_volley_presentation.tres"),
+	}
 
 
 func _attack_begin_reset() -> void:

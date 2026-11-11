@@ -90,11 +90,10 @@ func _configure() -> void:
 	ring_data = load("res://resources/boss_attacks/head_ring.tres")
 	volley_data = load("res://resources/boss_attacks/head_volley.tres")
 
-	var volley := _present(Attack.VOLLEY, State.VOLLEY, &"projectile", TelegraphShape.CONE)
-	volley.length = VOLLEY_CONE_LENGTH
-	var pulse := _present(Attack.PULSE, State.PULSE, &"aoe", TelegraphShape.RING)
-	pulse.phase_ring = true
-	pulse.clear_on_start = false
+	presentations = {
+		Attack.VOLLEY: load("res://resources/boss_attacks/head_volley_presentation.tres"),
+		Attack.PULSE: load("res://resources/boss_attacks/head_pulse_presentation.tres"),
+	}
 
 
 func _attack_begin_reset() -> void:
