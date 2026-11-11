@@ -24,6 +24,22 @@ var music: MusicDirector = null
 var travel: TravelService = null
 
 var current_area: Node = null
+var _run_overworld: Node2D
+var regions: Array[OverworldRegion] = []
+var _parked_collisions: Dictionary = {}
+var activation: RegionActivation
+
+func region_for(id: StringName) -> OverworldRegion:
+	for region in regions:
+		if region.encounter_id == id:
+			return region
+	return null
+
+func region_at(world: Vector2) -> OverworldRegion:
+	for region in regions:
+		if region.contains(world):
+			return region
+	return null
 
 ## (#350) Type of the gate the current dungeon was entered through, or -1 when
 ## the area was not entered through a gate (hub, direct _swap fixtures). Since
@@ -70,16 +86,24 @@ func _load_hub() -> void:
 
 ## #346: go straight to the overworld (same swap a hub TRAVEL gate makes).
 func enter_overworld() -> void:
-	_swap((load(OVERWORLD_SCENE) as PackedScene).instantiate())
+	if is_instance_valid(_run_overworld):
+		_swap(_run_overworld)
+	else:
+		_swap((load(OVERWORLD_SCENE) as PackedScene).instantiate())
 
 func _on_gate_entered(gate: Gate) -> void:
+	if gate.target_path == FastTravelRoutes.HUB_SCENE and has_active_encounter():
+		return
 	print("gate entered: ", Gate.GateType.keys()[gate.gate_type], " -> ", gate.target_dungeon.resource_path if gate.target_dungeon else gate.target_path)
 	_entry_gate_type = gate.gate_type
 	var target := gate.target_scene()
 	if target == null:
 		push_warning("Gate %s has no target scene" % gate.name)
 		return
-	_swap.call_deferred(target.instantiate())
+	if target.resource_path == OVERWORLD_SCENE:
+		enter_overworld.call_deferred()
+	else:
+		_swap.call_deferred(target.instantiate())
 
 ## #400: close the just-mounted area's gates to dungeons still inside their
 ## post-clear cooldown. Keyed by the gate's target scene like _dungeon_sites,
@@ -118,11 +142,27 @@ func _area_is_red(area: Node) -> bool:
 	return def != null and def.red_by_default
 
 func _swap(area: Node) -> void:
+	if current_area == area:
+		return
 	if current_area:
-		main_host.remove_child(current_area)
-		current_area.queue_free()
+		if current_area == _run_overworld:
+			# Keep nodes in-tree: removing an active encounter from the tree
+			# would abort it. Hub travel is refused while an encounter runs.
+			_set_overworld_collisions(false)
+			_run_overworld.hide()
+			_run_overworld.process_mode = Node.PROCESS_MODE_DISABLED
+		else:
+			main_host.remove_child(current_area)
+			current_area.queue_free()
 	current_area = area
-	main_host.add_child(current_area)
+	var first_mount := current_area.get_parent() == null
+	if first_mount:
+		main_host.add_child(current_area)
+	if current_area.scene_file_path == OVERWORLD_SCENE:
+		_run_overworld = current_area as Node2D
+		_set_overworld_collisions(true)
+		_run_overworld.show()
+		_run_overworld.process_mode = Node.PROCESS_MODE_INHERIT
 	if music:
 		# #359: the boss theme never outlives its dungeon; #471: a fresh loop
 		# on every dungeon entry, silence in the hub/overworld; #487: the
@@ -143,13 +183,18 @@ func _swap(area: Node) -> void:
 		if not sites.is_empty():
 			world_map.set_sites(current_area.name, sites) # #366
 		world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
-	_mount_area_spawns(current_area)
-	_mount_entrance_guards(current_area)
-	_mount_location_triggers(current_area)
-	_mount_objective(current_area)
-	_mount_exit_portal(current_area)
-	_mount_revive_item(current_area)
-	_mount_dungeon_modifiers(current_area)
+	if first_mount:
+		_mount_area_spawns(current_area)
+		if current_area.scene_file_path == OVERWORLD_SCENE:
+			_mount_regions(current_area)
+		_mount_entrance_guards(current_area)
+		_mount_location_triggers(current_area)
+		_mount_objective(current_area)
+		_mount_exit_portal(current_area)
+		_mount_revive_item(current_area)
+		_mount_dungeon_modifiers(current_area)
+	if current_area == _run_overworld and activation != null:
+		activation.update_now()
 	if travel:
 		travel.refresh()
 
@@ -245,8 +290,27 @@ func _mount_entrance_guards(area: Node) -> void:
 			continue
 		if guards.dungeon_id != &"" and cleared_dungeons.has(guards.dungeon_id):
 			continue
-		entries.append_array(guards.entries)
-		player_path = guards.player_path
+		var id := guards.dungeon_id if guards.dungeon_id != &"" else &"generated"
+		var region := region_for(id)
+		if region != null:
+			var local_entries: Array[SpawnEntry] = []
+			var delta := Vector2.ZERO
+			for entry in guards.entries:
+				var copy := entry.duplicate() as SpawnEntry
+				copy.position = region.layout.to_local((area as Node2D).to_global(entry.position + delta))
+				copy.route = PackedVector2Array()
+				for at in entry.route:
+					copy.route.append(region.layout.to_local((area as Node2D).to_global(at + delta)))
+				local_entries.append(copy)
+			var local_spawner := EnemySpawner.new()
+			local_spawner.name = "ApproachSpawner"
+			region.layout.add_child(local_spawner)
+			local_spawner.setup(local_entries, NodePath("../" + String(region.layout.get_path_to(player))), region.terrain, region.layout)
+			local_spawner.spawn_initial()
+			region.set_active(region.active)
+		else:
+			entries.append_array(guards.entries)
+			player_path = guards.player_path
 	# #373: overworld-wide migrants belong to no entrance, so a cleared
 	# dungeon (#348) never suppresses them; they mount through the same spawner.
 	var roamers := area.get_node_or_null("Roamers") as AreaSpawnData
@@ -463,19 +527,14 @@ func _mount_revive_item(area: Node) -> void:
 ## Shared by the #349 Hub shortcut and #366 map travel: mount `path` with the
 ## run's gate offering / authored boss semantics for `dungeon_id`.
 func _enter_dungeon(dungeon_id: StringName, path: String) -> void:
-	var target := load(path) as PackedScene
-	if target == null:
+	if path == "" or not FastTravelRoutes.DUNGEONS.has(dungeon_id):
 		return
-	## Reuse the current run's gate offering and authored boss semantics.
-	var authored := Gate.GateType.RED if dungeon_id == &"dungeon_b" else Gate.GateType.NORMAL
-	var gate_name: StringName = &"GateRed" if dungeon_id == &"dungeon_b" else &"GateNormal"
-	if dungeon_id in [&"dungeon_a", &"dungeon_b"]:
-		_entry_gate_type = offering_type_for(gate_name, authored, preload("res://data/gate_offering.tres"))
-	elif dungeon_id == &"dungeon_e" or dungeon_id == &"dungeon_maze":
-		_entry_gate_type = Gate.GateType.NORMAL # Preserve authored defense gate; no offering roll.
-	else:
-		_entry_gate_type = Gate.GateType.BOSS
-	_swap(target.instantiate())
+	enter_overworld()
+	var region := region_for(dungeon_id)
+	if region != null and player != null:
+		player.global_position = region.arrival
+		activation.update_now()
+
 
 
 ## #366 map travel. The map marks every dungeon cleared this run at its
@@ -492,6 +551,9 @@ func _enter_dungeon(dungeon_id: StringName, path: String) -> void:
 ## (clearing implies discovery); run-scoped like cleared_dungeons/WorldMap.
 func _dungeon_sites(area: Node) -> Dictionary:
 	var sites := {}
+	for region in regions:
+		if area.is_ancestor_of(region) and FastTravelRoutes.DUNGEONS.has(region.encounter_id):
+			sites[region.encounter_id] = region.entry
 	for g: Gate in get_tree().get_nodes_in_group("gates"):
 		if not area.is_ancestor_of(g):
 			continue
@@ -502,3 +564,56 @@ func _dungeon_sites(area: Node) -> Dictionary:
 		if id != &"":
 			sites[id] = g.global_position
 	return sites
+
+## Folded region lifetime equals the run. All initial enemy carriers go
+## through EnemySpawner, exactly once, with explicit persistent Player paths.
+func _mount_regions(area: Node) -> void:
+	var shared := area.get_node("Terrain") as TerrainMap
+	for child in area.get_children():
+		var region := child as OverworldRegion
+		if region == null:
+			continue
+		region.mount(shared)
+		regions.append(region)
+		var data := region.layout.get_node_or_null("SpawnData") as AreaSpawnData
+		if data != null:
+			var spawner := EnemySpawner.new()
+			spawner.name = "EnemySpawner"
+			region.layout.add_child(spawner)
+			var path := NodePath("../" + String(region.layout.get_path_to(player)))
+			spawner.setup(data.entries, path, shared, region.layout)
+			spawner.spawn_initial()
+		_mount_revive_item(region.layout)
+		region.set_active(false)
+	var ground := area.get_node_or_null("Ground") as OverworldGround
+	if ground != null:
+		ground.reserve_regions(regions)
+	activation = RegionActivation.new()
+	activation.name = "RegionActivation"
+	activation.player = player
+	activation.regions = regions
+	area.add_child(activation)
+	if world_map:
+		world_map.set_sites(area.name, _dungeon_sites(area))
+
+func has_active_encounter() -> bool:
+	for region in regions:
+		if region.keep_active():
+			return true
+	return false
+
+func _set_overworld_collisions(enabled: bool) -> void:
+	if not is_instance_valid(_run_overworld):
+		return
+	for n in _run_overworld.find_children("*", "CollisionObject2D", true, false):
+		var body := n as CollisionObject2D
+		if not enabled:
+			_parked_collisions[body.get_instance_id()] = [body.collision_layer, body.collision_mask]
+			body.collision_layer = 0
+			body.collision_mask = 0
+		elif _parked_collisions.has(body.get_instance_id()):
+			var state: Array = _parked_collisions[body.get_instance_id()]
+			body.collision_layer = state[0]
+			body.collision_mask = state[1]
+	if enabled:
+		_parked_collisions.clear()
