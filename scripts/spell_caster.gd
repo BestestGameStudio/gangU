@@ -626,6 +626,7 @@ func _cast_spell(spell: Spell) -> void:
 	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
 	_start_cooldown(spell, cooldown_base)
 	spell_cast.emit(spell)
+	FireballAudio.cast(self, spell) # #584: one cue per committed cast, not per shot.
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
 	CombatEffects.muzzle(get_tree().current_scene, global_position, dir.angle(), spell.projectile_color)
