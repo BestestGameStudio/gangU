@@ -79,3 +79,15 @@ to -10dBFS, no pitch/timbre change. Vorbis q6 from approved master.
 Plays only on actual nonlethal HP loss; no random pitch or volume boost.
 Audio-only 0.15s cooldown and one voice prevent stacking without gating hits.
 Lethal damage stops a prior grunt so the death cue stays distinct.
+
+
+# Fishy whistle, cast and reeling (#594, #595)
+
+Approved B2 whistle: Joseph Sardin, CC0
+https://bigsoundbank.com/man-whistling-a-melody-s1162.html .
+Excerpt 36.6-53.0s, 180Hz high-pass, 60ms in/400ms out fades, -12dBFS
+peak, 8ms right-channel delay, no pitch/time change. Full 16.4s melody
+plays only while unaware near a living player, 30-50s quiet spacing,
+one whistler globally. Stops on awareness, range exit or death.
+
+Encoded from approved 44.1kHz 16-bit stereo WAV using Vorbis q6, no added gain, pitch change or looping. Spatial attenuation applies.
