@@ -21,7 +21,7 @@ func _run() -> void:
 	var region := loader.region_for(&'dungeon_a')
 	var marker := Node.new()
 	region.layout.add_child(marker)
-	loader.cleared_dungeons[&'dungeon_a'] = true
+	loader.complete_encounter(&'dungeon_a')
 	_check(not travel.can_map_travel_to(&'dungeon_a'), 'map travel remains hub-origin only')
 	p.global_position = region.arrival
 	_check(travel.can_fast_return(), 'cleared physical region can return to hub')
