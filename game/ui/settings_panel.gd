@@ -1,7 +1,7 @@
 class_name SettingsPanel
 extends ModalPanel
-## (#489) Settings panel with a master volume slider. Esc (or the small
-## "Settings" button in the bottom-right corner) opens / closes it.
+## (#489) Settings panel with a master volume slider. Esc opens / closes
+## it (#622 removed the on-screen corner button; Esc is the only opener).
 ##
 ## - Master volume drives the Master audio bus (bus 0), which every
 ##   AudioStreamPlayer in the game plays on (music, ambience, SFX). The
@@ -23,7 +23,6 @@ const DEFAULT_MASTER := 1.0
 var settings_path := SETTINGS_PATH
 var master_volume := DEFAULT_MASTER
 
-var _open_button: Button
 var _backdrop: PanelContainer
 var _slider: HSlider
 var _value_label: Label
@@ -86,6 +85,9 @@ func set_master_volume(v: float) -> void:
 		_slider.set_value_no_signal(master_volume * 100.0)
 	_refresh_label()
 
+func _apply_shown(shown: bool) -> void:
+	_backdrop.visible = shown
+
 func is_open() -> bool:
 	return _backdrop != null and _backdrop.visible
 
@@ -94,16 +96,6 @@ func open() -> void:
 
 func close() -> void:
 	_set_shown(false)
-
-## The corner button stays on screen; only the backdrop is the panel.
-func _apply_shown(shown: bool) -> void:
-	_backdrop.visible = shown
-
-func toggle() -> void:
-	if is_open():
-		close()
-	else:
-		open()
 
 ## True when some other panel (map, equip, fast travel) is open.
 func _other_modal_open() -> bool:
@@ -129,24 +121,6 @@ func _refresh_label() -> void:
 		_value_label.text = "%d%%" % roundi(master_volume * 100.0)
 
 func _build_ui() -> void:
-	var corner := Control.new()
-	corner.name = "Corner"
-	# Bottom-right: the top-right corner holds the HUD's area name.
-	corner.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(corner)
-	_open_button = Button.new()
-	_open_button.name = "OpenSettings"
-	_open_button.text = "Settings"
-	_open_button.tooltip_text = "Settings (Esc)"
-	_open_button.focus_mode = Control.FOCUS_NONE
-	_open_button.add_theme_font_size_override("font_size", 12)
-	UiStyle.style_button(_open_button, UiStyle.B_DIM, 4.0)
-	_open_button.pressed.connect(toggle)
-	corner.add_child(_open_button)
-	# Pin the button 10 px inside the bottom-right screen corner.
-	_open_button.position = -_open_button.get_combined_minimum_size() - Vector2(10.0, 10.0)
-
 	_backdrop = PanelContainer.new()
 	_backdrop.name = "SettingsBackdrop"
 	_backdrop.add_theme_stylebox_override("panel", UiStyle.panel())
