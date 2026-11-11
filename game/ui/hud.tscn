@@ -1,8 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://bgangu6hud"]
+[gd_scene load_steps=3 format=3 uid="uid://bgangu6hud"]
 
 [ext_resource type="Script" path="res://game/ui/hud.gd" id="1_hud"]
 [ext_resource type="Texture2D" path="res://assets/sprites/hp_bar_frame.png" id="2_frame"]
-[ext_resource type="Script" path="res://game/ui/defense_wave_bar.gd" id="3_bar"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -83,21 +82,3 @@ size_flags_horizontal = 0
 theme_override_constants/h_separation = 16
 theme_override_constants/v_separation = 16
 columns = 3
-
-[node name="ObjectiveLabel" type="Label" parent="Root"]
-visible = false
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Objective: --"
-
-[node name="DefenseWaveBar" type="Control" parent="."]
-visible = false
-anchors_preset = -1
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -180.0
-offset_top = 8.0
-offset_right = 180.0
-offset_bottom = 56.0
-grow_horizontal = 2
-script = ExtResource("3_bar")
