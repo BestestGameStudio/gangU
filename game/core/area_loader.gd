@@ -417,6 +417,15 @@ func _on_objective_completed(dungeon_id: StringName) -> void:
 	cleared_dungeons[dungeon_id] = true # #346: its overworld entrance stops spawning guards
 	_gate_cooldown_until[dungeon_id] = Time.get_ticks_msec() + int(gate_reentry_cooldown_seconds * 1000.0) # #400
 	if first_clear:
+		# Cached overworlds do not remount, so remove the cleared approach's
+		# live guards here, preserving the prior next-visit suppression rule.
+		var region := region_for(dungeon_id)
+		if region != null:
+			var spawner := region.layout.get_node_or_null("ApproachSpawner") as EnemySpawner
+			if spawner != null:
+				for group in spawner._alive.values():
+					for enemy in group:
+						if is_instance_valid(enemy): enemy.queue_free()
 		dungeon_cleared.emit(dungeon_id)
 	if travel:
 		travel.refresh.call_deferred()
