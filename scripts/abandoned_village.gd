@@ -13,7 +13,14 @@ const CLEAR_COINS := 100
 ## #546: ambushers appear just outside the outer tree ring (trees reach ~506).
 const SPAWN_RADIUS := 540.0
 const HOUSE_HALF := Vector2(58, 54)
-const WELL_HALF := Vector2(40, 46)
+# #574: the footprint fits the visible well art, not its 96x96 draw rect.
+# The art's opaque pixels span ~64.5x72 px (0.75 scale from the 128px atlas
+# tile), centered ~4.5 px below the draw-rect center. Sizes are tuned for the
+# 32px terrain grid: the marked OBSTACLE cells come out to x [-32, 32] and
+# y [-56, 40] relative to the village center, the tightest cell span that
+# still covers the art (was x [-64, 64] - double the art's width).
+const WELL_HALF := Vector2(32, 30)
+const WELL_OFFSET := Vector2(0, 4.5)
 const PROPS: Texture2D = preload("res://assets/sprites/village_props.png")
 const ENEMY := preload("res://scenes/enemy.tscn")
 const LOOT := preload("res://resources/rewards/demo_table.tres")
@@ -89,7 +96,7 @@ func footprints() -> Array[Rect2]:
 		for column in [-1, 0, 1]:
 			var at := position + Vector2(column * 170, side * 170)
 			rects.append(Rect2(at - HOUSE_HALF, HOUSE_HALF * 2.0))
-	rects.append(Rect2(position - WELL_HALF, WELL_HALF * 2.0))
+	rects.append(Rect2(position + WELL_OFFSET - WELL_HALF, WELL_HALF * 2.0))
 	return rects
 
 func plant_footprints(map: TerrainMap, cells: Dictionary, blockers: Array[Vector3]) -> void:
