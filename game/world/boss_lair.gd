@@ -14,7 +14,13 @@ extends Node2D
 ##   manufactured for an empty one.
 ## - Success: unlock ONCE, when ALL registered bosses are dead. Accounting is
 ##   local (Enemy.died connections made in register_boss); no global scans.
-## - Player death: unlock WITHOUT clear (the run restarts via RunManager).
+## - Player death: unlock WITHOUT clear, but only a CONFIRMED UNREVIVED
+##   death counts. Player.died fires BEFORE RunManager's #12 interception,
+##   where a carried ReviveSatchel heals the player synchronously inside the
+##   same emission and cancels the restart - so the death is confirmed one
+##   frame later: hp still 0 means unrevived (unlock, no clear); hp > 0
+##   means revived (lair stays LOCKED with the live boss, death watched
+##   again). The defer also makes this independent of died-listener order.
 ## - Abort: a registered boss that LEAVES THE TREE without dying (unload,
 ##   dormancy, direct queue_free) while the encounter is active aborts it -
 ##   unlock WITHOUT clear. A vanished boss never counts as a kill, so no fake
@@ -49,6 +55,10 @@ signal boss_spawned(boss: Node)
 var _registered: Array[Enemy] = []
 var _active := false
 var _player: Player = null
+## Bumped on every start(); binds a pending deferred death confirmation to
+## its activation so a superseding activation (even same-player reentry)
+## discards the stale callback.
+var _activation := 0
 
 
 func _ready() -> void:
@@ -84,6 +94,7 @@ func start(player: Node2D) -> void:
 	if _active or _alive_bosses().is_empty():
 		return
 	_active = true
+	_activation += 1
 	_player = player as Player
 	if _player != null and not _player.died.is_connected(_on_player_died):
 		_player.died.connect(_on_player_died, CONNECT_ONE_SHOT)
@@ -117,9 +128,28 @@ func _on_boss_gone(boss: Enemy) -> void:
 
 
 func _on_player_died() -> void:
-	if _active:
-		_finish(false)
-
+	var p := _player
+	var a := _activation
+	if p == null:
+		return
+	await get_tree().process_frame
+	# Stale death: teardown, a different player, or a superseding activation
+	# (same-player reentry during the defer) - the new state owns itself.
+	if not is_instance_valid(p) or p != _player or a != _activation:
+		return
+	if not _active:
+		# Success or abort landed during the defer; nothing to finish, no
+		# further death to watch.
+		return
+	if p.hp > 0:
+		# Revived: stay locked/active and watch the next death (this ONE_SHOT
+		# connection was consumed by the fire above).
+		if not p.died.is_connected(_on_player_died):
+			p.died.connect(_on_player_died, CONNECT_ONE_SHOT)
+		return
+	# Confirmed unrevived death: hp is still 0 after RunManager's synchronous
+	# try_revive settled inside the died dispatch.
+	_finish(false)
 
 func _finish(cleared: bool) -> void:
 	_active = false
