@@ -65,12 +65,7 @@ func _configure() -> void:
 	_range(SPIN_RANGE, false, Attack.SPIN, Attack.LUNGE)
 	_range(VOLLEY_RANGE, true, Attack.VOLLEY, Attack.LUNGE)
 	attack_steps = {State.LUNGE: _dispatch_lunge, State.SPIN: _dispatch_spin, State.VOLLEY: _dispatch_volley}
-	first_attack_delay = FIRST_ATTACK_DELAY
-	attack_interval = ATTACK_INTERVAL
-	enraged_interval = ENRAGED_INTERVAL
-	recover_time = RECOVER_TIME
-	windup_times = WINDUP_TIME
-	windup_anims = WINDUP_ANIM
+	_apply_tuning(load("res://resources/boss_attacks/warlord_tuning.tres"))
 	lunge_data = load("res://resources/boss_attacks/warlord_lunge.tres")
 	volley_data = load("res://resources/boss_attacks/warlord_volley.tres")
 

@@ -44,9 +44,21 @@ func _init() -> void:
 	_configure()
 	_attack_timer = first_attack_delay
 
-## Per-boss: assign the tuning vars above from the subclass constants.
+## Per-boss: load authored tuning and configure attacks.
 func _configure() -> void:
 	pass
+
+## Copy mutable dictionaries so authored data cannot acquire per-enemy state.
+func _apply_tuning(tuning: BossTuning) -> void:
+	first_attack_delay = tuning.first_attack_delay
+	attack_interval = tuning.attack_interval
+	enraged_interval = tuning.enraged_interval
+	recover_time = tuning.recover_time
+	stun_time = tuning.stun_time
+	has_stun_phase = tuning.has_stun_phase
+	arrival_color = tuning.arrival_color
+	windup_times = tuning.windup_times.duplicate(true)
+	windup_anims = tuning.windup_anims.duplicate(true)
 
 ## Shared prologue of every boss step; the per-boss states run via _step.
 func physics_step(enemy: Enemy, player: Player, delta: float) -> void:
