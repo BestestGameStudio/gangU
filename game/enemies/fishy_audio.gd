@@ -41,9 +41,13 @@ func step(delta: float) -> void:
 		return
 	var behavior := enemy._behavior as EnemyBehaviorFishy
 	var target := enemy._player
-	if behavior == null or enemy.hp <= 0 or enemy.freeze.is_frozen() or not is_instance_valid(target) or target.hp <= 0:
+	if behavior == null or enemy.hp <= 0 or not is_instance_valid(target) or target.hp <= 0:
 		_silence()
 		_last_state = -1
+		return
+	# Freeze pauses an existing state, it is not a new cast transition.
+	if enemy.freeze.is_frozen():
+		_silence()
 		return
 	var state := behavior.state
 	if state == EnemyBehaviorFishy.State.CAST and _last_state != state:
