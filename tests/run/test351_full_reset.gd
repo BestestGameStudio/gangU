@@ -55,11 +55,9 @@ func _process(delta: float) -> bool:
 			if old_scene.area_loader.current_area == null:
 				return false
 			# --- world: enter DungeonA (real swap path) ---
-			old_scene.area_loader._swap(load("res://game/world/dungeon_a.tscn").instantiate())
-			var obj := old_scene.area_loader.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
-			_check(obj != null, "setup: DungeonA objective mounted")
-			if obj:
-				obj.objective_completed.connect(func(_id): objective_done = true)
+			old_scene.area_loader.enter_overworld()
+			old_scene.area_loader.dungeon_cleared.connect(func(id):
+				if id == &"dungeon_a": objective_done = true)
 			phase = 1; t = 0.0
 		1:
 			if t < 0.2:
@@ -133,10 +131,10 @@ func _process(delta: float) -> bool:
 			# world
 			_check(s.area_loader.current_area.name == &"Hub", "world: fresh run starts in the hub (got %s)" % s.area_loader.current_area.name)
 			# dungeon cleared-state: no completed objective carried, DungeonA repopulates
-			s.area_loader._swap(load("res://game/world/dungeon_a.tscn").instantiate())
-			var obj := s.area_loader.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
-			_check(obj != null, "dungeon clear: DungeonA objective re-mounted")
-			_check(get_nodes_in_group("enemies").size() > 0, "dungeon clear: DungeonA enemies respawned (%d)" % get_nodes_in_group("enemies").size())
+			_check(not s.area_loader.is_cleared(&"dungeon_a"), "encounter clear state reset")
+			s.area_loader.enter_overworld()
+			_check(s.area_loader.region_for(&"dungeon_a").layout != null, "region rebuilt in fresh run")
+			_check(get_nodes_in_group("enemies").size() > 0, "region enemies respawned")
 			# coins
 			_check((s.get_node("CurrencyWallet") as CurrencyWallet).balance() == 0, "coins: wallet back to 0")
 			# spells

@@ -2,10 +2,10 @@ class_name DefenseWaveBar
 extends Control
 ## #369: top-center wave progress bar for DEFENSE missions (#337).
 ## One icon per wave - an enemy glyph for a regular wave, a skull for a boss
-## wave (DungeonObjective.boss_waves; #368 makes the final wave
+## wave (DefenseEncounter.boss_waves; #368 makes the final wave
 ## a boss wave in Main). Clearing a wave fills the bar; a countdown centered under the
 ## bar shows when the next wave is about to spawn.
-## Visible only while the mounted DungeonObjective is a DEFENSE objective.
+## Visible only during an active physical defense encounter.
 ## Driven by polling the objective every frame, so no signal wiring is needed
 ## and area swaps that free the objective simply hide the bar.
 
@@ -22,7 +22,7 @@ const ICON_LIT := Color(1.0, 0.55, 0.15, 1.0)
 const SKULL_DIM := Color(0.55, 0.55, 0.6, 0.9)
 const SKULL_LIT := Color(0.94, 0.94, 0.97, 1.0)
 
-var _objective: DungeonObjective
+var _encounter: DefenseEncounter
 var _countdown: Label
 
 func _ready() -> void:
@@ -38,18 +38,17 @@ func _ready() -> void:
 	add_child(_countdown)
 	visible = false
 
-## The HUD mounts the discovered objective (DEFENSE only) or null on an area
-## swap / for every other objective type.
-func show_objective(objective: DungeonObjective) -> void:
-	_objective = objective
-	visible = objective != null
+## The HUD supplies the active physical defense or null outside it.
+func show_encounter(encounter: DefenseEncounter) -> void:
+	_encounter = encounter
+	visible = encounter != null and encounter.is_active()
 	queue_redraw()
 
 func _process(_delta: float) -> void:
-	if _objective == null or not is_instance_valid(_objective):
+	if _encounter == null or not is_instance_valid(_encounter):
 		visible = false
 		return
-	var remaining := _objective.next_wave_remaining()
+	var remaining := _encounter.next_wave_remaining()
 	if remaining >= 0.0:
 		_countdown.text = "Next wave in %ds" % int(ceili(remaining))
 		_countdown.visible = true
@@ -60,19 +59,19 @@ func _process(_delta: float) -> void:
 ## "skull" for a wave marked as a boss wave (#368 marker), else "enemy".
 ## Exposed for the test harness.
 func icon_kind(wave: int) -> String:
-	return "skull" if _objective != null and _objective.is_boss_wave(wave) else "enemy"
+	return "skull" if _encounter != null and _encounter.is_boss_wave(wave) else "enemy"
 
 ## Fraction of the bar filled (waves cleared / total). Exposed for tests.
 func fill_fraction() -> float:
-	if _objective == null or not is_instance_valid(_objective):
+	if _encounter == null or not is_instance_valid(_encounter):
 		return 0.0
-	var p := _objective.progress()
+	var p := _encounter.progress()
 	return clampf(float(p.x) / float(maxi(p.y, 1)), 0.0, 1.0)
 
 func _draw() -> void:
-	if _objective == null or not is_instance_valid(_objective):
+	if _encounter == null or not is_instance_valid(_encounter):
 		return
-	var total := _objective.total_waves()
+	var total := _encounter.total_waves()
 	if total <= 0:
 		return
 	var track := Rect2(Vector2.ZERO, Vector2(BAR_WIDTH, BAR_HEIGHT))
@@ -81,11 +80,11 @@ func _draw() -> void:
 	if frac > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, Vector2(BAR_WIDTH * frac, BAR_HEIGHT)), TRACK_FILL)
 	draw_rect(track, TRACK_BORDER, false, 1.0)
-	var cleared := _objective.progress().x
+	var cleared := _encounter.progress().x
 	var seg := BAR_WIDTH / total
 	for wave in range(1, total + 1):
 		var c := Vector2(seg * (wave - 0.5), BAR_HEIGHT * 0.5)
-		if _objective.is_boss_wave(wave):
+		if _encounter.is_boss_wave(wave):
 			_draw_skull(c, SKULL_LIT if wave <= cleared else SKULL_DIM)
 		else:
 			_draw_enemy(c, ICON_LIT if wave <= cleared else ICON_DIM)

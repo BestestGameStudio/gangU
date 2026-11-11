@@ -1,17 +1,14 @@
 class_name DungeonDefinition
 extends Resource
-## #512: a dungeon as data. One .tres per dungeon under data/dungeons/,
-## listed in DungeonCatalog. Main reads it to mount the objective, exit portal,
-## revive item and boss theme instead of branching on the area's node name.
-## Defaults describe a plain dungeon with an objective and no extras.
+## Region seed content catalog: layout, local boss/wave composition, revive
+## item and existing music policy. No objective enum or exit-portal policy.
 
 ## The area root node's name (what Main.current_area.name is).
 @export var area_name: StringName = &""
-## Id of the objective / clear record / fast-travel route.
+## Stable encounter clear record / fast-travel route id.
 @export var id: StringName = &""
 @export var label: String = ""
 @export_file("*.tscn") var scene: String = ""
-@export var objective_type: DungeonObjective.ObjectiveType = DungeonObjective.ObjectiveType.CLEAR_ALL_ENEMIES
 
 @export_group("Boss (ELIMINATION)")
 ## Spawned when the area's mobs are cleared. Null = no boss.
@@ -27,12 +24,6 @@ extends Resource
 @export var wave_boss_scene: PackedScene
 
 @export_group("Portal and extras")
-## Mounts an exit portal even without an "ExitPoint" marker.
-@export var default_exit_portal: bool = false
-## Exit portal is locked until the objective clears, whatever gate type
-## entered (RED entry also locks it).
-@export var locks_portal: bool = false
-@export var beast_portal_look: bool = false
 ## Treated as RED when no entry gate type is known (#350 fallback).
 @export var red_by_default: bool = false
 ## Mounts the one-time revive item (#9).

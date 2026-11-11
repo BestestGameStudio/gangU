@@ -23,6 +23,9 @@ func _run() -> void:
 		loader.activation.update_now()
 		for i in 5: await physics_frame
 		_check(d.is_active() and host.doors.all(func(door): return door.is_locked()), 'physical location starts and locks: '+String(id))
+		var bar := main.get_node('HUD/DefenseWaveBar') as DefenseWaveBar
+		_check(bar.visible and bar._encounter == d and bar.icon_kind(d.total_waves()) == 'skull', 'shipped defense bar follows encounter and boss-wave marker')
+		_check(bar._countdown.visible and bar._countdown.text.begins_with('Next wave in'), 'shipped countdown visible before wave')
 		if id == &'dungeon_e':
 			# Keep real production physics/timing: embedded or unreachable
 			# spawns must fail this core contract, not pass via script kills.
@@ -59,6 +62,7 @@ func _run() -> void:
 		for e in wave: e.apply_damage(999999)
 		await process_frame
 		_check(not loader.is_cleared(id), 'first wave does not clear full defense')
+		_check(bar.fill_fraction() > 0.0, 'shipped wave bar fill reflects cleared wave')
 		for n in range(2,d.total_waves()+1):
 			d.spawn_next_wave()
 			d._tick_pending_bosses(d.wave_boss_delay + 1.0)
@@ -67,7 +71,10 @@ func _run() -> void:
 			await process_frame
 		_check(d.is_cleared() and loader.is_cleared(id) and not host.is_active(), 'all waves and final bosses clear once')
 		_check(host.doors.all(func(door): return not door.is_locked()), 'success opens physical doors')
+		_check(not bar.visible, 'defense bar hides on encounter end')
 		loader._load_hub()
+		await process_frame
+		_check(not bar.visible, 'defense bar stays hidden in hub')
 		loader.enter_overworld()
 		_check(region == loader.region_for(id) and not d.start(loader.player), 'same-run hub trip cannot restart completed defense')
 		main.queue_free()

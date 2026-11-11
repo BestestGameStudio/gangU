@@ -1,15 +1,7 @@
 extends CanvasLayer
 class_name HUD
-## gangU #11 / #238: player HUD - a bare HP bar, a 3x2 grid of spell squares
-## mirroring the six equip slots, and the objective row.
-##
-## Objective slice consumes the merged #8 contract read-only: the production
-## mount (main.gd) adds a node named "DungeonObjective" to the dungeon area
-## AFTER the enemies. HUD boots before any objective exists and outlives area
-## swaps, so it discovers that node lazily by exact name, connects its
-## signals, and drops the reference when the swap frees it. No fake objective
-## data is rendered - the row stays hidden wherever no objective exists (the
-## hub).
+## Player health, spirit and six equipped spell slots. Encounters have no
+## legacy objective system. The shipped defense wave bar remains.
 ##
 ## Self-contained: mounted by the scene that owns the player, by instancing
 ## game/ui/hud.tscn and setting player_path, OR via the Player.find fallback.
@@ -51,13 +43,14 @@ const SHIELD_TRACK := Color(0.08, 0.08, 0.1, 0.75)
 const SPIRIT_FILLING := Color(0.3, 0.65, 0.85, 1.0)
 const SPIRIT_READY := Color(0.55, 1.0, 0.75, 1.0)
 const SPIRIT_TRACK := Color(0.06, 0.1, 0.14, 0.75)
+var _defense: DefenseEncounter
+var _area_loader: AreaLoader
+@onready var _defense_bar: DefenseWaveBar = $DefenseWaveBar
 var _player: Player
 var _caster: SpellCaster
 var _spirit: SpiritMeter
 var _slot_icons: Array[SpellIcon] = []
 
-var _objective: DungeonObjective
-var _discover_elapsed := 0.0
 
 ## Discovered and validity-checked exactly like the objective node. Polled
 ## every frame because cast XP changes can_upgrade without any signal.
@@ -72,11 +65,9 @@ var _progress_elapsed := 0.0
 @onready var _spirit_bar: ProgressBar = $Root/SpiritBar
 @onready var _spirit_label: Label = $Root/SpiritBar/SpiritLabel
 @onready var _spell_grid: GridContainer = $Root/SpellGrid
-@onready var _objective_label: Label = $Root/ObjectiveLabel
-## #369: top-center defense wave bar; mounted with the discovered objective.
-@onready var _defense_bar: DefenseWaveBar = $DefenseWaveBar
 
 func _ready() -> void:
+	_area_loader = get_parent().get_node_or_null("AreaLoader") as AreaLoader
 	_spirit_bar.visible = false
 	_hp_bar.add_theme_stylebox_override("background", _hp_bar_style(HP_TRACK_TEXTURE, HP_TRACK_CAP))
 	_hp_bar.add_theme_stylebox_override("fill", _hp_bar_style(HP_FILL_TEXTURE, HP_FILL_CAP))
@@ -164,7 +155,7 @@ func _can_upgrade(spell: Spell) -> bool:
 	return allowed
 
 func _process(delta: float) -> void:
-	_update_objective(delta)
+	_update_defense()
 	_update_progress(delta)
 	_update_slot_icons()
 
@@ -226,58 +217,6 @@ func _update_progress(delta: float) -> void:
 	_progress = get_tree().root.find_child("SpellProgress", true, false)
 
 
-## #11 objective slice: lazy discovery of the mounted DungeonObjective.
-## Throttled search; the node only exists while a dungeon with an objective
-## is the current area.
-func _update_objective(delta: float) -> void:
-	# Note: a freed objective compares == null in GDScript, so validity must
-	# be checked with is_instance_valid, not a null comparison.
-	if is_instance_valid(_objective):
-		return
-	_objective = null # never held, or the area swap freed it
-	_objective_label.visible = false
-	_defense_bar.show_objective(null)
-	_discover_elapsed += delta
-	if _discover_elapsed < 0.25:
-		return
-	_discover_elapsed = 0.0
-	var found := get_tree().root.find_child("DungeonObjective", true, false) as DungeonObjective
-	if found == null:
-		return
-	_objective = found
-	_objective.objective_progress_changed.connect(_on_objective_progress)
-	_objective.objective_completed.connect(_on_objective_completed)
-	_objective.objective_failed.connect(_on_objective_failed)
-	# #369: the wave bar only exists for DEFENSE missions.
-	if found.objective_type == DungeonObjective.ObjectiveType.DEFENSE:
-		_defense_bar.show_objective(found)
-	else:
-		_defense_bar.show_objective(null)
-	var p := _objective.progress()
-	_show_objective(p.x, p.y)
-	if _objective.is_failed():
-		_on_objective_failed(_objective.dungeon_id)
-
-func _show_objective(current: int, target: int) -> void:
-	if _objective != null and _objective.objective_type == DungeonObjective.ObjectiveType.DEFENSE:
-		# #337: waves cleared / total, plus the wave currently in play.
-		_objective_label.text = "Objective: DEFEND %d/%d waves (wave %d)" % [current, target, _objective.waves_spawned()]
-	else:
-		_objective_label.text = "Objective: CLEAR ALL %d/%d" % [current, target]
-	_objective_label.visible = true
-
-## #337: the defended core fell.
-func _on_objective_failed(_dungeon_id: StringName) -> void:
-	_objective_label.text = "Objective: FAILED - core destroyed"
-	_objective_label.visible = true
-
-func _on_objective_progress(current: int, target: int) -> void:
-	_show_objective(current, target)
-
-func _on_objective_completed(_dungeon_id: StringName) -> void:
-	_objective_label.text = "Objective: COMPLETE"
-	_objective_label.visible = true
-
 ## #50: screen-space rect other UI/world labels must keep clear of: the union
 ## of every visible Root descendant, extended for text that renders wider
 ## than its control box, plus padding. CanvasLayer space == screen space.
@@ -301,3 +240,37 @@ func reserved_rect() -> Rect2:
 		rect = r if first else rect.merge(r)
 		first = false
 	return rect.grow(RESERVED_PAD) if not first else rect
+
+## Preserve the shipped #369 wave icons, fill and countdown, sourced from
+## the physical encounter instead of the retired DungeonObjective class.
+func _update_defense() -> void:
+	if not is_instance_valid(_area_loader):
+		_area_loader = get_parent().get_node_or_null("AreaLoader") as AreaLoader
+	var found: DefenseEncounter
+	if is_instance_valid(_area_loader) and _area_loader.current_area == _area_loader._run_overworld:
+		for region in _area_loader.regions:
+			var host := region.layout.get_node_or_null("RegionEncounterHost") as RegionEncounterHost
+			if host != null and host.defense != null and host.defense.is_active():
+				found = host.defense
+				break
+	if found == _defense:
+		return
+	if is_instance_valid(_defense):
+		_defense.progress_changed.disconnect(_on_defense_progress)
+		_defense.wave_started.disconnect(_on_defense_wave)
+		_defense.encounter_finished.disconnect(_on_defense_finished)
+	_defense = found
+	_defense_bar.show_encounter(_defense)
+	if _defense != null:
+		_defense.progress_changed.connect(_on_defense_progress)
+		_defense.wave_started.connect(_on_defense_wave)
+		_defense.encounter_finished.connect(_on_defense_finished)
+
+func _on_defense_progress(_current: int, _target: int) -> void:
+	_defense_bar.queue_redraw()
+
+func _on_defense_wave(_wave: int, _total: int) -> void:
+	_defense_bar.queue_redraw()
+
+func _on_defense_finished(_id: StringName, _cleared: bool) -> void:
+	_defense_bar.show_encounter(null)

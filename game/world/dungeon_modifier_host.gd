@@ -63,15 +63,19 @@ func bind(p_area: Node, caster: SpellCaster = null, run_manager: RunManager = nu
 		return
 	_bound = true
 	area = p_area
-	var obj := area.get_node_or_null("DungeonObjective") as DungeonObjective
-	dungeon_id = obj.dungeon_id if obj != null else StringName(area.name)
+	var def := DungeonCatalog.for_area(area)
+	dungeon_id = def.id if def != null else StringName(area.name)
 	for child in area.get_children():
 		_track_enemy(child)
 	area.child_entered_tree.connect(_track_enemy)
-	if obj != null:
-		obj.objective_progress_changed.connect(_on_objective_progress)
-		obj.objective_completed.connect(_on_objective_completed)
-		obj.boss_spawned.connect(_on_boss_spawned)
+	# Keep the existing modifier event vocabulary, sourced from the region
+	# encounter rather than the retired global objective class.
+	var encounter := area.get_node_or_null("RegionEncounterHost") as RegionEncounterHost
+	if encounter != null:
+		encounter.boss_spawned.connect(_on_boss_spawned)
+		encounter.encounter_finished.connect(_on_encounter_finished)
+		if encounter.defense != null:
+			encounter.defense.progress_changed.connect(_on_objective_progress)
 	if caster != null:
 		caster.spell_cast.connect(_on_spell_cast)
 	if run_manager != null:
@@ -135,8 +139,9 @@ func _on_boss_spawned(boss: Node) -> void:
 func _on_objective_progress(current: int, target: int) -> void:
 	emit_event(OBJECTIVE_PROGRESS, {"current": current, "target": target})
 
-func _on_objective_completed(_dungeon_id: StringName) -> void:
-	emit_event(OBJECTIVE_COMPLETED)
+func _on_encounter_finished(_encounter_id: StringName, cleared: bool) -> void:
+	if cleared:
+		emit_event(OBJECTIVE_COMPLETED)
 
 func _on_spell_cast(spell: Spell) -> void:
 	emit_event(SPELL_CAST, {"spell": spell, "spell_name": spell.spell_name if spell else ""})
