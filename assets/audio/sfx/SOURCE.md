@@ -73,8 +73,10 @@ The presentation owns playback and stops/frees it on expiry or scene exit.
 
 Approved oof v1, 0.38s, 44.1kHz 16-bit stereo WAV master, -10dBFS peak.
 CC0 source: qdo https://freesound.org/people/qdo/sounds/528732/ .
-Excerpt 2.84-3.22s from the 14.8s public 128kbps MP3 preview, NOT the
-original lossless recording. 60ms raised-cosine tail fade, peak normalized
+Excerpt 2.84-3.22s from the 14.838s public HQ MP3 preview (~191kbps),
+https://cdn.freesound.org/previews/528/528732_10881859-hq.mp3 , NOT the
+uploader's original lossless recording. Source MP3: 44.1kHz stereo,
+354293 bytes, MD5 c3a288d320a3afcf6c47907eb1a88aa5. 60ms raised-cosine tail fade, peak normalized
 to -10dBFS, no pitch/timbre change. Vorbis q6 from approved master.
 Plays only on actual nonlethal HP loss; no random pitch or volume boost.
 Audio-only 0.15s cooldown and one voice prevent stacking without gating hits.
@@ -90,4 +92,24 @@ peak, 8ms right-channel delay, no pitch/time change. Full 16.4s melody
 plays only while unaware near a living player, 30-50s quiet spacing,
 one whistler globally. Stops on awareness, range exit or death.
 
-Encoded from approved 44.1kHz 16-bit stereo WAV using Vorbis q6, no added gain, pitch change or looping. Spatial attenuation applies.
+Approved cast v3: el_boss, CC0
+https://freesound.org/people/el_boss/sounds/853287/ .
+1.7s, trim/fades, stereo, -10dBFS peak. Source is the public HQ MP3
+preview (~201kbps), NOT the uploader's original lossless master:
+https://cdn.freesound.org/previews/853/853287_9129912-hq.mp3 .
+Source MP3: 48kHz stereo, 2.904s, 73104 bytes,
+MD5 74e50c555c32d5e181312e28a3c39605. Plays once at actual CAST edge.
+
+Approved reel v1: Joseph Sardin, CC0
+https://bigsoundbank.com/fishing-reel-fast-s1435.html .
+Excerpt 0.62-1.78s, 40ms in/250ms out fades, -10dBFS peak, 8ms
+right-channel delay, no pitch/time change. Two crank bursts with a gap,
+NOT a seamless loop. Repeated one-shots with 0.25s extra gap while HOOKED
+only; stops on every hook exit, player death or enemy death.
+
+All three encoded from approved 44.1kHz 16-bit stereo WAVs using Vorbis q6,
+no added gain, pitch change or looping. Spatial attenuation applies.
+
+Provenance correction in #602: earlier cast/hurt 128kbps descriptions were
+wrong. Verified HQ preview metadata above replaces those claims; approved
+WAV masters and shipped OGG bytes are unchanged. No account was created.
