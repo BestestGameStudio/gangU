@@ -23,7 +23,7 @@ extends Node
 
 const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 ## Fields kept; the least recently used one is dropped to make room.
-const MAX_FIELDS := 8
+const MAX_FIELDS := 64
 var map: TerrainMap = null:
 	set = set_map
 ## Cells the search may visit. An empty rect means unbounded, which is only
@@ -122,13 +122,15 @@ func field(goal: Vector2i) -> Dictionary:
 		dist[goal] = 0
 		var queue: Array[Vector2i] = [goal]
 		var head := 0
+		# Same test as passable(), inlined: this loop runs once per cell.
+		var sized := bounds.size != Vector2i.ZERO
 		while head < queue.size() and dist.size() < max_cells:
 			var c: Vector2i = queue[head]
 			head += 1
 			var nd: int = dist[c] + 1
 			for d in DIRS:
 				var n := c + d
-				if dist.has(n) or not passable(n):
+				if dist.has(n) or (sized and not bounds.has_point(n)) or not map.is_walkable_at_cell(n):
 					continue
 				dist[n] = nd
 				queue.append(n)
