@@ -46,6 +46,11 @@ func _is_proven_safe_area() -> bool:
 func can_fast_return() -> bool:
 	if area_loader.current_area == null:
 		return false
+	if area_loader.has_active_encounter():
+		return false
+	if area_loader.current_area.scene_file_path == AreaLoader.OVERWORLD_SCENE:
+		var region := area_loader.region_at(player.global_position) if player != null else null
+		return region != null and area_loader.is_cleared(region.encounter_id)
 	if _is_proven_safe_area():
 		return true
 	var objective := area_loader.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
