@@ -22,6 +22,23 @@ func update_now() -> void:
 		var nearest := at.clamp(region.bounds.position, region.bounds.end)
 		var distance := at.distance_to(nearest)
 		var awake := region.keep_active() or distance <= (sleep_distance if region.active else wake_distance)
+		if not awake and region.active and _has_actor_near(region, at):
+			awake = true
 		if awake != region.active:
 			region.set_active(awake)
 		region.refresh_dormancy()
+
+## #624: a sleeping region freezes every child of its layout. Approach guards
+## that chased the player out, their corpse sprite, damage numbers and drops
+## are such children, so they froze on screen. Stay awake while one is near.
+func _has_actor_near(region: OverworldRegion, at: Vector2) -> bool:
+	if region.layout == null:
+		return false
+	for node in region.layout.get_children():
+		var live := node is Enemy or node is EnemySprite or node is DamageNumber
+		if not live and not (node.is_in_group(&"combat_fx") or node.is_in_group(&"reward_drops")):
+			continue
+		if node is Node2D and (node as Node2D).global_position.distance_to(at) <= sleep_distance:
+			return true
+	return false
+
