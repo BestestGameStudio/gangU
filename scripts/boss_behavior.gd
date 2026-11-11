@@ -329,6 +329,24 @@ func _ring_release(enemy: Enemy, player: Player, to_player: Vector2, radius: flo
 		player.apply_damage(ring_data.damage)
 		CombatEffects.hit_spark(enemy.get_parent(), player.global_position)
 
+## Counter property names retain the original per-boss reset/test contract.
+## Increment before release, including when the current frame also recovers.
+func _ring_sequence(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegraph, counter: StringName) -> void:
+	enemy.velocity = Vector2.ZERO
+	var enraged: bool = is_enraged(enemy)
+	var count: int = get(counter)
+	if count == 0:
+		set(counter, 1)
+		_ring_release(enemy, player, to_player, _ring_radius(enemy) if ring_data.phase_first_radius else ring_data.radius, tele)
+	elif count == 1 and enraged and ring_data.enraged_second_ring and _t >= ring_data.second_at:
+		enemy.play_action(ring_data.second_animation, true)
+		set(counter, 2)
+		_ring_release(enemy, player, to_player, ring_data.enraged_radius, tele)
+	if _t >= (ring_data.enraged_duration if enraged else ring_data.duration):
+		if tele != null:
+			tele.clear()
+		_enter_recover(enemy)
+
 # --- data-driven attack presentation -----------------------------------------
 enum TelegraphShape { LINE, RING, CONE }
 
