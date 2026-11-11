@@ -125,6 +125,7 @@ func _run() -> void:
 
 	## 6. A spell with no configured paths says so.
 	var bare := Spell.new()
+	bare.mode = Spell.CastMode.PROJECTILE
 	bare.spell_name = "Bare Test Spell"
 	caster.unlock_spell(bare)
 	var br := _row("Bare Test Spell")

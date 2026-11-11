@@ -40,6 +40,7 @@ func _check(cond: bool, name: String) -> void:
 		ok = false
 
 func _initialize() -> void:
+	extra.mode = Spell.CastMode.PROJECTILE
 	map = FakeMap.new()
 	map.name = "FakeMap351"
 	root.add_child(map)
