@@ -95,7 +95,22 @@ func _process(delta: float) -> bool:
 			map.cleared[&"dungeon_a"] = true
 			# --- die through the production path ---
 			var p := old_scene.get_node("Player") as Player
+			var manager := old_scene.get_node("RunManager") as RunManager
+			var revive := ReviveSatchel.new()
+			revive.player_path = NodePath("../Player")
+			old_scene.add_child(revive)
+			manager.satchel = revive
+			revive.collect()
 			p.apply_damage(100000)
+			_check(p.hp > 0 and not manager._restarting and get_nodes_in_group(&"player_death_presentation").is_empty(), "revive intercepts before any death presentation")
+			manager.satchel = null
+			revive.queue_free()
+			p.apply_damage(100000)
+			_check(manager.restart_delay == 1.5 and manager._restarting, "existing 1.5-second death restart retained")
+			_check(get_nodes_in_group(&"player_death_presentation").size() == 1, "actual unrevived death creates one presentation")
+			p.died.emit()
+			_check(get_nodes_in_group(&"player_death_presentation").size() == 1, "duplicate death does not repeat presentation")
+			_check((p.get_node("SpellCaster") as SpellCaster).process_mode == Node.PROCESS_MODE_DISABLED, "dead casting stays disabled")
 			phase = 3; t = 0.0
 		3:
 			if t > 10.0:
@@ -111,6 +126,7 @@ func _process(delta: float) -> bool:
 				return false
 			var s := current_scene
 			_check(s != old_scene, "death reloaded the run scene")
+			_check(get_nodes_in_group(&"player_death_presentation").is_empty(), "death screen is gone on the next run")
 			# world
 			_check(s.area_loader.current_area.name == &"Hub", "world: fresh run starts in the hub (got %s)" % s.area_loader.current_area.name)
 			# dungeon cleared-state: no completed objective carried, DungeonA repopulates
