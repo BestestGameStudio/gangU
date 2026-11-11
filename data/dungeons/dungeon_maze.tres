@@ -11,7 +11,6 @@ area_name = &"DungeonMaze"
 id = &"dungeon_maze"
 label = "Maze Defense"
 scene = "res://game/world/dungeon_maze.tscn"
-objective_type = 3
 wave_enemy_scene = ExtResource("2_enemy")
 wave_reward_table = ExtResource("3_table")
 wave_boss_scene = ExtResource("4_boss")
