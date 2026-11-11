@@ -79,7 +79,7 @@ func _def_role(entry: Dictionary) -> String:
 		return "migrant"
 	if d.behavior == EnemyBehaviorGuard:
 		return "guard"
-	if d.behavior == EnemyBehaviorFishyGuard:
+	if d.behavior is EnemyBehaviorFishy and d.behavior._notice_radius() == 420.0 and d.behavior._leash_radius() == 800.0:
 		return "fishy" # #464: holds its post like a guard, casts from range
 	return "other"
 

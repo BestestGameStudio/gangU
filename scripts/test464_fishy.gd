@@ -123,7 +123,7 @@ func _leg_a_art_and_stats() -> void:
 	for path in ["mustache_warlord", "head_boss", "beast_boss", "defense_wave_boss"]:
 		min_boss = mini(min_boss, (load("res://resources/enemies/%s.tres" % path) as EnemyDefinition).max_hp)
 	_check(f.max_hp > 2 * maxi(warrior.max_hp, slime.max_hp) - 20 and f.max_hp < min_boss, "A: tankier than normal enemies (%d vs %d/%d), below every boss (%d)" % [f.max_hp, warrior.max_hp, slime.max_hp, min_boss])
-	_check(OVERWORLD_FISHY_DEF.max_hp == f.max_hp and OVERWORLD_FISHY_DEF.behavior == EnemyBehaviorFishyGuard, "A: overworld definition keeps the stats, swaps in the post/notice behavior")
+	_check(OVERWORLD_FISHY_DEF.max_hp == f.max_hp and (OVERWORLD_FISHY_DEF.behavior is EnemyBehaviorFishy and OVERWORLD_FISHY_DEF.behavior._notice_radius() == 420.0 and OVERWORLD_FISHY_DEF.behavior._leash_radius() == 800.0), "A: overworld definition keeps the stats, swaps in the post/notice behavior")
 	stage.queue_free()
 	await process_frame
 
@@ -287,10 +287,10 @@ func _leg_g_overworld_post() -> void:
 	var f := _mk(FISHY, stage, s[1], Vector2(400, 400), OVERWORLD_FISHY_DEF)
 	await process_frame
 	var b := _beh(f)
-	_check(b is EnemyBehaviorFishyGuard, "G: overworld definition -> post/notice behavior")
+	_check(b is EnemyBehaviorFishy and b._notice_radius() == 420.0 and b._leash_radius() == 800.0, "G: overworld definition -> post/notice behavior")
 	_drive(f, 180)
 	_check(b.state == EnemyBehaviorFishy.State.APPROACH and f.global_position.distance_to(Vector2(400, 400)) < 2.0, "G: holds its post while the player is beyond NOTICE_RADIUS")
-	p.global_position = Vector2(400 + EnemyBehaviorFishyGuard.NOTICE_RADIUS - 40.0, 400)
+	p.global_position = Vector2(400 + b._notice_radius() - 40.0, 400)
 	_drive_until(f, EnemyBehaviorFishy.State.WINDUP)
 	_check(b.engaged and b.state == EnemyBehaviorFishy.State.WINDUP, "G: notices the player inside NOTICE_RADIUS and casts")
 	stage.queue_free()
