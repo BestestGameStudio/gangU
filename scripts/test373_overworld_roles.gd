@@ -73,11 +73,11 @@ func _def_role(entry: Dictionary) -> String:
 	var d := entry.get("definition") as EnemyDefinition
 	if d == null or d.behavior == null:
 		return "none"
-	if d.behavior == EnemyBehaviorPatrol:
+	if (d.behavior is EnemyBehaviorPatrol and d.behavior.get_script() == EnemyBehaviorPatrol and d.behavior.aggro_radius == 220.0 and d.behavior.leash_radius == 520.0 and d.behavior.home_epsilon == 6.0 and d.behavior.stroll_fraction == 0.45 and d.behavior.pause_time == 0.8 and d.behavior.patrol_leash_radius == 900.0 and d.behavior.mustache_leash_radius == 1350.0):
 		return "patrol"
-	if d.behavior == EnemyBehaviorMigrate:
+	if (d.behavior is EnemyBehaviorMigrate and d.behavior.get_script() == EnemyBehaviorMigrate and d.behavior.aggro_radius == 220.0 and d.behavior.leash_radius == 520.0 and d.behavior.home_epsilon == 6.0 and d.behavior.travel_fraction == 0.55 and d.behavior.rest_time == 6.0):
 		return "migrant"
-	if d.behavior == EnemyBehaviorGuard:
+	if (d.behavior is EnemyBehaviorGuard and d.behavior.get_script() == EnemyBehaviorGuard and d.behavior.aggro_radius == 220.0 and d.behavior.leash_radius == 520.0 and d.behavior.home_epsilon == 6.0):
 		return "guard"
 	if d.behavior is EnemyBehaviorFishy and d.behavior._notice_radius() == 420.0 and d.behavior._leash_radius() == 800.0:
 		return "fishy" # #464: holds its post like a guard, casts from range
