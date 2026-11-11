@@ -40,7 +40,7 @@ func _is_proven_safe_area() -> bool:
 	if not _is_hub_area():
 		return false
 	var enemies := not get_tree().get_nodes_in_group("enemies").is_empty()
-	var spawn_capable := area_loader.current_area.get_node_or_null("SpawnData") != null or area_loader.current_area.get_node_or_null("EntranceGuards") != null or area_loader.current_area.get_node_or_null("Roamers") != null or area_loader.current_area.get_node_or_null("DungeonObjective") != null
+	var spawn_capable := area_loader.current_area.get_node_or_null("SpawnData") != null or area_loader.current_area.get_node_or_null("EntranceGuards") != null or area_loader.current_area.get_node_or_null("Roamers") != null
 	return FastTravelRoutes.is_safe_area(enemies, spawn_capable)
 
 func can_fast_return() -> bool:
@@ -53,11 +53,7 @@ func can_fast_return() -> bool:
 		return region != null and area_loader.is_cleared(region.encounter_id)
 	if _is_proven_safe_area():
 		return true
-	var objective := area_loader.current_area.get_node_or_null("DungeonObjective") as DungeonObjective
-	## #349 owner choice: once cleared this run, re-entry may return to hub
-	## immediately, without completing the fresh interior objective again.
-	## Existing exit-portal locks are unchanged; this is the explicit shortcut.
-	return objective != null and area_loader.is_cleared(objective.dungeon_id)
+	return false
 
 func _request_fast_travel(dungeon_id: StringName) -> void:
 	_commit_fast_travel.call_deferred(dungeon_id)
