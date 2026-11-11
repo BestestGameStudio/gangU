@@ -126,7 +126,7 @@ func _scene_leg_a() -> void:
 		var guards := 0
 		for entry: Dictionary in g.entries:
 			var d := entry.get("definition") as EnemyDefinition
-			if d != null and d.behavior == EnemyBehaviorGuard:
+			if d != null and (d.behavior is EnemyBehaviorGuard and d.behavior.get_script() == EnemyBehaviorGuard and d.behavior.aggro_radius == 220.0 and d.behavior.leash_radius == 520.0 and d.behavior.home_epsilon == 6.0):
 				guards += 1
 		_check(guards == 1, "(A) %s keeps exactly one posted guard (got %d)" % [g.name, guards])
 	var normal := ow.get_node("EntranceGuards/GuardsNormal") as EntranceGuards
@@ -134,7 +134,7 @@ func _scene_leg_a() -> void:
 	for entry: Dictionary in normal.entries:
 		if (entry["enemy"] as PackedScene).resource_path == "res://scenes/enemy_slime.tscn":
 			var d := entry.get("definition") as EnemyDefinition
-			if d != null and d.behavior == EnemyBehaviorPatrol and entry.has("route"):
+			if d != null and (d.behavior is EnemyBehaviorPatrol and d.behavior.get_script() == EnemyBehaviorPatrol and d.behavior.aggro_radius == 220.0 and d.behavior.leash_radius == 520.0 and d.behavior.home_epsilon == 6.0 and d.behavior.stroll_fraction == 0.45 and d.behavior.pause_time == 0.8 and d.behavior.patrol_leash_radius == 900.0 and d.behavior.mustache_leash_radius == 1350.0) and entry.has("route"):
 				slime_patrols += 1
 	_check(slime_patrols == 1, "(A) Normal's slime is now a patroller with a route (#414)")
 	ow.free()
