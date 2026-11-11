@@ -96,44 +96,13 @@ func _attack_begin_count() -> void:
 # --- ATTACKS -----------------------------------------------------------------
 
 func _lunge(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegraph) -> void:
-	var enraged: bool = is_enraged(enemy)
-	_lunge_step(enemy, player, to_player.length())
-	if _t < LUNGE_TIME:
-		return
-	if enraged and _lunges < 2:
-		# Chain: a short re-aimed pause, then a second lunge.
-		state = State.WINDUP
-		_t = 0.0
-		enemy.velocity = Vector2.ZERO
-		enemy.play_action(&"windup_bite", true)
-		if enemy.sprite != null:
-			enemy.sprite.set_glow(true)
-		if tele != null:
-			tele.show_line(_dir, LUNGE_LENGTH, LUNGE_HIT_RANGE * 0.6, LUNGE_CHAIN_PAUSE)
-		return
-	_enter_recover(enemy)
+	_lunge_sequence(enemy, player, to_player.length(), tele, _lunges)
 
 func _scream(enemy: Enemy, player: Player, to_player: Vector2, tele: BossTelegraph) -> void:
 	_ring_sequence(enemy, player, to_player, tele, &"_screams")
 
 func _scream_radius(enemy: Enemy) -> float:
 	return _ring_radius(enemy)
-
-# --- transitions ---------------------------------------------------------------
-
-## Phase change (once): drop whatever was happening and reel, stunned.
-## The Beast also drops its wind-up glow (unlike the Head).
-func _enter_stun(enemy: Enemy, tele: BossTelegraph) -> void:
-	phase_two = true
-	state = State.STUN
-	_t = 0.0
-	enemy.velocity = Vector2.ZERO
-	enemy.clear_action()
-	if enemy.sprite != null:
-		enemy.sprite.set_glow(false)
-	enemy.play_action(&"stun", true)
-	if tele != null:
-		tele.clear()
 
 func _dispatch_lunge(enemy: Enemy, player: Player, to_player: Vector2, _delta: float, tele: BossTelegraph) -> void:
 	_lunge(enemy, player, to_player, tele)
