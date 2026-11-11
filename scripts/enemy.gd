@@ -82,7 +82,7 @@ func _ready() -> void:
 	var prototype: Resource = definition.behavior if definition != null else null
 	if prototype == null:
 		_behavior = EnemyBehaviorChaseContact.new()
-	elif prototype is EnemyBehavior:
+	elif _is_behavior_script(prototype.get_script() as Script):
 		_behavior = prototype.duplicate(true) as EnemyBehavior
 	else:
 		push_error("Enemy '%s' (%s): definition behavior %s is not an EnemyBehavior; the enemy has no behavior." % [name, scene_file_path, prototype])
@@ -96,6 +96,17 @@ func _ready() -> void:
 		push_warning("Enemy: no player target (no player_path and no Player in the tree); standing idle.")
 	# #515: players never block enemies (or each other) - layers/masks in the
 	# scene, see PhysicsLayers.
+
+## Checks the prototype's script chain, not the instance: a behavior .tres
+## loaded while its script is still compiling (a preload cycle through an
+## owner such as WolfCave) holds a placeholder instance that fails
+## `is EnemyBehavior`, but its duplicate is a real one.
+static func _is_behavior_script(script: Script) -> bool:
+	while script != null:
+		if script == EnemyBehavior:
+			return true
+		script = script.get_base_script()
+	return false
 
 ## The one path for every hit an enemy lands: DamageCalc with both sides'
 ## modifiers, then the OnHit capture and report. `target` is duck-typed
