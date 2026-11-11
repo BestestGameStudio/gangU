@@ -2,6 +2,8 @@ class_name RegionEncounterHost
 extends Node
 ## Run-local integration, not another objective system. Counts only this
 ## region's initial mob spawns and their descendants; no global enemy scan.
+signal encounter_finished(encounter_id: StringName, cleared: bool)
+signal boss_spawned(boss: Node)
 var region: OverworldRegion
 var loader: AreaLoader
 var definition: DungeonDefinition
@@ -160,6 +162,7 @@ func _spawn_boss() -> void:
 	lair.start(loader.player)
 
 func _on_boss_spawned(_boss: Node) -> void:
+	boss_spawned.emit(_boss)
 	if loader.music != null:
 		loader.music.on_boss_spawned(definition.red_by_default or definition.boss_theme)
 
@@ -172,6 +175,7 @@ func _finish(cleared: bool) -> void:
 	_active = false
 	for door in doors: door.unlock()
 	if cleared: loader.complete_encounter(region.encounter_id)
+	encounter_finished.emit(region.encounter_id, cleared)
 	if loader.music != null:
 		loader.music.on_objective_completed()
 		loader.music.stop_dungeon()
