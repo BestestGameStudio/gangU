@@ -368,6 +368,7 @@ func _mount_regions(area: Node) -> void:
 		host.name = "RegionEncounterHost"
 		region.layout.add_child(host)
 		host.mount(region, self)
+		_mount_dungeon_modifiers(region.layout)
 		region.set_active(false)
 	var ground := area.get_node_or_null("Ground") as OverworldGround
 	if ground != null:
