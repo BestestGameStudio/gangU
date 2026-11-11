@@ -7,7 +7,7 @@ func _check(ok: bool, label: String) -> void:
 func _initialize() -> void:
 	call_deferred("_run")
 func _run() -> void:
-	var prototype := load("res://resources/enemies/fishy_guard_behavior.tres") as EnemyBehaviorFishy
+	var prototype := load("res://resources/behaviors/fishy_guard.tres") as EnemyBehaviorFishy
 	_check(prototype != null and prototype.notice_radius == 420.0 and prototype.leash_radius == 800.0, "authored guard radii unchanged")
 	var dungeon := EnemyBehaviorFishy.new()
 	_check(is_inf(dungeon._notice_radius()) and is_inf(dungeon._leash_radius()), "dungeon still always notices, never leashes")
