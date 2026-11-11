@@ -93,11 +93,11 @@ func _process(delta: float) -> bool:
 						var positions_ok := true
 						var resources_ok := true
 						for i in 3:
-							var entry: Dictionary = entries[i]
-							if entry.get("position") != EXPECTED_POSITIONS[i]:
+							var entry := entries[i] as SpawnEntry
+							if entry.position != EXPECTED_POSITIONS[i]:
 								positions_ok = false
-							var escene: PackedScene = entry.get("enemy")
-							var rtable: Resource = entry.get("reward_table")
+							var escene := entry.enemy
+							var rtable := entry.reward_table
 							if escene == null or escene.resource_path != "res://scenes/enemy.tscn":
 								resources_ok = false
 							if rtable == null or rtable.resource_path != "res://resources/rewards/demo_table.tres":

@@ -69,7 +69,7 @@ func _ready() -> void:
 	if offering != null and gate_type != GateType.BOSS:
 		var host := _offering_host()
 		if host != null:
-			gate_type = host.offering_type_for(name, gate_type, offering, offering_rng)
+			gate_type = host.call("offering_type_for", name, gate_type, offering, offering_rng)
 		else:
 			gate_type = offering.roll(gate_type, offering_rng)
 	var label: Label = $TypeLabel
@@ -90,7 +90,9 @@ func _ready() -> void:
 
 ## #350: the run's AreaLoader (a Main child since #512) caches one roll per
 ## gate so an offering stays fixed until death; a bare gate outside a Main
-## (unit tests) rolls directly.
+## (unit tests) rolls directly. Duck-typed on purpose: AreaLoader preloads
+## hub.tscn, which holds gates, so naming AreaLoader here is a load cycle that
+## makes gate.tscn fail to load.
 func _offering_host() -> Node:
 	var n := get_parent()
 	while n != null:
@@ -256,7 +258,7 @@ func _update_label_placement() -> void:
 		gate_screen + Vector2(-label_size.x - 26.0 - LABEL_GAP, -label_size.y / 2.0),
 	]
 	var pool: Array[Vector2] = []
-	for tl in candidates:
+	for tl: Vector2 in candidates:
 		if _clear_of_gates(Rect2(tl, label_size), other_gate_rects):
 			pool.append(tl)
 	if pool.is_empty():

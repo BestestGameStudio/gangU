@@ -61,7 +61,7 @@ func _ready() -> void:
 	if objective_path != NodePath(""):
 		var obj := get_node_or_null(objective_path)
 		if obj != null and obj.has_signal("objective_completed"):
-			obj.objective_completed.connect(_on_objective_completed)
+			obj.connect(&"objective_completed", _on_objective_completed)
 		else:
 			push_warning("ExitPortal: objective_path did not resolve to a node with an objective_completed signal.")
 	_refresh_visual()
@@ -73,7 +73,7 @@ func unlock() -> void:
 	print("exit portal unlocked")
 	_refresh_visual()
 
-func _on_objective_completed(_dungeon_id) -> void:
+func _on_objective_completed(_dungeon_id: StringName) -> void:
 	unlock()
 
 func _on_body_entered(body: Node2D) -> void:
@@ -104,8 +104,8 @@ func _refresh_visual() -> void:
 ## its role as the footprint/tint record, mirroring the gate (#195). The
 ## StateLabel stays live in both states so LOCKED/EXIT reads identically.
 func _apply_portal_look(tint: Color) -> void:
-	$ColorRect.visible = false
-	$ExitArrow.visible = false
+	($ColorRect as CanvasItem).visible = false
+	($ExitArrow as CanvasItem).visible = false
 	var rim_color := tint.lightened(0.6)
 	Gate._fill_band($Halo, Vector2(Gate.PORTAL_RX, Gate.PORTAL_RY), Color(tint, 0.45),
 		Vector2(Gate.PORTAL_RX + Gate.HALO_SPREAD, Gate.PORTAL_RY + Gate.HALO_SPREAD), Color(tint, 0.0))
@@ -144,8 +144,8 @@ func _apply_portal_look(tint: Color) -> void:
 	particles.color_ramp = fade
 	particles.emitting = true
 
-	for n in ["Halo", "Body", "SwirlPivot", "Rim", "Particles", "Light"]:
-		get_node(n).visible = true
+	for n: String in ["Halo", "Body", "SwirlPivot", "Rim", "Particles", "Light"]:
+		(get_node(n) as CanvasItem).visible = true
 
 ## #204: portal idle animation, only while the look is on. Same pulse as the
 ## gate (#195); the locked state's gray tint keeps it visibly dimmed.

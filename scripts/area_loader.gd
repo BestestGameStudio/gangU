@@ -20,10 +20,8 @@ var world_map: WorldMap = null
 ## #512: the run's MusicDirector; area swaps, boss spawns and objective
 ## completions drive it.
 var music: MusicDirector = null
-## #512: the run's TravelService; refreshed after swaps and clears. Untyped on
-## purpose: a typed AreaLoader <-> TravelService pair would be a cyclic class
-## reference, and GDScript resolves calls on a Variant at runtime.
-var travel = null
+## #512: the run's TravelService; refreshed after swaps and clears.
+var travel: TravelService = null
 
 var current_area: Node = null
 
@@ -137,7 +135,7 @@ func _swap(area: Node) -> void:
 	var p := player
 	var spawn := current_area.get_node_or_null("PlayerSpawn")
 	if p and spawn:
-		p.global_position = spawn.global_position
+		p.global_position = (spawn as Node2D).global_position
 	if p:
 		p.terrain = current_area.get_node_or_null("Terrain") as TerrainMap
 	if world_map:
@@ -166,8 +164,8 @@ func _mount_dungeon_modifiers(area: Node) -> void:
 	host.bind(area, main_host.get_node_or_null("Player/SpellCaster") as SpellCaster, main_host.get_node_or_null("RunManager") as RunManager)
 
 ## #100 generic mounter: every area swap reads the area's "SpawnData" child
-## (AreaSpawnData). Entries are plain scene data - position, enemy scene and
-## reward table per spawn. The carrier's player_path is assigned BEFORE
+## (AreaSpawnData). Entries are SpawnEntry scene data - position, enemy scene
+## and reward table per spawn. The carrier's player_path is assigned BEFORE
 ## add_child so Enemy._ready resolves it (D6 explicit wiring).
 ## Children of the area so a gate swap frees them.
 func _mount_area_spawns(area: Node) -> void:
@@ -239,7 +237,7 @@ func _mount_entrance_guards(area: Node) -> void:
 	var holder := area.get_node_or_null("EntranceGuards")
 	if holder == null:
 		return
-	var entries: Array = []
+	var entries: Array[SpawnEntry] = []
 	var player_path := NodePath("../../Player")
 	for g in holder.get_children():
 		var guards := g as EntranceGuards
@@ -336,7 +334,7 @@ func _on_objective_failed(dungeon_id: StringName) -> void:
 ## Boss -> Main/<Area>/<Boss>, so the Player is "../../Player" (AreaSpawnData idiom).
 func _on_boss_spawned(boss: Node) -> void:
 	if boss is Enemy:
-		boss.player_path = NodePath("../../Player")
+		(boss as Enemy).player_path = NodePath("../../Player")
 	# #359: boss theme (random of the two tracks) for RED-entered dungeon bosses
 	# and the boss arenas (Head, Beast). A NORMAL-rolled dungeon's boss is silent.
 	if music and current_area:

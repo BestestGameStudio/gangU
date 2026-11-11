@@ -79,7 +79,7 @@ func add_unique(m: StatModifier) -> StatModifier:
 	if m == null or m.source == &"":
 		push_warning("PlayerStats.add_unique: needs a modifier with a source")
 		return null
-	for old in _mods.duplicate():
+	for old: StatModifier in _mods.duplicate():
 		if old.source == m.source and old.stat == m.stat:
 			_mods.erase(old)
 	if _mods.has(m):

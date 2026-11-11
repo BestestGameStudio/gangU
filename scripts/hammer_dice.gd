@@ -99,7 +99,7 @@ func _draw() -> void:
 	draw_rect(rect.grow(2.0), Color(0.1, 0.08, 0.06, fade), true)
 	draw_rect(rect, Color(0.97, 0.95, 0.9, fade), true)
 	var pip := Color(0.15, 0.12, 0.1, fade) if _shown != 6 or not _settled else Color(0.8, 0.15, 0.1, fade)
-	for p in PIPS[_shown]:
+	for p: Vector2 in PIPS[_shown]:
 		draw_circle(p * SIZE * 0.27, 2.4, pip)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _settled and entry != null and entry.kind == RewardEntry.Kind.CURRENCY:

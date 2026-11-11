@@ -131,7 +131,7 @@ func _pin_icon(b: Button, left: float) -> SpellIcon:
 ## call: [S]/[M]/[G] for Specialization/Mastery/Signature, Base shows
 ## nothing). Reads the path's own tier when the provider exposes one;
 ## providers without a tier field degrade to no suffix. Display-only.
-func _tier_suffix(path) -> String:
+func _tier_suffix(path: Variant) -> String:
 	match _path_tier(path):
 		1:
 			return " [S]"
@@ -143,9 +143,17 @@ func _tier_suffix(path) -> String:
 
 ## Tier the path upgrades INTO (0 Base .. 3 Signature); 0 when the provider
 ## exposes no tier. Shared by the [S]/[M]/[G] suffix and the #451 card border.
-func _path_tier(path) -> int:
-	var tier: Variant = path.get("tier") if path is Resource else null
+func _path_tier(path: Variant) -> int:
+	var tier: Variant = (path as Resource).get(&"tier") if path is Resource else null
 	return clampi(int(tier), 0, UiStyle.RANK_COLORS.size() - 1) if tier != null else 0
+
+## A provider path is a SpellUpgrade or a {id, display_name} Dictionary.
+func _path_field(path: Variant, key: StringName) -> Variant:
+	if path is Dictionary:
+		return (path as Dictionary).get(key)
+	if path is Object:
+		return (path as Object).get(key)
+	return null
 
 ## #255: rank border tier for an owned spell (Base when the provider has no
 ## tier accessor); empty slots show none.
@@ -153,18 +161,18 @@ func _rank_tier(spell: Spell) -> int:
 	if spell == null:
 		return SpellRankBorder.NONE
 	if _upgrader != null and _upgrader.has_method(&"get_tier"):
-		return _upgrader.get_tier(spell)
+		return _upgrader.call(&"get_tier", spell)
 	return 0
 
 func _can_upgrade(spell: Spell) -> bool:
-	return spell != null and _upgrader != null and _upgrader.has_method(&"can_upgrade") and (_upgrader.can_upgrade(spell) or _can_token_upgrade(spell))
+	return spell != null and _upgrader != null and _upgrader.has_method(&"can_upgrade") and (_upgrader.call(&"can_upgrade", spell) or _can_token_upgrade(spell))
 
 ## #315: optional token channel (duck-typed; providers without it are unchanged).
 func _can_token_upgrade(spell: Spell) -> bool:
-	return spell != null and _upgrader != null and _upgrader.has_method(&"can_token_upgrade") and _upgrader.can_token_upgrade(spell)
+	return spell != null and _upgrader != null and _upgrader.has_method(&"can_token_upgrade") and _upgrader.call(&"can_token_upgrade", spell)
 
-func _path_needs_token(spell: Spell, path) -> bool:
-	return _upgrader != null and _upgrader.has_method(&"path_needs_token") and _upgrader.path_needs_token(spell, path)
+func _path_needs_token(spell: Spell, path: Variant) -> bool:
+	return _upgrader != null and _upgrader.has_method(&"path_needs_token") and _upgrader.call(&"path_needs_token", spell, path)
 
 func _ready() -> void:
 	visible = false
@@ -189,19 +197,19 @@ func _ready() -> void:
 	if upgrader_path != NodePath(""):
 		_upgrader = get_node_or_null(upgrader_path)
 		if _upgrader != null and _upgrader.has_signal(&"upgrades_changed"):
-			_upgrader.upgrades_changed.connect(func(_s): _refresh())
+			_upgrader.connect(&"upgrades_changed", func(_s: Variant) -> void: _refresh())
 	_caster = player.get_node_or_null("SpellCaster") as SpellCaster
-	if _caster == null or not _caster.has_method(&"get_slots"):
+	if _caster == null:
 		push_warning("EquipPanel: caster slot API not present; panel inert.")
 		_caster = null
 		return
 	if _caster.has_signal(&"slot_assigned"):
-		_caster.slot_assigned.connect(func(_i, _s): _refresh())
+		_caster.slot_assigned.connect(func(_i: int, _s: Spell) -> void: _refresh())
 	if _caster.has_signal(&"slot_cleared"):
-		_caster.slot_cleared.connect(func(_i): _refresh())
+		_caster.slot_cleared.connect(func(_i: int) -> void: _refresh())
 	# #376: keep the stat grid live while open (HP, buffs, hammer crit/combo).
 	_player.stats.changed.connect(_on_live_stat_change)
-	_player.health_changed.connect(func(_hp, _max): _on_live_stat_change())
+	_player.health_changed.connect(func(_hp: int, _max: int) -> void: _on_live_stat_change())
 	if _caster.hammer_state != null:
 		_caster.hammer_state.crit_changed.connect(_on_live_stat_change)
 		_caster.hammer_state.combo_changed.connect(_on_live_stat_change)
@@ -257,8 +265,8 @@ func _build_ui() -> void:
 		b.add_theme_font_size_override("font_size", 22)
 		b.custom_minimum_size = Vector2(220, 0)
 		var idx := i
-		b.pressed.connect(func(): _on_slot_pressed(idx))
-		b.gui_input.connect(func(ev: InputEvent): _on_slot_gui_input(ev, idx))
+		b.pressed.connect(func() -> void: _on_slot_pressed(idx))
+		b.gui_input.connect(func(ev: InputEvent) -> void: _on_slot_gui_input(ev, idx))
 		_slots_box.add_child(b)
 		_slot_buttons.append(b)
 		_slot_icons.append(_pin_icon(b, SLOT_ICON_LEFT))
@@ -382,7 +390,7 @@ func _refresh_stats() -> void:
 		_stats_box.set_entries("Stats", StatSheet.player_entries(_player))
 
 ## Live updates while the panel is open (combat keeps running under Tab).
-func _on_live_stat_change(_a = null) -> void:
+func _on_live_stat_change(_a: Variant = null) -> void:
 	if visible:
 		_refresh_stats()
 
@@ -409,7 +417,7 @@ func _refresh() -> void:
 	if _can_upgrade(_selected):
 		var uheader := Label.new()
 		uheader.text = "Upgrades"
-		var tokens: int = _upgrader.upgrade_tokens() if _upgrader.has_method(&"upgrade_tokens") else 0
+		var tokens: int = _upgrader.call(&"upgrade_tokens") if _upgrader.has_method(&"upgrade_tokens") else 0
 		if tokens > 0:
 			uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
 		uheader.add_theme_font_size_override("font_size", 22)
@@ -425,35 +433,36 @@ func _refresh() -> void:
 		cards.add_theme_constant_override("separation", UPGRADE_CARD_GAP)
 		scroll.add_child(cards)
 		var token_ready := _can_token_upgrade(_selected)
-		for path in _upgrader.get_upgrade_paths(_selected):
+		var paths: Array = _upgrader.call(&"get_upgrade_paths", _selected)
+		for path: Variant in paths:
 			var needs_token := _path_needs_token(_selected, path)
 			# A path offered by neither route (threshold unmet, no token) is
 			# not shown; with no token API this is the unchanged listing.
 			if needs_token and not token_ready:
 				continue
 			var b := UpgradeCard.new()
-			var result: Spell = path.get("result_spell")
+			var result := _path_field(path, &"result_spell") as Spell
 			var description := SpellDescription.for_spell(result)
 			if result != null and result.projectile_count > 0:
 				# #441: short form so the line does not wrap on the slimmer cards (Daniel: "shorten").
 				description += "\n%s px | %s px/s" % [int(result.range), int(result.projectile_speed)]
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
-			b.setup(path.display_name + _tier_suffix(path), description, needs_token)
+			b.setup(str(_path_field(path, &"display_name")) + _tier_suffix(path), description, needs_token)
 			# #451: border in the color of the tier this upgrade leads into.
 			b.set_border_color(UiStyle.RANK_COLORS[_path_tier(path)])
-			var pid = path.id
+			var pid: Variant = _path_field(path, &"id")
 			if needs_token:
-				b.pressed.connect(func(): _on_token_upgrade_pressed(pid))
+				b.pressed.connect(func() -> void: _on_token_upgrade_pressed(pid))
 			else:
-				b.pressed.connect(func(): _on_upgrade_pressed(pid))
+				b.pressed.connect(func() -> void: _on_upgrade_pressed(pid))
 			cards.add_child(b)
 
-func _on_upgrade_pressed(path_id) -> void:
+func _on_upgrade_pressed(path_id: Variant) -> void:
 	if _upgrader == null or _selected == null:
 		return
 	var sel := _selected
-	if not _upgrader.apply_upgrade(sel, path_id):
+	if not _upgrader.call(&"apply_upgrade", sel, path_id):
 		push_warning("EquipPanel: apply_upgrade refused; refreshing.")
 	elif _caster != null and not _caster.get_unlocked().has(sel):
 		# Successful replace consumed the selected spell; drop the stale
@@ -462,11 +471,11 @@ func _on_upgrade_pressed(path_id) -> void:
 	_refresh()
 
 ## #315: same flow as _on_upgrade_pressed, spending one boss upgrade token.
-func _on_token_upgrade_pressed(path_id) -> void:
+func _on_token_upgrade_pressed(path_id: Variant) -> void:
 	if _upgrader == null or _selected == null or not _upgrader.has_method(&"apply_upgrade_with_token"):
 		return
 	var sel := _selected
-	if not _upgrader.apply_upgrade_with_token(sel, path_id):
+	if not _upgrader.call(&"apply_upgrade_with_token", sel, path_id):
 		push_warning("EquipPanel: token upgrade refused; refreshing.")
 	elif _caster != null and not _caster.get_unlocked().has(sel):
 		_selected = null
@@ -500,14 +509,16 @@ func _on_slot_pressed(index: int) -> void:
 func _on_slot_gui_input(event: InputEvent, index: int) -> void:
 	if _caster == null:
 		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
+	var button := event as InputEventMouseButton
+	var motion := event as InputEventMouseMotion
+	if button != null and button.button_index == MOUSE_BUTTON_LEFT:
+		if button.pressed:
 			_press_slot = index
-			_press_pos = event.global_position
+			_press_pos = button.global_position
 			_drag_from = -1
 		else:
 			if _drag_from != -1:
-				var target := _slot_at(event.global_position)
+				var target := _slot_at(button.global_position)
 				if target != -1 and target != _drag_from:
 					_rearrange_slots(_drag_from, target)
 				# Only a release INSIDE the source button also fires its
@@ -515,9 +526,9 @@ func _on_slot_gui_input(event: InputEvent, index: int) -> void:
 				_suppress_next_click = target == _drag_from
 				_end_drag()
 			_press_slot = -1
-	elif event is InputEventMouseMotion and _press_slot != -1 and (event.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+	elif motion != null and _press_slot != -1 and (motion.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
 		if _drag_from == -1:
-			if _press_pos.distance_to(event.global_position) <= DRAG_THRESHOLD:
+			if _press_pos.distance_to(motion.global_position) <= DRAG_THRESHOLD:
 				return
 			var slots: Array = _caster.get_slots()
 			if _press_slot >= slots.size() or slots[_press_slot] == null:
@@ -526,7 +537,7 @@ func _on_slot_gui_input(event: InputEvent, index: int) -> void:
 			_begin_drag_ghost(slots[_drag_from])
 			_refresh()
 		if _drag_ghost != null:
-			_drag_ghost.global_position = event.global_position - _drag_ghost.size * 0.5
+			_drag_ghost.global_position = motion.global_position - _drag_ghost.size * 0.5
 
 func _slot_at(global_pos: Vector2) -> int:
 	for i in _slot_buttons.size():

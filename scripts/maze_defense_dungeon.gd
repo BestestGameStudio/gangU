@@ -37,7 +37,7 @@ func _ready() -> void:
 	elif randomize_seed:
 		map_seed = randi()
 	maze = MazeGen.generate(_terrain, map_seed, rooms, entrance_count, loop_chance)
-	print("maze defense: seed ", map_seed, ", ", maze["rooms"], " rooms, ", maze["entrances"].size(), " entrances")
+	print("maze defense: seed ", map_seed, ", ", maze["rooms"], " rooms, ", (maze["entrances"] as Array).size(), " entrances")
 	_core.position = _local(maze["objective"])
 	_player_spawn.position = _local(maze["player_spawn"])
 	_exit_point.position = _local(maze["exit"])

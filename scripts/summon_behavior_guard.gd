@@ -85,7 +85,7 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 ## #420: a player-owned summon pressed against a barricade on its way to an
 ## enemy hits the barricade with its contact attack (barricades take any
 ## player-sourced damage). Shares the contact cooldown with enemy hits.
-func _hit_blocking_barricade(summon: Summon, def) -> void:
+func _hit_blocking_barricade(summon: Summon, def: SummonDefinition) -> void:
 	if _contact_timer > 0.0 or not Barricade.is_player_side(summon):
 		return
 	for i in summon.get_slide_collision_count():

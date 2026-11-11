@@ -47,8 +47,7 @@ func _ready() -> void:
 	ambush.relative_to_trigger = true
 	for i in AMBUSH_COUNT:
 		var angle := TAU * float(i) / AMBUSH_COUNT
-		ambush.entries.append({"position": Vector2.from_angle(angle) * SPAWN_RADIUS,
-			"enemy": ENEMY, "reward_table": LOOT})
+		ambush.entries.append(SpawnEntry.new(Vector2.from_angle(angle) * SPAWN_RADIUS, ENEMY, LOOT))
 	ambush.ambush_started.connect(_begin)
 	event = ambush
 	_caption = Label.new()
@@ -71,13 +70,13 @@ func should_fire(body: Node2D) -> bool:
 ## that receives `triggered`). Walk up to the first ancestor that either keeps
 ## the history itself or has an AreaLoader child. A bare village outside a
 ## Main (unit fixtures) has no history and fires once per instance.
-func _run_history() -> Node:
+func _run_history() -> AreaLoader:
 	var n := get_parent()
 	while n != null:
-		if n.has_method("location_event_fire_count"):
+		if n is AreaLoader:
 			return n
-		var loader := n.get_node_or_null("AreaLoader")
-		if loader != null and loader.has_method("location_event_fire_count"):
+		var loader := n.get_node_or_null("AreaLoader") as AreaLoader
+		if loader != null:
 			return loader
 		n = n.get_parent()
 	return null
@@ -107,8 +106,8 @@ func shape_decor(ground: OverworldGround) -> void:
 ## OBSTACLE cells plus projectile-blocker circles (same mechanism as trees).
 func footprints() -> Array[Rect2]:
 	var rects: Array[Rect2] = []
-	for side in [-1, 1]:
-		for column in [-1, 0, 1]:
+	for side: int in [-1, 1]:
+		for column: int in [-1, 0, 1]:
 			var at := position + Vector2(column * 170, side * 170)
 			rects.append(Rect2(at - HOUSE_HALF, HOUSE_HALF * 2.0))
 	rects.append(Rect2(position + WELL_OFFSET - WELL_HALF, WELL_HALF * 2.0))
@@ -202,8 +201,8 @@ func _draw() -> void:
 			var cell := Vector2i(x, y)
 			draw_texture_rect_region(TerrainArt.TILES, Rect2(Vector2(x * 64, y * 64), Vector2(64, 64)),
 				Rect2(TerrainArt.variant(cell, 484) * 64, TerrainArt.row(&"ground") * 64, 64, 64), Color(0.8, 0.75, 0.62))
-	for side in [-1, 1]:
-		for column in [-1, 0, 1]:
+	for side: int in [-1, 1]:
+		for column: int in [-1, 0, 1]:
 			var at := Vector2(column * 170, side * 170)
 			var variant := posmod(column + 1 + (1 if side > 0 else 0), 3)
 			draw_texture_rect_region(PROPS, Rect2(at - Vector2(64, 64), Vector2(128, 128)),

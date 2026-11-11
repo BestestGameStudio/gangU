@@ -31,7 +31,7 @@ func _ready() -> void:
 	var exit: Vector2i = result["exit"]
 	_player_spawn.global_position = _terrain.cell_to_world(spawn)
 	_exit_point.global_position = _terrain.cell_to_world(exit)
-	var entries: Array[Dictionary] = []
+	var entries: Array[SpawnEntry] = []
 	for wp: Vector2i in result["waypoints"]:
 		var from_spawn := (wp - spawn).abs()
 		if wp == exit or maxi(from_spawn.x, from_spawn.y) < MIN_ENEMY_SPAWN_DISTANCE:
@@ -39,9 +39,5 @@ func _ready() -> void:
 		# #490: enemies 2, 5, 8, ... are Fishy: about one Fishy for every two
 		# Mustache Warriors (2 of the usual 5, where "every third" gives 1).
 		var fishy := entries.size() % FISHY_EVERY == 1
-		entries.append({
-			"position": to_local(_terrain.cell_to_world(wp)),
-			"enemy": FISHY_SCENE if fishy else ENEMY_SCENE,
-			"reward_table": REWARD_TABLE,
-		})
+		entries.append(SpawnEntry.new(to_local(_terrain.cell_to_world(wp)), FISHY_SCENE if fishy else ENEMY_SCENE, REWARD_TABLE))
 	_spawn_data.entries = entries

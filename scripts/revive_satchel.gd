@@ -36,9 +36,6 @@ func _ready() -> void:
 	_player = get_node_or_null(player_path) as Player
 	if _player == null:
 		push_error("ReviveSatchel: player_path did not resolve to a Player.")
-	if not _player.has_method(&"heal"):
-		# Lands with the #12 integration PR (Player.heal, mirrors apply_damage).
-		push_warning("ReviveSatchel: Player.heal() not present yet; try_revive() will refuse until it lands.")
 
 func collect() -> void:
 	carried += 1
@@ -50,8 +47,8 @@ func collect() -> void:
 func try_revive() -> bool:
 	if carried <= 0:
 		return false
-	if _player == null or not _player.has_method(&"heal"):
-		push_error("ReviveSatchel: cannot revive (missing player or Player.heal contract).")
+	if _player == null:
+		push_error("ReviveSatchel: cannot revive (missing player).")
 		return false
 	carried -= 1
 	_player.heal(revive_hp)

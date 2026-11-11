@@ -122,7 +122,7 @@ func _build_skeleton() -> void:
 ## new good.
 func _render() -> void:
 	_update_balance_text()
-	for box in [_rows, _relic_rows]:
+	for box: Node in [_rows, _relic_rows]:
 		for c in box.get_children():
 			box.remove_child(c)
 			c.queue_free()

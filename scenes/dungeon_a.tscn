@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bgangu7dna"]
+[gd_scene load_steps=18 format=3 uid="uid://bgangu7dna"]
 
 [ext_resource type="Script" uid="uid://bgangu100asd" path="res://scripts/area_spawn_data.gd" id="1_spawn"]
 [ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://scenes/enemy.tscn" id="2_enemy"]
@@ -9,6 +9,49 @@
 [ext_resource type="Script" path="res://scripts/terrain_map.gd" id="396_terrain"]
 [ext_resource type="Resource" path="res://resources/terrain_maps/dungeon_a.tres" id="396_layout"]
 [ext_resource type="Resource" path="res://resources/terrain_palettes/dungeon_a.tres" id="396_palette"]
+[ext_resource type="Script" uid="uid://kq19zfwepvmzr" path="res://scripts/spawn_entry.gd" id="518_spawn_entry"]
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_0"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(250, 280)
+enemy = ExtResource("2_enemy")
+reward_table = ExtResource("3_table")
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_1"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(576, 220)
+enemy = ExtResource("2_enemy")
+reward_table = ExtResource("3_table")
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_2"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(900, 280)
+enemy = ExtResource("2_enemy")
+reward_table = ExtResource("3_table")
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_3"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(410, 350)
+enemy = ExtResource("392_slime")
+reward_table = ExtResource("3_table")
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_4"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(740, 350)
+enemy = ExtResource("392_slime")
+reward_table = ExtResource("3_table")
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_5"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(576, 420)
+enemy = ExtResource("464_fishy")
+reward_table = ExtResource("3_table")
+
+[sub_resource type="Resource" id="Resource_spawn_spawndata_6"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(400, 140)
+enemy = ExtResource("464_fishy")
+reward_table = ExtResource("3_table")
 
 [node name="DungeonA" type="Node2D"]
 
@@ -80,5 +123,5 @@ position = Vector2(576, 560)
 
 [node name="SpawnData" type="Node" parent="."]
 script = ExtResource("1_spawn")
-entries = [{ "position": Vector2(250, 280), "enemy": ExtResource("2_enemy"), "reward_table": ExtResource("3_table") }, { "position": Vector2(576, 220), "enemy": ExtResource("2_enemy"), "reward_table": ExtResource("3_table") }, { "position": Vector2(900, 280), "enemy": ExtResource("2_enemy"), "reward_table": ExtResource("3_table") }, { "position": Vector2(410, 350), "enemy": ExtResource("392_slime"), "reward_table": ExtResource("3_table") }, { "position": Vector2(740, 350), "enemy": ExtResource("392_slime"), "reward_table": ExtResource("3_table") }, { "position": Vector2(576, 420), "enemy": ExtResource("464_fishy"), "reward_table": ExtResource("3_table") }, { "position": Vector2(400, 140), "enemy": ExtResource("464_fishy"), "reward_table": ExtResource("3_table") }]
+entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_spawndata_0"), SubResource("Resource_spawn_spawndata_1"), SubResource("Resource_spawn_spawndata_2"), SubResource("Resource_spawn_spawndata_3"), SubResource("Resource_spawn_spawndata_4"), SubResource("Resource_spawn_spawndata_5"), SubResource("Resource_spawn_spawndata_6")])
 player_path = NodePath("../../Player")

@@ -39,8 +39,8 @@ func _grid(d: Node) -> Dictionary:
 
 func _entry_positions(d: Node) -> Array[Vector2]:
 	var out: Array[Vector2] = []
-	for entry: Dictionary in (d.get_node("SpawnData") as AreaSpawnData).entries:
-		out.append(entry["position"])
+	for entry: SpawnEntry in (d.get_node("SpawnData") as AreaSpawnData).entries:
+		out.append(entry.position)
 	return out
 
 func _scene_legs() -> void:

@@ -76,7 +76,7 @@ func _physics_process(delta: float) -> void:
 		end_shield(false)
 
 func _damage_contacts(delta: float) -> void:
-	for e in _hit_clock.keys():
+	for e: Variant in _hit_clock.keys():
 		_hit_clock[e] -= delta
 		if not is_instance_valid(e) or _hit_clock[e] <= 0.0:
 			_hit_clock.erase(e)
@@ -118,10 +118,10 @@ func end_shield(popped: bool) -> void:
 		return
 	_ending = true
 	if spell.shield_push_radius > 0.0 and spell.shield_push_force > 0.0:
-		for e in get_tree().get_nodes_in_group(&"enemies"):
-			if not is_instance_valid(e) or not e.has_method(&"knockback"):
+		for e: Enemy in get_tree().get_nodes_in_group(&"enemies"):
+			if not is_instance_valid(e):
 				continue
-			var off: Vector2 = (e as Node2D).global_position - global_position
+			var off: Vector2 = e.global_position - global_position
 			if off.length() > spell.shield_push_radius:
 				continue
 			var dir := off.normalized() if off.length_squared() > 0.0 else Vector2.RIGHT

@@ -57,7 +57,7 @@ func _spawn(cell: Vector2i, play_create: bool) -> void:
 	_standing[cell] = s
 	if play_create:
 		s.play(&"create")
-		s.animation_finished.connect(func():
+		s.animation_finished.connect(func() -> void:
 			if is_instance_valid(s) and _standing.get(cell) == s:
 				s.play(&"intact"))
 	else:

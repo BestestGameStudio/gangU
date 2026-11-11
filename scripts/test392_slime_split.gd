@@ -6,9 +6,8 @@ var failures := 0
 
 ## Spawn policy that refuses descendants at/below 20 max HP (policy test).
 class SpawnerCap extends EnemySpawner:
-	func should_spawn(entry: Dictionary) -> bool:
-		var d: Variant = entry.get("definition")
-		return d == null or (d as EnemyDefinition).max_hp > 20
+	func should_spawn(entry: SpawnEntry) -> bool:
+		return entry.definition == null or entry.definition.max_hp > 20
 
 func _check(cond: bool, name: String) -> void:
 	if cond:
@@ -108,16 +107,16 @@ func _initialize() -> void:
 	# Placement (Daniel 2026-11-09): normal dungeon A, added alongside the
 	# three existing enemies, and near its normal gate in the overworld.
 	var da := (load("res://scenes/dungeon_a.tscn") as PackedScene).instantiate()
-	var da_entries: Array = da.get_node("SpawnData").entries
-	var da_slimes := da_entries.filter(func(e): return (e["enemy"] as PackedScene).resource_path == "res://scenes/enemy_slime.tscn")
+	var da_entries: Array[SpawnEntry] = (da.get_node("SpawnData") as AreaSpawnData).entries
+	var da_slimes := da_entries.filter(func(e: SpawnEntry) -> bool: return e.enemy.resource_path == "res://scenes/enemy_slime.tscn")
 	_check(da_entries.size() == 7 and da_slimes.size() == 2, "dungeon A: 3 original + 2 slimes (+ 2 Fishy, #490)")
 	da.free()
 	var ow := (load("res://scenes/overworld.tscn") as PackedScene).instantiate()
 	var gn: Node = ow.get_node("EntranceGuards/GuardsNormal")
-	var ow_slimes: Array = gn.entries.filter(func(e): return (e["enemy"] as PackedScene).resource_path == "res://scenes/enemy_slime.tscn")
-	_check(gn.dungeon_id == &"dungeon_a" and ow_slimes.size() == 1 and ow_slimes[0].has("definition"), "overworld GuardsNormal has a slime guard")
+	var ow_slimes: Array = gn.entries.filter(func(e: SpawnEntry) -> bool: return e.enemy.resource_path == "res://scenes/enemy_slime.tscn")
+	_check(gn.dungeon_id == &"dungeon_a" and ow_slimes.size() == 1 and ow_slimes[0].definition != null, "overworld GuardsNormal has a slime guard")
 	var gate_pos: Vector2 = (ow.get_node("GateNormal") as Node2D).position
-	_check(ow_slimes.size() == 1 and (ow_slimes[0]["position"] as Vector2).distance_to(gate_pos) < 150.0, "slime guard is near the normal gate")
+	_check(ow_slimes.size() == 1 and (ow_slimes[0] as SpawnEntry).position.distance_to(gate_pos) < 150.0, "slime guard is near the normal gate")
 	ow.free()
 	# 39 max HP does not split
 	var a2 := Node2D.new()
@@ -178,7 +177,7 @@ func _initialize() -> void:
 	root.add_child(a5)
 	var sp := EnemySpawner.new()
 	a5.add_child(sp)
-	sp.setup([{"position": Vector2.ZERO, "enemy": scene, "reward_table": null}], NodePath(""), null, a5)
+	sp.setup([SpawnEntry.new(Vector2.ZERO, scene)], NodePath(""), null, a5)
 	sp.spawn_initial()
 	var obj2 := DungeonObjective.new()
 	obj2.objective_type = DungeonObjective.ObjectiveType.CLEAR_ALL_ENEMIES
@@ -218,7 +217,7 @@ func _initialize() -> void:
 	root.add_child(a6)
 	var sp2 := EnemySpawner.new()
 	a6.add_child(sp2)
-	sp2.setup([{"position": Vector2.ZERO, "enemy": scene, "reward_table": null}], NodePath(""), null, a6)
+	sp2.setup([SpawnEntry.new(Vector2.ZERO, scene)], NodePath(""), null, a6)
 	sp2.spawn_initial()
 	var obj3 := DungeonObjective.new()
 	obj3.objective_type = DungeonObjective.ObjectiveType.ELIMINATION
@@ -298,7 +297,7 @@ func _initialize() -> void:
 	root.add_child(a8)
 	var sp3 := SpawnerCap.new()
 	a8.add_child(sp3)
-	sp3.setup([{"position": Vector2.ZERO, "enemy": scene, "reward_table": null}], NodePath(""), null, a8)
+	sp3.setup([SpawnEntry.new(Vector2.ZERO, scene)], NodePath(""), null, a8)
 	sp3.spawn_initial()
 	await process_frame
 	await process_frame

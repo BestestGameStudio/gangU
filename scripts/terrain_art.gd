@@ -95,10 +95,10 @@ static func row(art: StringName) -> int:
 
 ## The floor drawn under an object (tree -> its season's grass).
 static func floor_under(art: StringName) -> StringName:
-	return SETS[art].get("floor", &"ground")
+	return (SETS[art] as Dictionary).get("floor", &"ground")
 
 static func has_destroy(art: StringName) -> bool:
-	return SETS.has(art) and SETS[art].get("destroy", false)
+	return SETS.has(art) and (SETS[art] as Dictionary).get("destroy", false)
 
 ## Deterministic per-cell 0..n-1 pick (no RNG, stable across rebuilds).
 static func variant(cell: Vector2i, salt: int, n: int = VARIANTS) -> int:

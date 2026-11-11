@@ -58,7 +58,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## guessing - nothing is consumed either way on refusal.
 func try_use_dedicated_key() -> bool:
 	var carried_types: Array = []
-	for c in _counts:
+	for c: Consumable in _counts:
 		if _counts[c] > 0:
 			carried_types.append(c)
 	if carried_types.size() != 1:

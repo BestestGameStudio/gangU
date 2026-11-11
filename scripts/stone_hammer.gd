@@ -102,11 +102,11 @@ func _start_jump(player: Player) -> void:
 	_jump_key = player.get_instance_id()
 	var entry: Dictionary = _jumps.get(_jump_key, {})
 	if entry.is_empty():
-		var nodes: Array[CanvasItem] = []
+		var nodes: Array[Node2D] = []
 		if player.sprite != null:
 			nodes.append(player.sprite)
 		else:
-			for n in [player.body, player.nose_edge]:
+			for n: Node2D in [player.body, player.nose_edge]:
 				if n != null:
 					nodes.append(n)
 		var base: Array[Vector2] = []
@@ -131,7 +131,7 @@ func _end_jump() -> void:
 	var hammers: Array = entry["hammers"]
 	hammers.erase(self)
 	# Drop swings that vanished without ending (defensive; _exit_tree covers it).
-	for h in hammers.duplicate():
+	for h: Variant in hammers.duplicate():
 		if not is_instance_valid(h) or not (h as StoneHammer)._jumping:
 			hammers.erase(h)
 	var player := instance_from_id(_jump_key) as Player
@@ -146,7 +146,7 @@ func _end_jump() -> void:
 ## Highest lift among the player's active jumps, as a screen-up offset.
 static func _shared_up(entry: Dictionary, player: Node2D) -> Vector2:
 	var lift := 0.0
-	for h in entry["hammers"]:
+	for h: Variant in entry["hammers"]:
 		if is_instance_valid(h):
 			lift = maxf(lift, (h as StoneHammer)._lift)
 	# The player node turns toward the cursor; hop straight up on screen.
@@ -157,7 +157,7 @@ static func _apply_offset(entry: Dictionary, up: Vector2) -> void:
 	var base: Array = entry["base"]
 	for i in nodes.size():
 		if is_instance_valid(nodes[i]):
-			(nodes[i] as CanvasItem).position = base[i] + up
+			(nodes[i] as Node2D).position = base[i] + up
 
 func is_jumping() -> bool:
 	return _jumping
@@ -254,9 +254,9 @@ func _deal(body: Node, amount: float, mods: DamageModifiers) -> void:
 	var result := DamageCalc.compute(amount, mods, body.get(&"damage_modifiers") as DamageModifiers, rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
-		body.apply_damage(result.amount, result.crit_tier)
+		(body as Enemy).apply_damage(result.amount, result.crit_tier)
 	else:
-		body.apply_damage(result.amount)
+		body.call(&"apply_damage", result.amount)
 	OnHit.end(receipt, body)
 	# #390: slam and Rhythm shockwave both report as melee hits of this spell.
 	OnHit.report(source, spell, body, result, OnHit.DELIVERY_MELEE, receipt)

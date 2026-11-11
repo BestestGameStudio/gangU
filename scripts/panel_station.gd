@@ -19,12 +19,12 @@ func _on_body_entered(body: Node2D) -> void:
 		if panel == null:
 			return
 		if pass_caster:
-			panel.open(body.get_node_or_null("SpellCaster"))
+			panel.call(&"open", body.get_node_or_null("SpellCaster"))
 		else:
-			panel.open()
+			panel.call(&"open")
 
 func _on_body_exited(body: Node2D) -> void:
 	if body is Player:
 		var panel := get_tree().get_first_node_in_group(panel_group)
 		if panel != null:
-			panel.close()
+			panel.call(&"close")

@@ -19,7 +19,7 @@ func _ready() -> void:
 	if spell == null:
 		push_warning("SpellPickup: no spell assigned.")
 		return
-	$NameLabel.text = spell.spell_name
+	($NameLabel as Label).text = spell.spell_name
 	body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node2D) -> void:

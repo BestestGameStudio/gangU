@@ -236,13 +236,14 @@ func _make_row(spell: Spell) -> Control:
 		paths.add_child(none)
 	else:
 		_add_paths(paths, spell, 0, {spell: true}, true)
-	for child in row.find_children("*", "Control", true, false):
+	for child: Control in row.find_children("*", "Control", true, false):
 		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return row
 
 ## (#375) Left-click on a row toggles its selection for swapping.
 func _on_row_gui_input(event: InputEvent, spell: Spell) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	var button := event as InputEventMouseButton
+	if button != null and button.button_index == MOUSE_BUTTON_LEFT and button.pressed:
 		select_spell(spell)
 
 ## (#375) Select an unlocked spell (or click it again to deselect). A spell
@@ -313,7 +314,7 @@ func _refresh_slot_bar() -> void:
 		b.custom_minimum_size = Vector2(76, 40)
 		UiStyle.style_button(b, UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM)
 		var idx := i
-		b.pressed.connect(func(): _on_slot_chosen(idx))
+		b.pressed.connect(func() -> void: _on_slot_chosen(idx))
 		_slot_bar.add_child(b)
 
 ## (#318) Recursively lists the upgrade tree reachable from `source`: one

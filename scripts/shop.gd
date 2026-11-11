@@ -165,7 +165,7 @@ func _reroll_stock() -> void:
 	var pool := offerable_entries()
 	pool.shuffle()
 	_stock.clear()
-	for e in pool.slice(0, stock_size):
+	for e: ShopEntry in pool.slice(0, stock_size):
 		_stock.append(e)
 	stock_refreshed.emit()
 

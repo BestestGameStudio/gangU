@@ -114,7 +114,7 @@ func _process(delta: float) -> bool:
 			carrier.name = "SpawnData"
 			var enemy_scene: PackedScene = load("res://scenes/enemy.tscn")
 			for pos in [Vector2(250, 280), Vector2(576, 220), Vector2(900, 280)]:
-				carrier.entries.append({"position": pos, "enemy": enemy_scene, "reward_table": demo})
+				carrier.entries.append(SpawnEntry.new(pos, enemy_scene, demo))
 			area.add_child(carrier)
 			scene.area_loader._mount_area_spawns(area)
 			var mounted := 0

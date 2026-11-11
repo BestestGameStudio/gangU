@@ -38,8 +38,8 @@ func _physics_process(delta: float) -> void:
 	if target_provider.is_valid():
 		global_position = target_provider.call()
 	pulled = 0
-	for e in get_tree().get_nodes_in_group(&"enemies"):
-		if not (e is Enemy) or not is_instance_valid(e) or e.is_queued_for_deletion() or e.hp <= 0:
+	for e: Enemy in get_tree().get_nodes_in_group(&"enemies"):
+		if not is_instance_valid(e) or e.is_queued_for_deletion() or e.hp <= 0:
 			continue
 		var off: Vector2 = global_position - e.global_position
 		var d := off.length()

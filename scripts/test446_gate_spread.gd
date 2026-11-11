@@ -94,9 +94,9 @@ func _run() -> void:
 		var gate_pos: Vector2 = EXPECTED[GUARD_GATE[gname]]
 		var ok := true
 		var on_field := true
-		for entry in guards.entries:
-			var pts: Array = [entry["position"]]
-			pts.append_array(entry.get("route", []))
+		for entry: SpawnEntry in guards.entries:
+			var pts: Array = [entry.position]
+			pts.append_array(entry.route)
 			for q in pts:
 				if (q as Vector2).distance_to(gate_pos) > 300.0:
 					ok = false

@@ -44,7 +44,7 @@ func set_frozen(frozen: bool) -> void:
 
 ## Ask every live bubble to claim me (shared with WaterRain).
 static func claim_by_bubbles(node: Node2D) -> void:
-	for bubble in node.get_tree().get_nodes_in_group(&"freeze_bubbles"):
+	for bubble: FreezeBubble in node.get_tree().get_nodes_in_group(&"freeze_bubbles"):
 		bubble.claim(node)
 
 ## Spawn a lob under `parent`. A zero-length lob (`from == target`) is a drop
@@ -159,21 +159,21 @@ func _draw() -> void:
 static func deal_damage(body: Node, p_spell: Spell, p_source: Variant, delivery: StringName = OnHit.DELIVERY_SPLASH) -> void:
 	if body == null or not body.has_method(&"apply_damage"):
 		return
-	p_source = OnHit.live(p_source)
+	var attacker := OnHit.live(p_source)
 	# Same attacker composition as Projectile.setup: the source's modifiers
 	# plus tag-matched owned-relic modifiers in a fresh copy (never mutates
 	# the source's collection, so repeated hits cannot accumulate).
-	var mods := Projectile.attacker_modifiers_for(p_source, p_spell)
+	var mods := Projectile.attacker_modifiers_for(attacker, p_spell)
 	var rng: RandomNumberGenerator = null
-	if p_source != null and is_instance_valid(p_source):
-		rng = p_source.get(&"damage_rng") as RandomNumberGenerator
+	if attacker != null:
+		rng = attacker.get(&"damage_rng") as RandomNumberGenerator
 	if rng == null:
 		rng = RandomNumberGenerator.new()
 	var result := DamageCalc.compute(p_spell.damage, mods, body.get(&"damage_modifiers") as DamageModifiers, rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
-		body.apply_damage(result.amount, result.crit_tier)
+		(body as Enemy).apply_damage(result.amount, result.crit_tier)
 	else:
-		body.apply_damage(result.amount)
+		body.call(&"apply_damage", result.amount)
 	OnHit.end(receipt, body)
-	OnHit.report(p_source, p_spell, body, result, delivery, receipt)
+	OnHit.report(attacker, p_spell, body, result, delivery, receipt)

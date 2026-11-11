@@ -80,6 +80,6 @@ func _restart() -> void:
 static func reset_persistent_run_state(tree: SceneTree) -> void:
 	for n in tree.get_nodes_in_group(RUN_STATE_GROUP):
 		if n.has_method(&"reset_run_state"):
-			n.reset_run_state()
+			n.call(&"reset_run_state")
 		else:
 			push_error("RunManager: '%s' is in %s but has no reset_run_state()" % [n.get_path(), RUN_STATE_GROUP])

@@ -13,10 +13,8 @@ extends Node
 ##   override it (same role as SummonManager.effective_cap).
 ## - Bookkeeping: spawned / spawn_died signals and alive_count(entry).
 ##
-## Entry format is the AreaSpawnData one ("position", "enemy",
-## "reward_table"); an optional "definition" (EnemyDefinition, #346) is
-## assigned before tree entry; an optional "route" (#373) is handed to the
-## behavior after tree entry; other unknown keys are tolerated and ignored.
+## Entries are SpawnEntry resources: the definition (#346) is assigned
+## before tree entry, the route (#373) is handed to the behavior after it.
 
 ## Typed construction options shared by independent spawn owners. Tree entry,
 ## policy, signals and owner bookkeeping stay with each caller.
@@ -34,30 +32,31 @@ class SpawnOptions extends RefCounted:
 static func spawn(scene: PackedScene, pos: Vector2, opts: SpawnOptions) -> Node:
 	var node := scene.instantiate()
 	if node is Node2D:
-		node.position = pos
-	if node is Enemy:
+		(node as Node2D).position = pos
+	var enemy := node as Enemy
+	if enemy != null:
 		if opts.wire_enemy:
-			node.player_path = opts.player_path
-			node.terrain = opts.terrain
-			node.reward_table = opts.reward_table
+			enemy.player_path = opts.player_path
+			enemy.terrain = opts.terrain
+			enemy.reward_table = opts.reward_table
 		if opts.definition != null:
-			node.definition = opts.definition
+			enemy.definition = opts.definition
 		if opts.context != null:
-			node.context = opts.context
+			enemy.context = opts.context
 	return node
 
-signal spawned(enemy: Enemy, entry: Dictionary)
-signal spawn_died(enemy: Enemy, entry: Dictionary)
+signal spawned(enemy: Enemy, entry: SpawnEntry)
+signal spawn_died(enemy: Enemy, entry: SpawnEntry)
 
-var entries: Array = []
+var entries: Array[SpawnEntry] = []
 var player_path: NodePath = NodePath("../../Player")
 var terrain: TerrainMap = null
 var parent_area: Node = null
 
 ## alive spawns per entry: entry index -> Array of Enemy
-var _alive: Dictionary = {}
+var _alive: Dictionary[int, Array] = {}
 
-func setup(p_entries: Array, p_player_path: NodePath, p_terrain: TerrainMap, p_parent_area: Node) -> void:
+func setup(p_entries: Array[SpawnEntry], p_player_path: NodePath, p_terrain: TerrainMap, p_parent_area: Node) -> void:
 	entries = p_entries
 	player_path = p_player_path
 	terrain = p_terrain
@@ -65,12 +64,12 @@ func setup(p_entries: Array, p_player_path: NodePath, p_terrain: TerrainMap, p_p
 
 ## Policy seam. Default: always allow. Override (or replace the script) to
 ## add caps, timers, triggers, budgets later.
-func should_spawn(_entry: Dictionary) -> bool:
+func should_spawn(_entry: SpawnEntry) -> bool:
 	return true
 
 func spawn_initial() -> Array[Enemy]:
 	var out: Array[Enemy] = []
-	for entry: Dictionary in entries:
+	for entry: SpawnEntry in entries:
 		var e := request_spawn(entry)
 		if e != null:
 			out.append(e)
@@ -81,7 +80,7 @@ func spawn_initial() -> Array[Enemy]:
 ## player_path is assigned BEFORE add_child so Enemy._ready resolves it, the
 ## terrain comes from the area, and the enemy is parented to the area so a
 ## gate swap frees it.
-func request_spawn(entry: Dictionary) -> Enemy:
+func request_spawn(entry: SpawnEntry) -> Enemy:
 	var e := _prepare_spawn(entry)
 	if e == null:
 		return null
@@ -96,7 +95,7 @@ func request_spawn(entry: Dictionary) -> Enemy:
 ## request_spawn; only the tree entry, route hand-off and `spawned` emission
 ## move to the idle frame. Descendants of splitting enemies go through here,
 ## so should_spawn governs them and the counters/signals never miss them.
-func request_spawn_deferred(entry: Dictionary) -> Enemy:
+func request_spawn_deferred(entry: SpawnEntry) -> Enemy:
 	var e := _prepare_spawn(entry)
 	if e == null:
 		return null
@@ -105,65 +104,65 @@ func request_spawn_deferred(entry: Dictionary) -> Enemy:
 
 ## Shared policy + instantiate + wiring + bookkeeping for both spawn paths.
 ## No tree mutation here, so it is safe inside a physics/death callback.
-func _prepare_spawn(entry: Dictionary) -> Enemy:
+func _prepare_spawn(entry: SpawnEntry) -> Enemy:
 	if not should_spawn(entry):
 		return null
-	var data := SpawnEntry.from_dictionary(entry)
-	if data == null:
+	if entry.enemy == null:
+		push_error("EnemySpawner: spawn entry has no enemy scene.")
 		return null
 	var opts := SpawnOptions.new()
 	opts.wire_enemy = true
 	opts.player_path = player_path
 	opts.terrain = terrain
-	opts.reward_table = data.reward_table
-	opts.definition = data.definition
-	var e := spawn(data.enemy, data.position, opts) as Enemy
+	opts.reward_table = entry.reward_table
+	opts.definition = entry.definition
+	var e := spawn(entry.enemy, entry.position, opts) as Enemy
 	var idx := _entry_index(entry)
 	if not _alive.has(idx):
 		_alive[idx] = []
-	(_alive[idx] as Array).append(e)
+	_alive[idx].append(e)
 	e.died.connect(_on_enemy_died.bind(e, entry, idx))
 	# #392: splitting enemies (EnemySlime) route their death-spawned
 	# descendants back through this spawner's policy/bookkeeping seam.
-	if "spawner" in e:
-		e.set("spawner", self)
+	if e is EnemySlime:
+		(e as EnemySlime).spawner = self
 	return e
 
-func _finish_spawn(e: Enemy, entry: Dictionary) -> void:
+func _finish_spawn(e: Enemy, entry: SpawnEntry) -> void:
 	if not is_instance_valid(e) or parent_area == null:
 		return
 	parent_area.add_child(e)
 	_apply_route(e, entry)
 	spawned.emit(e, entry)
 
-## #373: an optional "route" (Array/PackedVector2Array of points in the
-## area's local space) is handed to the behavior AFTER tree entry (the
-## behavior is created in Enemy._ready), converted to global space. Behaviors
-## without configure_route ignore it.
-func _apply_route(e: Enemy, entry: Dictionary) -> void:
-	if not entry.has("route") or e._behavior == null or not e._behavior.has_method("configure_route"):
+## #373: a non-empty route (points in the area's local space) is handed to
+## the behavior AFTER tree entry (the behavior is created in Enemy._ready),
+## converted to global space. Behaviors without configure_route ignore it.
+func _apply_route(e: Enemy, entry: SpawnEntry) -> void:
+	var guard := e._behavior as EnemyBehaviorGuard
+	if entry.route.is_empty() or guard == null:
 		return
 	var pts := PackedVector2Array()
 	var area_2d := parent_area as Node2D
-	for p in entry["route"]:
+	for p in entry.route:
 		pts.append(area_2d.to_global(p) if area_2d != null else p)
-	e._behavior.configure_route(pts)
+	guard.configure_route(pts)
 
-## Index of this exact entry Dictionary (identity, not content), so two
+## Index of this exact entry (identity, not content), so two
 ## entries with identical content keep separate bookkeeping. -1 = an entry
 ## that is not in `entries` (one shared bucket).
-func _entry_index(entry: Dictionary) -> int:
+func _entry_index(entry: SpawnEntry) -> int:
 	for i in entries.size():
 		if is_same(entries[i], entry):
 			return i
 	return -1
 
-func alive_count(entry: Dictionary) -> int:
+func alive_count(entry: SpawnEntry) -> int:
 	var idx := _entry_index(entry)
 	if not _alive.has(idx):
 		return 0
 	var n := 0
-	for e in _alive[idx]:
+	for e: Variant in _alive[idx]:
 		if is_instance_valid(e):
 			n += 1
 	return n
@@ -171,12 +170,12 @@ func alive_count(entry: Dictionary) -> int:
 func total_alive() -> int:
 	var n := 0
 	for idx in _alive:
-		for e in _alive[idx]:
+		for e: Variant in _alive[idx]:
 			if is_instance_valid(e):
 				n += 1
 	return n
 
-func _on_enemy_died(e: Enemy, entry: Dictionary, idx: int) -> void:
+func _on_enemy_died(e: Enemy, entry: SpawnEntry, idx: int) -> void:
 	if _alive.has(idx):
-		(_alive[idx] as Array).erase(e)
+		_alive[idx].erase(e)
 	spawn_died.emit(e, entry)
