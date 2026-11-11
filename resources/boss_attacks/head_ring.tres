@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BossRingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_ring_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+radius = 120.0
+enraged_radius = 175.0
+damage = 16
+display_time = 0.5
+color = Color(1, 0.22, 0.32, 1)

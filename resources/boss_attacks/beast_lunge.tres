@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BossLungeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_lunge_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+speed = 600.0
+enraged_speed = 740.0
+duration = 0.34
+hit_range = 60.0
+damage = 18

@@ -245,19 +245,8 @@ func _face(enemy: Enemy, dir_x: float) -> void:
 # --- shared volley attack ----------------------------------------------------
 
 ## Attack data is supplied by Head/Warlord from their unchanged constants.
-class VolleyData extends RefCounted:
-	var spell: Spell
-	var scene: PackedScene
-	var shots: int
-	var enraged_shots: int
-	var spread: float
-	var enraged_spread: float
-	var fire_at: float
-	var second_wave_at: float
-	var duration: float
-	var muzzle_offset: float
 
-var volley_data: VolleyData
+var volley_data: BossVolleyData
 var _waves_fired: int = 0
 
 func _volley_step(enemy: Enemy, to_player: Vector2) -> void:
@@ -299,14 +288,8 @@ func _volley_spread(enemy: Enemy) -> float:
 
 # --- shared lunge attack -----------------------------------------------------
 
-class LungeData extends RefCounted:
-	var speed: float
-	var enraged_speed: float
-	var duration: float
-	var hit_range: float
-	var damage: int
 
-var lunge_data: LungeData
+var lunge_data: BossLungeData
 var _hits: int = 0
 
 ## Movement/contact are shared; the caller keeps its end/chain transition.
@@ -319,14 +302,8 @@ func _lunge_step(enemy: Enemy, player: Player, dist: float) -> void:
 
 # --- shared ring attack ------------------------------------------------------
 
-class RingData extends RefCounted:
-	var radius: float
-	var enraged_radius: float
-	var damage: int
-	var display_time: float
-	var color: Color
 
-var ring_data: RingData
+var ring_data: BossRingData
 
 func _ring_radius(enemy: Enemy) -> float:
 	return ring_data.enraged_radius if is_enraged(enemy) else ring_data.radius

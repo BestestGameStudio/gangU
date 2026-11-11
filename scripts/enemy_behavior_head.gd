@@ -87,23 +87,8 @@ func _configure() -> void:
 	arrival_color = HEAD_RED
 	windup_times = WINDUP_TIME
 	windup_anims = WINDUP_ANIM
-	ring_data = RingData.new()
-	ring_data.radius = PULSE_RADIUS
-	ring_data.enraged_radius = PULSE_RADIUS_ENRAGED
-	ring_data.damage = PULSE_DAMAGE
-	ring_data.display_time = PULSE_TIME
-	ring_data.color = HEAD_RED
-	volley_data = VolleyData.new()
-	volley_data.spell = BOLT_SPELL
-	volley_data.scene = PROJECTILE_SCENE
-	volley_data.shots = VOLLEY_SHOTS
-	volley_data.enraged_shots = VOLLEY_SHOTS_ENRAGED
-	volley_data.spread = VOLLEY_SPREAD_DEG
-	volley_data.enraged_spread = VOLLEY_SPREAD_ENRAGED_DEG
-	volley_data.fire_at = VOLLEY_FIRE_AT
-	volley_data.second_wave_at = VOLLEY_SECOND_WAVE_AT
-	volley_data.duration = VOLLEY_TIME
-	volley_data.muzzle_offset = MUZZLE_OFFSET
+	ring_data = load("res://resources/boss_attacks/head_ring.tres")
+	volley_data = load("res://resources/boss_attacks/head_volley.tres")
 
 	var volley := _present(Attack.VOLLEY, State.VOLLEY, &"projectile", TelegraphShape.CONE)
 	volley.length = VOLLEY_CONE_LENGTH

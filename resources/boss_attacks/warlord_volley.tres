@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BossVolleyData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/boss_volley_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://resources/spells/warlord_orb.tres" id="2_spell"]
+[ext_resource type="PackedScene" path="res://scenes/projectile.tscn" id="3_scene"]
+
+[resource]
+script = ExtResource("1_data")
+spell = ExtResource("2_spell")
+scene = ExtResource("3_scene")
+shots = 5
+enraged_shots = 7
+spread = 50.0
+enraged_spread = 70.0
+fire_at = 0.2
+second_wave_at = 0.45
+duration = 0.6
+muzzle_offset = 34.0
