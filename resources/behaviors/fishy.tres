@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EnemyBehaviorFishy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_behavior_fishy.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+hook_range = 560.0
+hook_speed = 950.0
+hook_hit_radius = 22.0
+windup_time = 0.6
+aim_lock_at = 0.35
+reel_speed = 380.0
+reel_stop = 46.0
+hook_max_time = 2.4
+tick_interval = 0.25
+tick_damage = 3
+stall_time = 0.3
+retract_speed = 1400.0
+recover_time = 0.45
+cast_cooldown = 2.4
+keep_away = 150.0
+engage_fraction = 0.85
+ally_radius = 520.0
+rally_time = 2.5
+rally_interval = 0.5
+rod_tip_offset = Vector2(16, -22)
