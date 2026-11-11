@@ -47,6 +47,28 @@ const RALLY_INTERVAL := 0.5
 ## Rod tip relative to the body (art faces right; mirrored when flipped).
 const ROD_TIP := Vector2(16, -22)
 
+## #513: authored behavior tuning; constants remain compatibility defaults.
+@export var hook_range: float = HOOK_RANGE
+@export var hook_speed: float = HOOK_SPEED
+@export var hook_hit_radius: float = HOOK_HIT_RADIUS
+@export var windup_time: float = WINDUP_TIME
+@export var aim_lock_at: float = AIM_LOCK_AT
+@export var reel_speed: float = REEL_SPEED
+@export var reel_stop: float = REEL_STOP
+@export var hook_max_time: float = HOOK_MAX_TIME
+@export var tick_interval: float = TICK_INTERVAL
+@export var tick_damage: int = TICK_DAMAGE
+@export var stall_time: float = STALL_TIME
+@export var retract_speed: float = RETRACT_SPEED
+@export var recover_time: float = RECOVER_TIME
+@export var cast_cooldown: float = CAST_COOLDOWN
+@export var keep_away: float = KEEP_AWAY
+@export var engage_fraction: float = ENGAGE_FRACTION
+@export var ally_radius: float = ALLY_RADIUS
+@export var rally_time: float = RALLY_TIME
+@export var rally_interval: float = RALLY_INTERVAL
+@export var rod_tip_offset: Vector2 = ROD_TIP
+
 var state: int = State.APPROACH
 var hooked_player: Player = null
 var hook_pos := Vector2.ZERO
@@ -109,7 +131,7 @@ func is_hooked() -> bool:
 	return state == State.HOOKED
 
 func rod_tip(enemy: Enemy) -> Vector2:
-	var tip := ROD_TIP
+	var tip := rod_tip_offset
 	if enemy.sprite != null and enemy.sprite.flip_h:
 		tip.x = -tip.x
 	return enemy.global_position + tip
@@ -142,10 +164,10 @@ func _approach(enemy: Enemy, target: Player, delta: float) -> void:
 	var d := to.length()
 	var clear := _line_clear(enemy, enemy.global_position, target.global_position)
 	var want := Vector2.ZERO
-	if d > HOOK_RANGE * ENGAGE_FRACTION or not clear:
+	if d > hook_range * engage_fraction or not clear:
 		want = to.normalized() * enemy.speed
 		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, target.global_position, enemy.speed, delta, enemy.can_swim)
-	elif d < KEEP_AWAY:
+	elif d < keep_away:
 		want = -to.normalized() * enemy.speed * 0.8
 		enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, want, delta, enemy.can_swim)
 	else:
@@ -158,7 +180,7 @@ func _approach(enemy: Enemy, target: Player, delta: float) -> void:
 		_deal(enemy, target, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		_contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack")
-	if _cooldown <= 0.0 and clear and d <= HOOK_RANGE * 0.95:
+	if _cooldown <= 0.0 and clear and d <= hook_range * 0.95:
 		_begin_windup(enemy, target)
 
 func _begin_windup(enemy: Enemy, target: Player) -> void:
@@ -169,19 +191,19 @@ func _begin_windup(enemy: Enemy, target: Player) -> void:
 	enemy.play_action(&"cast", true)
 	var tele := _telegraph(enemy)
 	if tele != null:
-		tele.show_line(aim_dir, HOOK_RANGE, 5.0, WINDUP_TIME)
+		tele.show_line(aim_dir, hook_range, 5.0, windup_time)
 
 # --- WINDUP -----------------------------------------------------------------
 
 func _windup(enemy: Enemy, target: Player, alive: bool, delta: float) -> void:
 	_t += delta
 	enemy.velocity = Vector2.ZERO
-	if _t < AIM_LOCK_AT and alive:
+	if _t < aim_lock_at and alive:
 		_aim_at(enemy, target)
 		var tele := _telegraph(enemy)
 		if tele != null:
 			tele.set_direction(aim_dir)
-	if _t >= WINDUP_TIME:
+	if _t >= windup_time:
 		state = State.CAST
 		_t = 0.0
 		_traveled = 0.0
@@ -196,7 +218,7 @@ func _windup(enemy: Enemy, target: Player, alive: bool, delta: float) -> void:
 
 func _cast(enemy: Enemy, target: Player, alive: bool, delta: float) -> void:
 	enemy.velocity = Vector2.ZERO
-	var step := minf(HOOK_SPEED * delta, HOOK_RANGE - _traveled)
+	var step := minf(hook_speed * delta, hook_range - _traveled)
 	var from := hook_pos
 	var motion := aim_dir * step
 	# Terrain first: the hook stops where the line meets a blocker.
@@ -205,7 +227,7 @@ func _cast(enemy: Enemy, target: Player, alive: bool, delta: float) -> void:
 	if alive and not target.is_invulnerable() and not target.is_dashing():
 		var p: Vector2 = target.global_position
 		var closest := Geometry2D.get_closest_point_to_segment(p, from, from + reach)
-		if closest.distance_to(p) <= HOOK_HIT_RADIUS:
+		if closest.distance_to(p) <= hook_hit_radius:
 			hook_pos = closest
 			_begin_hooked(enemy, target)
 			return
@@ -213,7 +235,7 @@ func _cast(enemy: Enemy, target: Player, alive: bool, delta: float) -> void:
 	_traveled += reach.length()
 	if block_t >= 0.0:
 		_end_cast(enemy, &"terrain")
-	elif _traveled >= HOOK_RANGE - 0.01:
+	elif _traveled >= hook_range - 0.01:
 		_end_cast(enemy, &"miss")
 
 func _begin_hooked(enemy: Enemy, target: Player) -> void:
@@ -240,32 +262,32 @@ func _hooked(enemy: Enemy, delta: float) -> void:
 	_t += delta
 	var to: Vector2 = enemy.global_position - p.global_position
 	var d := to.length()
-	if d <= REEL_STOP:
+	if d <= reel_stop:
 		_end_cast(enemy, &"reeled")
 		return
 	if not _line_clear(enemy, enemy.global_position, p.global_position):
 		_end_cast(enemy, &"blocked")
 		return
-	if _t >= HOOK_MAX_TIME:
+	if _t >= hook_max_time:
 		_end_cast(enemy, &"timeout")
 		return
 	_face(enemy, -to)
-	var want := minf(REEL_SPEED * delta, d - REEL_STOP)
+	var want := minf(reel_speed * delta, d - reel_stop)
 	var moved: Vector2 = p.displace(to.normalized() * want)
 	_stall_t = _stall_t + delta if moved.length() < want * 0.2 else 0.0
 	hook_pos = p.global_position
 	_tick_t -= delta
 	if _tick_t <= 0.0:
-		_tick_t = TICK_INTERVAL
-		_deal(enemy, p, TICK_DAMAGE, OnHit.DELIVERY_MELEE)
+		_tick_t = tick_interval
+		_deal(enemy, p, tick_damage, OnHit.DELIVERY_MELEE)
 	_rally_t -= delta
 	if _rally_t <= 0.0:
-		_rally_t = RALLY_INTERVAL
+		_rally_t = rally_interval
 		rally_allies(enemy)
-	if _stall_t >= STALL_TIME:
+	if _stall_t >= stall_time:
 		_end_cast(enemy, &"stalled")
 
-## Calls every other live enemy within ALLY_RADIUS to group up on the target.
+## Calls every other live enemy within ally_radius to group up on the target.
 ## Returns how many answered (tests).
 func rally_allies(enemy: Enemy) -> int:
 	var n := 0
@@ -273,9 +295,9 @@ func rally_allies(enemy: Enemy) -> int:
 		var e := node as Enemy
 		if e == null or e == enemy or e.hp <= 0 or e.is_in_group("boss"):
 			continue
-		if e.global_position.distance_to(enemy.global_position) > ALLY_RADIUS:
+		if e.global_position.distance_to(enemy.global_position) > ally_radius:
 			continue
-		e.rally(RALLY_TIME)
+		e.rally(rally_time)
 		n += 1
 	return n
 
@@ -286,7 +308,7 @@ func _end_cast(enemy: Enemy, why: StringName) -> void:
 	hooked_player = null
 	state = State.RECOVER
 	_t = 0.0
-	_cooldown = CAST_COOLDOWN
+	_cooldown = cast_cooldown
 	enemy.clear_action()
 	enemy.play_action(&"retract")
 	var tele := _telegraph(enemy)
@@ -296,8 +318,8 @@ func _end_cast(enemy: Enemy, why: StringName) -> void:
 func _recover(enemy: Enemy, delta: float) -> void:
 	_t += delta
 	enemy.velocity = Vector2.ZERO
-	hook_pos = hook_pos.move_toward(rod_tip(enemy), RETRACT_SPEED * delta)
-	if _t >= RECOVER_TIME and hook_pos.distance_to(rod_tip(enemy)) < 1.0:
+	hook_pos = hook_pos.move_toward(rod_tip(enemy), retract_speed * delta)
+	if _t >= recover_time and hook_pos.distance_to(rod_tip(enemy)) < 1.0:
 		state = State.APPROACH
 
 # --- helpers ----------------------------------------------------------------
