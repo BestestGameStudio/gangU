@@ -10,3 +10,4 @@ extends Resource
 @export var arrival_color: Color = Enemy.SPRITE_BURST_COLOR
 @export var windup_times: Dictionary = {}
 @export var windup_anims: Dictionary = {}
+@export var clear_glow_on_stun: bool = false
