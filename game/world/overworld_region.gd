@@ -38,9 +38,6 @@ func mount(shared: TerrainMap) -> void:
 		# Generated layouts have no authored doorway: the south-center gap
 		# joins the existing generated walkable graph below.
 		entry_local = Vector2(39.5, 12.5) * source.cell_size
-	layout.position = approach - entry_local
-	entry = to_global(approach)
-	arrival = entry - door_direction * 96.0
 	if source == null:
 		# The old crystal scene had only a drawn frame, not collision. Give
 		# its existing arena footprint the same terrain wall seam as lairs.
@@ -48,11 +45,27 @@ func mount(shared: TerrainMap) -> void:
 		source.name = "Terrain"
 		source.z_index = -60
 		layout.add_child(source)
+		# Keep the authored arena and ALL existing WaveSpawns inside the walls.
+		# The frame is presentation-only; put the new physical wall one cell
+		# outside its bounds, leaving room for wave spread and actor radii.
+		var frame_bounds := Rect2()
+		for node in layout.get_node("Background").get_children():
+			if node is ColorRect and String(node.name).begins_with("ArenaFrame"):
+				var rect := (node as ColorRect).get_rect()
+				frame_bounds = rect if frame_bounds.size == Vector2.ZERO else frame_bounds.merge(rect)
+		var lo := Vector2i((frame_bounds.position / source.cell_size).floor()) - Vector2i.ONE
+		var hi := Vector2i((frame_bounds.end / source.cell_size).floor()) + Vector2i.ONE
 		var cells := {}
-		for x in range(3,15):
-			for y in range(1,11):
-				cells[Vector2i(x,y)] = TerrainTypes.OBSTACLE if x==3 or x==14 or y==1 or y==10 else TerrainTypes.GROUND
+		for x in range(lo.x, hi.x + 1):
+			for y in range(lo.y, hi.y + 1):
+				cells[Vector2i(x,y)] = TerrainTypes.OBSTACLE if x==lo.x or x==hi.x or y==lo.y or y==hi.y else TerrainTypes.GROUND
 		source.set_cells(cells)
+		# The new physical entry is the south wall opening, not the former
+		# interior PlayerSpawn. Its barrier must cover the actual doorway.
+		entry_local = Vector2(entry_local.x, (hi.y + 0.5) * source.cell_size)
+	layout.position = approach - entry_local
+	entry = to_global(approach)
+	arrival = entry - door_direction * 96.0
 	_open_source_door(source)
 	_stamp_terrain(source)
 	# Each original region terrain draws its palette/art. Shared terrain is
