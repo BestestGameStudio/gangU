@@ -59,8 +59,8 @@ Append a section to `assets/sprites/SOURCE.md`: source (issue #, who attached it
 
 ## 6. Verify
 - `godot --headless --path . --import` - no errors in the output.
-- A harness leg asserting animations exist with expected frame counts/loop flags and that a sampled pixel reads the intended colour family (pattern: `scripts/test177_mustache_warrior.gd` leg A, `scripts/test90_enemy_visual.gd`).
-- Run only your harness while iterating; run the full suite once at the end and compare against the known baseline noise in README "Testing" (do not rebuild main to re-baseline).
+- A harness leg asserting animations exist with expected frame counts/loop flags and that a sampled pixel reads the intended colour family (keep it in scratch space while iterating; only fold a check into a core harness if it guards a contract).
+- Run only your harness while iterating; run the full suite once at the end; it must report `RESULT: ALL PASS`.
 - Windowed screenshots of the sprite in-game (see the enemy-creation skill's capture recipe) and Read them before claiming the art looks right.
 
 ## 7. PR

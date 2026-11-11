@@ -23,9 +23,9 @@ Only these run, plus whatever git/file tools the action itself provides:
 Use Read / Glob / Grep instead of `cat`/`ls`/`find`. No `curl`, `cp`, `rm`, `pip`, `apt`, or ad-hoc `python3 -c`.
 
 ## Tests (headless)
-- `timeout 300 godot --headless -s scripts/<harness>.gd` - exit code 0 and a `RESULT: ALL PASS` line mean pass. Harnesses are `extends SceneTree` scripts named `scripts/test<issue>_<topic>.gd`.
+- `timeout 300 godot --headless -s scripts/<harness>.gd` - exit code 0 and a `RESULT: ALL PASS` line mean pass. Harnesses are the core `extends SceneTree` scripts `scripts/test*.gd`; the full suite is `godot --headless --path . --script res://tools/run_tests.gd`.
 - Run the harness for the area you touched plus any whose names match the systems you changed (Grep `scripts/test*.gd` for the class names). Report the real output, failures included.
-- New behaviour gets a new harness in the same style, named after the issue.
+- Extend the core harness that owns the system you changed; do not add per-issue harnesses, debug scenes or record scripts.
 
 ## Screenshots and video (rendered)
 Rendering needs a virtual display; use the compatibility GL driver:
