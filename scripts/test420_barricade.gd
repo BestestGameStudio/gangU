@@ -152,7 +152,7 @@ func _teardown(stage: Node2D) -> void:
 func _leg_a_variant() -> void:
 	var e: Enemy = _barricader_scene.instantiate()
 	_check(e.cover_seek, "A: barricader opts into the cover machine")
-	_check(e.definition != null and e.definition.behavior == EnemyBehaviorBarricader, "A: barricader definition uses EnemyBehaviorBarricader")
+	_check(e.definition != null and e.definition.behavior is EnemyBehaviorBarricader and e.definition.behavior.deploy_range == 420.0 and e.definition.behavior.min_deploy_dist == 110.0 and e.definition.behavior.deploy_cooldown == 6.0 and e.definition.behavior.scan_interval == 0.5 and e.definition.behavior.barricade_ahead == 40.0 and e.definition.behavior.open_radius == 40.0 and e.definition.behavior.spot_min == 48.0 and e.definition.behavior.spot_max == 160.0 and e.definition.behavior.spot_rings == 4 and e.definition.behavior.spot_rays == 9 and e.definition.behavior.spot_cone == EnemyBehaviorBarricader.SPOT_CONE and e.definition.behavior.fast_mult == 2.2 and e.definition.behavior.arrive_eps == 10.0 and e.definition.behavior.stall_time == 1.0 and e.definition.behavior.max_run_time == 3.0 and e.definition.behavior.build_time == 0.4, "A: barricader definition uses EnemyBehaviorBarricader")
 	e.free()
 	var w: Enemy = _warrior_scene.instantiate()
 	_check(w.definition == null, "A: regular Mustache Warrior unchanged (no definition / default behavior)")
