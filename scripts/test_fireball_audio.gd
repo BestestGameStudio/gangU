@@ -85,7 +85,7 @@ func _run() -> void:
 	terrain_shot._sweep_segment(Vector2(350, 16), Vector2(100, 0))
 	_check(terrain_shot.is_queued_for_deletion() and _voices(FireballAudio.IMPACT) == 3 and absf(terrain_shot.global_position.x - 384.0) < 1.0, "real terrain wall stop sounds at unchanged wall face")
 	for v in get_nodes_in_group(&"fireball_audio"):
-		_check(v.get_parent() == stage and v.bus == &"Master" and v.volume_db == 0.0 and v.pitch_scale == 1.0 and v.playing, "scene-owned playback preserves gain/pitch and Master settings")
+		_check(v.get_parent() == stage and v.bus == &"Master" and v.volume_db == -10.0 and v.pitch_scale == 1.0 and v.playing, "scene-owned cast and impact playback is -10 dB with unchanged pitch and Master settings")
 	# Dummy/headless audio callback timing can lag wall-clock timers under load.
 	var deadline := Time.get_ticks_msec() + 4000
 	while not get_nodes_in_group(&"fireball_audio").is_empty() and Time.get_ticks_msec() < deadline:
