@@ -36,7 +36,7 @@ class CDP:
             try:
                 with urllib.request.urlopen(f'http://127.0.0.1:{port}/json') as r:
                     tabs = json.load(r)
-                self.ws = websocket.create_connection(next(t['webSocketDebuggerUrl'] for t in tabs if t['type'] == 'page'), timeout=30)
+                self.ws = websocket.create_connection(next(t['webSocketDebuggerUrl'] for t in tabs if t['type'] == 'page'), timeout=30, suppress_origin=True)
                 self.n = 0
                 self.events = []
                 return
@@ -124,9 +124,9 @@ def run():
             thread.start()
             port = freeport()
             log = open(tmp/'chrome.log','w')
-            chrome = subprocess.Popen([a.chrome,'--headless=new','--no-sandbox','--disable-dev-shm-usage',
-                '--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader',
-                '--remote-allow-origins=http://127.0.0.1:'+str(port), '--remote-debugging-port='+str(port),
+            chrome = subprocess.Popen([a.chrome,'--headless=new','--disable-dev-shm-usage',
+                '--use-gl=angle','--use-angle=swiftshader',
+                '--remote-debugging-port='+str(port),
                 '--user-data-dir='+str(tmp/'chrome-profile'),'--window-size=1152,648','about:blank'],stdout=log,stderr=log,start_new_session=True)
             c = None
             try:
@@ -138,7 +138,7 @@ def run():
                 c.call('Browser.setDownloadBehavior',{'behavior':'allow','downloadPath':str(downloads)})
                 c.call('Emulation.setDeviceMetricsOverride',{'width':1152,'height':648,'deviceScaleFactor':1,'mobile':False})
                 c.call('Page.navigate',{'url':f'http://127.0.0.1:{server.server_port}/index.html'})
-                deadline = time.monotonic()+60
+                deadline = time.monotonic()+20
                 while time.monotonic()<deadline:
                     text = c.read('document.body.innerText') or ''
                     # Canvas accessibility is not a readiness signal; inspect actual render frames.
@@ -146,6 +146,8 @@ def run():
                     if loaded:
                         break
                     time.sleep(.25)
+                if not loaded:
+                    raise RuntimeError('Normal sandbox-preserving local browser did not load export; no security override permitted')
                 time.sleep(2) # one bounded settling window, not account polling
                 import base64
                 off = c.call('Page.captureScreenshot',{'format':'png'})['data']
@@ -153,7 +155,7 @@ def run():
                 # Normal browser pointer events on explicit benchmark-only Start button.
                 c.call('Input.dispatchMouseEvent',{'type':'mousePressed','x':130,'y':31,'button':'left','clickCount':1})
                 c.call('Input.dispatchMouseEvent',{'type':'mouseReleased','x':130,'y':31,'button':'left','clickCount':1})
-                deadline = time.monotonic()+45
+                deadline = time.monotonic()+20
                 result = None
                 while time.monotonic()<deadline:
                     result = c.read('window.ganguBrowserPerf || null')
