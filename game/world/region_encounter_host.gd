@@ -154,6 +154,7 @@ func _spawn_boss() -> void:
 	if boss == null:
 		_finish(false)
 		return
+	boss.add_to_group("boss")
 	region.layout.add_child(boss)
 	lair.register_boss(boss)
 	lair.start(loader.player)
