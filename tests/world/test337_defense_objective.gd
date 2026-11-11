@@ -23,8 +23,16 @@ func _run() -> void:
 		loader.activation.update_now()
 		for i in 5: await physics_frame
 		_check(d.is_active() and host.doors.all(func(door): return door.is_locked()), 'physical location starts and locks: '+String(id))
-		d.set_physics_process(false) # deterministic wave timing, not disabled gameplay coverage
-		d.spawn_next_wave()
+		if id == &'dungeon_e':
+			# Keep real production physics/timing: embedded or unreachable
+			# spawns must fail this core contract, not pass via script kills.
+			for i in int(d.first_wave_delay * 60.0) + 10: await physics_frame
+			_check(d.waves_spawned() == 1, 'first wave starts on its production timer')
+			for point in d.wave_spawn_points:
+				for offset in [Vector2.ZERO, Vector2(32,0), Vector2(-32,0), Vector2(0,32), Vector2(0,-32)]:
+					_check(region.terrain.is_walkable_at(region.layout.to_global(point + offset)), 'authored wave marker plus spread/actor footprint is clear')
+		else:
+			d.spawn_next_wave()
 		var wave := d._owned_enemies.duplicate()
 		var attackers := 0
 		for enemy in wave:
@@ -32,6 +40,22 @@ func _run() -> void:
 		_check(wave.size() == d.wave_size(1) and attackers > 0 and attackers < wave.size(), 'wave composition and mixed targets')
 		_check(wave.all(func(enemy): return enemy.terrain == region.terrain and enemy.get_node_or_null(enemy.player_path) == loader.player), 'shared physical terrain and explicit player wiring')
 		_check(id != &'dungeon_maze' or wave.all(func(enemy): return enemy.nav == d.wave_nav and d.wave_nav != null), 'maze keeps existing FlowNav')
+		if id == &'dungeon_e':
+			var attacker: Enemy
+			for enemy in wave:
+				if enemy.objective_target == d.defense_core: attacker = enemy; break
+			_check(attacker != null, 'a real wave core attacker exists')
+			if attacker != null:
+				loader.player.global_position = d.defense_core.global_position + Vector2(0,2000)
+				for enemy in wave:
+					if enemy != attacker: enemy.process_mode = Node.PROCESS_MODE_DISABLED
+				var hp_before := d.defense_core.hp
+				for i in 600: await physics_frame
+				_check(d.defense_core.hp < hp_before, 'live physics core attacker reaches and damages the core')
+				for enemy in wave: enemy.process_mode = Node.PROCESS_MODE_INHERIT
+				loader.player.global_position = region.arrival
+		d.set_physics_process(false) # remaining wave bookkeeping is deterministic
+
 		for e in wave: e.apply_damage(999999)
 		await process_frame
 		_check(not loader.is_cleared(id), 'first wave does not clear full defense')
