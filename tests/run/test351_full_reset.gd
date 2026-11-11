@@ -108,6 +108,9 @@ func _process(delta: float) -> bool:
 			p.apply_damage(100000)
 			_check(manager.restart_delay == 1.5 and manager._restarting, "existing 1.5-second death restart retained")
 			_check(get_nodes_in_group(&"player_death_presentation").size() == 1, "actual unrevived death creates one presentation")
+			var presentation := get_nodes_in_group(&"player_death_presentation")[0] as PlayerDeathPresentation
+			_check(presentation._audio.playing and not presentation._audio.stream.loop, "real death starts one nonlooping audio cue")
+			_check(absf(presentation._audio.stream.get_length() - 1.5) < 0.02, "cue fits existing 1.5-second screen window")
 			p.died.emit()
 			_check(get_nodes_in_group(&"player_death_presentation").size() == 1, "duplicate death does not repeat presentation")
 			_check((p.get_node("SpellCaster") as SpellCaster).process_mode == Node.PROCESS_MODE_DISABLED, "dead casting stays disabled")

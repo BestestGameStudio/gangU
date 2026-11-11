@@ -55,3 +55,15 @@ Shipped OGG SHA-256:
 Headless tests verify stream wiring and playback state, not perceived loudness
 or by-ear in-game sound. The samples were approved before integration; the
 in-game mix has not been auditioned by ear here.
+
+
+# Player death (#591)
+
+Approved v7: one human scream at 0.00s and one single-contact church bell
+at 0.45s, with natural fade ending inside the existing 1.50s death screen.
+No gameplay timer change, pitch randomization or looping. Master peak -6dBFS.
+Sources (CC0): Dorian Clair https://bigsoundbank.com/cry-of-pain-s2361.html
+and Joseph Sardin https://bigsoundbank.com/1-church-bell-s0830.html .
+Bell pitched down 14 semitones in the approved master. Encoded from the
+approved 44.1kHz 16-bit stereo WAV with Vorbis q6, no added processing.
+The presentation owns playback and stops/frees it on expiry or scene exit.
