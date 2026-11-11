@@ -507,6 +507,7 @@ func _on_body_entered(body: Node2D) -> void:
 		var s := body as Summon
 		if is_instance_valid(s.player) and s.player is Player and is_instance_valid(source) and (source is Player or (source is Summon and source.player == s.player)):
 			return
+	FireballAudio.impact(self, spell) # #584: after friendly/source/re-hit exclusions.
 	if body.has_method(&"apply_damage"):
 		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, body.get(&"damage_modifiers") as DamageModifiers, _attacker_rng)
 		# #214: bodies with a source gate (destroyable containers) receive the
@@ -689,6 +690,7 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 		elif e.has("blocker"):
 			# #407/#433: stop at the cover edge (tree canopy, wall face), not past it.
 			global_position = from + motion * float(e.t)
+			FireballAudio.impact(self, spell) # #584: real solid-cover collision.
 			blocked.emit()
 			queue_free()
 		elif e.interact:
@@ -696,9 +698,11 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 			# PIERCING always keeps flying, as for blocks.
 			var rule := _terrain.interact_cell(e.cell, spell.tags)
 			if rule != null and rule.consumes_projectile and not spell.tags.has(SpellTags.PIERCING):
+				FireballAudio.impact(self, spell)
 				queue_free()
 		elif _terrain.destroy_cell(e.cell):
 			if not spell.tags.has(SpellTags.PIERCING):
+				FireballAudio.impact(self, spell)
 				queue_free()
 		if is_queued_for_deletion():
 			return
