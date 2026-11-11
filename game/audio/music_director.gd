@@ -20,13 +20,9 @@ extends Node
 ## dungeon entry; while a boss theme plays it yields (stream_paused) and
 ## fades back in when the theme ends.
 ##
-## Overworld piano (#487, supersedes the #477 nature ambience): one quiet
-## original piano piece, no ambience bed. It was mounted in overworld.tscn;
-## the director now starts it when the overworld scene becomes the current
-## area and stops it on leaving. The track is already quiet by design (peak
-## -15.1 dBFS, RMS about -37 dBFS) and ends in a 4 s fade to silence, so the
-## loop restarts with a natural pause; the level is kept as approved (0 dB,
-## no gain trim and no loudness match to the other tracks).
+## Overworld remix (#597): the approved piano and percussion mix. The
+## original #487 piano asset stays available for another use. Playback
+## keeps the approved quiet gain (0 dB) and the soft ending/pause.
 
 const BOSS_TRACKS: Array[AudioStream] = [
 	preload("res://assets/audio/music/boss1.ogg"),
@@ -43,7 +39,7 @@ const DUNGEON_TRACK: AudioStream = preload("res://assets/audio/music/dungeon_bat
 const DUNGEON_VOLUME_DB := -13.0
 const DUNGEON_FADE_IN_SEC := 1.5
 
-const OVERWORLD_TRACK: AudioStream = preload("res://assets/audio/music/overworld_soft_piano_loop.ogg")
+const OVERWORLD_TRACK: AudioStream = preload("res://assets/audio/music/overworld_piano_night_run_remix.ogg")
 ## The scene whose mount plays the piano (the #477 home was overworld.tscn,
 ## so this is a scene path, not an area-name check).
 const OVERWORLD_SCENE := "res://game/world/overworld.tscn"

@@ -76,3 +76,11 @@ Levels (`ffmpeg -af volumedetect`): mean -14.9 dB, peak -0.1 dB. At runtime
 near the boss themes' effective level (about -21.5 dB mean, then their -6 dB).
 Looping is set in code (`MusicDirector.start_dungeon`), not in the import. The lossless
 WAV master is not committed.
+
+## #597 overworld piano and Night Run remix
+
+Candidate percussion source: **"Loop - Night Run.mp3" by McChaffe**, Freesound sound330411, published2015-12-07.
+- Source: https://freesound.org/people/McChaffe/sounds/330411/
+- License: Creative Commons Attribution3.0 Unported, https://creativecommons.org/licenses/by/3.0/ . Remixing and redistribution are permitted with attribution, a license link and a description of changes. No endorsement is implied.
+- Preview source: the page's public HQ MP3 preview, https://cdn.freesound.org/previews/330/330411_4263416-hq.mp3 . This is not the login-required original download.
+- Processing: use the first32s percussion phrase repeated twice, time-stretch120BPM to108BPM (atempo0.9) to match measured piano onset spacing, high-pass70Hz/low-pass7.5kHz, net -8dB percussion gain; enter at8.889s with4.444s fade-in, fade out72.222-77.778s. Existing piano gain and pitch unchanged. Output81.778s; MP3preview192kbps. Measured MP3preview mean -36.4dBFS, peak -14.9dBFS; integrated Ogg mean -36.1dBFS, peak -14.9dBFS (codec rounding, no normalization). Mitra approved the listening preview on2026-11-11 and asked to use it as the overworld theme while preserving the older piano for another use. `overworld_piano_night_run_remix.ogg` is Ogg Vorbis q5 encoded from that same mix master, with no further gain or mix changes. MusicDirector selects this new asset at0dB. The old `overworld_soft_piano_loop.ogg` and its import metadata remain unchanged. Looping remains set in code.
