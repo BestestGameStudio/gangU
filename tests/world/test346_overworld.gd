@@ -1,231 +1,98 @@
 extends SceneTree
-## #346 harness: the overworld between the hub and the dungeon entrances.
-##   (A) hub: keeps its services (shop, spell directory, bestiary) and holds
-##       ONE travel gate to the overworld - no dungeon gates any more.
-##   (B) overworld scene: every dungeon entrance (A, B, generated, C) plus a
-##       travel gate back to the hub; ground covers them, a road per gate,
-##       decor kept off roads and gates.
-##   (C) PRODUCTION flow: hub -> overworld spawns leashed guards around every
-##       uncleared entrance; they hold their posts while the player is at the
-##       arrival point.
-##   (D) guard behavior: engages in range or when hit, gives up past the
-##       leash and walks home.
-##   (E) clearing DungeonA removes its entrance guards on the next overworld
-##       visit (the others stay); the overworld -> hub gate works.
-##   (F) a death restart forgets cleared dungeons (per-run state).
-
+## Core folded-world contract: physical entries, one instance per run,
+## parked hub isolation, explicit Player wiring and bounded activation.
+## The performance sample is repeatable diagnostic output, not a claim
+## about browser FPS on a developer laptop. Structural tick-budget guards
+## are stable across CI machines; browser frame times are PR evidence.
 var failures := 0
-
+var checks := 0
 func _check(ok: bool, label: String) -> void:
-	if not ok:
-		failures += 1
-	print("[346] ", label, " -> ", "PASS" if ok else "FAIL")
-
-func _frames(n: int) -> void:
-	for i in n:
-		await physics_frame
-
-func _enter(main: Node, gate_name: String) -> void:
-	var gate: Gate = main.area_loader.current_area.get_node(gate_name)
-	gate._on_body_entered(main.get_node("Player"))
-	await _frames(3)
-
-## Entrance enemies (gate guards + #373 patrols). #373 migrants belong to
-## no entrance and are covered by test373_overworld_roles.
-## #478: the overworld's day bird hunts the idle player on its own clock
-## and counts as an area enemy. These flow legs assert #414 entrance
-## guards/patrols only, so the bird and its driver are removed on entry.
-func _remove_bird(main: Node) -> void:
-	var mgr: OverworldBird = main.area_loader.current_area.get_node_or_null("OverworldBird") as OverworldBird
-	if mgr == null:
-		return
-	if mgr.bird != null and is_instance_valid(mgr.bird):
-		mgr.bird.free()
-	mgr.free()
-
-func _guards(main: Node) -> Array[Enemy]:
-	var out: Array[Enemy] = []
-	for n in main.area_loader.current_area.get_children():
-		if n is Enemy and not ((n as Enemy)._behavior is EnemyBehaviorMigrate):
-			out.append(n)
-	return out
-
-## #373: only the stationary gate-guard role holds a post.
-func _is_post_guard(e: Enemy) -> bool:
-	return e._behavior != null and e._behavior.get_script() == EnemyBehaviorGuard
-
-func _near(enemies: Array[Enemy], at: Vector2, r: float) -> int:
-	var n := 0
-	for e in enemies:
-		if e.global_position.distance_to(at) <= r:
-			n += 1
-	return n
-
+	checks += 1
+	if not ok: failures += 1
+	print('[world] ', label, ' -> ', 'PASS' if ok else 'FAIL')
 func _initialize() -> void:
-	_scene_legs()
-	await _flow_legs()
-	print("[346] DONE failures=", failures)
-	if failures == 0:
-		print("RESULT: ALL PASS")
-	quit(1 if failures > 0 else 0)
-
-func _scene_legs() -> void:
-	# (A) hub
-	var hub: Node = load("res://game/world/hub.tscn").instantiate()
-	var gates: Array[Gate] = []
-	for c in hub.get_children():
-		if c is Gate:
-			gates.append(c)
-	_check(gates.size() == 1, "(A) hub holds exactly one gate (got %d)" % gates.size())
-	var travel := hub.get_node_or_null("GateOverworld") as Gate
-	_check(travel != null and travel.gate_type == Gate.GateType.TRAVEL, "(A) hub GateOverworld is a TRAVEL gate")
-	_check(travel != null and travel.target_path == "res://game/world/overworld.tscn" and travel.target_scene() != null, "(A) GateOverworld leads to the overworld")
-	for svc in ["ShopVendor", "SpellDirectory", "BestiaryStation"]:
-		_check(hub.get_node_or_null(svc) != null, "(A) hub keeps its %s" % svc)
-	for old in ["GateNormal", "GateRed", "GateGenerated", "GateBoss"]:
-		_check(hub.get_node_or_null(old) == null, "(A) %s moved out of the hub" % old)
-	hub.free()
-
-	# (B) overworld
-	var ow: Node2D = load("res://game/world/overworld.tscn").instantiate()
-	var expect := {
-		"GateNormal": "res://game/world/dungeon_a.tscn",
-		"GateRed": "res://game/world/dungeon_b.tscn",
-		"GateGenerated": "res://game/world/dungeon_generated.tscn",
-		"GateBoss": "res://game/world/dungeon_c.tscn",
-		"GateBeast": "res://game/world/dungeon_d.tscn",
-	}
-	for gname: String in expect:
-		var g := ow.get_node_or_null(gname) as Gate
-		_check(g != null and g.target_dungeon != null and g.target_dungeon.resource_path == expect[gname], "(B) overworld %s leads to %s" % [gname, expect[gname]])
-	var back := ow.get_node_or_null("GateHub") as Gate
-	_check(back != null and back.gate_type == Gate.GateType.TRAVEL and back.target_path == "res://game/world/hub.tscn", "(B) overworld GateHub is a TRAVEL gate back to the hub")
-	_check(ow.get_node_or_null("PlayerSpawn") is Marker2D, "(B) overworld has a PlayerSpawn")
-	_check(ow.get_node_or_null("SpawnData") == null, "(B) no area-wide SpawnData: enemies are per-entrance")
-	var ground := ow.get_node("Ground") as OverworldGround
-	ground.build_from(ow)
-	var spawn: Vector2 = (ow.get_node("PlayerSpawn") as Node2D).position
-	_check(ground.covers(spawn), "(B) ground covers the arrival point")
-	_check(ground.roads.size() == 8, "(B) one road per gate (got %d)" % ground.roads.size()) # #337: + GateDefense, #367: + GateMaze
-	var far := 0.0
-	for c in ow.get_children():
-		if c is Gate:
-			var at: Vector2 = (c as Node2D).position
-			_check(ground.covers(at), "(B) ground covers %s %s" % [c.name, at])
-			far = maxf(far, at.distance_to(spawn))
-	_check(far > 1000.0, "(B) explorable: farthest entrance is %.0f px from the arrival point (> 1000)" % far)
-	var decor_ok := true
-	for d in ground.decor:
-		if ground.road_distance(d["at"]) <= OverworldGround.ROAD_CLEAR:
-			decor_ok = false
-	_check(ground.decor.size() > 40 and decor_ok, "(B) %d decor pieces, none on a road" % ground.decor.size())
-	var holder := ow.get_node_or_null("EntranceGuards")
-	var ids := {}
-	if holder:
-		for g in holder.get_children():
-			if g is EntranceGuards:
-				ids[(g as EntranceGuards).dungeon_id] = (g as EntranceGuards).entries.size()
-	_check(ids.has(&"dungeon_a") and ids.has(&"dungeon_b") and ids.has(&"dungeon_c") and ids.has(&""), "(B) guard sets for A, B, C and the generated entrance (%s)" % [ids])
-	ow.free()
-
-func _flow_legs() -> void:
-	Bestiary.save_path = "user://test346_bestiary.cfg" # keep the player's real record untouched
-	var main: Node = (load("res://game/core/main.tscn") as PackedScene).instantiate()
+	_run.call_deferred()
+func _frames(n: int) -> void:
+	for i in n: await physics_frame
+func _run() -> void:
+	Bestiary.save_path = 'user://world_contract_bestiary.cfg'
+	var main: Node = load('res://game/core/main.tscn').instantiate()
 	root.add_child(main)
 	current_scene = main
 	await _frames(3)
-	var p: Player = main.get_node("Player")
-	_check(main.area_loader.current_area.name == "Hub", "(C) boots into the hub")
-	await _enter(main, "GateOverworld")
-	var ow: Node = main.area_loader.current_area
-	_remove_bird(main) # #478: guard/patrol legs only
-	_check(ow.name == "Overworld", "(C) hub GateOverworld -> Overworld (got %s)" % ow.name)
-	_check(p.global_position == (ow.get_node("PlayerSpawn") as Node2D).global_position, "(C) player placed at the overworld PlayerSpawn")
-	var guards := _guards(main)
-	_check(guards.size() == 29, "(C) 29 entrance enemies around the 5 uncleared entrances (#414: 5 guards + 14 patrols, #490: + 2 Fishy per camp, got %d)" % guards.size())
-	_check(guards.all(func(e: Enemy) -> bool: return e._behavior is EnemyBehaviorGuard or (e._behavior is EnemyBehaviorFishy and e._behavior._notice_radius() == 420.0 and e._behavior._leash_radius() == 800.0)), "(C) every guard runs a leashed guard behavior (#464: Fishy runs its post/notice variant)")
-	_check(guards.filter(func(e: Enemy) -> bool: return (e._behavior is EnemyBehaviorFishy and e._behavior._notice_radius() == 420.0 and e._behavior._leash_radius() == 800.0)).size() == 10, "(C) #490: 10 Fishy at the entrances (2 per camp)")
-	_check(_near(guards, ow.get_node("GateNormal").global_position, 160.0) == 4, "(C) 4 enemies posted at the DungeonA entrance (gate guard, 2 moustache patrols, #414 slime patrol)")
-	_check(_near(guards, ow.get_node("GateBoss").global_position, 180.0) == 5, "(C) 5 guards posted at the boss entrance (#464: 4 + Fishy)")
-	_check(_near(guards, ow.get_node("GateBeast").global_position, 180.0) == 4, "(C) 4 guards posted at the Beast entrance (#326)")
-	var posts := {}
-	for e in guards:
-		posts[e] = e.global_position
-	await _frames(60)
-	var still := true
-	for e in guards:
-		if _is_post_guard(e) and e.global_position.distance_to(posts[e]) > 2.0:
-			still = false
-	_check(still, "(C) gate guards hold their posts while the player stands at the arrival point")
-	_check(p.hp == p.max_hp, "(C) no damage taken at the arrival point (hp %d)" % p.hp)
-
-	# (D) guard behavior
-	var g0: Enemy = null
-	for e in guards:
-		if _is_post_guard(e) and e.global_position.distance_to(ow.get_node("GateRed").global_position) < 160.0:
-			g0 = e
-			break
-	p.global_position = g0.global_position + Vector2(0, -150) # north: the gate is south
-	await _frames(30)
-	_check((g0._behavior as EnemyBehaviorGuard).engaged, "(D) a guard engages a player inside its aggro radius")
-	_check(g0.global_position.distance_to(posts[g0]) > 10.0, "(D) the engaged guard leaves its post to chase")
-	p.global_position = posts[g0] + Vector2(0, 900)
-	await _frames(6)
-	_check(not (g0._behavior as EnemyBehaviorGuard).engaged, "(D) the guard gives up past its leash")
-	await _frames(240)
-	_check(g0.global_position.distance_to(posts[g0]) <= EnemyBehaviorGuard.HOME_EPSILON + 1.0, "(D) and walks back to its post (%.1f px off)" % g0.global_position.distance_to(posts[g0]))
-	var g1: Enemy = null
-	for e in guards:
-		if _is_post_guard(e) and e.global_position.distance_to(ow.get_node("GateBoss").global_position) < 180.0:
-			g1 = e
-			break
-	# 350 px: outside AGGRO_RADIUS, inside LEASH_RADIUS (a ranged snipe).
-	p.global_position = posts[g1] + Vector2(0, 350)
+	var loader: AreaLoader = main.area_loader
+	var p: Player = main.get_node('Player')
+	var player_id := p.get_instance_id()
+	var hub: Node = loader.current_area
+	var gate := hub.get_node('GateOverworld') as Gate
+	_check(gate.gate_type == Gate.GateType.TRAVEL, 'hub retains TRAVEL passage')
+	gate._on_body_entered(p)
 	await _frames(3)
-	_check(not (g1._behavior as EnemyBehaviorGuard).engaged, "(D) a guard ignores a player outside its aggro radius")
-	g1.apply_damage(1)
+	var ow := loader.current_area
+	_check(ow.name == &'Overworld' and loader.regions.size() == FastTravelRoutes.DUNGEONS.size()+1, 'catalog physical regions and generated content mounted')
+	var map := ow.get_node('Terrain') as TerrainMap
+	for region in loader.regions:
+		_check(region.layout != null and region.layout.get_node_or_null('ExitPortal') == null, 'region has layout, no exit portal: '+String(region.encounter_id))
+		_check(map.is_walkable_at(region.entry), 'physical doorway is passable: '+String(region.encounter_id))
+		for other in loader.regions:
+			if other != region:
+				_check(not region.bounds.intersects(other.bounds), 'region geometry does not overlap')
+		p.global_position = region.entry
+		loader.activation.update_now()
+		_check(region.active, 'nearby region wakes: '+String(region.encounter_id))
+	var enemy: Enemy
+	for n in get_nodes_in_group('enemies'):
+		if n is Enemy and ow.is_ancestor_of(n):
+			enemy = n
+			break
+	_check(enemy != null and enemy.get_node_or_null(enemy.player_path) == p and enemy.terrain == map, 'spawn explicit player path and shared physical terrain')
+	var marker := Node2D.new()
+	marker.name = 'RetainedRunMarker'
+	ow.add_child(marker)
+	p.hp = 77
+	loader._load_hub()
 	await _frames(2)
-	_check((g1._behavior as EnemyBehaviorGuard).engaged, "(D) a guard hit from beyond aggro range fights back")
-	p.hp = p.max_hp
-
-	# (E) clear DungeonA, its entrance guards are gone next visit
-	p.global_position = (ow.get_node("PlayerSpawn") as Node2D).global_position
-	await _enter(main, "GateNormal")
-	_check(main.area_loader.current_area.name == "DungeonA", "(E) overworld GateNormal -> DungeonA")
-	# #392: DungeonA slimes split, so keep killing until no enemy is left.
-	for _round in 8:
-		var alive := get_nodes_in_group("enemies").filter(func(n): return is_instance_valid(n) and not n.is_queued_for_deletion())
-		if alive.is_empty():
-			break
-		for e in alive:
-			e.apply_damage(999) # synthetic kills
-		await _frames(3)
-	_check(main.area_loader.cleared_dungeons.has(&"dungeon_a"), "(E) clearing DungeonA records it as cleared")
-	var portal: ExitPortal = main.area_loader.current_area.get_node("ExitPortal")
-	portal._on_body_entered(p)
-	await _frames(3)
-	# #378: the exit portal now lands at DungeonA's overworld entrance.
-	_check(main.area_loader.current_area.name == "Overworld", "(E) the exit portal returns to the overworld")
-	ow = main.area_loader.current_area
-	_remove_bird(main) # #478
-	guards = _guards(main)
-	_check(guards.size() == 23, "(E) 23 entrance enemies after clearing DungeonA (#414, #490: its 4 + 2 Fishy gone, got %d)" % guards.size())
-	_check(_near(guards, ow.get_node("GateNormal").global_position, 200.0) == 0, "(E) the cleared DungeonA entrance has no guards")
-	_check(_near(guards, ow.get_node("GateRed").global_position, 160.0) == 3, "(E) the uncleared DungeonB entrance keeps its 3 enemies (#414: guard + 2 patrols)")
-	await _enter(main, "GateHub")
-	_check(main.area_loader.current_area.name == "Hub", "(E) overworld GateHub -> Hub")
-	_check(get_nodes_in_group("enemies").size() == 0, "(E) leaving the overworld frees its guards")
-
-	# (F) death restart forgets cleared dungeons
-	p.apply_damage(9999)
-	for i in 600:
+	_check(is_instance_valid(ow) and not (ow as Node2D).visible, 'hub parks existing overworld')
+	var collisions_off := true
+	for n in ow.find_children('*','CollisionObject2D',true,false):
+		if n.collision_layer != 0 or n.collision_mask != 0: collisions_off = false
+	_check(collisions_off, 'parked overworld has no collisions in hub')
+	loader.enter_overworld()
+	await _frames(2)
+	_check(loader.current_area == ow and ow.get_node_or_null('RetainedRunMarker') == marker, 'hub trip retains exact region instances')
+	_check(p.get_instance_id() == player_id and p.hp == 77, 'hub trip preserves player and HP')
+	p.global_position = ow.get_node('PlayerSpawn').global_position
+	loader.activation.update_now()
+	var active_count := 0
+	var eligible := 0
+	var ticking := 0
+	for r in loader.regions:
+		if r.active: active_count += 1
+	for n in get_nodes_in_group('enemies'):
+		if ow.is_ancestor_of(n):
+			eligible += 1
+			if n.can_process(): ticking += 1
+	_check(active_count < loader.regions.size(), 'activation bounds awake regions near hub')
+	_check(eligible > 0 and ticking * 2 <= eligible, 'most distant actors do not tick')
+	print('[world-perf] nodes=', get_node_count(), ' enemies=', eligible, ' ticking=', ticking, ' regions_awake=', active_count)
+	var samples: Array[int] = []
+	var last := Time.get_ticks_usec()
+	for i in 120:
 		await process_frame
-		if current_scene != main and current_scene != null:
-			break
-	var fresh: Node = current_scene
-	_check(fresh != main and fresh.area_loader.current_area.name == "Hub", "(F) death restarts the run in the hub")
-	_check(fresh.area_loader.cleared_dungeons.is_empty(), "(F) cleared dungeons reset with the run")
-	fresh.area_loader.enter_overworld()
-	await _frames(3)
-	_remove_bird(fresh) # #478
-	_check(_guards(fresh).size() == 29, "(F) every entrance is guarded again (#414 mix + #490 Fishy, got %d)" % _guards(fresh).size())
+		var now := Time.get_ticks_usec()
+		samples.append(now-last)
+		last = now
+	samples.sort()
+	print('[world-perf] frame-cadence-us p50=', samples[60], ' p90=', samples[108], ' headless, not browser FPS')
+	# Full reload is the death-reset path. No cached region may survive it.
+	var old_id := ow.get_instance_id()
+	reload_current_scene()
+	await _frames(5)
+	var fresh := current_scene
+	_check(fresh != main and fresh.area_loader.current_area.name == &'Hub', 'full reset returns fresh run to hub')
+	_check(not is_instance_id_valid(old_id) and fresh.area_loader.regions.is_empty(), 'full reset destroys cached world and region state')
+	fresh.queue_free()
+	await process_frame
+	print('[world] ', checks, ' checks, failures=', failures)
+	print('RESULT: ALL PASS' if failures == 0 else 'RESULT: FAIL')
+	quit(1 if failures else 0)
