@@ -107,13 +107,20 @@ func _idle_step(enemy: Enemy, player, delta: float) -> void:
 			_travel_timer = enemy.global_position.distance_to(_spot) / maxf(spd, 1.0) * 2.0 + 1.0
 
 func _chase_step(enemy: Enemy, player, delta: float) -> void:
+	# #633 (Daniel): _resolve_target returns null for a live player hidden
+	# from sight (#461 tall grass); recover it from the enemy so losing
+	# sight runs the last-seen search below instead of dropping to IDLE.
+	if (player == null or not is_instance_valid(player)) and enemy._player != null and is_instance_valid(enemy._player):
+		player = enemy._player
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		_state = State.IDLE
+		_last_seen = Vector2.INF
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
 		return
 	if not _player_nearby(enemy, player, chase_exit_range):
 		_state = State.IDLE
+		_last_seen = Vector2.INF
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
 		return
@@ -157,6 +164,7 @@ func _search_step(enemy: Enemy, player, delta: float) -> void:
 	if _search_timer <= 0.0:
 		_state = State.IDLE
 		_spot = Vector2.INF
+		_last_seen = Vector2.INF
 		return
 	# Short wander near the last seen position.
 	if _spot == Vector2.INF:
