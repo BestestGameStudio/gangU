@@ -201,3 +201,12 @@ var travel: TravelService = null
 var _shop: Shop = null
 ## (#347) The run's map record; AreaLoader is told about every area swap.
 var _world_map: WorldMap = null
+
+## #637 (Daniel, 2026-11-12: "debug mode toggleable by F2 which shows enemy
+## state in a text above their head"): F2 toggles the enemy state debug
+## labels. Desktop key only, OFF by default - nothing in the project or an
+## export can enable it at startup; it exists for in-session debugging.
+func _unhandled_key_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and key.keycode == KEY_F2:
+		Enemy.debug_states = not Enemy.debug_states
