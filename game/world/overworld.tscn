@@ -1,4 +1,4 @@
-[gd_scene load_steps=63 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=67 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
