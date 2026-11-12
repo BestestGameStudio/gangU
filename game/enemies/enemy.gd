@@ -49,6 +49,11 @@ var contact_range: float
 			contact_range = value.contact_range
 
 var hp: int
+## #637 (Daniel, 2026-11-12: "debug mode toggleable by F2 which shows enemy
+## state in a text above their head"): global toggle for the enemy state
+## debug labels. Off by default; Main flips it on F2 (desktop key only).
+static var debug_states := false
+var _debug_label: Label = null
 var damage_modifiers := DamageModifiers.new()
 var damage_rng := RandomNumberGenerator.new()
 var terrain: TerrainMap = null
@@ -180,6 +185,29 @@ func _process(delta: float) -> void:
 		_flash_t -= delta
 		if _flash_t <= 0.0:
 			modulate = Color.WHITE
+	if debug_states:
+		_update_debug_label()
+	elif _debug_label != null:
+		_debug_label.visible = false
+
+## #637: small state label above the head, only while the F2 debug overlay
+## is on and the behavior exposes a state (see EnemyBehavior.debug_state_text).
+func _update_debug_label() -> void:
+	var text := _behavior.debug_state_text() if _behavior != null else ""
+	if text == "":
+		if _debug_label != null:
+			_debug_label.visible = false
+		return
+	if _debug_label == null:
+		_debug_label = Label.new()
+		_debug_label.add_theme_font_size_override("font_size", 10)
+		_debug_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		_debug_label.add_theme_constant_override("outline_size", 4)
+		_debug_label.position = Vector2(-40.0, -56.0)
+		_debug_label.z_index = 50
+		add_child(_debug_label)
+	_debug_label.text = text
+	_debug_label.visible = true
 
 ## #209: target resolution. DEFAULT UNCHANGED: the resolved player. A
 ## standard chase/contact enemy may instead pick the nearest live summon

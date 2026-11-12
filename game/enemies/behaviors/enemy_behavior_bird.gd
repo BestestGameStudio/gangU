@@ -68,7 +68,7 @@ const ALT_MAX := 480.0
 ## Leave (nightfall): climb to this before despawn.
 const ALT_GONE := 760.0
 
-enum { CIRCLE, TELEGRAPH, DIVE, STUNNED, TAKEOFF, LEAVE }
+enum State { CIRCLE, TELEGRAPH, DIVE, STUNNED, TAKEOFF, LEAVE }
 
 var state: int = CIRCLE
 var _timer: float = 0.0
