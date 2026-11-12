@@ -36,6 +36,8 @@ enum State { IDLE, CHASE }
 ## Arrival tolerance at a picked spot.
 @export var arrive_epsilon: float = 10.0
 
+var _travel_timer: float = 0.0
+
 var _state: int = State.IDLE
 var _pick_timer: float = 0.0
 var _spot := Vector2.INF
@@ -67,6 +69,16 @@ func _idle_step(enemy: Enemy, player, delta: float) -> void:
 			enemy.velocity = Vector2.ZERO
 			enemy.move_and_slide()
 			return
+		# Bounded travel: a spot can be walkable yet unreachable (water,
+		# disconnected walls), and TerrainPath yields zero movement when no
+		# route exists. Give up and repick instead of stalling until CHASE.
+		_travel_timer -= delta
+		if _travel_timer <= 0.0:
+			_spot = Vector2.INF
+			_pick_timer = _rng.randf_range(idle_pick_min, idle_pick_max)
+			enemy.velocity = Vector2.ZERO
+			enemy.move_and_slide()
+			return
 		var spd: float = enemy.speed * stroll_fraction
 		var desired: Vector2 = to_spot.normalized() * spd
 		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, desired, _spot, spd, delta, enemy.can_swim)
@@ -80,6 +92,10 @@ func _idle_step(enemy: Enemy, player, delta: float) -> void:
 		var spot: Variant = _pick_cover_spot(enemy)
 		if spot != null:
 			_spot = spot
+			# Travel budget: straight-line time at stroll speed, doubled,
+			# plus a second of slack for detours.
+			var spd: float = enemy.speed * stroll_fraction
+			_travel_timer = enemy.global_position.distance_to(_spot) / maxf(spd, 1.0) * 2.0 + 1.0
 
 func _chase_step(enemy: Enemy, player, delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
