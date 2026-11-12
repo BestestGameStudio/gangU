@@ -26,4 +26,8 @@ func debug_state_text() -> String:
 		var keys: Array = (named as Dictionary).keys()
 		if s >= 0 and s < keys.size():
 			return String(keys[s])
+	# Anonymous enums (bird, wolf) expose the state name through the
+	# state_name() harness hook instead.
+	if has_method("state_name"):
+		return call("state_name")
 	return ""

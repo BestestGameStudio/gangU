@@ -45,7 +45,7 @@ const RETREAT_ARRIVE := 48.0
 ## Recover drift after a pounce (vulnerable beat).
 const RECOVER_TIME := 0.9
 
-enum State { PROWL, HUNT, TELEGRAPH, POUNCE, RECOVER, RETREAT }
+enum { PROWL, HUNT, TELEGRAPH, POUNCE, RECOVER, RETREAT }
 
 var state: int = PROWL
 var _cooldown: float = 0.0
