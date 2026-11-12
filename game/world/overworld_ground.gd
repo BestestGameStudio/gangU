@@ -32,6 +32,12 @@ const CENTER := Vector2(576, -150)
 ## decor/patch grids below derive their extents from RADII so the terrain
 ## mix covers the whole field at the same density.
 const RADII := Vector2(2400, 2100)
+## #635 (Daniel, WhatsApp 2026-11-12: "extend the map south with grass,
+## trees ..."): the field outline reaches this far past the old south edge.
+## Only the south half of the outline grows; the north edge and every
+## existing decor/meadow/tall-grass slot stay put because the placement
+## grids anchor at CENTER and only their southern gy range extends.
+const SOUTH_EXTEND := 1200.0
 const OUTLINE_POINTS := 64
 const OUTER_FADE := 160.0
 
@@ -223,7 +229,10 @@ func _blob(d: float) -> PackedVector2Array:
 	for i in OUTLINE_POINTS:
 		var a := TAU * i / OUTLINE_POINTS
 		var wob := 1.0 + (_hash01(i, 0, 11) - 0.5) * 0.12
-		pts.append(CENTER + Vector2(cos(a) * (RADII.x * wob + d), sin(a) * (RADII.y * wob + d)))
+		# #635: asymmetric south radius - the outline stays a superset of
+		# the old ellipse, so no existing slot check changes result.
+		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
+		pts.append(CENTER + Vector2(cos(a) * (RADII.x * wob + d), sin(a) * (ry * wob + d)))
 	return pts
 
 ## A gently bent road: two hashed sideways offsets along the way.
@@ -246,8 +255,9 @@ func _build_patches() -> void:
 	var n := 0
 	var gx_n := int(ceil(RADII.x / 190.0)) + 1
 	var gy_n := int(ceil(RADII.y / 190.0)) + 1
+	var gy_s := int(ceil((RADII.y + SOUTH_EXTEND) / 190.0)) + 1
 	for gx in range(-gx_n, gx_n + 1):
-		for gy in range(-gy_n, gy_n + 1):
+		for gy in range(-gy_n, gy_s + 1):
 			var at := CENTER + Vector2(gx * 190.0, gy * 190.0) + Vector2(_hash01(gx, gy, 21) - 0.5, _hash01(gx, gy, 22) - 0.5) * 120.0
 			if not covers(at):
 				continue
@@ -306,8 +316,9 @@ func _build_tall_grass() -> void:
 	var inner := _blob(-120.0)
 	var gx_n := int(ceil(RADII.x / GRASS_STEP)) + 1
 	var gy_n := int(ceil(RADII.y / GRASS_STEP)) + 1
+	var gy_s := int(ceil((RADII.y + SOUTH_EXTEND) / GRASS_STEP)) + 1
 	for gx in range(-gx_n, gx_n + 1):
-		for gy in range(-gy_n, gy_n + 1):
+		for gy in range(-gy_n, gy_s + 1):
 			if _hash01(gx, gy, 41) > GRASS_CHANCE:
 				continue
 			var at := CENTER + Vector2(gx, gy) * GRASS_STEP + Vector2(_hash01(gx, gy, 42) - 0.5, _hash01(gx, gy, 43) - 0.5) * GRASS_STEP * 0.6
@@ -426,8 +437,9 @@ func _build_decor() -> void:
 	# +1: the outline's radial wobble bulges up to 6% past RADII.
 	var gx_n := int(ceil(RADII.x / DECOR_STEP)) + 1
 	var gy_n := int(ceil(RADII.y / DECOR_STEP)) + 1
+	var gy_s := int(ceil((RADII.y + SOUTH_EXTEND) / DECOR_STEP)) + 1
 	for gx in range(-gx_n, gx_n + 1):
-		for gy in range(-gy_n, gy_n + 1):
+		for gy in range(-gy_n, gy_s + 1):
 			var at := CENTER + Vector2(gx, gy) * DECOR_STEP + Vector2(_hash01(gx, gy, 31) - 0.5, _hash01(gx, gy, 32) - 0.5) * DECOR_STEP * 0.8
 			if _hash01(gx, gy, 33) > 0.42:
 				continue
@@ -457,7 +469,7 @@ func _draw_grass_tiles() -> void:
 	var cell := float(TerrainArt.CELL)
 	var grown := _blob(cell * 0.5)
 	var lo := Vector2i(((CENTER - RADII * 1.1) / cell).floor())
-	var hi := Vector2i(((CENTER + RADII * 1.1) / cell).ceil())
+	var hi := Vector2i(((CENTER + (RADII + Vector2(0, SOUTH_EXTEND)) * 1.1) / cell).ceil())
 	lo = lo.max(Vector2i((_view.position / cell).floor()))
 	hi = hi.min(Vector2i((_view.end / cell).ceil()))
 	var grass := TerrainArt.row(&"grass_summer") * TerrainArt.CELL
