@@ -43,6 +43,8 @@ enum State { IDLE, CHASE, SEARCH }
 var _travel_timer: float = 0.0
 var _last_seen := Vector2.INF
 var _search_timer: float = 0.0
+var _chasing_last_seen: bool = false
+var _lost_travel_timer: float = 0.0
 
 var _state: int = State.IDLE
 var _pick_timer: float = 0.0
@@ -115,12 +117,14 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		_state = State.IDLE
 		_last_seen = Vector2.INF
+		_chasing_last_seen = false
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
 		return
 	if not _player_nearby(enemy, player, chase_exit_range):
 		_state = State.IDLE
 		_last_seen = Vector2.INF
+		_chasing_last_seen = false
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
 		return
@@ -130,18 +134,37 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 		if _last_seen == Vector2.INF:
 			_last_seen = player.global_position
 		if enemy.global_position.distance_to(_last_seen) <= arrive_epsilon:
+			_chasing_last_seen = false
 			_state = State.SEARCH
 			_search_timer = search_duration
 			_spot = Vector2.INF
 			enemy.velocity = Vector2.ZERO
 			enemy.move_and_slide()
 			return
+		# Bounded travel (#634 review): the last seen point can be
+		# unreachable (water for a non-swimmer, a blocked or disconnected
+		# route) and TerrainPath yields zero movement when no route exists.
+		# Give up and search where we stopped instead of stalling forever.
 		var spd0: float = enemy.chase_speed()
+		if not _chasing_last_seen:
+			_chasing_last_seen = true
+			_lost_travel_timer = enemy.global_position.distance_to(_last_seen) / maxf(spd0, 1.0) * 2.0 + 1.0
+		_lost_travel_timer -= delta
+		if _lost_travel_timer <= 0.0:
+			_chasing_last_seen = false
+			_state = State.SEARCH
+			_search_timer = search_duration
+			_spot = Vector2.INF
+			_last_seen = enemy.global_position
+			enemy.velocity = Vector2.ZERO
+			enemy.move_and_slide()
+			return
 		var to_seen: Vector2 = _last_seen - enemy.global_position
 		var want: Vector2 = to_seen.normalized() * spd0
 		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, _last_seen, spd0, delta, enemy.can_swim)
 		enemy.move_and_slide()
 		return
+	_chasing_last_seen = false
 	_last_seen = player.global_position
 	var to_player: Vector2 = player.global_position - enemy.global_position
 	var spd: float = enemy.chase_speed()
