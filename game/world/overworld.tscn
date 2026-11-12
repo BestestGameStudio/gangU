@@ -93,6 +93,27 @@ enemy = ExtResource("631_red")
 reward_table = ExtResource("346_table")
 definition = ExtResource("631_red_def")
 
+[sub_resource type="Resource" id="Resource_spawn_redsouth_0"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(420, 2420)
+enemy = ExtResource("631_red")
+reward_table = ExtResource("346_table")
+definition = ExtResource("631_red_def")
+
+[sub_resource type="Resource" id="Resource_spawn_redsouth_1"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(760, 2560)
+enemy = ExtResource("631_red")
+reward_table = ExtResource("346_table")
+definition = ExtResource("631_red_def")
+
+[sub_resource type="Resource" id="Resource_spawn_redsouth_2"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(300, 2720)
+enemy = ExtResource("631_red")
+reward_table = ExtResource("346_table")
+definition = ExtResource("631_red_def")
+
 [sub_resource type="Resource" id="Resource_spawn_guardsred_0"]
 script = ExtResource("518_spawn_entry")
 position = Vector2(2222, -60)
@@ -431,4 +452,13 @@ player_path = NodePath("../../Player")
 [node name="Roamers" type="Node" parent="."]
 script = ExtResource("373_spawn_data")
 entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_roamers_0"), SubResource("Resource_spawn_roamers_1"), SubResource("Resource_spawn_roamers_2"), SubResource("Resource_spawn_roamers_3")])
+player_path = NodePath("../../Player")
+
+# #635: red mustache test group in the extended south field. A plain
+# AreaSpawnData child (Roamers idiom) so the mounter spawns it always-on
+# under the overworld itself - the EntranceGuards path would mount it into
+# the generated region's layout, which sleeps this far south.
+[node name="RedMustachesSouth" type="Node" parent="."]
+script = ExtResource("373_spawn_data")
+entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_redsouth_0"), SubResource("Resource_spawn_redsouth_1"), SubResource("Resource_spawn_redsouth_2")])
 player_path = NodePath("../../Player")

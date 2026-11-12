@@ -267,10 +267,15 @@ func _mount_entrance_guards(area: Node) -> void:
 			player_path = guards.player_path
 	# #373: overworld-wide migrants belong to no entrance, so a cleared
 	# dungeon (#348) never suppresses them; they mount through the same spawner.
-	var roamers := area.get_node_or_null("Roamers") as AreaSpawnData
-	if roamers != null:
-		entries.append_array(roamers.entries)
-		player_path = roamers.player_path
+	# #635: same always-on treatment for every direct AreaSpawnData child of
+	# the area (Roamers, the south red-mustache test group); the generic
+	# #100 "SpawnData" carrier keeps its own mounter.
+	for child in area.get_children():
+		var data := child as AreaSpawnData
+		if data == null or data is EntranceGuards or child.name == "SpawnData":
+			continue
+		entries.append_array(data.entries)
+		player_path = data.player_path
 	if entries.is_empty():
 		return
 	var spawner := EnemySpawner.new()
