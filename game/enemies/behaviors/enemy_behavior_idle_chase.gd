@@ -18,7 +18,7 @@ extends EnemyBehavior
 ## Player-only targeting: this class does not join the
 ## EnemyBehaviorChaseContact summon-taunt seam (#209).
 
-enum State { IDLE, CHASE }
+enum State { IDLE, CHASE, SEARCH }
 
 ## Seconds between cover-spot picks while idling (random in the range).
 @export var idle_pick_min: float = 3.0
@@ -35,8 +35,16 @@ enum State { IDLE, CHASE }
 @export var pick_attempts: int = 12
 ## Arrival tolerance at a picked spot.
 @export var arrive_epsilon: float = 10.0
+## Seconds spent searching around the last seen position.
+@export var search_duration: float = 4.0
+## Wander radius around the last seen position while searching.
+@export var search_radius: float = 200.0
 
 var _travel_timer: float = 0.0
+var _last_seen := Vector2.INF
+var _search_timer: float = 0.0
+var _chasing_last_seen: bool = false
+var _lost_travel_timer: float = 0.0
 
 var _state: int = State.IDLE
 var _pick_timer: float = 0.0
@@ -55,11 +63,14 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			_idle_step(enemy, player, delta)
 		State.CHASE:
 			_chase_step(enemy, player, delta)
+		State.SEARCH:
+			_search_step(enemy, player, delta)
 
 func _idle_step(enemy: Enemy, player, delta: float) -> void:
 	if _player_nearby(enemy, player, chase_enter_range):
 		_state = State.CHASE
 		_spot = Vector2.INF
+		_last_seen = player.global_position
 		return
 	if _spot != Vector2.INF:
 		# Stroll to the picked spot; rest on arrival until the next pick.
@@ -98,16 +109,63 @@ func _idle_step(enemy: Enemy, player, delta: float) -> void:
 			_travel_timer = enemy.global_position.distance_to(_spot) / maxf(spd, 1.0) * 2.0 + 1.0
 
 func _chase_step(enemy: Enemy, player, delta: float) -> void:
+	# #633 (Daniel): _resolve_target returns null for a live player hidden
+	# from sight (#461 tall grass); recover it from the enemy so losing
+	# sight runs the last-seen search below instead of dropping to IDLE.
+	if (player == null or not is_instance_valid(player)) and enemy._player != null and is_instance_valid(enemy._player):
+		player = enemy._player
 	if player == null or not is_instance_valid(player) or player.hp <= 0:
 		_state = State.IDLE
+		_last_seen = Vector2.INF
+		_chasing_last_seen = false
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
 		return
 	if not _player_nearby(enemy, player, chase_exit_range):
 		_state = State.IDLE
+		_last_seen = Vector2.INF
+		_chasing_last_seen = false
 		enemy.velocity = Vector2.ZERO
 		enemy.move_and_slide()
 		return
+	if not enemy.sees(player):
+		# #633 (Daniel): sight lost (tall grass) - chase to the last seen
+		# position, then search there instead of giving up instantly.
+		if _last_seen == Vector2.INF:
+			_last_seen = player.global_position
+		if enemy.global_position.distance_to(_last_seen) <= arrive_epsilon:
+			_chasing_last_seen = false
+			_state = State.SEARCH
+			_search_timer = search_duration
+			_spot = Vector2.INF
+			enemy.velocity = Vector2.ZERO
+			enemy.move_and_slide()
+			return
+		# Bounded travel (#634 review): the last seen point can be
+		# unreachable (water for a non-swimmer, a blocked or disconnected
+		# route) and TerrainPath yields zero movement when no route exists.
+		# Give up and search where we stopped instead of stalling forever.
+		var spd0: float = enemy.chase_speed()
+		if not _chasing_last_seen:
+			_chasing_last_seen = true
+			_lost_travel_timer = enemy.global_position.distance_to(_last_seen) / maxf(spd0, 1.0) * 2.0 + 1.0
+		_lost_travel_timer -= delta
+		if _lost_travel_timer <= 0.0:
+			_chasing_last_seen = false
+			_state = State.SEARCH
+			_search_timer = search_duration
+			_spot = Vector2.INF
+			_last_seen = enemy.global_position
+			enemy.velocity = Vector2.ZERO
+			enemy.move_and_slide()
+			return
+		var to_seen: Vector2 = _last_seen - enemy.global_position
+		var want: Vector2 = to_seen.normalized() * spd0
+		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, _last_seen, spd0, delta, enemy.can_swim)
+		enemy.move_and_slide()
+		return
+	_chasing_last_seen = false
+	_last_seen = player.global_position
 	var to_player: Vector2 = player.global_position - enemy.global_position
 	var spd: float = enemy.chase_speed()
 	var chase: Vector2 = to_player.normalized() * spd if to_player.length() > 8.0 else Vector2.ZERO
@@ -117,6 +175,54 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		_contact_timer = enemy.contact_cooldown
 		enemy.play_action(&"attack") # #177: visual swing only
+
+func _search_step(enemy: Enemy, player, delta: float) -> void:
+	# Regaining sight resumes the chase.
+	if _player_nearby(enemy, player, chase_enter_range) and enemy.sees(player):
+		_state = State.CHASE
+		_spot = Vector2.INF
+		_last_seen = player.global_position
+		return
+	_search_timer -= delta
+	if _search_timer <= 0.0:
+		_state = State.IDLE
+		_spot = Vector2.INF
+		_last_seen = Vector2.INF
+		return
+	# Short wander near the last seen position.
+	if _spot == Vector2.INF:
+		var p: Variant = _pick_walkable_near(enemy, _last_seen, search_radius)
+		if p == null:
+			enemy.velocity = Vector2.ZERO
+			enemy.move_and_slide()
+			return
+		_spot = p
+		var spd0: float = enemy.speed * stroll_fraction
+		_travel_timer = enemy.global_position.distance_to(_spot) / maxf(spd0, 1.0) * 2.0 + 1.0
+	var to_spot: Vector2 = _spot - enemy.global_position
+	if to_spot.length() <= arrive_epsilon:
+		_spot = Vector2.INF
+		enemy.velocity = Vector2.ZERO
+		enemy.move_and_slide()
+		return
+	_travel_timer -= delta
+	if _travel_timer <= 0.0:
+		_spot = Vector2.INF
+		enemy.velocity = Vector2.ZERO
+		enemy.move_and_slide()
+		return
+	var spd: float = enemy.speed * stroll_fraction
+	var desired: Vector2 = to_spot.normalized() * spd
+	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, desired, _spot, spd, delta, enemy.can_swim)
+	enemy.move_and_slide()
+
+func _pick_walkable_near(enemy: Enemy, center: Vector2, radius: float) -> Variant:
+	for i in pick_attempts:
+		var offset := Vector2(_rng.randf_range(-radius, radius), _rng.randf_range(-radius, radius))
+		var p: Vector2 = center + offset
+		if _walkable(enemy.terrain, p, enemy.can_swim):
+			return p
+	return null
 
 func _player_nearby(enemy: Enemy, player, range: float) -> bool:
 	return player != null and is_instance_valid(player) and player.hp > 0 \
