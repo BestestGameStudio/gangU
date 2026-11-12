@@ -56,7 +56,7 @@ var _lost_travel_timer: float = 0.0
 var _alert_target := Vector2.INF
 var _alert_travel_timer: float = 0.0
 var _alert_handled: int = 0
-static var _alert_seq: int = 0
+var _listening_enemy: Enemy = null
 
 var _state: int = State.IDLE
 var _pick_timer: float = 0.0
@@ -69,6 +69,7 @@ func _init() -> void:
 	_rng.randomize()
 
 func physics_step(enemy: Enemy, player, delta: float) -> void:
+	_ensure_listening(enemy)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	match _state:
 		State.IDLE:
@@ -250,29 +251,41 @@ func _alert_step(enemy: Enemy, player, delta: float) -> void:
 	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, _alert_target, spd, delta, enemy.can_swim)
 	enemy.move_and_slide()
 
-## Entering CHASE on a spotting alerts nearby red mustaches (#639). Each
-## broadcast carries a sequence so a receiver acts once per alert; a red
-## already chasing ignores it.
+## Entering CHASE on a spotting alerts nearby red mustaches (#639) through
+## the AlertBus autoload. Each broadcast carries a sequence so a receiver
+## acts once per alert; a red already chasing ignores it.
 func _enter_chase(enemy: Enemy, player) -> void:
 	_state = State.CHASE
 	_spot = Vector2.INF
 	_alert_target = Vector2.INF
 	_last_seen = player.global_position
-	_alert_seq += 1
-	_broadcast_alert(enemy, _last_seen, _alert_seq)
+	AlertBus.ensure(enemy.get_tree()).broadcast(enemy, _last_seen)
 
-func _broadcast_alert(enemy: Enemy, spot: Vector2, seq: int) -> void:
-	for other in enemy.get_tree().get_nodes_in_group("enemies"):
-		if other == enemy or not other is Enemy:
-			continue
-		if (other as Enemy).global_position.distance_to(enemy.global_position) > alert_radius:
-			continue
-		var b: EnemyBehavior = (other as Enemy)._behavior
-		if b is EnemyBehaviorIdleChase:
-			(b as EnemyBehaviorIdleChase)._receive_alert(other, spot, seq)
+## #639: subscribe this behavior to the alert bus for its enemy. Connects
+## lazily on the first physics step (the duplicated behavior has no tree of
+## its own); disconnects when the enemy leaves the tree so the bus never
+## holds a dead enemy or a stale behavior.
+func _ensure_listening(enemy: Enemy) -> void:
+	if _listening_enemy != null:
+		return
+	_listening_enemy = enemy
+	var bus := AlertBus.ensure(enemy.get_tree())
+	bus.red_alert.connect(_on_red_alert.bind(enemy))
+	enemy.tree_exiting.connect(_stop_listening)
 
-func _receive_alert(enemy: Enemy, spot: Vector2, seq: int) -> void:
-	if seq <= _alert_handled or _state == State.CHASE:
+func _stop_listening() -> void:
+	if _listening_enemy == null:
+		return
+	var bus := AlertBus.ensure(_listening_enemy.get_tree())
+	var cb := _on_red_alert.bind(_listening_enemy)
+	if bus.red_alert.is_connected(cb):
+		bus.red_alert.disconnect(cb)
+	_listening_enemy = null
+
+func _on_red_alert(spot: Vector2, seq: int, source: Enemy, enemy: Enemy) -> void:
+	if source == enemy or seq <= _alert_handled or _state == State.CHASE:
+		return
+	if enemy.global_position.distance_to(source.global_position) > alert_radius:
 		return
 	_alert_handled = seq
 	var bearing: Vector2 = enemy.global_position - spot
