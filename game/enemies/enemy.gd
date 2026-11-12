@@ -180,7 +180,10 @@ func clear_action() -> void:
 		sprite.clear_action()
 
 func _process(delta: float) -> void:
-	visible = seen_by_player() # #461 tall grass
+	# #461 tall grass concealment; #640 (Daniel, 2026-11-12: "In f2 debug mode
+	# make enemies visible in tall grass"): the F2 overlay draws concealed
+	# enemies fully visible (visual only - AI sight rules unchanged).
+	visible = debug_states or seen_by_player() # #461 tall grass
 	if _flash_t > 0.0:
 		_flash_t -= delta
 		if _flash_t <= 0.0:
