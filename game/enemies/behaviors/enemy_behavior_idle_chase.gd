@@ -18,7 +18,7 @@ extends EnemyBehavior
 ## Player-only targeting: this class does not join the
 ## EnemyBehaviorChaseContact summon-taunt seam (#209).
 
-enum State { IDLE, CHASE, SEARCH }
+enum State { IDLE, CHASE, SEARCH, ALERT }
 
 ## Seconds between cover-spot picks while idling (random in the range).
 @export var idle_pick_min: float = 3.0
@@ -39,12 +39,24 @@ enum State { IDLE, CHASE, SEARCH }
 @export var search_duration: float = 4.0
 ## Wander radius around the last seen position while searching.
 @export var search_radius: float = 200.0
+## #639 (Daniel, WhatsApp 2026-11-12: "in search mode if one red MM finds
+## the player alert nearby MMs"): a red that enters CHASE on spotting the
+## player alerts other red mustaches within this range (about a screen).
+@export var alert_radius: float = 1280.0
+## An alerted red heads for a point this far from the alert spot, on its own
+## bearing from it, so converging reds arrive from different sides (flank).
+@export var flank_ring: float = 160.0
 
 var _travel_timer: float = 0.0
 var _last_seen := Vector2.INF
 var _search_timer: float = 0.0
 var _chasing_last_seen: bool = false
 var _lost_travel_timer: float = 0.0
+
+var _alert_target := Vector2.INF
+var _alert_travel_timer: float = 0.0
+var _alert_handled: int = 0
+var _listening_enemy: Enemy = null
 
 var _state: int = State.IDLE
 var _pick_timer: float = 0.0
@@ -57,6 +69,7 @@ func _init() -> void:
 	_rng.randomize()
 
 func physics_step(enemy: Enemy, player, delta: float) -> void:
+	_ensure_listening(enemy)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	match _state:
 		State.IDLE:
@@ -65,12 +78,12 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			_chase_step(enemy, player, delta)
 		State.SEARCH:
 			_search_step(enemy, player, delta)
+		State.ALERT:
+			_alert_step(enemy, player, delta)
 
 func _idle_step(enemy: Enemy, player, delta: float) -> void:
 	if _player_nearby(enemy, player, chase_enter_range):
-		_state = State.CHASE
-		_spot = Vector2.INF
-		_last_seen = player.global_position
+		_enter_chase(enemy, player)
 		return
 	if _spot != Vector2.INF:
 		# Stroll to the picked spot; rest on arrival until the next pick.
@@ -177,11 +190,9 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 		enemy.play_action(&"attack") # #177: visual swing only
 
 func _search_step(enemy: Enemy, player, delta: float) -> void:
-	# Regaining sight resumes the chase.
+	# Regaining sight resumes the chase (and re-alerts nearby reds).
 	if _player_nearby(enemy, player, chase_enter_range) and enemy.sees(player):
-		_state = State.CHASE
-		_spot = Vector2.INF
-		_last_seen = player.global_position
+		_enter_chase(enemy, player)
 		return
 	_search_timer -= delta
 	if _search_timer <= 0.0:
@@ -215,6 +226,79 @@ func _search_step(enemy: Enemy, player, delta: float) -> void:
 	var desired: Vector2 = to_spot.normalized() * spd
 	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, desired, _spot, spd, delta, enemy.can_swim)
 	enemy.move_and_slide()
+
+## #639: an alerted red converges on the alert spot's flank ring at chase
+## speed. Seeing the player switches straight to CHASE (and re-alerts);
+## arriving or running out of travel budget drops to a local SEARCH, whose
+## own expiry falls back to IDLE as usual.
+func _alert_step(enemy: Enemy, player, delta: float) -> void:
+	if _player_nearby(enemy, player, chase_enter_range) and enemy.sees(player):
+		_enter_chase(enemy, player)
+		return
+	_alert_travel_timer -= delta
+	var arrived := enemy.global_position.distance_to(_alert_target) <= arrive_epsilon
+	if arrived or _alert_travel_timer <= 0.0:
+		_last_seen = _alert_target if arrived else enemy.global_position
+		_alert_target = Vector2.INF
+		_state = State.SEARCH
+		_search_timer = search_duration
+		_spot = Vector2.INF
+		enemy.velocity = Vector2.ZERO
+		enemy.move_and_slide()
+		return
+	var spd: float = enemy.chase_speed()
+	var want: Vector2 = (_alert_target - enemy.global_position).normalized() * spd
+	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, _alert_target, spd, delta, enemy.can_swim)
+	enemy.move_and_slide()
+
+## Entering CHASE on a spotting alerts nearby red mustaches (#639) through
+## the AlertBus autoload. Each broadcast carries a sequence so a receiver
+## acts once per alert; a red already chasing ignores it.
+func _enter_chase(enemy: Enemy, player) -> void:
+	_state = State.CHASE
+	_spot = Vector2.INF
+	_alert_target = Vector2.INF
+	_last_seen = player.global_position
+	AlertBus.ensure(enemy.get_tree()).broadcast(enemy, _last_seen)
+
+## #639: subscribe this behavior to the alert bus for its enemy. Connects
+## lazily on the first physics step (the duplicated behavior has no tree of
+## its own); disconnects when the enemy leaves the tree so the bus never
+## holds a dead enemy or a stale behavior.
+func _ensure_listening(enemy: Enemy) -> void:
+	if _listening_enemy != null:
+		return
+	_listening_enemy = enemy
+	var bus := AlertBus.ensure(enemy.get_tree())
+	bus.red_alert.connect(_on_red_alert.bind(enemy))
+	enemy.tree_exiting.connect(_stop_listening)
+
+func _stop_listening() -> void:
+	if _listening_enemy == null:
+		return
+	var bus := AlertBus.ensure(_listening_enemy.get_tree())
+	var cb := _on_red_alert.bind(_listening_enemy)
+	if bus.red_alert.is_connected(cb):
+		bus.red_alert.disconnect(cb)
+	_listening_enemy = null
+
+func _on_red_alert(spot: Vector2, seq: int, source: Enemy, enemy: Enemy) -> void:
+	if source == enemy or seq <= _alert_handled or _state == State.CHASE:
+		return
+	if enemy.global_position.distance_to(source.global_position) > alert_radius:
+		return
+	_alert_handled = seq
+	var bearing: Vector2 = enemy.global_position - spot
+	if bearing.length() < 1.0:
+		bearing = Vector2.from_angle(_rng.randf() * TAU)
+	_alert_target = spot + bearing.normalized() * flank_ring
+	var spd: float = enemy.chase_speed()
+	# Travel budget (#634 pattern): straight-line time at chase speed,
+	# doubled, plus slack - an unreachable flank point degrades to a local
+	# search instead of stalling forever.
+	_alert_travel_timer = enemy.global_position.distance_to(_alert_target) / maxf(spd, 1.0) * 2.0 + 1.0
+	_state = State.ALERT
+	_spot = Vector2.INF
 
 func _pick_walkable_near(enemy: Enemy, center: Vector2, radius: float) -> Variant:
 	for i in pick_attempts:
