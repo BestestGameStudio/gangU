@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyBehaviorIdleChase" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/enemies/behaviors/enemy_behavior_idle_chase.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+idle_pick_min = 3.0
+idle_pick_max = 6.0
+wander_radius = 600.0
+chase_enter_range = 1280.0
+chase_exit_range = 1536.0
+stroll_fraction = 0.45
