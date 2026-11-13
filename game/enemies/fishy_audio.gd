@@ -4,7 +4,7 @@ extends Node2D
 const WHISTLE := preload("res://assets/audio/sfx/fishy_whistle_b2.ogg")
 const CAST := preload("res://assets/audio/sfx/fishy_cast_v3.ogg")
 const REEL := preload("res://assets/audio/sfx/fishy_reeling_v1.ogg")
-const IDLE_RADIUS := 300.0
+const IDLE_RADIUS := 900.0
 const REEL_GAP := 0.25
 var _whistle: AudioStreamPlayer2D
 var _cast: AudioStreamPlayer2D
@@ -21,7 +21,7 @@ func _ready() -> void:
 	_whistle = _voice(WHISTLE)
 	_cast = _voice(CAST)
 	_reel = _voice(REEL)
-	_idle_left = randf_range(30.0, 50.0)
+	_idle_left = 0.0
 
 func _voice(cue: AudioStream) -> AudioStreamPlayer2D:
 	var voice := AudioStreamPlayer2D.new()
@@ -69,7 +69,7 @@ func step(delta: float) -> void:
 	if not idle:
 		if _whistle.playing:
 			_whistle.stop()
-			_idle_left = randf_range(30.0, 50.0)
+			_idle_left = 0.0
 	else:
 		_idle_left -= delta
 		if _idle_left <= 0.0 and not _any_whistle():
