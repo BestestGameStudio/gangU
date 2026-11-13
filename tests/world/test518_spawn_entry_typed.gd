@@ -7,7 +7,6 @@ const ENEMY := "res://game/enemies/enemy.tscn"
 const SLIME := "res://game/enemies/enemy_slime.tscn"
 const FISHY := "res://game/enemies/enemy_fishy.tscn"
 const TABLE := "res://data/rewards/demo_table.tres"
-const PATROL_DEF := "res://data/enemies/overworld_patrol.tres"
 
 var failures := 0
 
@@ -57,10 +56,7 @@ func _carrier_leg() -> void:
 	db.free()
 
 	var ow := (load("res://game/world/overworld.tscn") as PackedScene).instantiate()
-	var g := (ow.get_node("EntranceGuards/GuardsNormal") as AreaSpawnData).entries
-	var route := PackedVector2Array([Vector2(-1070, -60), Vector2(-1000, -80), Vector2(-1010, -160), Vector2(-1110, -150)])
 	_check(_all_typed(ow), "every overworld carrier holds SpawnEntry resources")
-	_check(g.size() == 6 and _matches(g[1], Vector2(-1070, -60), ENEMY, TABLE, PATROL_DEF, route), "GuardsNormal [1] patrol keeps its definition and 4-point route")
 	ow.free()
 
 func _reject_leg() -> void:

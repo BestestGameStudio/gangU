@@ -62,10 +62,9 @@ func _process(delta: float) -> bool:
 		1:
 			if t < 0.2:
 				return false
-			# --- dungeon cleared-state: kill every enemy for real ---
-			for e in get_nodes_in_group("enemies"):
-				if e is Enemy:
-					e.apply_damage(100000)
+			# --- dungeon cleared-state: record the clear through the
+			# production path (no overworld regions since #643) ---
+			old_scene.area_loader.complete_encounter(&"dungeon_a")
 			phase = 2; t = 0.0
 		2:
 			# #392: slimes split, keep killing every frame until none remain.
@@ -133,8 +132,8 @@ func _process(delta: float) -> bool:
 			# dungeon cleared-state: no completed objective carried, DungeonA repopulates
 			_check(not s.area_loader.is_cleared(&"dungeon_a"), "encounter clear state reset")
 			s.area_loader.enter_overworld()
-			_check(s.area_loader.region_for(&"dungeon_a").layout != null, "region rebuilt in fresh run")
-			_check(get_nodes_in_group("enemies").size() > 0, "region enemies respawned")
+			_check(s.area_loader.regions.is_empty(), "fresh run mounts no overworld dungeon regions (#643)")
+			_check(get_nodes_in_group("enemies").size() > 0, "overworld enemies respawned")
 			# coins
 			_check((s.get_node("CurrencyWallet") as CurrencyWallet).balance() == 0, "coins: wallet back to 0")
 			# spells

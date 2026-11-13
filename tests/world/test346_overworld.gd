@@ -29,17 +29,8 @@ func _run() -> void:
 	gate._on_body_entered(p)
 	await _frames(3)
 	var ow := loader.current_area
-	_check(ow.name == &'Overworld' and loader.regions.size() == FastTravelRoutes.DUNGEONS.size()+1, 'catalog physical regions and generated content mounted')
+	_check(ow.name == &'Overworld' and loader.regions.is_empty(), 'overworld mounts no dungeon regions (#643)')
 	var map := ow.get_node('Terrain') as TerrainMap
-	for region in loader.regions:
-		_check(region.layout != null and region.layout.get_node_or_null('ExitPortal') == null, 'region has layout, no exit portal: '+String(region.encounter_id))
-		_check(map.is_walkable_at(region.entry), 'physical doorway is passable: '+String(region.encounter_id))
-		for other in loader.regions:
-			if other != region:
-				_check(not region.bounds.intersects(other.bounds), 'region geometry does not overlap')
-		p.global_position = region.entry
-		loader.activation.update_now()
-		_check(region.active, 'nearby region wakes: '+String(region.encounter_id))
 	var enemy: Enemy
 	for n in get_nodes_in_group('enemies'):
 		if n is Enemy and ow.is_ancestor_of(n):
@@ -72,8 +63,8 @@ func _run() -> void:
 		if ow.is_ancestor_of(n):
 			eligible += 1
 			if n.can_process(): ticking += 1
-	_check(active_count < loader.regions.size(), 'activation bounds awake regions near hub')
-	_check(eligible > 0 and ticking * 2 <= eligible, 'most distant actors do not tick')
+	_check(active_count == 0, 'no regions to wake (#643)')
+	_check(eligible > 0 and ticking == eligible, 'always-on overworld cast ticks (#643)')
 	print('[world-perf] nodes=', get_node_count(), ' enemies=', eligible, ' ticking=', ticking, ' regions_awake=', active_count)
 	var samples: Array[int] = []
 	var last := Time.get_ticks_usec()
@@ -84,29 +75,6 @@ func _run() -> void:
 		last = now
 	samples.sort()
 	print('[world-perf] frame-cadence-us p50=', samples[60], ' p90=', samples[108], ' headless, not browser FPS')
-	# Clearing keeps the cached world: live approach guards must be removed
-	# explicitly, while an uncleared neighboring approach stays guarded.
-	var a := loader.region_for(&'dungeon_a')
-	var b := loader.region_for(&'dungeon_b')
-	var a_spawner := a.layout.get_node('ApproachSpawner') as EnemySpawner
-	var b_spawner := b.layout.get_node('ApproachSpawner') as EnemySpawner
-	var a_guards: Array = []
-	var b_guards: Array = []
-	for group in a_spawner._alive.values(): a_guards.append_array(group)
-	for group in b_spawner._alive.values(): b_guards.append_array(group)
-	_check(not a_guards.is_empty() and not b_guards.is_empty(), 'both uncleared approaches initially guarded')
-	var host := a.layout.get_node('RegionEncounterHost') as RegionEncounterHost
-	for round in 8:
-		for e in host._alive.duplicate():
-			if is_instance_valid(e): e.apply_damage(999999)
-		await _frames(2)
-	_check(loader.is_cleared(&'dungeon_a'), 'actual A mob clear records victory')
-	loader._load_hub()
-	await _frames(2)
-	loader.enter_overworld()
-	await _frames(2)
-	_check(a_guards.all(func(e): return not is_instance_valid(e)), 'cleared A approach guards absent after cached hub trip')
-	_check(b_guards.all(func(e): return is_instance_valid(e) and e.hp > 0), 'uncleared B approach guard control unchanged')
 	# Full reload is the death-reset path. No cached region may survive it.
 	var old_id := ow.get_instance_id()
 	reload_current_scene()
