@@ -1,6 +1,8 @@
 class_name DesertStatue
 extends Enemy
 
+const BODY_RADIUS := 24.0
+
 var arena: Node2D
 var possessed := false
 var broken := false
@@ -14,7 +16,7 @@ func _ready() -> void:
 	add_to_group(&"enemies")
 	var shape := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = 24.0
+	circle.radius = BODY_RADIUS
 	shape.shape = circle
 	add_child(shape)
 

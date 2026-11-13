@@ -6,6 +6,8 @@ extends Node2D
 enum State { DORMANT, POSSESSED, STUNNED, TRANSFERRING, PHASE_TWO }
 var arena_radius := 0.0
 var statue_radius := 0.0
+var barrier_radius := 0.0
+var player_limit_radius := 0.0
 var activation_radius := 0.0
 var _sized := false
 @export var spear_radius := 5.5
@@ -15,8 +17,12 @@ var _sized := false
 @export var spear_damage := 10
 ## World-space screen widths per second at the unchanged normal zoom.
 @export var spear_screen_speed := 1.15
-@export var volley_interval := 2.4
-@export var volley_delay := 1.5
+@export var volley_interval := 1.0
+@export var volley_delay := 1.0
+@export var lane_delay_max := 0.2
+@export var ray_growth_duration := 0.7
+@export var vision_angle_degrees := 150.0
+@export var vision_range_ring_fraction := 0.6
 @export var stun_duration := 1.0
 @export var transfer_speed := 380.0
 @export var star_damage := 16
@@ -40,12 +46,22 @@ class SpearLane:
 	var start := Vector2.ZERO
 	var end := Vector2.ZERO
 
+	var starts_at := 0.0
+	var fires_at := 0.0
+	var finished := false
+
+class SpearVolley:
+	extends RefCounted
+	var starts_at := 0.0
+	var counted := false
+	var aims_at_player := false
+	var lanes: Array[SpearLane] = []
+
 var volleys_left := 0
-var _volley_clock := 0.0
+var _attack_time := 0.0
+var _next_volley_at := 0.0
+var _pending_volleys: Array[SpearVolley] = []
 var _screen_world_size := Vector2.ZERO
-var _volley_left := 0.0
-var _volley_pending := false
-var _lanes: Array[SpearLane] = []
 var _previous_targets: Dictionary = {}
 var phase_two_damage_multiplier := 1.0
 var phase_two_speed_multiplier := 1.0
@@ -55,7 +71,6 @@ var _hit_stun_used := false
 var _episode_host: DesertStatue
 var _force_hop := false
 var _phase_time := 0.0
-var _barrier: StaticBody2D
 var _ui: CanvasLayer
 var _title: Label
 var _details: Label
@@ -70,6 +85,9 @@ func _ready() -> void:
 	_rng.randomize()
 	hp = boss_max_hp
 	player = get_parent().get_parent().get_node_or_null("Player") as Player
+	var player_shape := player.get_node("CollisionShape2D") as CollisionShape2D
+	var player_radius := (player_shape.shape as CircleShape2D).radius
+	player_limit_radius = barrier_radius-player_radius-2.0
 	z_index = -10
 	for i in 12:
 		var statue := DesertStatue.new()
@@ -87,23 +105,7 @@ func _ready() -> void:
 		statue.z_index = 10
 		add_child(statue)
 		statues.append(statue)
-	_make_barrier()
 	_make_ui()
-
-func _make_barrier() -> void:
-	_barrier = StaticBody2D.new()
-	_barrier.collision_layer = 0
-	_barrier.collision_mask = 0
-	for i in 128:
-		var a := Vector2.from_angle(TAU*i/128) * arena_radius
-		var b := Vector2.from_angle(TAU*(i+1)/128) * arena_radius
-		var shape := CollisionShape2D.new()
-		var segment := SegmentShape2D.new()
-		segment.a = a
-		segment.b = b
-		shape.shape = segment
-		_barrier.add_child(shape)
-	add_child(_barrier)
 
 func _make_ui() -> void:
 	_ui = CanvasLayer.new()
@@ -154,10 +156,8 @@ func _physics_process(delta: float) -> void:
 	_ui.visible = visiting
 	if not visiting:
 		return
-	# Teleport spells also respect the encounter boundary.
-	var offset := player.global_position-global_position
-	if offset.length() > arena_radius-21:
-		player.global_position = global_position + offset.normalized()*(arena_radius-21)
+	# Direct scripted repositioning also remains on the inner side of the ring.
+	player.global_position = constrain_player_position(player.global_position)
 	if state == State.PHASE_TWO:
 		_phase_time += delta
 		for statue in statues:
@@ -174,25 +174,28 @@ func _physics_process(delta: float) -> void:
 			else:
 				state = State.POSSESSED
 	if state != State.PHASE_TWO:
-		_volley_clock = maxf(_volley_clock-delta,0.0)
-		if _volley_pending:
-			_volley_left = maxf(_volley_left-delta,0.0)
-			if _volley_left <= 0.000001:
-				_volley_left = 0.0
-				_fire_volley.call_deferred()
-		elif _volley_clock <= 0.000001:
-			_plan_volley()
+		_advance_volleys(delta)
 	_update_ui()
 	queue_redraw()
 
 func start_encounter() -> void:
 	if state != State.DORMANT:
 		return
-	_barrier.collision_layer = PhysicsLayers.WORLD
+	player.movement_constraint = Callable(self,"constrain_player_position")
 	_possess(statues[_rng.randi_range(0,11)])
 
 func is_active() -> bool:
 	return state != State.DORMANT and is_instance_valid(player) and player.hp > 0
+
+func constrain_player_position(destination: Vector2) -> Vector2:
+	if not is_active() or not is_visible_in_tree():
+		return destination
+	var offset := destination-global_position
+	return global_position+offset.limit_length(player_limit_radius)
+
+func _exit_tree() -> void:
+	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
+		player.movement_constraint = Callable()
 
 func _possess(statue: DesertStatue) -> void:
 	if statue != _episode_host:
@@ -284,81 +287,139 @@ func _cancel_star() -> void:
 		star.queue_free()
 	star = null
 
-func _plan_volley() -> void:
-	_lanes.clear()
+func _advance_volleys(delta: float) -> void:
+	_attack_time += delta
+	while _next_volley_at <= _attack_time+0.000001:
+		_plan_volley(_next_volley_at)
+		_next_volley_at += volley_interval
+	var pending: Array[SpearVolley] = []
+	for volley in _pending_volleys:
+		var unfinished := false
+		for lane in volley.lanes:
+			if lane.finished:
+				continue
+			if lane.shooter.broken:
+				lane.finished = true
+			elif lane.fires_at <= _attack_time+0.000001:
+				lane.finished = true
+				_fire_lane.call_deferred(lane,volley)
+			else:
+				unfinished = true
+		if unfinished:
+			pending.append(volley)
+	_pending_volleys = pending
+
+func statue_sees_point(statue: DesertStatue, point: Vector2) -> bool:
+	if statue.broken:
+		return false
+	var offset := point-statue.global_position
+	if offset.length() > statue_radius*vision_range_ring_fraction:
+		return false
+	if offset.is_zero_approx():
+		return true
+	var inward := (global_position-statue.global_position).normalized()
+	return inward.dot(offset.normalized()) >= cos(deg_to_rad(vision_angle_degrees)*0.5)
+
+func player_is_watched() -> bool:
+	for statue in statues:
+		if statue_sees_point(statue,player.global_position):
+			return true
+	return false
+
+func _plan_volley(starts_at: float) -> void:
+	var volley := SpearVolley.new()
+	volley.starts_at = starts_at
+	volley.aims_at_player = player_is_watched()
+	var player_target := to_local(player.global_position)
 	for shooter in statues:
 		if shooter.broken:
 			continue
-		var choices: Array[DesertStatue] = []
-		for target in statues:
-			if target != shooter and not target.broken:
-				choices.append(target)
-		if choices.size() > 1:
-			choices.erase(_previous_targets.get(shooter))
-		if choices.is_empty():
-			continue
-		# Prefer crossing the interior instead of tracing adjacent ring edges.
-		var across: Array[DesertStatue] = []
-		for target in choices:
-			if shooter.position.normalized().dot(target.position.normalized()) < -0.25:
-				across.append(target)
-		var target: DesertStatue = choices.pick_random() if across.is_empty() else across.pick_random()
-		_previous_targets[shooter] = target
+		var target: DesertStatue
+		var endpoint := player_target
+		if not volley.aims_at_player:
+			var choices: Array[DesertStatue] = []
+			for candidate in statues:
+				if candidate != shooter and not candidate.broken:
+					choices.append(candidate)
+			if choices.size() > 1:
+				choices.erase(_previous_targets.get(shooter))
+			if choices.is_empty():
+				continue
+			# Prefer crossing the interior instead of tracing adjacent ring edges.
+			var across: Array[DesertStatue] = []
+			for candidate in choices:
+				if shooter.position.normalized().dot(candidate.position.normalized()) < -0.25:
+					across.append(candidate)
+			target = choices.pick_random() if across.is_empty() else across.pick_random()
+			_previous_targets[shooter] = target
+			endpoint = target.position+Vector2(0,-20)
 		var lane := SpearLane.new()
 		lane.shooter = shooter
 		lane.target = target
 		lane.start = shooter.position+Vector2(0,-20)
-		lane.end = target.position+Vector2(0,-20)
-		_lanes.append(lane)
-	_volley_clock = volley_interval
-	_volley_left = volley_delay
-	_volley_pending = not _lanes.is_empty()
+		lane.end = endpoint
+		lane.starts_at = starts_at+_rng.randf_range(0,lane_delay_max)
+		lane.fires_at = lane.starts_at+volley_delay
+		volley.lanes.append(lane)
+	if not volley.lanes.is_empty():
+		_pending_volleys.append(volley)
 
-func _fire_volley() -> void:
-	if not _volley_pending or not visiting or state == State.PHASE_TWO:
+func _fire_lane(lane: SpearLane, volley: SpearVolley) -> void:
+	if not visiting or state == State.PHASE_TWO or lane.shooter.broken:
 		return
-	# Every shot is mounted in this one deferred call, on the same physics tick.
-	for lane in _lanes:
-		if lane.shooter.broken:
-			continue
-		var spell := Spell.new()
-		spell.damage = spear_damage
-		spell.projectile_speed = _screen_world_size.x*spear_screen_speed
-		spell.range = lane.start.distance_to(lane.end)
-		spell.radius = spear_radius
-		spell.projectile_color = Color("dc734e")
-		var shot := PROJECTILE.instantiate() as Projectile
-		shot.setup(spell,lane.end-lane.start,lane.shooter)
-		shot.collision_mask = PhysicsLayers.WORLD | PhysicsLayers.PLAYER | PhysicsLayers.SUMMON
-		shot.position = lane.start
-		shot.z_index = 12
-		shot.visual_override = SPEAR_VISUAL.new()
-		add_child(shot)
-	_lanes.clear()
-	_volley_pending = false
-	if state == State.POSSESSED:
-		volleys_left -= 1
-		if volleys_left <= 0:
-			begin_transfer.call_deferred()
+	var spell := Spell.new()
+	spell.damage = spear_damage
+	spell.projectile_speed = _screen_world_size.x*spear_screen_speed
+	spell.range = lane.start.distance_to(lane.end)
+	spell.radius = spear_radius
+	spell.projectile_color = Color("dc734e")
+	var shot := PROJECTILE.instantiate() as Projectile
+	shot.setup(spell,lane.end-lane.start,lane.shooter)
+	shot.collision_mask = PhysicsLayers.WORLD | PhysicsLayers.PLAYER | PhysicsLayers.SUMMON
+	shot.position = lane.start
+	shot.z_index = 12
+	shot.visual_override = SPEAR_VISUAL.new()
+	add_child(shot)
+	# The first surviving spear counts this volley once, including during transit.
+	if not volley.counted:
+		volley.counted = true
+		if state == State.POSSESSED:
+			volleys_left -= 1
+			if volleys_left <= 0:
+				begin_transfer()
+
+func _ray_fraction(lane: SpearLane) -> float:
+	return clampf((_attack_time-lane.starts_at)/ray_growth_duration,0,1)
 
 func _draw_volley() -> void:
-	if not _volley_pending:
-		return
-	var progress := 1.0-_volley_left/volley_delay
-	for lane in _lanes:
-		if lane.shooter.broken:
-			continue
-		draw_line(lane.start,lane.end,Color(0.3,0.04,0.03,0.3),8,true)
-		draw_line(lane.start,lane.end,Color(0.95,0.12,0.12,0.65+progress*0.3),3,true)
-		var direction := (lane.end-lane.start).normalized()
-		var side := direction.orthogonal()
-		var tip := lane.start.lerp(lane.end,0.6)
-		draw_polyline(PackedVector2Array([tip-direction*16+side*7,tip,tip-direction*16-side*7]),Color(1,0.35,0.25,0.9),3,true)
+	# Newer rays draw first, leaving the imminent paths on top.
+	for index in range(_pending_volleys.size()-1,-1,-1):
+		for lane in _pending_volleys[index].lanes:
+			if lane.finished or lane.shooter.broken:
+				continue
+			var fraction := _ray_fraction(lane)
+			if fraction <= 0:
+				continue
+			var tip := lane.start.lerp(lane.end,fraction)
+			draw_line(lane.start,tip,Color(0.3,0.04,0.03,0.2),3.5,true)
+			draw_line(lane.start,tip,Color(0.95,0.12,0.12,0.65+fraction*0.3),1.5,true)
+			if lane.start.distance_to(tip) < 20:
+				continue
+			var direction := (lane.end-lane.start).normalized()
+			var side := direction.orthogonal()
+			draw_polyline(PackedVector2Array([tip-direction*9+side*4.5,tip,tip-direction*9-side*4.5]),Color(1,0.35,0.25,0.9),1.5,true)
+
+func _next_spear_delay() -> float:
+	var remaining := INF
+	for volley in _pending_volleys:
+		for lane in volley.lanes:
+			if not lane.finished and not lane.shooter.broken:
+				remaining = minf(remaining,lane.fires_at-_attack_time)
+	return maxf(remaining,0)
 
 func _enter_phase_two() -> void:
 	state = State.PHASE_TWO
-	_lanes.clear()
-	_volley_pending = false
+	_pending_volleys.clear()
 	_cancel_star()
 	phase_two_damage_multiplier = 1.0 + broken_count*phase_two_damage_per_statue
 	phase_two_speed_multiplier = 1.0 + broken_count*phase_two_speed_per_statue
@@ -375,8 +436,8 @@ func _update_ui() -> void:
 	if state == State.PHASE_TWO:
 		_title.text = "PHASE 2  ·  THE SOVEREIGN AWAKENS"
 		_details.text = "%d absorbed  |  Damage +%d%%  |  Speed +%d%%  |  Recovered %d HP" % [broken_count,roundi((phase_two_damage_multiplier-1)*100),roundi((phase_two_speed_multiplier-1)*100),phase_two_recovered_hp]
-	elif _volley_pending:
-		_details.text = "SPEAR VOLLEY IN %.1fs   |   Dodge the marked paths" % _volley_left
+	elif not _pending_volleys.is_empty():
+		_details.text = "NEXT SPEARS IN %.1fs   |   Dodge the marked paths" % _next_spear_delay()
 	elif state == State.STUNNED:
 		_details.text = "POSSESSION STUNNED  ·  %.1fs   |   Broken statues: %d" % [_stun_left,broken_count]
 	elif state == State.TRANSFERRING:
@@ -394,6 +455,7 @@ func configure_size() -> void:
 	_screen_world_size = get_viewport_rect().size / camera_zoom
 	arena_radius = _screen_world_size.y * arena_diameter_screen_heights * 0.5
 	statue_radius = arena_radius*0.75
+	barrier_radius = statue_radius-DesertStatue.BODY_RADIUS
 	activation_radius = minf(220.0,arena_radius*0.25)
 	_sized = true
 
@@ -431,8 +493,8 @@ func _draw() -> void:
 	_draw_volley()
 	if state != State.DORMANT:
 		var alpha := 0.65+sin(Time.get_ticks_msec()*0.003)*0.15
-		_circle(arena_radius,Color(1,0.79,0.3,alpha),5)
-		_circle(arena_radius-8,Color(1,0.86,0.49,0.2),12)
+		_circle(barrier_radius,Color(1,0.79,0.3,alpha),4)
+		_circle(barrier_radius-4,Color(1,0.86,0.49,0.2),8)
 	if state == State.PHASE_TWO:
 		var pulse := 55+sin(_phase_time*3)*5
 		draw_circle(Vector2.ZERO,pulse,Color(0.9,0.6,0.15,0.2))
