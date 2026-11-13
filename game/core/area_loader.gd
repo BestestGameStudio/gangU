@@ -234,11 +234,12 @@ func _start_location_event(event: OverworldEvent, ctx: OverworldEventContext) ->
 ## (#220 seam), parented to the area so leaving the overworld frees them.
 func _mount_entrance_guards(area: Node) -> void:
 	var holder := area.get_node_or_null("EntranceGuards")
-	if holder == null:
-		return
 	var entries: Array[SpawnEntry] = []
 	var player_path := NodePath("../../Player")
-	for g in holder.get_children():
+	# #643: the EntranceGuards container leaves with the overworld dungeons;
+	# the always-on mounts below (Roamers, the south group) must still run.
+	var guard_groups: Array = holder.get_children() if holder != null else []
+	for g in guard_groups:
 		var guards := g as EntranceGuards
 		if guards == null:
 			continue

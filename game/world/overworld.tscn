@@ -1,97 +1,22 @@
-[gd_scene load_steps=67 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=23 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
 [ext_resource type="Script" path="res://game/spells/effects/terrain_block_visuals.gd" id="437_blockvis"]
 [ext_resource type="Script" path="res://game/core/day_night_tint.gd" id="448_tint"]
-[ext_resource type="Script" path="res://game/world/entrance_guards.gd" id="346_guards"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://game/world/gate.tscn" id="346_gate"]
-[ext_resource type="PackedScene" uid="uid://bgangu7dna" path="res://game/world/dungeon_a.tscn" id="346_dna"]
-[ext_resource type="PackedScene" uid="uid://bgangu7dnb" path="res://game/world/dungeon_b.tscn" id="346_dnb"]
-[ext_resource type="PackedScene" path="res://game/world/dungeon_generated.tscn" id="346_dng"]
-[ext_resource type="PackedScene" path="res://game/world/dungeon_c.tscn" id="346_dnc"]
-[ext_resource type="PackedScene" path="res://game/world/dungeon_d.tscn" id="346_dnd"]
-[ext_resource type="PackedScene" path="res://game/world/dungeon_e.tscn" id="337_dne"]
-[ext_resource type="PackedScene" path="res://game/world/dungeon_maze.tscn" id="367_maze"]
 [ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://game/enemies/enemy.tscn" id="346_enemy"]
 [ext_resource type="Resource" uid="uid://bgangurdemotable" path="res://data/rewards/demo_table.tres" id="346_table"]
-[ext_resource type="Resource" path="res://data/gate_offering.tres" id="350_offer"]
-[ext_resource type="Resource" path="res://data/enemies/overworld_guard.tres" id="346_guard_def"]
 [ext_resource type="PackedScene" path="res://game/enemies/enemy_red_mustache.tscn" id="631_red"]
 [ext_resource type="Resource" path="res://data/enemies/red_mustache.tres" id="631_red_def"]
-[ext_resource type="Resource" path="res://data/enemies/overworld_patrol.tres" id="373_patrol_def"]
-[ext_resource type="PackedScene" path="res://game/enemies/enemy_slime.tscn" id="392_slime"]
 [ext_resource type="Resource" path="res://data/enemies/overworld_migrant.tres" id="373_migrant_def"]
-[ext_resource type="Resource" path="res://data/enemies/slime_patrol.tres" id="414_slime_patrol_def"]
 [ext_resource type="Script" path="res://game/world/area_spawn_data.gd" id="373_spawn_data"]
 [ext_resource type="Script" path="res://game/enemies/spawners/wolf_caves.gd" id="474_caves"]
-[ext_resource type="PackedScene" path="res://game/enemies/enemy_fishy.tscn" id="464_fishy"]
-[ext_resource type="Resource" path="res://data/enemies/overworld_fishy.tres" id="464_fishy_def"]
 [ext_resource type="Script" path="res://game/enemies/spawners/overworld_bird.gd" id="478_bird"]
 
 [ext_resource type="Script" path="res://game/world/abandoned_village.gd" id="484_village"]
 [ext_resource type="Script" uid="uid://kq19zfwepvmzr" path="res://game/world/spawn_entry.gd" id="518_spawn_entry"]
 
-[ext_resource type="Script" path="res://game/world/overworld_region.gd" id="548_region"]
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_0"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-1190, -30)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("346_guard_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_1"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-1070, -60)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-1070, -60, -1000, -80, -1010, -160, -1110, -150)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_2"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-1380, -20)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_3"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-820, 80)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_4"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-1030, 10)
-enemy = ExtResource("392_slime")
-reward_table = ExtResource("346_table")
-definition = ExtResource("414_slime_patrol_def")
-route = PackedVector2Array(-1030, 10, -980, -20, -1000, -90, -1070, -70)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_5"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-1240, 90)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-1240, 90, -1290, 130, -1310, 50, -1260, 40)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_6"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-1150, 60)
-enemy = ExtResource("631_red")
-reward_table = ExtResource("346_table")
-definition = ExtResource("631_red_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsnormal_7"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-990, -10)
-enemy = ExtResource("631_red")
-reward_table = ExtResource("346_table")
-definition = ExtResource("631_red_def")
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_0"]
 script = ExtResource("518_spawn_entry")
@@ -113,178 +38,6 @@ position = Vector2(300, 2720)
 enemy = ExtResource("631_red")
 reward_table = ExtResource("346_table")
 definition = ExtResource("631_red_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsred_0"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(2222, -60)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("346_guard_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsred_1"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(2342, -30)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(2342, -30, 2420, -70, 2400, -160, 2300, -150)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsred_2"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(2270, 50)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(2270, 50, 2360, 70, 2410, 0, 2330, 0)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsred_3"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(2300, -110)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsred_4"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(2530, 120)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsgenerated_0"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-790, 970)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("346_guard_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsgenerated_1"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-610, 960)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-610, 960, -530, 1010, -540, 1110, -620, 1140)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsgenerated_2"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-700, 890)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-700, 890, -810, 870, -840, 790, -690, 780, -590, 850)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsgenerated_3"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-670, 1070)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-670, 1070, -600, 1100, -590, 1030, -660, 1010)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsgenerated_4"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-480, 1050)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsgenerated_5"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-920, 1150)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsbeast_0"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-790, -1100)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("346_guard_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsbeast_1"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-610, -1100)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-610, -1100, -530, -1140, -520, -1220)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsbeast_2"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-800, -1300)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-800, -1300, -880, -1240, -890, -1340, -780, -1380)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsbeast_3"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-600, -1300)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(-600, -1300, -670, -1380, -530, -1380)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsbeast_4"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-920, -1200)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsbeast_5"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(-480, -1200)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsboss_0"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(1760, -1100)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("346_guard_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsboss_1"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(1940, -1100)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(1940, -1100, 2020, -1140, 2030, -1220)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsboss_2"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(1750, -1300)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(1750, -1300, 1670, -1240, 1660, -1340, 1770, -1380)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsboss_3"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(1950, -1300)
-enemy = ExtResource("346_enemy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("373_patrol_def")
-route = PackedVector2Array(1950, -1300, 1880, -1380, 1980, -1330)
-
-[sub_resource type="Resource" id="Resource_spawn_guardsboss_4"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(1850, -1200)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
-
-[sub_resource type="Resource" id="Resource_spawn_guardsboss_5"]
-script = ExtResource("518_spawn_entry")
-position = Vector2(2070, -1200)
-enemy = ExtResource("464_fishy")
-reward_table = ExtResource("346_table")
-definition = ExtResource("464_fishy_def")
 
 [sub_resource type="Resource" id="Resource_spawn_roamers_0"]
 script = ExtResource("518_spawn_entry")
@@ -369,85 +122,6 @@ position = Vector2(576, 640)
 gate_type = 3
 target_path = "res://game/world/hub.tscn"
 label_text = "HUB"
-
-[node name="GateNormal" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"dungeon_a"
-layout_scene = ExtResource("346_dna")
-approach = Vector2(-1100, 50)
-
-[node name="GateRed" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"dungeon_b"
-layout_scene = ExtResource("346_dnb")
-approach = Vector2(2252, 50)
-
-[node name="GateGenerated" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"generated"
-layout_scene = ExtResource("346_dng")
-approach = Vector2(-700, 1050)
-door_direction = Vector2(1, 0)
-
-[node name="GateBoss" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"dungeon_c"
-layout_scene = ExtResource("346_dnc")
-approach = Vector2(1850, -1200)
-
-[node name="GateBeast" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"dungeon_d"
-layout_scene = ExtResource("346_dnd")
-approach = Vector2(-700, -1200)
-
-[node name="GateDefense" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"dungeon_e"
-layout_scene = ExtResource("337_dne")
-approach = Vector2(1850, 1050)
-
-[node name="GateMaze" type="Node2D" parent="."]
-script = ExtResource("548_region")
-encounter_id = &"dungeon_maze"
-layout_scene = ExtResource("367_maze")
-approach = Vector2(576, -2200)
-
-[node name="EntranceGuards" type="Node" parent="."]
-
-[node name="GuardsNormal" type="Node" parent="EntranceGuards"]
-script = ExtResource("346_guards")
-dungeon_id = &"dungeon_a"
-entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_guardsnormal_0"), SubResource("Resource_spawn_guardsnormal_1"), SubResource("Resource_spawn_guardsnormal_2"), SubResource("Resource_spawn_guardsnormal_3"), SubResource("Resource_spawn_guardsnormal_4"), SubResource("Resource_spawn_guardsnormal_5")])
-player_path = NodePath("../../Player")
-
-[node name="RedMustaches" type="Node" parent="EntranceGuards"]
-script = ExtResource("346_guards")
-entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_guardsnormal_6"), SubResource("Resource_spawn_guardsnormal_7")])
-player_path = NodePath("../../Player")
-
-[node name="GuardsRed" type="Node" parent="EntranceGuards"]
-script = ExtResource("346_guards")
-dungeon_id = &"dungeon_b"
-entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_guardsred_0"), SubResource("Resource_spawn_guardsred_1"), SubResource("Resource_spawn_guardsred_2"), SubResource("Resource_spawn_guardsred_3"), SubResource("Resource_spawn_guardsred_4")])
-player_path = NodePath("../../Player")
-
-[node name="GuardsGenerated" type="Node" parent="EntranceGuards"]
-script = ExtResource("346_guards")
-entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_guardsgenerated_0"), SubResource("Resource_spawn_guardsgenerated_1"), SubResource("Resource_spawn_guardsgenerated_2"), SubResource("Resource_spawn_guardsgenerated_3"), SubResource("Resource_spawn_guardsgenerated_4"), SubResource("Resource_spawn_guardsgenerated_5")])
-player_path = NodePath("../../Player")
-
-[node name="GuardsBeast" type="Node" parent="EntranceGuards"]
-script = ExtResource("346_guards")
-dungeon_id = &"dungeon_d"
-entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_guardsbeast_0"), SubResource("Resource_spawn_guardsbeast_1"), SubResource("Resource_spawn_guardsbeast_2"), SubResource("Resource_spawn_guardsbeast_3"), SubResource("Resource_spawn_guardsbeast_4"), SubResource("Resource_spawn_guardsbeast_5")])
-player_path = NodePath("../../Player")
-
-[node name="GuardsBoss" type="Node" parent="EntranceGuards"]
-script = ExtResource("346_guards")
-dungeon_id = &"dungeon_c"
-entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_guardsboss_0"), SubResource("Resource_spawn_guardsboss_1"), SubResource("Resource_spawn_guardsboss_2"), SubResource("Resource_spawn_guardsboss_3"), SubResource("Resource_spawn_guardsboss_4"), SubResource("Resource_spawn_guardsboss_5")])
-player_path = NodePath("../../Player")
 
 [node name="Roamers" type="Node" parent="."]
 script = ExtResource("373_spawn_data")

@@ -21,18 +21,16 @@ func _run() -> void:
 	Input.action_release(&'move_up')
 	_check(main.area_loader.current_area.name == &'Overworld', 'actual input traverses hub TRAVEL passage')
 	var ow: Node = main.area_loader.current_area
-	var region: OverworldRegion = main.area_loader.region_for(&'dungeon_a')
 	var id := p.get_instance_id()
+	_check(main.area_loader.regions.is_empty(), 'overworld mounts no dungeon regions (#643)')
 	# Position only establishes the start of the walk, not its outcome.
-	p.global_position = region.entry + Vector2(0, 80)
-	main.area_loader.activation.update_now()
+	p.global_position = ow.get_node('PlayerSpawn').global_position
 	var start := p.global_position
 	Input.action_press(&'move_up')
 	for i in 50: await physics_frame
 	Input.action_release(&'move_up')
-	_check(p.global_position.y < region.entry.y - 16 and p.global_position.distance_to(start) > 96, 'actual input crosses physical doorway')
-	_check(main.area_loader.current_area == ow and p.get_instance_id() == id, 'region entry does not swap world/player')
-	_check(region.contains(p.global_position), 'player ends inside region bounds')
+	_check(p.global_position.distance_to(start) > 96, 'actual input walks the overworld')
+	_check(main.area_loader.current_area == ow and p.get_instance_id() == id, 'overworld walk does not swap world/player')
 	_check(ow.find_children('*','ExitPortal',true,false).is_empty(), 'no dungeon exit portal in folded world')
 	main.queue_free()
 	await process_frame
