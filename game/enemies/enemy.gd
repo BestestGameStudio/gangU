@@ -13,6 +13,9 @@ signal died()
 signal health_changed(current: int, max_hp: int)
 
 ## Runtime stats, copied from `definition` when it is assigned.
+## Optional area-owned boundary; unset everywhere outside that encounter.
+var movement_constraint: Callable
+
 var max_hp: int
 var speed: float
 var contact_damage: int
@@ -334,11 +337,16 @@ func _physics_process(delta: float) -> void:
 		# Water Ball shove must not push a mob or boss out of the arena.
 		if terrain != null:
 			global_position = TerrainMotion.clamp_displacement(terrain, before, global_position, can_swim)
+		global_position = constrain_movement(global_position)
 		_knockback = _knockback.move_toward(Vector2.ZERO, KNOCKBACK_DECEL * delta)
 		return
 	_knockback = Vector2.ZERO
 	if _behavior != null:
 		_behavior.physics_step(self, _resolve_target(), delta)
+	global_position = constrain_movement(global_position)
+
+func constrain_movement(destination: Vector2) -> Vector2:
+	return movement_constraint.call(destination) if movement_constraint.is_valid() else destination
 
 ## #331 Water Ball bubble Mastery: push this enemy along `push` (px/s),
 ## decaying at KNOCKBACK_DECEL px/s^2. Walls stop it (move_and_collide).

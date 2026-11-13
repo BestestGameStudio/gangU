@@ -3,7 +3,7 @@ extends Node2D
 ## Sunbound Sanctum. Run-owned state persists until the normal death reset.
 ## Initial balance values are tunable placeholders.
 
-enum State { DORMANT, POSSESSED, STUNNED, TRANSFERRING, PHASE_TWO }
+enum State { DORMANT, POSSESSED, STUNNED, PREPARING, TRANSFERRING, PHASE_TWO }
 var arena_radius := 0.0
 var statue_radius := 0.0
 var barrier_radius := 0.0
@@ -25,6 +25,7 @@ var _sized := false
 @export var vision_range_ring_fraction := 0.6
 @export var stun_duration := 1.0
 @export var transfer_speed := 380.0
+@export var transfer_windup := 0.35
 @export var star_damage := 16
 @export var phase_two_damage_per_statue := 0.08
 @export var phase_two_speed_per_statue := 0.06
@@ -71,6 +72,16 @@ var _hit_stun_used := false
 var _episode_host: DesertStatue
 var _force_hop := false
 var _phase_time := 0.0
+var _transfer_target: DesertStatue
+var _transfer_left := 0.0
+class EnemyBoundary:
+	extends RefCounted
+	var inside := false
+	var radius := 16.0
+	var direction := Vector2.RIGHT
+	var previous: Callable
+	var position := Vector2.ZERO
+var _enemy_boundaries: Dictionary = {}
 var _ui: CanvasLayer
 var _title: Label
 var _details: Label
@@ -106,6 +117,7 @@ func _ready() -> void:
 		add_child(statue)
 		statues.append(statue)
 	_make_ui()
+	get_tree().node_added.connect(_watch_enemy_spawn)
 
 func _make_ui() -> void:
 	_ui = CanvasLayer.new()
@@ -156,6 +168,9 @@ func _physics_process(delta: float) -> void:
 	_ui.visible = visiting
 	if not visiting:
 		return
+	for enemy in _enemy_boundaries.keys():
+		if is_instance_valid(enemy):
+			enemy.global_position = constrain_enemy_position(enemy.global_position,enemy)
 	# Direct scripted repositioning also remains on the inner side of the ring.
 	player.global_position = constrain_player_position(player.global_position)
 	if state == State.PHASE_TWO:
@@ -173,6 +188,8 @@ func _physics_process(delta: float) -> void:
 				begin_transfer.call_deferred()
 			else:
 				state = State.POSSESSED
+	elif state == State.PREPARING:
+		_update_transfer_preparation(delta)
 	if state != State.PHASE_TWO:
 		_advance_volleys(delta)
 	_update_ui()
@@ -183,6 +200,8 @@ func start_encounter() -> void:
 		return
 	player.movement_constraint = Callable(self,"constrain_player_position")
 	_possess(statues[_rng.randi_range(0,11)])
+	for enemy in get_tree().get_nodes_in_group(&"enemies"):
+		_register_enemy(enemy)
 
 func is_active() -> bool:
 	return state != State.DORMANT and is_instance_valid(player) and player.hp > 0
@@ -193,7 +212,73 @@ func constrain_player_position(destination: Vector2) -> Vector2:
 	var offset := destination-global_position
 	return global_position+offset.limit_length(player_limit_radius)
 
+func _watch_enemy_spawn(node: Node) -> void:
+	if node is Enemy and not (node is DesertStatue):
+		_register_enemy.call_deferred(node)
+
+func _register_enemy(candidate: Variant) -> void:
+	if not is_instance_valid(candidate) or not (candidate is Enemy) or candidate is DesertStatue:
+		return
+	var enemy := candidate as Enemy
+	if not is_active() or not is_visible_in_tree() or not get_parent().is_ancestor_of(enemy) or _enemy_boundaries.has(enemy):
+		return
+	var boundary := EnemyBoundary.new()
+	var offset := enemy.global_position-global_position
+	boundary.position = enemy.global_position
+	boundary.inside = offset.length() < barrier_radius
+	boundary.direction = offset.normalized() if not offset.is_zero_approx() else Vector2.RIGHT
+	var shape := enemy.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape != null and shape.shape != null:
+		var size := shape.shape.get_rect().size*enemy.scale.abs()
+		boundary.radius = maxf(size.x,size.y)*0.5
+	boundary.previous = enemy.movement_constraint
+	_enemy_boundaries[enemy] = boundary
+	enemy.movement_constraint = Callable(self,"constrain_enemy_position").bind(enemy)
+	enemy.tree_exiting.connect(_release_enemy.bind(enemy),CONNECT_ONE_SHOT)
+
+func constrain_enemy_position(destination: Vector2, enemy: Enemy) -> Vector2:
+	if not _enemy_boundaries.has(enemy):
+		return destination
+	var boundary: EnemyBoundary = _enemy_boundaries[enemy]
+	var offset := destination-global_position
+	if not is_active() or not is_visible_in_tree():
+		boundary.position = destination
+		boundary.inside = offset.length() < barrier_radius
+		return destination
+	if not offset.is_zero_approx():
+		boundary.direction = offset.normalized()
+	var result := destination
+	if boundary.inside:
+		result = global_position+offset.limit_length(barrier_radius-boundary.radius-2.0)
+	else:
+		var limit := barrier_radius+boundary.radius+2.0
+		var from := boundary.position-global_position
+		if from.length() < limit:
+			from = from.normalized()*limit if not from.is_zero_approx() else boundary.direction*limit
+		var motion := offset-from
+		var length_squared := motion.length_squared()
+		var dot := from.dot(motion)
+		var discriminant := dot*dot-length_squared*(from.length_squared()-limit*limit)
+		if length_squared > 0.000001 and discriminant >= 0:
+			var contact := (-dot-sqrt(discriminant))/length_squared
+			if contact >= 0 and contact <= 1:
+				result = global_position+from+motion*contact
+		if (result-global_position).length() < limit-0.01:
+			result = global_position+from.normalized()*limit
+	boundary.position = result
+	return result
+
+func _release_enemy(enemy: Enemy) -> void:
+	if not _enemy_boundaries.has(enemy):
+		return
+	if is_instance_valid(enemy) and enemy.movement_constraint == Callable(self,"constrain_enemy_position").bind(enemy):
+		var boundary: EnemyBoundary = _enemy_boundaries[enemy]
+		enemy.movement_constraint = boundary.previous
+	_enemy_boundaries.erase(enemy)
+
 func _exit_tree() -> void:
+	for enemy in _enemy_boundaries.keys():
+		_release_enemy(enemy)
 	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
 		player.movement_constraint = Callable()
 
@@ -240,31 +325,58 @@ func heal(amount: int) -> void:
 	hp = mini(hp+maxi(amount,0),boss_max_hp)
 
 func _stun(force_hop: bool) -> void:
+	_transfer_target = null
 	_hit_stun_used = true
 	state = State.STUNNED
 	_stun_left = stun_duration
 	_force_hop = force_hop
 
-func begin_transfer() -> void:
-	if state == State.PHASE_TWO or state == State.TRANSFERRING or (state == State.STUNNED and _stun_left > 0) or not visiting:
-		return
+func _choose_transfer_target() -> DesertStatue:
 	var choices: Array[DesertStatue] = []
 	for statue in statues:
 		if not statue.broken and statue != possessed:
 			choices.append(statue)
-	if choices.is_empty():
+	return null if choices.is_empty() else choices.pick_random()
+
+func begin_transfer() -> void:
+	if state in [State.PHASE_TWO,State.PREPARING,State.TRANSFERRING] or (state == State.STUNNED and _stun_left > 0) or not visiting:
+		return
+	_transfer_target = _choose_transfer_target()
+	if _transfer_target == null:
 		_possess(possessed)
+		return
+	state = State.PREPARING
+	_transfer_left = transfer_windup
+
+func _update_transfer_preparation(delta: float) -> void:
+	if _transfer_target == null or _transfer_target.broken:
+		_transfer_target = _choose_transfer_target()
+		if _transfer_target == null:
+			_possess(possessed)
+			return
+		_transfer_left = transfer_windup
+		return
+	_transfer_left -= delta
+	if _transfer_left <= 0:
+		_launch_star.call_deferred()
+
+func _launch_star() -> void:
+	if state != State.PREPARING:
+		return
+	if _transfer_target == null or _transfer_target.broken:
+		_update_transfer_preparation(0)
 		return
 	state = State.TRANSFERRING
 	star = DesertPossessionStar.new()
 	star.arena = self
 	star.origin = possessed
-	star.destination = choices.pick_random()
+	star.destination = _transfer_target
 	star.speed = transfer_speed
 	star.contact_damage = star_damage
 	star.position = possessed.position+Vector2(0,-20)
 	possessed.possessed = false
 	possessed = null
+	_transfer_target = null
 	star.z_index = 15
 	add_child(star)
 
@@ -283,6 +395,7 @@ func star_arrived(returned: bool) -> void:
 	star = null
 
 func _cancel_star() -> void:
+	_transfer_target = null
 	if is_instance_valid(star):
 		star.queue_free()
 	star = null
@@ -401,13 +514,13 @@ func _draw_volley() -> void:
 			if fraction <= 0:
 				continue
 			var tip := lane.start.lerp(lane.end,fraction)
-			draw_line(lane.start,tip,Color(0.3,0.04,0.03,0.2),3.5,true)
-			draw_line(lane.start,tip,Color(0.95,0.12,0.12,0.65+fraction*0.3),1.5,true)
+			draw_line(lane.start,tip,Color(0.3,0.04,0.03,0.18),2.5,true)
+			draw_line(lane.start,tip,Color(0.95,0.12,0.12,0.65+fraction*0.3),1.0,true)
 			if lane.start.distance_to(tip) < 20:
 				continue
 			var direction := (lane.end-lane.start).normalized()
 			var side := direction.orthogonal()
-			draw_polyline(PackedVector2Array([tip-direction*9+side*4.5,tip,tip-direction*9-side*4.5]),Color(1,0.35,0.25,0.9),1.5,true)
+			draw_polyline(PackedVector2Array([tip-direction*7+side*3,tip,tip-direction*7-side*3]),Color(1,0.35,0.25,0.9),1.0,true)
 
 func _next_spear_delay() -> float:
 	var remaining := INF
@@ -440,8 +553,10 @@ func _update_ui() -> void:
 		_details.text = "NEXT SPEARS IN %.1fs   |   Dodge the marked paths" % _next_spear_delay()
 	elif state == State.STUNNED:
 		_details.text = "POSSESSION STUNNED  ·  %.1fs   |   Broken statues: %d" % [_stun_left,broken_count]
+	elif state == State.PREPARING:
+		_details.text = "POSSESSION PATH  ·  %.1fs" % maxf(_transfer_left,0)
 	elif state == State.TRANSFERRING:
-		_details.text = "INTERCEPT THE GOLDEN STAR   |   Broken statues: %d" % broken_count
+		_details.text = "INTERCEPT THE PURPLE STAR   |   Broken statues: %d" % broken_count
 	else:
 		_details.text = "Strike the glowing eyes   |   Broken statues: %d" % broken_count
 
@@ -491,6 +606,13 @@ func _draw() -> void:
 		var at := _ring_points[i]
 		draw_circle(at,48,Color(0.65,0.48,0.27,0.25))
 	_draw_volley()
+	if state == State.PREPARING and _transfer_target != null:
+		var from := possessed.position+Vector2(0,-20)
+		var to := _transfer_target.position+Vector2(0,-20)
+		draw_line(from,to,Color(0.65,0.22,1,0.85),1.0,true)
+		var direction := (to-from).normalized()
+		var side := direction.orthogonal()
+		draw_polyline(PackedVector2Array([to-direction*9+side*3,to,to-direction*9-side*3]),Color("d9a5ff"),1.0,true)
 	if state != State.DORMANT:
 		var alpha := 0.65+sin(Time.get_ticks_msec()*0.003)*0.15
 		_circle(barrier_radius,Color(1,0.79,0.3,alpha),4)

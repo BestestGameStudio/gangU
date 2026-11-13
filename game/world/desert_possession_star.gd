@@ -10,16 +10,20 @@ var contact_damage := 16
 var _time := 0.0
 var _touched := false
 var _last_shots: Dictionary = {}
+var _retarget_left := 0.0
+var _broken_target_warned := false
+var _trail: Array[Vector2] = []
 
 func intercept() -> void:
 	returning = true
+	_retarget_left = 0.0
 
 func _physics_process(delta: float) -> void:
 	if not arena.visiting:
 		return
 	_time += delta
 	var target := origin if returning else destination
-	if not returning and target.broken:
+	if not returning and target.broken and not _broken_target_warned:
 		# A destroyed destination is not an interception. Keep the star outbound.
 		var nearest := INF
 		for statue: DesertStatue in arena.statues:
@@ -32,8 +36,13 @@ func _physics_process(delta: float) -> void:
 		if nearest == INF and not origin.broken:
 			destination = origin
 		target = destination
+		_broken_target_warned = destination.broken
+		_retarget_left = arena.transfer_windup
+	var paused := _retarget_left > 0
+	_retarget_left = maxf(_retarget_left-delta,0.0)
+	var step := 0.0 if paused else speed*delta
 	var from := global_position
-	var to := from.move_toward(target.global_position + Vector2(0,-20), speed * delta)
+	var to := from.move_toward(target.global_position + Vector2(0,-20), step)
 	if not returning:
 		_check_interceptions(from, to)
 	var player: Player = arena.player
@@ -43,8 +52,13 @@ func _physics_process(delta: float) -> void:
 		intercept()
 	# Interception changes the destination immediately, including the last outbound step.
 	target = origin if returning else destination
-	to = from.move_toward(target.global_position + Vector2(0,-20), speed * delta)
+	if returning:
+		step = speed*delta
+	to = from.move_toward(target.global_position + Vector2(0,-20), step)
 	global_position = to
+	_trail.append(global_position)
+	if _trail.size() > 12:
+		_trail.pop_front()
 	if global_position.distance_to(target.global_position + Vector2(0,-20)) < 2:
 		arena.star_arrived(returning)
 		queue_free()
@@ -77,10 +91,26 @@ func _distance_segment(point: Vector2, a: Vector2, b: Vector2) -> float:
 	return point.distance_to(Geometry2D.get_closest_point_to_segment(point,a,b))
 
 func _draw() -> void:
-	var color := Color("ffc75b")
-	draw_circle(Vector2.ZERO, 23, Color(color,0.13))
+	var color := Color("ad4dff")
+	var target := origin if returning else destination
+	if is_instance_valid(target):
+		var end := to_local(target.global_position+Vector2(0,-20))
+		draw_line(Vector2.ZERO,end,Color(0.7,0.3,1,0.5),0.8,true)
+		if end.length() > 20:
+			var direction := end.normalized()
+			var side := direction.orthogonal()
+			draw_polyline(PackedVector2Array([end-direction*8+side*3,end,end-direction*8-side*3]),Color("d9a5ff"),0.8,true)
+	for i in range(1,_trail.size()):
+		var strength := float(i)/_trail.size()
+		draw_line(to_local(_trail[i-1]),to_local(_trail[i]),Color(0.69,0.35,1,strength*0.55),1+strength*4,true)
+	var pulse := 1.0+sin(_time*8)*0.08
+	draw_circle(Vector2.ZERO,40*pulse,Color(color,0.05))
+	draw_circle(Vector2.ZERO,29*pulse,Color(color,0.12))
+	draw_circle(Vector2.ZERO,20*pulse,Color(color,0.3))
 	var points := PackedVector2Array()
 	for i in 10:
-		points.append(Vector2.from_angle(-PI/2 + i*TAU/10 + _time*2) * (15 if i%2 == 0 else 6))
+		points.append(Vector2.from_angle(-PI/2+i*TAU/10+_time*2)*(15 if i%2 == 0 else 6))
 	draw_colored_polygon(points,color)
-	draw_circle(Vector2.ZERO,4,Color("fff5ce"))
+	points.append(points[0])
+	draw_polyline(points,Color("e2b8ff"),1.0,true)
+	draw_circle(Vector2.ZERO,6,Color("f6e8ff"))

@@ -51,10 +51,10 @@ func _draw() -> void:
 	draw_rect(Rect2(5, -30, 9, 5), Color("312d31"))
 	draw_rect(Rect2(-9, -16, 18, 4), Color("65523b"))
 	if possessed:
-		draw_circle(Vector2(-9, -28), 7, Color(1,0.8,0.3,0.16))
-		draw_circle(Vector2(9, -28), 7, Color(1,0.8,0.3,0.16))
-		draw_circle(Vector2(-9, -28), 4, Color("ffe9a0"))
-		draw_circle(Vector2(9, -28), 4, Color("ffe9a0"))
+		draw_circle(Vector2(-9, -28), 7, Color(0.64,0.2,1,0.28))
+		draw_circle(Vector2(9, -28), 7, Color(0.64,0.2,1,0.28))
+		draw_circle(Vector2(-9, -28), 4, Color("bb66ff"))
+		draw_circle(Vector2(9, -28), 4, Color("bb66ff"))
 	elif hp < max_hp:
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
