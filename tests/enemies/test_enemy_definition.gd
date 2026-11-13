@@ -196,9 +196,12 @@ func _test_fishy_audio() -> void:
 	behavior.engaged = false
 	audio._idle_left = 0.0
 	audio.step(0.01)
-	p.position += Vector2(1000, 0)
+	p.position += Vector2(1500, 0)
 	audio.step(0.01)
 	_check(not audio._whistle.playing, "Fishy: range exit stops whistle")
+	p.position = fish.position - Vector2(800, 0)
+	audio.step(0.01)
+	_check(audio._whistle.playing, "Fishy: whistle starts at once on entering 800 px range")
 	p.position = Vector2.ZERO
 	behavior._begin_windup(fish, p)
 	audio.step(0.01)
