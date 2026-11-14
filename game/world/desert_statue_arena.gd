@@ -178,12 +178,6 @@ func _physics_process(delta: float) -> void:
 	player.global_position = constrain_player_position(player.global_position)
 	if state == State.PHASE_TWO:
 		_phase_time += delta
-		for statue in statues:
-			if statue.broken and not statue.absorbed:
-				statue.position = statue.position.move_toward(Vector2.ZERO,delta*250)
-				statue.scale = statue.scale.move_toward(Vector2.ONE*0.12,delta*0.9)
-				if statue.position.length() < 8:
-					statue.absorbed = true
 	elif state == State.STUNNED:
 		_stun_left -= delta
 		if _stun_left <= 0:
@@ -458,7 +452,7 @@ func _plan_volley(starts_at: float) -> void:
 		if not volley.aims_at_player:
 			var choices: Array[DesertStatue] = []
 			for candidate in statues:
-				if candidate != shooter and not candidate.broken:
+				if candidate != shooter:
 					choices.append(candidate)
 			if choices.size() > 1:
 				choices.erase(_previous_targets.get(shooter))
@@ -471,7 +465,16 @@ func _plan_volley(starts_at: float) -> void:
 					across.append(candidate)
 			target = choices.pick_random() if across.is_empty() else across.pick_random()
 			_previous_targets[shooter] = target
-			endpoint = target.position+Vector2(0,-20)
+			# Broken statues' rubble moves inward, but the warning stays aimed at
+			# the statue's original ring position for the full volley.
+			endpoint = _ring_points[statues.find(target)]+Vector2(0,-20)
+		else:
+			# Aim through the frozen player position and keep flying to the arena edge.
+			var direction := (player_target-(shooter.position+Vector2(0,-20))).normalized()
+			var start := shooter.position+Vector2(0,-20)
+			var projection := -start.dot(direction)
+			var edge_distance := projection+sqrt(maxf(projection*projection+arena_radius*arena_radius-start.length_squared(),0.0))
+			endpoint = start+direction*edge_distance
 		var lane := SpearLane.new()
 		lane.shooter = shooter
 		lane.target = target
@@ -492,6 +495,8 @@ func _fire_lane(lane: SpearLane, volley: SpearVolley) -> void:
 	spell.range = lane.start.distance_to(lane.end)
 	spell.radius = spear_radius
 	spell.projectile_color = Color("dc734e")
+	if volley.aims_at_player:
+		spell.tags.append(SpellTags.PIERCING)
 	var shot := PROJECTILE.instantiate() as Projectile
 	shot.setup(spell,lane.end-lane.start,lane.shooter)
 	shot.collision_mask = PhysicsLayers.WORLD | PhysicsLayers.PLAYER | PhysicsLayers.SUMMON

@@ -31,6 +31,14 @@ func apply_damage(amount: int, crit_tier: int = 0) -> void:
 
 func _process(delta: float) -> void:
 	flash = maxf(flash - delta, 0.0)
+	# Destroyed stone is drawn as rubble and pulled into the arena centre as
+	# soon as the statue breaks. Phase two can then simply absorb whatever
+	# rubble remains instead of starting this animation for every statue.
+	if broken and not absorbed:
+		position = position.move_toward(Vector2.ZERO, delta * 250.0)
+		scale = scale.move_toward(Vector2.ONE * 0.12, delta * 0.9)
+		if position.length() < 8.0:
+			absorbed = true
 	queue_redraw()
 
 func _draw() -> void:
@@ -50,7 +58,8 @@ func _draw() -> void:
 	draw_rect(Rect2(-14, -30, 9, 5), Color("312d31"))
 	draw_rect(Rect2(5, -30, 9, 5), Color("312d31"))
 	draw_rect(Rect2(-9, -16, 18, 4), Color("65523b"))
-	if possessed:
+	var phase_two := arena is DesertStatueArena and (arena as DesertStatueArena).state == DesertStatueArena.State.PHASE_TWO
+	if possessed and not phase_two:
 		draw_circle(Vector2(-9, -28), 7, Color(0.64,0.2,1,0.28))
 		draw_circle(Vector2(9, -28), 7, Color(0.64,0.2,1,0.28))
 		draw_circle(Vector2(-9, -28), 4, Color("bb66ff"))
