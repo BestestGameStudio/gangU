@@ -457,3 +457,28 @@ AbandonedVillage draws atlas regions by path with nearest filtering. The road
 reuses the existing TerrainArt floor atlas; surrounding trees already use its
 object atlas. The old shape-drawn clearing disk is removed, exposing the
 existing grass floor. No building/well/ruin primitive drawing remains.
+
+## Stationary circle statues (#658)
+
+Source: six transparent animated GIFs supplied by Colin for this replacement.
+Nearest-neighbor reduction from 1024x1024 to 64x64, no crop or per-frame
+recentering, preserving the source body/feet anchors and alpha. Packed in
+`stationary_statues.png`, 19 columns by 6 rows (empty cells unused);
+`stationary_statues_frames.tres` stores the source per-frame durations.
+The static first pose supplies idle; the throw directions are selected from
+the inward vector, not mirrored or rotated. Hit/death remain front-facing
+as supplied. The old `sandstatues.png` remains for the moving phase-two boss.
+
+- `throw_down`: 13 frames; milliseconds [400, 100, 160, 120, 280, 50, 60, 70, 100, 180, 140, 180, 300]; source SHA256 `2b98619d188c41f42b4a5eb3c4c68c59f27caecc1abceafd7ae11d28731bc279`.
+- `throw_left`: 13 frames; milliseconds [400, 100, 160, 120, 280, 50, 60, 70, 100, 180, 140, 180, 300]; source SHA256 `c1318fc793ac0d9b8200007cfb9c21eabe7a0215f0f4cac3111aa35f8ab6c0cb`.
+- `throw_right`: 13 frames; milliseconds [400, 100, 160, 120, 280, 50, 60, 70, 100, 180, 140, 180, 300]; source SHA256 `51544b17f84b379b5ced808e30f74104d5407fd1a756262181cd88e0fc23e0bf`.
+- `throw_up`: 13 frames; milliseconds [400, 100, 160, 120, 280, 50, 60, 70, 100, 180, 140, 180, 300]; source SHA256 `232cf131b08c437f8ff5fa11cfab320c29f4f7f58abc1b6a09150f7e2f7e50ea`.
+- `hurt`: 6 frames; milliseconds [60, 90, 150, 120, 110, 200]; source SHA256 `67dcc5f5f23e2caaa021628fca608e1dccc4575473ee4b231a257ed3f060c964`.
+- `death`: 19 frames; milliseconds [70, 100, 110, 120, 130, 220, 60, 60, 60, 70, 70, 70, 80, 80, 90, 90, 100, 110, 1300]; source SHA256 `569bc9d22e71dfff5dee9ca179ec0e1188512239ae8df66e6d46dc21e2c5266f`.
+
+Throws are uniformly sped up at runtime to fit 90% of the existing volley
+interval (1.35s at the default 1.5s cadence). Frame 7, the first pose without
+the released spear, aligns with the actual projectile release. Hit and death
+use their original timing; hurt reactions queue behind an active throw so
+they cannot obscure its release. Death finishes before the original rubble
+absorption begins. Rebuilding cancels death and restores the ring anchor.
