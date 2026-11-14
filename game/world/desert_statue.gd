@@ -45,6 +45,9 @@ func _draw() -> void:
 	if absorbed:
 		return
 	draw_ellipse_shadow()
+	if arena is DesertStatueArena and (arena as DesertStatueArena).state == DesertStatueArena.State.PHASE_TWO and (arena as DesertStatueArena).possessed == self:
+		_draw_sand_general()
+		return
 	if broken:
 		for i in 5:
 			var p := Vector2.from_angle(float(i) * 2.4) * (8.0 + i * 3.0)
@@ -67,6 +70,21 @@ func _draw() -> void:
 	elif hp < max_hp:
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
+
+func _draw_sand_general() -> void:
+	var body := Color("b87839")
+	var armor := Color("e3bb71")
+	draw_colored_polygon(PackedVector2Array([Vector2(-25,5),Vector2(25,5),Vector2(20,48),Vector2(-20,48)]),body)
+	draw_colored_polygon(PackedVector2Array([Vector2(-29,8),Vector2(-19,-2),Vector2(19,-2),Vector2(29,8),Vector2(20,20),Vector2(-20,20)]),armor)
+	draw_circle(Vector2(0,-17),22,Color("a85e2e"))
+	draw_colored_polygon(PackedVector2Array([Vector2(-24,-18),Vector2(-15,-38),Vector2(0,-43),Vector2(15,-38),Vector2(24,-18)]),Color("e5c47f"))
+	draw_rect(Rect2(Vector2(-13,-19),Vector2(8,4)),Color("ffd975"))
+	draw_rect(Rect2(Vector2(5,-19),Vector2(8,4)),Color("ffd975"))
+	# A simple three-pronged trident signals the new phase's weapon.
+	draw_line(Vector2(28,-28),Vector2(45,50),Color("65422b"),6.0,true)
+	draw_line(Vector2(38,-28),Vector2(30,-43),Color("edcf89"),4.0,true)
+	draw_line(Vector2(38,-28),Vector2(39,-48),Color("edcf89"),4.0,true)
+	draw_line(Vector2(38,-28),Vector2(49,-43),Color("edcf89"),4.0,true)
 
 func draw_ellipse_shadow() -> void:
 	draw_set_transform(Vector2(0, 24), 0, Vector2(1, 0.35))
