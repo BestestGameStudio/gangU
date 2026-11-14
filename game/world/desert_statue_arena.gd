@@ -87,6 +87,7 @@ var _title: Label
 var _details: Label
 var _bar: ProgressBar
 var _rng := RandomNumberGenerator.new()
+var audio: DesertStatueAudio
 const CombatEffects := preload("res://game/combat/combat_effects.gd")
 const SPEAR_VISUAL := preload("res://game/world/desert_spear_visual.gd")
 const PROJECTILE := preload("res://game/spells/projectile.tscn")
@@ -116,6 +117,8 @@ func _ready() -> void:
 		statue.z_index = 10
 		add_child(statue)
 		statues.append(statue)
+	audio = DesertStatueAudio.new()
+	add_child(audio)
 	_make_ui()
 	get_tree().node_added.connect(_watch_enemy_spawn)
 
@@ -292,11 +295,13 @@ func _possess(statue: DesertStatue) -> void:
 	possessed.possessed = true
 	volleys_left = _rng.randi_range(1,5)
 	state = State.POSSESSED
+	audio.possess(possessed.global_position)
 
 func damage_statue(statue: DesertStatue, amount: int, crit_tier: int) -> void:
 	if not visiting or state == State.PHASE_TWO or state == State.DORMANT or amount <= 0:
 		return
 	statue.flash = 0.15
+	audio.damage(statue.global_position)
 	if statue == possessed:
 		var before := hp
 		apply_damage(amount)
@@ -311,6 +316,7 @@ func damage_statue(statue: DesertStatue, amount: int, crit_tier: int) -> void:
 		if statue.hp == 0:
 			statue.broken = true
 			statue.collision_layer = 0
+			audio.death(statue.global_position)
 			if not statue.destroyed_once:
 				statue.destroyed_once = true
 				broken_count += 1
@@ -496,6 +502,7 @@ func _fire_lane(lane: SpearLane, volley: SpearVolley) -> void:
 	# The first surviving spear counts this volley once, including during transit.
 	if not volley.counted:
 		volley.counted = true
+		audio.spear(lane.shooter.global_position)
 		if state == State.POSSESSED:
 			volleys_left -= 1
 			if volleys_left <= 0:
