@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=24 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
@@ -17,6 +17,8 @@
 [ext_resource type="Script" path="res://game/world/abandoned_village.gd" id="484_village"]
 [ext_resource type="Script" uid="uid://kq19zfwepvmzr" path="res://game/world/spawn_entry.gd" id="518_spawn_entry"]
 
+
+[ext_resource type="Script" path="res://game/world/desert_statue_arena.gd" id="desert_arena"]
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_0"]
 script = ExtResource("518_spawn_entry")
@@ -132,3 +134,7 @@ player_path = NodePath("../../Player")
 script = ExtResource("373_spawn_data")
 entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_redsouth_0"), SubResource("Resource_spawn_redsouth_1"), SubResource("Resource_spawn_redsouth_2")])
 player_path = NodePath("../../Player")
+
+[node name="DesertStatueArena" type="Node2D" parent="."]
+position = Vector2(2100, 400)
+script = ExtResource("desert_arena")

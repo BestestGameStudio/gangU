@@ -201,6 +201,9 @@ func build_from(area: Node) -> void:
 	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
 		village.shape_decor(self)
+	var desert := area.get_node_or_null("DesertStatueArena")
+	if desert != null:
+		desert.shape_decor(self)
 	_plant_tree_collision(area)
 	_build_tall_grass()
 	_plant_tall_grass(area)
@@ -327,6 +330,9 @@ func _build_tall_grass() -> void:
 			var r := 64.0 + _hash01(gx, gy, 44) * 64.0
 			var village := get_parent().get_node_or_null("AbandonedVillage") as AbandonedVillage if get_parent() != null else null
 			if village != null and at.distance_to(village.position) < 550.0 + r:
+				continue
+			var desert := get_parent().get_node_or_null("DesertStatueArena") as DesertStatueArena
+			if desert != null and desert.contains_footprint(at,r+140.0):
 				continue
 			if at.distance_to(spawn) < GRASS_CLEAR + r:
 				continue

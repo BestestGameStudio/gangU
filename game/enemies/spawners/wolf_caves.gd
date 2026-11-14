@@ -50,6 +50,9 @@ func _pick_spot(ground: OverworldGround, i: int) -> Vector2:
 		if f < 0.45:
 			break
 		var at: Vector2 = OverworldGround.CENTER + Vector2(dir.x * OverworldGround.RADII.x, dir.y * OverworldGround.RADII.y) * f
+		var desert := ground.get_parent().get_node_or_null("DesertStatueArena") as DesertStatueArena
+		if desert != null and desert.contains_footprint(at, DECOR_CLEAR):
+			continue
 		if not ground.covers(at):
 			continue
 		if ground.road_distance(at) <= OverworldGround.ROAD_CLEAR:

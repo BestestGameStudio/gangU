@@ -14,6 +14,9 @@ signal health_changed(current: int, max_hp: int)
 ## never changes silently.
 signal shield_changed(current: int)
 
+## An active area can constrain movement without blocking combat projectiles.
+var movement_constraint: Callable
+
 @export var speed: float = 320.0
 @export var max_hp: int = 100
 @export var can_swim: bool = true
@@ -350,6 +353,7 @@ func _physics_process(delta: float) -> void:
 			launch_cancelled.emit()
 		velocity = Vector2.ZERO
 		move_and_slide()
+		global_position = constrain_movement(global_position)
 		if _stun_left == 0.0:
 			stun_ended.emit()
 		return
@@ -383,6 +387,7 @@ func _physics_process(delta: float) -> void:
 			launch_finished = true
 	velocity = TerrainMotion.resolve(terrain, global_position, velocity, desired, delta, can_swim)
 	move_and_slide()
+	global_position = constrain_movement(global_position)
 	if launch_finished:
 		launch_ended.emit()
 	if sprite != null:
@@ -394,13 +399,17 @@ func _physics_process(delta: float) -> void:
 				facing = &"down" if input_dir.y > 0.0 else &"up"
 		_update_sprite(input_dir != Vector2.ZERO or is_dashing() or is_launching())
 
+func constrain_movement(destination: Vector2) -> Vector2:
+	return movement_constraint.call(destination) if movement_constraint.is_valid() else destination
+
 ## #266: single entry point for instant movement that is not WASD/dash
 ## velocity: being pushed, spell movement (blinks, leaps), scripted shoves.
 ## Terrain clamps it, so the player stops at the edge of any blocking or
 ## falling cell instead of entering it. Returns the offset actually applied.
 func displace(offset: Vector2) -> Vector2:
 	var from := global_position
-	global_position = TerrainMotion.clamp_displacement(terrain, from, from + offset, can_swim)
+	var destination := constrain_movement(from+offset)
+	global_position = TerrainMotion.clamp_displacement(terrain, from, destination, can_swim)
 	return global_position - from
 
 ## #461: while standing in tall grass the player is hidden from anyone

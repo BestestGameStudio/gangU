@@ -388,6 +388,10 @@ func _mount_regions(area: Node) -> void:
 		world_map.set_sites(area.name, _dungeon_sites(area))
 
 func has_active_encounter() -> bool:
+	if is_instance_valid(_run_overworld):
+		var desert := _run_overworld.get_node_or_null("DesertStatueArena")
+		if desert != null and desert.is_active():
+			return true
 	for region in regions:
 		if region.keep_active():
 			return true

@@ -165,7 +165,7 @@ func _step_dive(enemy: Enemy, player, alive: bool, delta: float) -> void:
 	if _timer > 0.0:
 		return
 	# Impact.
-	enemy.global_position = _locked
+	enemy.global_position = enemy.constrain_movement(_locked)
 	_altitude = 0.0
 	enemy.velocity = Vector2.ZERO
 	enemy.move_and_slide()
