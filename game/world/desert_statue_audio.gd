@@ -6,10 +6,10 @@ const SPEAR: AudioStream = preload("res://assets/audio/sfx/statue_spear_throw_v2
 const DAMAGE: AudioStream = preload("res://assets/audio/sfx/statue_damage_v6a.ogg")
 const DEATH: AudioStream = preload("res://assets/audio/sfx/statue_death_v7c.ogg")
 const POSSESS: AudioStream = preload("res://assets/audio/sfx/statue_possession_v8d.ogg")
-## The approved masters peak near -6 dBFS; keep the in-game mix restrained
-## (the Fire Ball cues had to drop 10 dB after review).
-const VOLUME_DB := -8.0
-const DEATH_VOLUME_DB := -6.0
+## Mixed to sit with the other effects (hurt/death cues play near 0 dB):
+## Colin found the first pass (-8/-6 dB) very quiet by comparison.
+const VOLUME_DB := -2.0
+const DEATH_VOLUME_DB := 0.0
 const MAX_DISTANCE := 1400.0
 
 var _spear: AudioStreamPlayer2D
