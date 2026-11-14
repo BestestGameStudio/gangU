@@ -797,7 +797,7 @@ func _circle(radius: float, color: Color, width: float = -1.0) -> void:
 func _draw() -> void:
 	for i in 9:
 		_circle(arena_radius+100-i*10,Color("bda076").lerp(Color("d8bd86"),float(i)/8))
-	_circle(arena_radius-12,Color("d9be87"))
+	_circle(arena_radius-12,Color("b39a70"))
 	for i in 650:
 		var a := float(i)*2.399963
 		var at := Vector2.from_angle(a)*sqrt(float(i)/650)*(arena_radius-15)

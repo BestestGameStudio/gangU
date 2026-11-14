@@ -21,6 +21,7 @@ func _ready() -> void:
 	_sprite.texture = STATUE_SHEET
 	_sprite.hframes = 4
 	_sprite.vframes = 2
+	_sprite.scale = Vector2(1.22, 1.22)
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_sprite.z_index = -1
 	add_child(_sprite)
@@ -79,22 +80,17 @@ func _update_sprite() -> void:
 		direction = Vector2.DOWN
 	var angle := direction.angle()
 	var frame := 0
-	var base_angle := PI*0.5 # sheet column 0 faces toward the player
 	if angle >= -PI*0.25 and angle < PI*0.25:
 		frame = 1 # right
-		base_angle = 0.0
 	elif angle >= PI*0.25 and angle < PI*0.75:
 		frame = 0 # toward
-		base_angle = PI*0.5
 	elif angle >= -PI*0.75 and angle < -PI*0.25:
 		frame = 3 # away
-		base_angle = -PI*0.5
 	else:
 		frame = 2 # left
-		base_angle = PI
 	_sprite.frame_coords = Vector2i(frame, 1 if possessed else 0)
-	# The sheet has cardinal poses; rotate the nearest pose for diagonal angles.
-	_sprite.rotation = wrapf(angle-base_angle, -PI, PI)
+	# Turn by switching to the closest cardinal pose. Keep the pixel art upright.
+	_sprite.rotation = 0.0
 
 func _draw_sand_shield() -> void:
 	var general_arena := arena as DesertStatueArena
