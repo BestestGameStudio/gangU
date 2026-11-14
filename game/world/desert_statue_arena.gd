@@ -30,6 +30,11 @@ var _sized := false
 @export var phase_two_damage_per_statue := 0.08
 @export var phase_two_speed_per_statue := 0.06
 @export var phase_two_heal_per_statue := 16
+## Phase-two attack and arena hazard tuning are PLACEHOLDERS.
+@export var phase_two_hazard_duration := 48.0
+@export var phase_two_attack_damage := 18
+@export var phase_two_attack_gap := 0.65
+@export var phase_two_shield_heal_per_second := 12.0
 
 var hp := 2400
 var state: State = State.DORMANT
@@ -72,6 +77,25 @@ var _hit_stun_used := false
 var _episode_host: DesertStatue
 var _force_hop := false
 var _phase_time := 0.0
+var _phase_two_attack_time := 0.0
+var _phase_two_attack_index := 0
+var _phase_two_attack_done := false
+var _phase_two_release_done := false
+var _phase_two_dash_count := 0
+var _phase_two_dash_hit := false
+var _phase_two_aim := Vector2.ZERO
+var _phase_two_boss_position := Vector2.ZERO
+var _phase_two_impact_time := 0.0
+var _phase_two_impact_position := Vector2.ZERO
+var _phase_two_impact_duration := 0.55
+var _phase_two_impact_radius := 145.0
+var _phase_two_bash_start := Vector2.ZERO
+var _phase_two_bash_direction := Vector2.DOWN
+var _phase_two_bash_hit := false
+var _phase_two_shield: StaticBody2D
+var _phase_two_shield_time := 0.0
+var _phase_two_shield_heal_fraction := 0.0
+var _phase_two_bombardment: DesertBombardment
 var _transfer_target: DesertStatue
 var _transfer_left := 0.0
 class EnemyBoundary:
@@ -91,6 +115,7 @@ var audio: DesertStatueAudio
 const CombatEffects := preload("res://game/combat/combat_effects.gd")
 const SPEAR_VISUAL := preload("res://game/world/desert_spear_visual.gd")
 const PROJECTILE := preload("res://game/spells/projectile.tscn")
+const BOMBARDMENT := preload("res://game/world/desert_bombardment.gd")
 
 func _ready() -> void:
 	configure_size()
@@ -178,12 +203,7 @@ func _physics_process(delta: float) -> void:
 	player.global_position = constrain_player_position(player.global_position)
 	if state == State.PHASE_TWO:
 		_phase_time += delta
-		for statue in statues:
-			if statue.broken and not statue.absorbed:
-				statue.position = statue.position.move_toward(Vector2.ZERO,delta*250)
-				statue.scale = statue.scale.move_toward(Vector2.ONE*0.12,delta*0.9)
-				if statue.position.length() < 8:
-					statue.absorbed = true
+		_phase_two_step(delta)
 	elif state == State.STUNNED:
 		_stun_left -= delta
 		if _stun_left <= 0:
@@ -298,10 +318,17 @@ func _possess(statue: DesertStatue) -> void:
 	audio.possess(possessed.global_position)
 
 func damage_statue(statue: DesertStatue, amount: int, crit_tier: int) -> void:
-	if not visiting or state == State.PHASE_TWO or state == State.DORMANT or amount <= 0:
+	if not visiting or state == State.DORMANT or amount <= 0:
 		return
 	statue.flash = 0.15
 	audio.damage(statue.global_position)
+	if state == State.PHASE_TWO:
+		if statue == possessed:
+			var boss_before := hp
+			apply_damage(amount)
+			OnHit.record(statue, boss_before, hp)
+			CombatEffects.damage_number(get_parent(), statue.global_position, amount, crit_tier)
+		return
 	if statue == possessed:
 		var before := hp
 		apply_damage(amount)
@@ -324,11 +351,21 @@ func damage_statue(statue: DesertStatue, amount: int, crit_tier: int) -> void:
 
 func apply_damage(amount: int) -> void:
 	hp = maxi(hp-maxi(amount,0),0)
+	if state == State.PHASE_TWO and is_instance_valid(possessed):
+		possessed.hp = hp
+		possessed.health_changed.emit(hp, boss_max_hp)
 	if hp <= boss_max_hp/2 and state != State.PHASE_TWO:
 		_enter_phase_two()
+	if hp <= 0 and state == State.PHASE_TWO:
+		_phase_two_bombardment.active = false
+		_details.text = "THE SAND GENERAL IS DEFEATED"
 
 func heal(amount: int) -> void:
+	var before := hp
 	hp = mini(hp+maxi(amount,0),boss_max_hp)
+	if hp != before and state == State.PHASE_TWO and is_instance_valid(possessed):
+		possessed.hp = hp
+		possessed.health_changed.emit(hp, boss_max_hp)
 
 func _stun(force_hop: bool) -> void:
 	_transfer_target = null
@@ -458,7 +495,7 @@ func _plan_volley(starts_at: float) -> void:
 		if not volley.aims_at_player:
 			var choices: Array[DesertStatue] = []
 			for candidate in statues:
-				if candidate != shooter and not candidate.broken:
+				if candidate != shooter:
 					choices.append(candidate)
 			if choices.size() > 1:
 				choices.erase(_previous_targets.get(shooter))
@@ -471,7 +508,16 @@ func _plan_volley(starts_at: float) -> void:
 					across.append(candidate)
 			target = choices.pick_random() if across.is_empty() else across.pick_random()
 			_previous_targets[shooter] = target
-			endpoint = target.position+Vector2(0,-20)
+			# Broken statues' rubble moves inward, but the warning stays aimed at
+			# the statue's original ring position for the full volley.
+			endpoint = _ring_points[statues.find(target)]+Vector2(0,-20)
+		else:
+			# Aim through the frozen player position and keep flying to the arena edge.
+			var direction := (player_target-(shooter.position+Vector2(0,-20))).normalized()
+			var start := shooter.position+Vector2(0,-20)
+			var projection := -start.dot(direction)
+			var edge_distance := projection+sqrt(maxf(projection*projection+arena_radius*arena_radius-start.length_squared(),0.0))
+			endpoint = start+direction*edge_distance
 		var lane := SpearLane.new()
 		lane.shooter = shooter
 		lane.target = target
@@ -492,6 +538,8 @@ func _fire_lane(lane: SpearLane, volley: SpearVolley) -> void:
 	spell.range = lane.start.distance_to(lane.end)
 	spell.radius = spear_radius
 	spell.projectile_color = Color("dc734e")
+	if volley.aims_at_player:
+		spell.tags.append(SpellTags.PIERCING)
 	var shot := PROJECTILE.instantiate() as Projectile
 	shot.setup(spell,lane.end-lane.start,lane.shooter)
 	shot.collision_mask = PhysicsLayers.WORLD | PhysicsLayers.PLAYER | PhysicsLayers.SUMMON
@@ -539,6 +587,30 @@ func _next_spear_delay() -> float:
 
 func _enter_phase_two() -> void:
 	state = State.PHASE_TWO
+	_phase_two_boss_position = Vector2(0, -arena_radius + 100.0)
+	_phase_two_attack_time = 0.0
+	_phase_two_attack_index = 0
+	_phase_two_bombardment = BOMBARDMENT.new() as DesertBombardment
+	_phase_two_bombardment.name = "PhaseTwoBombardment"
+	_phase_two_bombardment.shrink_duration = phase_two_hazard_duration
+	_phase_two_bombardment.max_progress = 1.0
+	_phase_two_bombardment.start(arena_radius)
+	_phase_two_bombardment.bombardment_due.connect(_on_bombardment_due)
+	add_child.call_deferred(_phase_two_bombardment)
+	# Reuse the encounter's hit receiver as the general's target so player
+	# spells keep their normal collision and OnHit flow.
+	if is_instance_valid(possessed):
+		possessed.position = _phase_two_boss_position
+		possessed.hp = hp
+		possessed.max_hp = boss_max_hp
+		possessed.broken = false
+		possessed.absorbed = false
+		possessed.collision_layer = PhysicsLayers.ENEMY
+		possessed.collision_mask = 0
+	for statue in statues:
+		if statue != possessed:
+			statue.absorbed = true
+			statue.collision_layer = 0
 	_pending_volleys.clear()
 	_cancel_star()
 	phase_two_damage_multiplier = 1.0 + broken_count*phase_two_damage_per_statue
@@ -549,13 +621,218 @@ func _enter_phase_two() -> void:
 	for shot: Projectile in get_tree().get_nodes_in_group(&"projectiles"):
 		if shot.source is DesertStatue and (shot.source as DesertStatue).arena == self:
 			shot.queue_free()
+	queue_redraw()
+
+## PHASE 2 boss loop: each move has a readable windup, release, then recovery.
+## The sand general is arena-owned (like phase-one possession), so its HP
+## remains the encounter HP and all attacks use the normal Player damage path.
+func _phase_two_step(delta: float) -> void:
+	_phase_two_impact_time = maxf(_phase_two_impact_time-delta, 0.0)
+	if _phase_two_shield_time > 0.0:
+		_phase_two_shield_time -= delta
+		if _phase_two_shield_time <= 0.0:
+			_remove_phase_two_shield()
+	if hp <= 0:
+		return
+	if _phase_two_shield_time > 0.0:
+		_phase_two_shield_heal_fraction += phase_two_shield_heal_per_second*delta
+		var healing := floori(_phase_two_shield_heal_fraction)
+		if healing > 0:
+			heal(healing)
+			_phase_two_shield_heal_fraction -= healing
+	if _phase_two_bombardment != null:
+		_phase_two_bombardment.advance(delta)
+		_phase_two_boss_position = _constrain_boss_position(_phase_two_boss_position)
+	if is_instance_valid(possessed):
+		possessed.position = _phase_two_boss_position
+	_phase_two_attack_time += delta*phase_two_speed_multiplier
+	var windup: float = [0.65, 0.45, 0.85, 0.9, 0.55, 0.8, 0.75][_phase_two_attack_index]
+	var release: float = [1.15, 1.05, 1.2, 1.2, 0.8, 1.25, 1.0][_phase_two_attack_index]
+	if _phase_two_attack_time < windup:
+		_phase_two_aim = player.global_position
+		return
+	var attack_time: float = _phase_two_attack_time-windup
+	if not _phase_two_attack_done:
+		_phase_two_attack_done = true
+		_phase_two_dash_count = -1
+		_phase_two_dash_hit = false
+		_phase_two_release_done = false
+		if _phase_two_attack_index == 3:
+			_phase_two_aim = to_local(player.global_position)
+		elif _phase_two_attack_index == 2 or _phase_two_attack_index == 4:
+			_phase_two_aim = (to_local(player.global_position)-_phase_two_boss_position).normalized()
+			if _phase_two_attack_index == 4:
+				_phase_two_bash_start = _phase_two_boss_position
+				_phase_two_bash_direction = _phase_two_aim
+				_phase_two_bash_hit = false
+		else:
+			_phase_two_aim = player.global_position
+	_phase_two_execute(_phase_two_attack_index, attack_time, delta)
+	if is_instance_valid(possessed):
+		possessed.position = _phase_two_boss_position
+	if attack_time >= release:
+		_phase_two_attack_time = -phase_two_attack_gap
+		_phase_two_attack_done = false
+		_phase_two_release_done = false
+		_phase_two_attack_index = (_phase_two_attack_index+1)%7
+
+func _phase_two_execute(attack: int, t: float, delta: float) -> void:
+	var target_offset := player.global_position-global_position
+	var attack_damage := maxi(roundi(phase_two_attack_damage*phase_two_damage_multiplier), 1)
+	match attack:
+		0: # Panning projectile volley, sweeping left to right across the arena.
+			if _phase_two_dash_count < 4 and t >= 0.18 + (_phase_two_dash_count+1)*0.09:
+				_phase_two_dash_count += 1
+				var start := Vector2(-arena_radius*0.78 + _phase_two_dash_count*arena_radius*0.39, -arena_radius*0.58)
+				_spawn_general_projectile(start, Vector2(0.12,1), attack_damage, arena_radius*1.6, 9.0)
+		1: # Triple slash: three short dashes aimed at the player's latest position.
+			if t < 0.9:
+				var dash_slot := mini(floori(t/0.28),2)
+				if dash_slot > _phase_two_dash_count:
+					_phase_two_dash_count = dash_slot
+					_phase_two_aim = player.global_position
+					_phase_two_dash_hit = false
+				var dash_destination := _phase_two_boss_position.move_toward(_phase_two_aim-global_position, 340.0*phase_two_speed_multiplier*delta)
+				_phase_two_boss_position = _constrain_boss_position(dash_destination)
+				if not _phase_two_dash_hit and _phase_two_boss_position.distance_to(target_offset) < 56.0:
+					player.apply_damage(attack_damage)
+					_phase_two_dash_hit = true
+		2: # Charged frontal sweep, a broad panning slash in front of the general.
+			if t >= 0.3 and not _phase_two_release_done:
+				_phase_two_release_done = true
+				var forward := _phase_two_aim.normalized()
+				var to_player := target_offset-_phase_two_boss_position
+				if to_player.length() < 245 and forward.dot(to_player.normalized()) > 0.35:
+					player.apply_damage(attack_damage)
+		3: # Ground slam: large circular area around the player's locked position.
+			if t >= 0.4 and not _phase_two_release_done:
+				_phase_two_release_done = true
+				_show_phase_two_impact(_phase_two_aim, 145.0, 0.55)
+				if target_offset.distance_to(_phase_two_aim) < 145:
+					player.apply_damage(attack_damage+5)
+		4: # A visible shield-first lunge pushes toward the south wall.
+			var dash_time := 0.42
+			var dash_progress := clampf(t/dash_time, 0.0, 1.0)
+			var eased_progress := 1.0-pow(1.0-dash_progress, 3.0)
+			var bash_destination := _phase_two_bash_start + _phase_two_bash_direction*175.0*eased_progress
+			_phase_two_boss_position = _constrain_boss_position(bash_destination)
+			if not _phase_two_bash_hit and _phase_two_boss_position.distance_to(target_offset) < 66.0:
+				_phase_two_bash_hit = true
+				_show_phase_two_impact(target_offset, 68.0, 0.32)
+				player.apply_damage(attack_damage)
+				player.launch(Vector2.DOWN, 520.0, 0.34)
+			if t > dash_time:
+				var retreat := clampf((t-dash_time)/0.24, 0.0, 1.0)
+				var retreat_destination := _phase_two_bash_start + _phase_two_bash_direction*175.0*(1.0-retreat)
+				_phase_two_boss_position = _constrain_boss_position(retreat_destination)
+		5: # Spear throw; its hit propels the player back across the arena.
+			if t >= 0.2 and not _phase_two_release_done:
+				_phase_two_release_done = true
+				var spear_direction := (target_offset-_phase_two_boss_position).normalized()
+				var shot := _spawn_general_projectile(_phase_two_boss_position+spear_direction*45.0, spear_direction, attack_damage+4, arena_radius*1.8, 12.0)
+				shot.visual_override = SPEAR_VISUAL.new()
+				shot.visual_override.scale = Vector2(1.6, 1.6)
+				shot.hit.connect(_on_spear_throw_hit)
+		6: # Plant a temporary solid shield between the general and the player.
+			if t >= 0.28 and not _phase_two_release_done:
+				_phase_two_release_done = true
+				var player_local := to_local(player.global_position)
+				var between := _phase_two_boss_position.lerp(player_local, 0.56)
+				var safe_position := _constrain_boss_position(between)
+				_plant_phase_two_shield(safe_position, player_local-safe_position)
+	queue_redraw()
+
+func _constrain_boss_position(destination: Vector2) -> Vector2:
+	var safe_radius_limit := maxf(arena_radius-45.0, 1.0)
+	if _phase_two_bombardment == null:
+		return destination.limit_length(safe_radius_limit)
+	var safe_boss_radius := maxf(_phase_two_bombardment.safe_radius-45.0, 0.0)
+	return destination.limit_length(minf(safe_boss_radius, safe_radius_limit))
+
+func _plant_phase_two_shield(local_position: Vector2, toward_player: Vector2) -> void:
+	_remove_phase_two_shield()
+	var shield := StaticBody2D.new()
+	shield.name = "GeneralPlantedShield"
+	shield.collision_layer = PhysicsLayers.WORLD
+	shield.collision_mask = 0
+	shield.position = local_position
+	shield.rotation = toward_player.angle()+PI*0.5
+	shield.z_index = 8
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(88.0, 24.0)
+	collision.shape = shape
+	shield.add_child(collision)
+	var outer := Polygon2D.new()
+	outer.name = "ShieldWood"
+	outer.polygon = PackedVector2Array([Vector2(-42,-17),Vector2(31,-17),Vector2(45,-8),Vector2(45,8),Vector2(31,17),Vector2(-42,17)])
+	outer.color = Color("68452f")
+	shield.add_child(outer)
+	var face := Polygon2D.new()
+	face.name = "ShieldFace"
+	face.polygon = PackedVector2Array([Vector2(-36,-12),Vector2(28,-12),Vector2(38,-6),Vector2(38,6),Vector2(28,12),Vector2(-36,12)])
+	face.color = Color("d3a452")
+	face.z_index = 1
+	shield.add_child(face)
+	var ridge := Line2D.new()
+	ridge.name = "ShieldRidge"
+	ridge.points = PackedVector2Array([Vector2(-34,0),Vector2(0,-3),Vector2(36,0)])
+	ridge.width = 3.0
+	ridge.default_color = Color("fff0b6")
+	ridge.z_index = 2
+	shield.add_child(ridge)
+	_phase_two_shield = shield
+	_phase_two_shield_time = 5.0
+	_phase_two_shield_heal_fraction = 0.0
+	add_child.call_deferred(shield)
+
+func _remove_phase_two_shield() -> void:
+	_phase_two_shield_time = 0.0
+	_phase_two_shield_heal_fraction = 0.0
+	if is_instance_valid(_phase_two_shield):
+		_phase_two_shield.queue_free()
+	_phase_two_shield = null
+
+func _show_phase_two_impact(at: Vector2, radius: float, duration: float) -> void:
+	_phase_two_impact_position = at
+	_phase_two_impact_radius = radius
+	_phase_two_impact_duration = duration
+	_phase_two_impact_time = duration
+
+func _spawn_general_projectile(local_start: Vector2, direction: Vector2, damage: int, max_range: float, radius: float) -> Projectile:
+	var spell := Spell.new()
+	spell.damage = damage
+	spell.projectile_speed = maxf(_screen_world_size.x*0.78, 450.0)
+	spell.range = max_range
+	spell.radius = radius
+	spell.projectile_color = Color("f0bd53")
+	var shot := PROJECTILE.instantiate() as Projectile
+	shot.setup(spell, direction, self)
+	shot.collision_mask = PhysicsLayers.WORLD | PhysicsLayers.PLAYER
+	shot.position = local_start
+	shot.z_index = 12
+	add_child.call_deferred(shot)
+	return shot
+
+func _on_spear_throw_hit(body: Node2D) -> void:
+	if body == player and is_instance_valid(player):
+		player.launch(Vector2.DOWN, 650.0, 0.46)
+
+func _on_bombardment_due() -> void:
+	if is_instance_valid(player) and not _phase_two_bombardment.is_safe(player.global_position, global_position):
+		player.apply_damage(maxi(roundi(phase_two_attack_damage*0.55*phase_two_damage_multiplier), 1))
 
 func _update_ui() -> void:
 	_bar.value = hp
 	_title.text = "SUNBOUND SOVEREIGN  ·  %d / %d" % [hp,boss_max_hp]
-	if state == State.PHASE_TWO:
+	if state == State.PHASE_TWO and hp <= 0:
+		_title.text = "THE SAND GENERAL IS DEFEATED"
+		_details.text = "The Sunbound Sanctum is quiet"
+	elif state == State.PHASE_TWO:
 		_title.text = "PHASE 2  ·  THE SOVEREIGN AWAKENS"
 		_details.text = "%d absorbed  |  Damage +%d%%  |  Speed +%d%%  |  Recovered %d HP" % [broken_count,roundi((phase_two_damage_multiplier-1)*100),roundi((phase_two_speed_multiplier-1)*100),phase_two_recovered_hp]
+		if _phase_two_shield_time > 0.0:
+			_details.text += "  |  SHIELD REGENERATING"
 	elif not _pending_volleys.is_empty():
 		_details.text = "NEXT SPEARS IN %.1fs   |   Dodge the marked paths" % _next_spear_delay()
 	elif state == State.STUNNED:
@@ -603,7 +880,7 @@ func _circle(radius: float, color: Color, width: float = -1.0) -> void:
 func _draw() -> void:
 	for i in 9:
 		_circle(arena_radius+100-i*10,Color("bda076").lerp(Color("d8bd86"),float(i)/8))
-	_circle(arena_radius-12,Color("d9be87"))
+	_circle(arena_radius-12,Color("b39a70"))
 	for i in 650:
 		var a := float(i)*2.399963
 		var at := Vector2.from_angle(a)*sqrt(float(i)/650)*(arena_radius-15)
@@ -629,9 +906,61 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO,pulse,Color(0.9,0.6,0.15,0.2))
 		draw_arc(Vector2.ZERO,pulse,0,TAU,64,Color("ffd274"),3)
 		draw_string(ThemeDB.fallback_font,Vector2(-53,6),"PHASE 2",HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color("fff0c4"))
+		if _phase_two_shield_time > 0.0:
+			var heal_pulse := 54.0+sin(Time.get_ticks_msec()*0.01)*5.0
+			draw_arc(_phase_two_boss_position,heal_pulse,0,TAU,64,Color(0.38,1.0,0.54,0.8),3.0,true)
+			draw_string(ThemeDB.fallback_font,_phase_two_boss_position+Vector2(-5,-54),"+",HORIZONTAL_ALIGNMENT_LEFT,-1,25,Color("9dffad"))
+		_draw_phase_two_telegraph()
 	if state == State.DORMANT:
 		draw_string(ThemeDB.fallback_font,Vector2(-arena_radius+80,-35),"SUNBOUND SANCTUM",HORIZONTAL_ALIGNMENT_LEFT,-1,23,Color("ffe7b4"))
 		draw_string(ThemeDB.fallback_font,Vector2(-arena_radius+80,-10),"Walk east to the central seal",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("fff1d5"))
 		draw_arc(Vector2.ZERO,activation_radius,0,TAU,80,Color(0.94,0.77,0.4,0.6),2)
 		draw_string(ThemeDB.fallback_font,Vector2(-140,58),"SUNBOUND SANCTUM",HORIZONTAL_ALIGNMENT_LEFT,-1,23,Color("ffe7b4"))
 		draw_string(ThemeDB.fallback_font,Vector2(-126,82),"Approach the seal to challenge",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("fff1d5"))
+
+func _draw_phase_two_telegraph() -> void:
+	if _phase_two_impact_time > 0.0:
+		var impact_progress := 1.0-_phase_two_impact_time/_phase_two_impact_duration
+		var impact_radius := 18.0+impact_progress*_phase_two_impact_radius
+		var impact_alpha := clampf(_phase_two_impact_time/_phase_two_impact_duration, 0.0, 1.0)
+		draw_circle(_phase_two_impact_position, _phase_two_impact_radius*0.46*(1.0-impact_progress*0.72), Color(1.0,0.82,0.39,0.42*impact_alpha))
+		draw_arc(_phase_two_impact_position, impact_radius, 0, TAU, 72, Color(1.0,0.91,0.59,impact_alpha), 9.0*(1.0-impact_progress*0.55), true)
+		draw_arc(_phase_two_impact_position, impact_radius*0.78, 0, TAU, 64, Color(1.0,0.3,0.08,impact_alpha*0.9), 3.0, true)
+		for i in 8:
+			var angle := TAU*float(i)/8.0+0.18
+			var direction := Vector2.from_angle(angle)
+			draw_line(_phase_two_impact_position+direction*24, _phase_two_impact_position+direction*(impact_radius*0.86), Color(0.28,0.12,0.07,impact_alpha), 4.0, true)
+	if _phase_two_attack_time < 0.35 or hp <= 0:
+		return
+	var alpha := 0.22 + 0.18 * absf(sin(Time.get_ticks_msec()*0.012))
+	match _phase_two_attack_index:
+		1:
+			draw_line(_phase_two_boss_position, _phase_two_aim-global_position, Color(1.0,0.35,0.2,alpha), 12.0, true)
+		2:
+			draw_line(_phase_two_boss_position, _phase_two_boss_position+_phase_two_aim.normalized()*240, Color(1.0,0.3,0.1,alpha), 34.0, true)
+		3:
+			draw_circle(_phase_two_aim, 145, Color(0.95,0.11,0.05,0.13+alpha*0.18))
+			draw_arc(_phase_two_aim, 145, 0, TAU, 72, Color(1.0,0.22,0.08,alpha+0.35), 7.0, true)
+			draw_arc(_phase_two_aim, 133, 0, TAU, 72, Color(1.0,0.72,0.28,alpha+0.28), 2.0, true)
+		4:
+			var bash_end := _phase_two_boss_position+_phase_two_aim.normalized()*175.0
+			draw_line(_phase_two_boss_position, bash_end, Color(1.0,0.2,0.08,alpha+0.18), 42.0, true)
+			draw_line(_phase_two_boss_position, bash_end, Color(1.0,0.8,0.36,alpha+0.32), 5.0, true)
+			if _phase_two_attack_time > 0.6:
+				draw_line(_phase_two_bash_start, _phase_two_boss_position, Color(1.0,0.82,0.43,alpha*0.85), 20.0, true)
+		5:
+			var spear_target := to_local(_phase_two_aim)
+			var spear_direction := (spear_target-_phase_two_boss_position).normalized()
+			var spear_start := _phase_two_boss_position+spear_direction*42.0
+			var spear_tip := spear_target-spear_direction*15.0
+			draw_line(spear_start, spear_tip, Color(1.0,0.24,0.08,alpha+0.12), 11.0, true)
+			draw_line(spear_start, spear_tip, Color("fff0b4"), 3.0, true)
+			draw_line(spear_tip, spear_tip-spear_direction*17.0+spear_direction.orthogonal()*8.0, Color("fff0b4"), 3.0, true)
+			draw_line(spear_tip, spear_tip-spear_direction*17.0-spear_direction.orthogonal()*8.0, Color("fff0b4"), 3.0, true)
+		6:
+			var player_local := to_local(_phase_two_aim)
+			var toward_player := (player_local-_phase_two_boss_position).normalized()
+			var wall_center := _phase_two_boss_position.lerp(player_local, 0.56)
+			var side := toward_player.orthogonal()*46.0
+			draw_colored_polygon(PackedVector2Array([wall_center-side-toward_player*10.0,wall_center+side-toward_player*10.0,wall_center+side+toward_player*10.0,wall_center-side+toward_player*10.0]),Color(1.0,0.78,0.28,alpha*0.65))
+			draw_line(wall_center-side, wall_center+side, Color("fff0b4"), 6.0, true)
