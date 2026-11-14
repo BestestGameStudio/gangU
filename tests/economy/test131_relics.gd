@@ -170,10 +170,11 @@ func run() -> void:
 	check(not rm._restarting and owned.has_id(r.id), "item revive preserves OWNED RELICS in same run")
 	# No revive remains: actual RunManager timer reloads current Main scene.
 	rm.restart_delay = 0.01
+	var pre_death_count := owned.count()
 	player.apply_damage(player.hp)
 	check(rm._restarting, "unrevived death starts new-run path")
 	await create_timer(0.2).timeout
 	var next_owned := current_scene.get_node("OwnedRelics") as OwnedRelics
-	check(next_owned.count() == 0, "actual new-run scene reload clears OWNED RELICS")
+	check(next_owned.count() == pre_death_count and next_owned.has_id(r.id) and next_owned.has_id(fresh.id), "new-run reload KEEPS owned relics across death (#655)")
 	print("[131] DONE checks=", checks, " failures=", failures)
 	quit(1 if failures else 0)

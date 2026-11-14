@@ -265,6 +265,35 @@ func get_slots() -> Array[Spell]:
 func get_unlocked() -> Array[Spell]:
 	return unlocked.duplicate()
 
+## #655: death-carry restore (ProgressionCarry). Makes the fresh caster match
+## the inventory captured at death EXACTLY. Runs AFTER _ready seeded
+## starting_spells, so first prune any seeded spell the snapshot does not
+## have (a spell consumed by an applied upgrade is gone from the snapshot;
+## its result is appended below), then append missing snapshot entries
+## (idempotent per entry, refusal-guarded like the public APIs), then clear
+## all slots and rebuild the captured layout. Signal-faithful so the HUD
+## slot bar follows.
+func restore_run_state(p_unlocked: Array[Spell], p_spells: Array[Spell], p_slots: Array[Spell]) -> void:
+	for spell in unlocked.duplicate():
+		if spell != null and not p_unlocked.has(spell):
+			unlocked.erase(spell)
+	for spell in spells.duplicate():
+		if spell != null and not p_spells.has(spell):
+			spells.erase(spell)
+	for spell in p_unlocked:
+		if spell != null and not unlocked.has(spell) and not has_logical_spell(spell):
+			unlocked.append(spell)
+			spell_unlocked.emit(spell)
+	for spell in p_spells:
+		if spell != null and not spells.has(spell):
+			spells.append(spell)
+			spell_added.emit(spell)
+	for i in SLOT_COUNT:
+		clear_slot(i)
+	for i in SLOT_COUNT:
+		if i < p_slots.size() and p_slots[i] != null and unlocked.has(p_slots[i]):
+			assign_slot(i, p_slots[i])
+
 func next_spell() -> void:
 	if spells.size() > 1:
 		current_index = (current_index + 1) % spells.size()

@@ -182,6 +182,10 @@ func _ready() -> void:
 	settings.name = "SettingsPanel"
 	add_child(settings)
 	area_loader._load_hub()
+	# #655: reapply the progression snapshot RunManager took at the player's
+	# death - spells, cast XP, upgrade tiers/tokens and relics persist across
+	# death; coins, the world and the map still reset with this reload.
+	ProgressionCarry.apply_pending(self)
 	# Absent flag: no load, node, callbacks, counter traversal or export.
 	if OS.get_cmdline_user_args().has("--gameperf"):
 		var script: Script = load("res://game/core/game_perf_probe.gd")

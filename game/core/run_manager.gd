@@ -16,15 +16,24 @@ class_name RunManager
 ##
 ## Consumes: Player.died (#5). Exposes: run_restarting() for the #11 HUD.
 ##
-## #351 FULL-RESET SCOPE (Colin, 2026-11-08): death resets EVERYTHING run-
-## scoped - the world (current area -> hub, enemies, pickups), dungeon
-## cleared-state, spells, upgrades, coins and the map. No partial carryover.
-## Today all of that lives in nodes under the run scene, so the reload alone
-## wipes it. State that outlives the reload (an autoload, a node parked on
-## the tree root, e.g. future overworld cleared-state #348 or the map #347)
-## MUST join RUN_STATE_GROUP and implement reset_run_state(); _restart calls
-## it on every member right before the reload. Cross-run META records (the
-## Bestiary, #325) are not run state and stay out of this group.
+## #351 FULL-RESET SCOPE (Colin, 2026-11-08): death resets run-scoped state
+## - the world (current area -> hub, enemies, pickups), dungeon
+## cleared-state, coins and the map. Today all of that lives in nodes under
+## the run scene, so the reload alone wipes it. State that outlives the
+## reload (an autoload, a node parked on the tree root, e.g. future
+## overworld cleared-state #348 or the map #347) MUST join RUN_STATE_GROUP
+## and implement reset_run_state(); _restart calls it on every member right
+## before the reload. Cross-run META records (the Bestiary, #325) are not
+## run state and stay out of this group.
+##
+## #655 CARVE-OUT (Daniel, 2026-11-14: "dying does not reset your
+## progression (spells, upgrades, relics) money is lost tho"): progression
+## is the ONE thing death no longer resets. _on_player_died snapshots the
+## caster inventory/slots, cast XP, upgrade tiers/tokens and relics into
+## ProgressionCarry before the restart presentation; Main applies the
+## snapshot to the fresh scene after the reload. This supersedes the #351
+## "no partial carryover" line for progression ONLY: coins, the world,
+## cleared-state, the map, the revive satchel and consumables still reset.
 
 signal run_restarting()
 
@@ -60,6 +69,9 @@ func _on_player_died() -> void:
 	if satchel != null and satchel.try_revive():
 		return
 	_restarting = true
+	# #655: capture progression BEFORE anything tears down; Main reapplies it
+	# to the fresh scene after the reload (spells/upgrades/relics persist).
+	ProgressionCarry.snapshot(get_tree())
 	_disable_casting()
 	PlayerDeathPresentation.begin(get_parent(), _watched, restart_delay)
 	run_restarting.emit()

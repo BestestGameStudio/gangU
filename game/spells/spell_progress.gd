@@ -35,6 +35,24 @@ func _on_spell_cast(spell: Spell) -> void:
 func cast_count(spell: Spell) -> int:
 	return int(_cast_counts.get(spell, 0))
 
+## #655: death-carry seams (ProgressionCarry). capture/restore the per-run
+## cast XP, applied tiers and boss upgrade tokens verbatim; restore emits so
+## the Tab panel follows. Applied upgrade RESULTS ride the caster's inventory
+## (the result spell is already unlocked/slotted), so nothing re-applies here.
+func capture_run_state() -> Dictionary:
+	return {
+		"cast_counts": _cast_counts.duplicate(),
+		"tiers": _tiers.duplicate(),
+		"tokens": _upgrade_tokens,
+	}
+
+func restore_run_state(state: Dictionary) -> void:
+	_cast_counts = state.get("cast_counts", {})
+	_tiers = state.get("tiers", {})
+	_upgrade_tokens = int(state.get("tokens", 0))
+	tokens_changed.emit(_upgrade_tokens)
+	upgrades_changed.emit(null)
+
 ## Upgrade paths offered for a spell: [{id, name}] per the pinned provider
 ## shape; returns full SpellUpgrade resources, F reads id/display_name.
 func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
