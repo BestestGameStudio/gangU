@@ -6,8 +6,9 @@ extends SceneTree
 ##   world        - back in the hub, not the dungeon we died in
 ##   dungeon clear- DungeonA objective completed before death; fresh run has
 ##                  no completed objective and DungeonA re-mounts its enemies
-##   spells       - collected extra spell gone, loadout == starting_spells
-##   upgrades     - SpellProgress cast counts and tiers back to 0
+##   spells       - collected extra spell PERSISTS; starting loadout kept
+##                  (upgraded fire_ball stays swapped for its result, #655)
+##   upgrades     - cast XP and applied tiers PERSIST (#655)
 ##   coins        - CurrencyWallet balance back to 0
 ##   map          - stand-in for root-parked state (#347/#348) in the
 ##                  RunManager.RUN_STATE_GROUP gets reset_run_state() called
@@ -32,6 +33,8 @@ var old_scene: Node
 var map: FakeMap
 var extra := Spell.new()
 var fire_ball: Spell = load("res://data/spells/fire_ball.tres")
+var split_result: Spell = load("res://data/spells/fire_ball_split.tres")
+var applied := false
 var objective_done := false
 
 func _check(cond: bool, name: String) -> void:
@@ -85,7 +88,7 @@ func _process(delta: float) -> bool:
 			var prog := old_scene.get_node("SpellProgress") as SpellProgress
 			for i in 10:
 				prog._on_spell_cast(fire_ball)
-			var applied := prog.apply_upgrade(fire_ball, &"fireball_split") if prog.can_upgrade(fire_ball) else false
+			applied = prog.apply_upgrade(fire_ball, &"fireball_split") if prog.can_upgrade(fire_ball) else false
 			_check(prog.cast_count(fire_ball) >= 10, "setup: fire ball XP recorded")
 			print("[351] info: fireball_split applied before death = ", applied)
 			map.revealed[&"dungeon_a"] = true
@@ -136,20 +139,24 @@ func _process(delta: float) -> bool:
 			_check(get_nodes_in_group("enemies").size() > 0, "overworld enemies respawned")
 			# coins
 			_check((s.get_node("CurrencyWallet") as CurrencyWallet).balance() == 0, "coins: wallet back to 0")
-			# spells
+			# spells (#655: progression persists across death)
 			var caster := s.get_node("Player/SpellCaster") as SpellCaster
-			_check(not (extra in caster.spells), "spells: collected extra spell gone")
-			var same := caster.spells.size() == caster.starting_spells.size()
+			_check(extra in caster.spells, "spells: collected extra spell persists across death (#655)")
+			_check(caster.spells.size() == caster.starting_spells.size() + 1, "spells: loadout == starting + extra (%d)" % caster.spells.size())
+			var same := true
 			for sp in caster.starting_spells:
-				same = same and sp in caster.spells
-			_check(same, "spells: loadout == starting_spells (%d)" % caster.spells.size())
-			# upgrades
+				if applied and sp == fire_ball:
+					same = same and split_result in caster.spells and not (fire_ball in caster.spells)
+				else:
+					same = same and sp in caster.spells
+			_check(same, "spells: starting loadout persists (upgraded fire_ball stays swapped for split result)")
+			# upgrades (#655: cast XP + applied tiers persist)
 			var prog := s.get_node("SpellProgress") as SpellProgress
-			_check(prog.cast_count(fire_ball) == 0, "upgrades: fire ball XP back to 0")
+			_check(prog.cast_count(fire_ball) >= 10, "upgrades: fire ball XP persists across death (#655)")
 			var tiers := 0
 			for sp in caster.spells:
 				tiers += prog.get_tier(sp)
-			_check(tiers == 0, "upgrades: every held spell at Base tier")
+			_check(tiers == (1 if applied else 0), "upgrades: applied split tier persists across death (#655)")
 			# map / persistent run state
 			_check(map.resets == 1, "map: reset_run_state() called once on death (got %d)" % map.resets)
 			_check(map.revealed.is_empty() and map.cleared.is_empty(), "map: revealed + cleared state wiped")
