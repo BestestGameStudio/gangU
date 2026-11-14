@@ -25,10 +25,10 @@ func throw_windup(cycle: float) -> float:
 func _throw_speed(cycle: float) -> float:
 	return THROW_DURATION / minf(THROW_DURATION, maxf(cycle * 0.9, 0.1))
 
-func begin_throw(fires_in: float, cycle: float) -> void:
+func begin_throw(fires_in: float, cycle: float, direction: Vector2) -> void:
 	if broken or absorbed or _phase_two():
 		return
-	_stationary.play(_inward_animation(), _throw_speed(cycle))
+	_stationary.play(_throw_animation(direction), _throw_speed(cycle))
 	# Account for the physics tick crossing the cue time. Release is still
 	# controlled by the arena lane, never by an animation callback.
 	_seek_animation(maxf(throw_windup(cycle) - fires_in, 0.0) * _throw_speed(cycle))
@@ -56,11 +56,12 @@ func rebuild() -> void:
 func _phase_two() -> bool:
 	return arena is DesertStatueArena and (arena as DesertStatueArena).state == DesertStatueArena.State.PHASE_TWO
 
-func _inward_animation() -> StringName:
-	var inward := -_ring_position
-	if absf(inward.x) > absf(inward.y):
-		return &"throw_right" if inward.x > 0 else &"throw_left"
-	return &"throw_down" if inward.y >= 0 else &"throw_up"
+# The supplied art is directional; pick the pose matching the actual spear
+# path so any aim (player, statue or centre) reads correctly.
+func _throw_animation(direction: Vector2) -> StringName:
+	if absf(direction.x) > absf(direction.y):
+		return &"throw_right" if direction.x > 0 else &"throw_left"
+	return &"throw_down" if direction.y >= 0 else &"throw_up"
 
 func _seek_animation(seconds: float) -> void:
 	for i in STATIONARY_FRAMES.get_frame_count(_stationary.animation):
