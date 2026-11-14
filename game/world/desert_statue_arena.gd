@@ -86,6 +86,11 @@ var _phase_two_aim := Vector2.ZERO
 var _phase_two_boss_position := Vector2.ZERO
 var _phase_two_impact_time := 0.0
 var _phase_two_impact_position := Vector2.ZERO
+var _phase_two_impact_duration := 0.55
+var _phase_two_impact_radius := 145.0
+var _phase_two_bash_start := Vector2.ZERO
+var _phase_two_bash_direction := Vector2.DOWN
+var _phase_two_bash_hit := false
 var _phase_two_bombardment: DesertBombardment
 var _transfer_target: DesertStatue
 var _transfer_left := 0.0
@@ -636,9 +641,15 @@ func _phase_two_step(delta: float) -> void:
 			_phase_two_aim = to_local(player.global_position)
 		elif _phase_two_attack_index == 2 or _phase_two_attack_index == 4:
 			_phase_two_aim = (to_local(player.global_position)-_phase_two_boss_position).normalized()
+			if _phase_two_attack_index == 4:
+				_phase_two_bash_start = _phase_two_boss_position
+				_phase_two_bash_direction = _phase_two_aim
+				_phase_two_bash_hit = false
 		else:
 			_phase_two_aim = player.global_position
 	_phase_two_execute(_phase_two_attack_index, attack_time, delta)
+	if is_instance_valid(possessed):
+		possessed.position = _phase_two_boss_position
 	if attack_time >= release:
 		_phase_two_attack_time = -phase_two_attack_gap
 		_phase_two_attack_done = false
@@ -647,7 +658,6 @@ func _phase_two_step(delta: float) -> void:
 
 func _phase_two_execute(attack: int, t: float, delta: float) -> void:
 	var target_offset := player.global_position-global_position
-	var target_distance := target_offset.length()
 	var attack_damage := maxi(roundi(phase_two_attack_damage*phase_two_damage_multiplier), 1)
 	match attack:
 		0: # Panning projectile volley, sweeping left to right across the arena.
@@ -676,22 +686,37 @@ func _phase_two_execute(attack: int, t: float, delta: float) -> void:
 		3: # Ground slam: large circular area around the player's locked position.
 			if t >= 0.4 and not _phase_two_release_done:
 				_phase_two_release_done = true
-				_phase_two_impact_position = _phase_two_aim
-				_phase_two_impact_time = 0.55
+				_show_phase_two_impact(_phase_two_aim, 145.0, 0.55)
 				if target_offset.distance_to(_phase_two_aim) < 145:
 					player.apply_damage(attack_damage+5)
-		4: # Shield bash pushes toward the south wall and the approaching hazard.
-			if t >= 0.18 and not _phase_two_release_done:
-				_phase_two_release_done = true
-				if target_distance < 190:
-					player.apply_damage(attack_damage)
-					player.launch(Vector2.DOWN, 520.0, 0.34)
+		4: # A visible shield-first lunge pushes toward the south wall.
+			var dash_time := 0.42
+			var dash_progress := clampf(t/dash_time, 0.0, 1.0)
+			var eased_progress := 1.0-pow(1.0-dash_progress, 3.0)
+			_phase_two_boss_position = _phase_two_bash_start + _phase_two_bash_direction*175.0*eased_progress
+			if not _phase_two_bash_hit and _phase_two_boss_position.distance_to(target_offset) < 66.0:
+				_phase_two_bash_hit = true
+				_show_phase_two_impact(target_offset, 68.0, 0.32)
+				player.apply_damage(attack_damage)
+				player.launch(Vector2.DOWN, 520.0, 0.34)
+			if t > dash_time:
+				var retreat := clampf((t-dash_time)/0.24, 0.0, 1.0)
+				_phase_two_boss_position = _phase_two_bash_start + _phase_two_bash_direction*175.0*(1.0-retreat)
 		5: # Spear throw; its hit propels the player back across the arena.
 			if t >= 0.2 and not _phase_two_release_done:
 				_phase_two_release_done = true
-				var shot := _spawn_general_projectile(_phase_two_boss_position, target_offset-_phase_two_boss_position, attack_damage+4, arena_radius*1.8, 8.0)
+				var spear_direction := (target_offset-_phase_two_boss_position).normalized()
+				var shot := _spawn_general_projectile(_phase_two_boss_position+spear_direction*45.0, spear_direction, attack_damage+4, arena_radius*1.8, 12.0)
+				shot.visual_override = SPEAR_VISUAL.new()
+				shot.visual_override.scale = Vector2(1.6, 1.6)
 				shot.hit.connect(_on_spear_throw_hit)
 	queue_redraw()
+
+func _show_phase_two_impact(at: Vector2, radius: float, duration: float) -> void:
+	_phase_two_impact_position = at
+	_phase_two_impact_radius = radius
+	_phase_two_impact_duration = duration
+	_phase_two_impact_time = duration
 
 func _spawn_general_projectile(local_start: Vector2, direction: Vector2, damage: int, max_range: float, radius: float) -> Projectile:
 	var spell := Spell.new()
@@ -808,10 +833,10 @@ func _draw() -> void:
 
 func _draw_phase_two_telegraph() -> void:
 	if _phase_two_impact_time > 0.0:
-		var impact_progress := 1.0-_phase_two_impact_time/0.55
-		var impact_radius := 38.0+impact_progress*115.0
-		var impact_alpha := clampf(_phase_two_impact_time/0.55, 0.0, 1.0)
-		draw_circle(_phase_two_impact_position, 68.0*(1.0-impact_progress*0.72), Color(1.0,0.82,0.39,0.38*impact_alpha))
+		var impact_progress := 1.0-_phase_two_impact_time/_phase_two_impact_duration
+		var impact_radius := 18.0+impact_progress*_phase_two_impact_radius
+		var impact_alpha := clampf(_phase_two_impact_time/_phase_two_impact_duration, 0.0, 1.0)
+		draw_circle(_phase_two_impact_position, _phase_two_impact_radius*0.46*(1.0-impact_progress*0.72), Color(1.0,0.82,0.39,0.42*impact_alpha))
 		draw_arc(_phase_two_impact_position, impact_radius, 0, TAU, 72, Color(1.0,0.91,0.59,impact_alpha), 9.0*(1.0-impact_progress*0.55), true)
 		draw_arc(_phase_two_impact_position, impact_radius*0.78, 0, TAU, 64, Color(1.0,0.3,0.08,impact_alpha*0.9), 3.0, true)
 		for i in 8:
@@ -831,6 +856,17 @@ func _draw_phase_two_telegraph() -> void:
 			draw_arc(_phase_two_aim, 145, 0, TAU, 72, Color(1.0,0.22,0.08,alpha+0.35), 7.0, true)
 			draw_arc(_phase_two_aim, 133, 0, TAU, 72, Color(1.0,0.72,0.28,alpha+0.28), 2.0, true)
 		4:
-			draw_line(_phase_two_boss_position, _phase_two_boss_position+_phase_two_aim.normalized()*190, Color(1.0,0.3,0.1,alpha), 28.0, true)
+			var bash_end := _phase_two_boss_position+_phase_two_aim.normalized()*175.0
+			draw_line(_phase_two_boss_position, bash_end, Color(1.0,0.2,0.08,alpha+0.18), 42.0, true)
+			draw_line(_phase_two_boss_position, bash_end, Color(1.0,0.8,0.36,alpha+0.32), 5.0, true)
+			if _phase_two_attack_time > 0.6:
+				draw_line(_phase_two_bash_start, _phase_two_boss_position, Color(1.0,0.82,0.43,alpha*0.85), 20.0, true)
 		5:
-			draw_line(_phase_two_boss_position, to_local(_phase_two_aim), Color("ffd477"), 3.0, true)
+			var spear_target := to_local(_phase_two_aim)
+			var spear_direction := (spear_target-_phase_two_boss_position).normalized()
+			var spear_start := _phase_two_boss_position+spear_direction*42.0
+			var spear_tip := spear_target-spear_direction*15.0
+			draw_line(spear_start, spear_tip, Color(1.0,0.24,0.08,alpha+0.12), 11.0, true)
+			draw_line(spear_start, spear_tip, Color("fff0b4"), 3.0, true)
+			draw_line(spear_tip, spear_tip-spear_direction*17.0+spear_direction.orthogonal()*8.0, Color("fff0b4"), 3.0, true)
+			draw_line(spear_tip, spear_tip-spear_direction*17.0-spear_direction.orthogonal()*8.0, Color("fff0b4"), 3.0, true)
