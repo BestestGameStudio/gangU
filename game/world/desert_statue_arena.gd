@@ -466,7 +466,7 @@ func _advance_volleys(delta: float) -> void:
 			else:
 				if not lane.animation_started and lane.fires_at - _attack_time <= lane.shooter.throw_windup(volley_interval):
 					lane.animation_started = true
-					lane.shooter.begin_throw(lane.fires_at - _attack_time, volley_interval)
+					lane.shooter.begin_throw(lane.fires_at - _attack_time, volley_interval, (lane.end - lane.start).normalized())
 				unfinished = true
 		if unfinished:
 			pending.append(volley)
@@ -492,20 +492,43 @@ func player_is_watched() -> bool:
 func _plan_volley(starts_at: float) -> void:
 	var volley := SpearVolley.new()
 	volley.starts_at = starts_at
-	# Keep existing spotted-player piercing rules; only the aim changes.
 	volley.aims_at_player = player_is_watched()
-	# Stationary statues always throw radially inward (Colin, #658).
-	# Continue through the center to the far arena edge, as a crossing spear.
-	# No player tracking or random statue targets in phase one.
+	var player_target := to_local(player.global_position)
 	for shooter in statues:
 		if shooter.broken:
 			continue
-		var start := shooter.position + Vector2(0, -20)
-		var direction := -start.normalized()
-		var endpoint := direction * arena_radius
+		var target: DesertStatue
+		var endpoint := player_target
+		if not volley.aims_at_player:
+			var choices: Array[DesertStatue] = []
+			for candidate in statues:
+				if candidate != shooter:
+					choices.append(candidate)
+			if choices.size() > 1:
+				choices.erase(_previous_targets.get(shooter))
+			if choices.is_empty():
+				continue
+			# Prefer crossing the interior instead of tracing adjacent ring edges.
+			var across: Array[DesertStatue] = []
+			for candidate in choices:
+				if shooter.position.normalized().dot(candidate.position.normalized()) < -0.25:
+					across.append(candidate)
+			target = choices.pick_random() if across.is_empty() else across.pick_random()
+			_previous_targets[shooter] = target
+			# Broken statues' rubble moves inward, but the warning stays aimed at
+			# the statue's original ring position for the full volley.
+			endpoint = _ring_points[statues.find(target)]+Vector2(0,-20)
+		else:
+			# Aim through the frozen player position and keep flying to the arena edge.
+			var direction := (player_target-(shooter.position+Vector2(0,-20))).normalized()
+			var start := shooter.position+Vector2(0,-20)
+			var projection := -start.dot(direction)
+			var edge_distance := projection+sqrt(maxf(projection*projection+arena_radius*arena_radius-start.length_squared(),0.0))
+			endpoint = start+direction*edge_distance
 		var lane := SpearLane.new()
 		lane.shooter = shooter
-		lane.start = start
+		lane.target = target
+		lane.start = shooter.position+Vector2(0,-20)
 		lane.end = endpoint
 		lane.starts_at = starts_at+_rng.randf_range(0,lane_delay_max)
 		lane.fires_at = lane.starts_at+volley_delay

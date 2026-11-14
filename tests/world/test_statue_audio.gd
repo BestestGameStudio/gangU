@@ -91,18 +91,21 @@ func _run() -> void:
 	arena._fire_lane(lane3, volley3)
 	_check(arena.audio.spear_count == 2, "broken statue lane stays silent")
 
-	# The arena owns release timing and inward paths; animation cannot change
-	# damage/collision or the return-star rebuild lifecycle (#658).
+	# The arena owns release timing and spear paths; animation cannot change
+	# damage/collision or the return-star rebuild lifecycle (#658 art).
 	arena._pending_volleys.clear()
+	player.global_position = Vector2.ZERO # arena centre: outside every statue's vision range
 	arena._plan_volley(0.0)
-	var inward := true
+	var plan := arena._pending_volleys[0]
+	_check(not plan.aims_at_player, "centre player outside statue vision keeps statue targets")
+	var targets_other := true
 	var delay_preserved := true
-	for planned in arena._pending_volleys[0].lanes:
-		inward = inward and absf(planned.start.cross(planned.end)) < 0.1 and planned.start.dot(planned.end) < 0.0
+	for planned in plan.lanes:
+		targets_other = targets_other and planned.target != null and planned.target != planned.shooter and planned.end == arena._ring_points[arena.statues.find(planned.target)]+Vector2(0,-20)
 		delay_preserved = delay_preserved and is_equal_approx(planned.fires_at - planned.starts_at, arena.volley_delay)
-	_check(inward, "all stationary warnings and spears cross the arena center")
-	_check(delay_preserved, "center aim preserves the combat release delay")
-	_check(arena.statues[0]._inward_animation() == &"throw_down" and arena.statues[3]._inward_animation() == &"throw_left" and arena.statues[6]._inward_animation() == &"throw_up" and arena.statues[9]._inward_animation() == &"throw_right", "ring cardinal positions select inward throws")
+	_check(targets_other, "unwatched volleys target another statue's ring anchor")
+	_check(delay_preserved, "statue aim preserves the combat release delay")
+	_check(arena.statues[0]._throw_animation(Vector2.DOWN) == &"throw_down" and arena.statues[0]._throw_animation(Vector2.LEFT) == &"throw_left" and arena.statues[0]._throw_animation(Vector2.UP) == &"throw_up" and arena.statues[0]._throw_animation(Vector2.RIGHT) == &"throw_right", "throw direction selects the matching directional animation")
 	target._process(0.1)
 	var death_anchor := target.position
 	_check(target._stationary.animation == &"death" and target.collision_layer == 0, "crumbling statue is already non-collidable")
@@ -121,7 +124,7 @@ func _run() -> void:
 	returning.queue_free()
 	_check(not target.broken and not target.absorbed and target.scale == Vector2.ONE and target.position == target._ring_position, "returning star rebuilds at original ring anchor and scale")
 	_check(target.collision_layer == PhysicsLayers.ENEMY and target._stationary.animation == &"idle", "rebuild restores collision and cancels death animation")
-	target.begin_throw(target.throw_windup(arena.volley_interval), arena.volley_interval)
+	target.begin_throw(target.throw_windup(arena.volley_interval), arena.volley_interval, Vector2.DOWN)
 	target._seek_animation(target.THROW_RELEASE_TIME + 0.00001)
 	_check(target._stationary.frame == 7, "projectile release aligns with first empty-hand throw pose")
 	arena._enter_phase_two()
