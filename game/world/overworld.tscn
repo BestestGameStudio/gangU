@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=22 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
@@ -11,8 +11,6 @@
 [ext_resource type="Resource" path="res://data/enemies/red_mustache.tres" id="631_red_def"]
 [ext_resource type="Resource" path="res://data/enemies/overworld_migrant.tres" id="373_migrant_def"]
 [ext_resource type="Script" path="res://game/world/area_spawn_data.gd" id="373_spawn_data"]
-[ext_resource type="Script" path="res://game/enemies/spawners/wolf_caves.gd" id="474_caves"]
-[ext_resource type="Script" path="res://game/enemies/spawners/overworld_bird.gd" id="478_bird"]
 
 [ext_resource type="Script" path="res://game/world/abandoned_village.gd" id="484_village"]
 [ext_resource type="Script" uid="uid://kq19zfwepvmzr" path="res://game/world/spawn_entry.gd" id="518_spawn_entry"]
@@ -91,11 +89,7 @@ cell_size = 32
 script = ExtResource("437_blockvis")
 map_path = NodePath("../Terrain")
 
-[node name="OverworldBird" type="Node" parent="."]
-script = ExtResource("478_bird")
 
-[node name="WolfCaves" type="Node" parent="."]
-script = ExtResource("474_caves")
 
 [node name="DayNightTint" type="CanvasModulate" parent="."]
 script = ExtResource("448_tint")
