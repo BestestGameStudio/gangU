@@ -1,0 +1,16 @@
+[gd_resource type="SpriteFrames" load_steps=6 format=3]
+[ext_resource type="Texture2D" path="res://assets/sprites/roman_planted_shield.png" id="1"]
+[sub_resource type="AtlasTexture" id="s0"]
+atlas = ExtResource("1")
+region = Rect2(0, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="s1"]
+atlas = ExtResource("1")
+region = Rect2(64, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="s2"]
+atlas = ExtResource("1")
+region = Rect2(128, 0, 64, 64)
+[sub_resource type="AtlasTexture" id="s3"]
+atlas = ExtResource("1")
+region = Rect2(192, 0, 64, 64)
+[resource]
+animations = [{"frames": [{"duration": 1.0,"texture":SubResource("s0")},{"duration": 1.0,"texture":SubResource("s1")},{"duration": 1.0,"texture":SubResource("s2")},{"duration": 1.0,"texture":SubResource("s3")}],"loop":true,"name":&"idle","speed":5.0}]
