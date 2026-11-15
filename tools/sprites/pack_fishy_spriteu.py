@@ -4,8 +4,8 @@ gangU's fishy.png atlas + fishy_frames.tres.
 usage: python3 -I tools/sprites/pack_fishy_spriteu.py SPRITEU_FISHY.json OLD_FISHY.png \
            assets/sprites/fishy.png --tres data/sprites/fishy_frames.tres
 
-The SpriteU sheet is 64x64, front view, with idle + cast + cast-up/down/left +
-hit animations. gangU's behavior (game/enemies/behaviors/enemy_behavior_fishy.gd)
+The SpriteU sheet is 64x64, front view, with idle, walk, attack, death,
+hit, cast and cast-up/down/left animations. gangU's behavior (game/enemies/behaviors/enemy_behavior_fishy.gd)
 needs idle/walk/attack/hurt/death plus cast/cast_hold/reel/retract per cast
 direction, and the fishing line reads the `hook` cell.
 
@@ -20,12 +20,10 @@ Mapping (SpriteU -> gangU):
 - retract         <- cast[5,4,1]
 - cast_up/_down/_left and their cast_hold/reel/retract companions: same frames
   from the matching directional cast. The plain names are the right cast.
-- walk/death      <- the SpriteU package's walk/death when present (added
-                     2026-11-14), else the PREVIOUS sheet's cells,
+- walk/attack/death <- the SpriteU package's walk/attack/death when present
+                     (walk + death added 2026-11-14; slowed walk + attack in the
+                     same-day v3 package), else the PREVIOUS sheet's cells,
                      bottom-aligned into 64x64
-- attack          <- ALWAYS the previous sheet's cells: the SpriteU pack
-                     ships no attack art, and we do not invent motion. Reachable
-                     in game as the close-range rod-club contact hit.
 - hook            <- the previous sheet's hook cell (the flying hook graphic
                      the FishingLine draws at the line end; unchanged art)
 
@@ -58,7 +56,7 @@ def build_layout(sprite):
     idle_ms = [f.get("ms", 850) if isinstance(f, dict) else 850 for f in anims["idle"]["frames"]]
     # Old-sheet fallbacks (64x52 cells, bottom-aligned at pack time) for any
     # state the package does not ship: walk = old cells 3,4,5,4; death = old
-    # 4,5. attack = old cells 18,19 always (no SpriteU attack art).
+    # 4,5; attack = old cells 18,19.
     if "walk" in anims:
         walk = [add("walk", rows("walk", i)) for i in range(len(anims["walk"]["frames"]))]
     else:
