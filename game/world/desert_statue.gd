@@ -9,11 +9,11 @@ const THROW_DURATION := 2.14
 const GENERAL_FRAMES: SpriteFrames = preload("res://assets/sprites/roman_general_frames.tres")
 # Visual-only sampling of the arena clock. Damage, projectiles and movement
 # remain owned by DesertStatueArena, never by animation callbacks.
-const GENERAL_MOVES := ["projectile", "triple_slash", "charged_slash", "ground_slam", "shield_bash", "spear_throw"]
-const GENERAL_WINDUPS := [0.65, 0.45, 0.85, 0.9, 0.55, 0.8]
-const GENERAL_RELEASES := [1.15, 1.05, 1.2, 1.2, 0.8, 1.25]
-const GENERAL_IMPACT_FRAMES := [[6, 9, 12], [4, 7, 10], [8], [7], [5], [7]]
-const GENERAL_IMPACT_TIMES := [[0.18, 0.36, 0.54], [0.0, 0.28, 0.56], [0.3], [0.4], [0.0], [0.2]]
+const GENERAL_MOVES := ["projectile", "triple_slash", "charged_slash", "ground_slam", "shield_bash", "spear_throw", "shield_plant"]
+const GENERAL_WINDUPS := [0.65, 0.45, 0.85, 0.9, 0.55, 0.8, 0.75]
+const GENERAL_RELEASES := [1.15, 1.05, 1.2, 1.2, 0.8, 1.25, 1.0]
+const GENERAL_IMPACT_FRAMES := [[6, 9, 12], [4, 7, 10], [8], [7], [5], [7], [4]]
+const GENERAL_IMPACT_TIMES := [[0.18, 0.36, 0.54], [0.0, 0.28, 0.56], [0.3], [0.4], [0.0], [0.2], [0.28]]
 
 var arena: Node2D
 var possessed := false
@@ -98,9 +98,9 @@ func _ready() -> void:
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "RomanGeneralSprite"
 	_sprite.sprite_frames = GENERAL_FRAMES
-	_sprite.scale = Vector2(1.22, 1.22)
+	_sprite.scale = Vector2(2.0, 2.0)
 	# Native feet are at y=55. Keep them at the existing ground/shadow y=24.
-	_sprite.position.y = -4.06
+	_sprite.position.y = -22.0
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_sprite.z_index = -1
 	add_child(_sprite)
