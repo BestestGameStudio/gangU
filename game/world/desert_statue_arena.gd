@@ -2,6 +2,7 @@ class_name DesertStatueArena
 extends Node2D
 ## Sunbound Sanctum. Run-owned state persists until the normal death reset.
 ## Initial balance values are tunable placeholders.
+## Phase 2 tell/attack alignment is tracked in #666.
 
 enum State { DORMANT, POSSESSED, STUNNED, PREPARING, TRANSFERRING, PHASE_TWO }
 var arena_radius := 0.0
