@@ -1,28 +1,30 @@
 # Fishy - SpriteU integration spec
 
-Source package: SpriteU `sprites/fishy.json` (SpriteU repo, commit 9f6f6dc,
-"Fishy: directional casts (up/down/left) + hit animations (#4)").
+Source package: SpriteU `sprites/fishy.json` - idle/hit/cast + directional
+casts from SpriteU repo commit 9f6f6dc ("Fishy: directional casts
+(up/down/left) + hit animations (#4)"); `walk`/`death`/`attack` from the
+2026-11-14 delivered packages (v3 final: slowed walk 6x125ms, new attack).
 Packed by `tools/sprites/pack_fishy_spriteu.py` into `assets/sprites/fishy.png`
-(512x512 atlas of 64x64 cells) and `data/sprites/fishy_frames.tres`.
+(512x576 atlas of 64x64 cells) and `data/sprites/fishy_frames.tres`.
 
 ## What the SpriteU package provides
 - New front-view Fishy design: `idle` (2-frame subtle breath loop, 850ms per
   frame - Colin chose "very subtle"), `hit`, `cast`, plus directional casts
-  `cast_up`, `cast_down`, `cast_left`, and (2026-11-14 package) `walk`
-  (4x125ms loop) and `death` (8-frame one-shot, 2290ms, held corpse).
+  `cast_up`, `cast_down`, `cast_left`, and (2026-11-14 packages) `walk`
+  (6x125ms loop, slowed in v3), `death` (8-frame one-shot,
+  110/90/100/150/170/150/120/1400ms, held corpse) and `attack` (4 frames,
+  125/83/125/125ms, added in v3). Colin accepted the full v3 set 2026-11-14.
 - The packer derives `cast_hold` (wind-up loop: first 2 cast frames) and
   `reel`/`retract` (cast frames 3-1 wind-down) from the provided cast frames,
   per direction. These derived animations are flagged here so reviewers know
   they are not separately authored art.
 
-## What the package does NOT provide
-No `attack` art. Attack still uses the previous hand-drawn sheet's two cells
-(bottom-aligned into 64x64, [1.0, 1.5] @12). It is reachable in game as the
-close-range rod-club contact hit, so the old top-down style remains visible
-there until SpriteU authors attack art; a follow-up package can replace the
-fallback cells without code changes (the packer maps by animation name).
-The 2026-11-14 package's cast/hit frames are byte-identical to the accepted
-ones; only idle gained a frame.
+## Fallbacks
+No shipped state falls back to the old sheet any more: the 2026-11-14 v3
+package added `attack` and slowed `walk` to 6x125ms, and Colin accepted the
+full set. Cast/hit frames are byte-identical to the accepted ones across all
+package versions. If a future package drops a state, the packer falls back to
+the previous sheet's cells without code changes (it maps by animation name).
 
 ## Scene/behavior metrics (new design)
 - Sprite offset: (0, -16) (new art feet at row 62 of each cell; keeps the old
