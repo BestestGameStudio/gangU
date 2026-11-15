@@ -249,7 +249,10 @@ func start_encounter() -> void:
 		_register_enemy(enemy)
 
 func is_active() -> bool:
-	return state != State.DORMANT and is_instance_valid(player) and player.hp > 0
+	# A won fight is over: state stays PHASE_TWO on the kneeling general, so
+	# without the _won check hub travel stays refused forever (AreaLoader
+	# blocks the hub gate while an encounter is active).
+	return not _won and state != State.DORMANT and is_instance_valid(player) and player.hp > 0
 
 func constrain_player_position(destination: Vector2) -> Vector2:
 	if _won or not is_active() or not is_visible_in_tree():
@@ -340,6 +343,8 @@ func _possess(statue: DesertStatue) -> void:
 	audio.possess(possessed.global_position)
 
 func damage_statue(statue: DesertStatue, amount: int, crit_tier: int) -> void:
+	if _won:
+		return # The defeated general kneels; hits must not flash, play hit sfx or spawn damage numbers.
 	if state == State.PHASE_TWO and general_height > 120.0:
 		return # Airborne actor is off the floor, never an invisible target.
 	if not visiting or state == State.DORMANT or amount <= 0:
