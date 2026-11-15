@@ -1,0 +1,1293 @@
+{
+  "frame_size": [
+    64,
+    64
+  ],
+  "rows": [
+    {
+      "row": 0,
+      "name": "idle-front",
+      "frame_count": 5,
+      "durations_ms": [
+        320,
+        280,
+        280,
+        320,
+        320
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 4
+        }
+      ]
+    },
+    {
+      "row": 1,
+      "name": "idle-back",
+      "frame_count": 5,
+      "durations_ms": [
+        320,
+        280,
+        280,
+        320,
+        320
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 4
+        }
+      ]
+    },
+    {
+      "row": 2,
+      "name": "idle-right",
+      "frame_count": 5,
+      "durations_ms": [
+        320,
+        280,
+        280,
+        320,
+        320
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 4
+        }
+      ]
+    },
+    {
+      "row": 3,
+      "name": "walk-front",
+      "frame_count": 8,
+      "durations_ms": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "tags": [
+        {
+          "name": "walk",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "row": 4,
+      "name": "walk-back",
+      "frame_count": 8,
+      "durations_ms": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "tags": [
+        {
+          "name": "walk",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "row": 5,
+      "name": "walk-right",
+      "frame_count": 8,
+      "durations_ms": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "tags": [
+        {
+          "name": "walk",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "row": 6,
+      "name": "run-front",
+      "frame_count": 8,
+      "durations_ms": [
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70
+      ],
+      "tags": [
+        {
+          "name": "run",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "row": 7,
+      "name": "run-back",
+      "frame_count": 8,
+      "durations_ms": [
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70
+      ],
+      "tags": [
+        {
+          "name": "run",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "row": 8,
+      "name": "run-right",
+      "frame_count": 8,
+      "durations_ms": [
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70
+      ],
+      "tags": [
+        {
+          "name": "run",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "row": 9,
+      "name": "projectile-front",
+      "frame_count": 22,
+      "durations_ms": [
+        220,
+        180,
+        180,
+        180,
+        160,
+        160,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 5
+        },
+        {
+          "name": "impact",
+          "from": 6,
+          "to": 6
+        },
+        {
+          "name": "cast",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "impact",
+          "from": 9,
+          "to": 9
+        },
+        {
+          "name": "cast",
+          "from": 10,
+          "to": 11
+        },
+        {
+          "name": "impact",
+          "from": 12,
+          "to": 12
+        },
+        {
+          "name": "cast",
+          "from": 13,
+          "to": 14
+        },
+        {
+          "name": "wind-down",
+          "from": 15,
+          "to": 21
+        }
+      ]
+    },
+    {
+      "row": 10,
+      "name": "projectile-back",
+      "frame_count": 22,
+      "durations_ms": [
+        220,
+        180,
+        180,
+        180,
+        160,
+        160,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 5
+        },
+        {
+          "name": "impact",
+          "from": 6,
+          "to": 6
+        },
+        {
+          "name": "cast",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "impact",
+          "from": 9,
+          "to": 9
+        },
+        {
+          "name": "cast",
+          "from": 10,
+          "to": 11
+        },
+        {
+          "name": "impact",
+          "from": 12,
+          "to": 12
+        },
+        {
+          "name": "cast",
+          "from": 13,
+          "to": 14
+        },
+        {
+          "name": "wind-down",
+          "from": 15,
+          "to": 21
+        }
+      ]
+    },
+    {
+      "row": 11,
+      "name": "projectile-right",
+      "frame_count": 22,
+      "durations_ms": [
+        220,
+        180,
+        180,
+        180,
+        160,
+        160,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 5
+        },
+        {
+          "name": "impact",
+          "from": 6,
+          "to": 6
+        },
+        {
+          "name": "cast",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "impact",
+          "from": 9,
+          "to": 9
+        },
+        {
+          "name": "cast",
+          "from": 10,
+          "to": 11
+        },
+        {
+          "name": "impact",
+          "from": 12,
+          "to": 12
+        },
+        {
+          "name": "cast",
+          "from": 13,
+          "to": 14
+        },
+        {
+          "name": "wind-down",
+          "from": 15,
+          "to": 21
+        }
+      ]
+    },
+    {
+      "row": 12,
+      "name": "triple-slash-front",
+      "frame_count": 19,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        60,
+        100,
+        100,
+        60,
+        100,
+        100,
+        70,
+        200,
+        200,
+        200,
+        200,
+        180,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-up",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-up",
+          "from": 8,
+          "to": 9
+        },
+        {
+          "name": "impact",
+          "from": 10,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 18
+        }
+      ]
+    },
+    {
+      "row": 13,
+      "name": "triple-slash-back",
+      "frame_count": 19,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        60,
+        100,
+        100,
+        60,
+        100,
+        100,
+        70,
+        200,
+        200,
+        200,
+        200,
+        180,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-up",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-up",
+          "from": 8,
+          "to": 9
+        },
+        {
+          "name": "impact",
+          "from": 10,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 18
+        }
+      ]
+    },
+    {
+      "row": 14,
+      "name": "triple-slash-right",
+      "frame_count": 19,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        60,
+        100,
+        100,
+        60,
+        100,
+        100,
+        70,
+        200,
+        200,
+        200,
+        200,
+        180,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-up",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-up",
+          "from": 8,
+          "to": 9
+        },
+        {
+          "name": "impact",
+          "from": 10,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 18
+        }
+      ]
+    },
+    {
+      "row": 15,
+      "name": "charged-slash-front",
+      "frame_count": 20,
+      "durations_ms": [
+        250,
+        160,
+        160,
+        160,
+        160,
+        140,
+        140,
+        140,
+        60,
+        60,
+        60,
+        190,
+        190,
+        190,
+        190,
+        190,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 19
+        }
+      ]
+    },
+    {
+      "row": 16,
+      "name": "charged-slash-back",
+      "frame_count": 20,
+      "durations_ms": [
+        250,
+        160,
+        160,
+        160,
+        160,
+        140,
+        140,
+        140,
+        60,
+        60,
+        60,
+        190,
+        190,
+        190,
+        190,
+        190,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 19
+        }
+      ]
+    },
+    {
+      "row": 17,
+      "name": "charged-slash-right",
+      "frame_count": 20,
+      "durations_ms": [
+        250,
+        160,
+        160,
+        160,
+        160,
+        140,
+        140,
+        140,
+        60,
+        60,
+        60,
+        190,
+        190,
+        190,
+        190,
+        190,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 19
+        }
+      ]
+    },
+    {
+      "row": 18,
+      "name": "ground-slam-front",
+      "frame_count": 18,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        150,
+        120,
+        120,
+        50,
+        70,
+        150,
+        150,
+        160,
+        160,
+        160,
+        160,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 17
+        }
+      ]
+    },
+    {
+      "row": 19,
+      "name": "ground-slam-back",
+      "frame_count": 18,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        150,
+        120,
+        120,
+        50,
+        70,
+        150,
+        150,
+        160,
+        160,
+        160,
+        160,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 17
+        }
+      ]
+    },
+    {
+      "row": 20,
+      "name": "ground-slam-right",
+      "frame_count": 18,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        150,
+        120,
+        120,
+        50,
+        70,
+        150,
+        150,
+        160,
+        160,
+        160,
+        160,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 17
+        }
+      ]
+    },
+    {
+      "row": 21,
+      "name": "shield-bash-front",
+      "frame_count": 15,
+      "durations_ms": [
+        240,
+        160,
+        160,
+        160,
+        160,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        190,
+        190,
+        190,
+        190
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 4
+        },
+        {
+          "name": "impact",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "wind-down",
+          "from": 7,
+          "to": 14
+        }
+      ]
+    },
+    {
+      "row": 22,
+      "name": "shield-bash-back",
+      "frame_count": 15,
+      "durations_ms": [
+        240,
+        160,
+        160,
+        160,
+        160,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        190,
+        190,
+        190,
+        190
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 4
+        },
+        {
+          "name": "impact",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "wind-down",
+          "from": 7,
+          "to": 14
+        }
+      ]
+    },
+    {
+      "row": 23,
+      "name": "shield-bash-right",
+      "frame_count": 15,
+      "durations_ms": [
+        240,
+        160,
+        160,
+        160,
+        160,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        190,
+        190,
+        190,
+        190
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 4
+        },
+        {
+          "name": "impact",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "wind-down",
+          "from": 7,
+          "to": 14
+        }
+      ]
+    },
+    {
+      "row": 24,
+      "name": "spear-throw-front",
+      "frame_count": 17,
+      "durations_ms": [
+        240,
+        150,
+        150,
+        150,
+        150,
+        140,
+        140,
+        60,
+        60,
+        140,
+        140,
+        160,
+        160,
+        160,
+        160,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "row": 25,
+      "name": "spear-throw-back",
+      "frame_count": 17,
+      "durations_ms": [
+        240,
+        150,
+        150,
+        150,
+        150,
+        140,
+        140,
+        60,
+        60,
+        140,
+        140,
+        160,
+        160,
+        160,
+        160,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "row": 26,
+      "name": "spear-throw-right",
+      "frame_count": 17,
+      "durations_ms": [
+        240,
+        150,
+        150,
+        150,
+        150,
+        140,
+        140,
+        60,
+        60,
+        140,
+        140,
+        160,
+        160,
+        160,
+        160,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "row": 27,
+      "name": "shield-plant-front",
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
+      "row": 28,
+      "name": "shield-plant-back",
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
+      "row": 29,
+      "name": "shield-plant-right",
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    }
+  ],
+  "left": "mirror right"
+}

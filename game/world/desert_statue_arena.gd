@@ -770,24 +770,15 @@ func _plant_phase_two_shield(local_position: Vector2, toward_player: Vector2) ->
 	shape.size = Vector2(88.0, 24.0)
 	collision.shape = shape
 	shield.add_child(collision)
-	var outer := Polygon2D.new()
-	outer.name = "ShieldWood"
-	outer.polygon = PackedVector2Array([Vector2(-42,-17),Vector2(31,-17),Vector2(45,-8),Vector2(45,8),Vector2(31,17),Vector2(-42,17)])
-	outer.color = Color("68452f")
-	shield.add_child(outer)
-	var face := Polygon2D.new()
-	face.name = "ShieldFace"
-	face.polygon = PackedVector2Array([Vector2(-36,-12),Vector2(28,-12),Vector2(38,-6),Vector2(38,6),Vector2(28,12),Vector2(-36,12)])
-	face.color = Color("d3a452")
-	face.z_index = 1
+	# Visual-only Roman shield replacement. The 88x24 wall, placement, facing,
+	# five-second lifetime and regeneration are unchanged.
+	var face := AnimatedSprite2D.new()
+	face.name = "RomanPlantedShield"
+	face.sprite_frames = preload("res://assets/sprites/roman_planted_shield_frames.tres")
+	face.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	face.scale = Vector2(2.0, 2.0)
+	face.play(&"idle")
 	shield.add_child(face)
-	var ridge := Line2D.new()
-	ridge.name = "ShieldRidge"
-	ridge.points = PackedVector2Array([Vector2(-34,0),Vector2(0,-3),Vector2(36,0)])
-	ridge.width = 3.0
-	ridge.default_color = Color("fff0b6")
-	ridge.z_index = 2
-	shield.add_child(ridge)
 	_phase_two_shield = shield
 	_phase_two_shield_time = 5.0
 	_phase_two_shield_heal_fraction = 0.0
