@@ -1191,6 +1191,132 @@
           "to": 10
         }
       ]
+    },
+    {
+      "row": 30,
+      "name": "death-front",
+      "frame_count": 13,
+      "durations_ms": [
+        70,
+        120,
+        110,
+        110,
+        150,
+        130,
+        100,
+        110,
+        90,
+        130,
+        140,
+        150,
+        1400
+      ],
+      "tags": [
+        {
+          "name": "recoil",
+          "from": 0,
+          "to": 1
+        },
+        {
+          "name": "point",
+          "from": 2,
+          "to": 5
+        },
+        {
+          "name": "fall",
+          "from": 6,
+          "to": 9
+        },
+        {
+          "name": "fallen",
+          "from": 10,
+          "to": 12
+        }
+      ]
+    },
+    {
+      "row": 31,
+      "name": "death-back",
+      "frame_count": 13,
+      "durations_ms": [
+        70,
+        120,
+        110,
+        110,
+        150,
+        130,
+        100,
+        110,
+        90,
+        130,
+        140,
+        150,
+        1400
+      ],
+      "tags": [
+        {
+          "name": "recoil",
+          "from": 0,
+          "to": 1
+        },
+        {
+          "name": "point",
+          "from": 2,
+          "to": 5
+        },
+        {
+          "name": "fall",
+          "from": 6,
+          "to": 9
+        },
+        {
+          "name": "fallen",
+          "from": 10,
+          "to": 12
+        }
+      ]
+    },
+    {
+      "row": 32,
+      "name": "death-right",
+      "frame_count": 13,
+      "durations_ms": [
+        70,
+        120,
+        110,
+        110,
+        150,
+        130,
+        100,
+        110,
+        90,
+        130,
+        140,
+        150,
+        1400
+      ],
+      "tags": [
+        {
+          "name": "recoil",
+          "from": 0,
+          "to": 1
+        },
+        {
+          "name": "point",
+          "from": 2,
+          "to": 5
+        },
+        {
+          "name": "fall",
+          "from": 6,
+          "to": 9
+        },
+        {
+          "name": "fallen",
+          "from": 10,
+          "to": 12
+        }
+      ]
     }
   ],
   "left": "mirror right"
