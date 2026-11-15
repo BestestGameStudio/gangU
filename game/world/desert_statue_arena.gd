@@ -378,7 +378,7 @@ func apply_damage(amount: int) -> void:
 	if state == State.PHASE_TWO and is_instance_valid(possessed):
 		possessed.hp = hp
 		possessed.health_changed.emit(hp, boss_max_hp)
-	if hp <= boss_max_hp/2 and state != State.PHASE_TWO:
+	if hp <= boss_max_hp*3/4 and state != State.PHASE_TWO:
 		_enter_phase_two()
 	if hp <= 0 and state == State.PHASE_TWO:
 		_phase_two_bombardment.active = false
