@@ -84,7 +84,7 @@ var _phase_time := 0.0
 const MOVE_WINDUP := [0.8, 0.7, 0.95, 1.0, 0.75, 0.85, 0.75]
 const MOVE_RELEASE := [1.25, 2.05, 1.3, 1.55, 1.15, 1.25, 1.1]
 const MOVE_CUE := [0.0, 0.22, 0.12, 0.4, 0.0, 0.0, 0.0]
-const FAN_COUNT := 37
+const FAN_COUNT := 19
 const FAN_RELEASE_DURATION := 0.36
 const FAN_HALF_ANGLE := PI*0.5
 const SWEEP_RADIUS := 245.0
@@ -749,7 +749,7 @@ func _phase_two_execute(attack: int, t: float, _delta: float) -> void:
 	var target_offset := to_local(player.global_position)
 	var attack_damage := maxi(roundi(phase_two_attack_damage*phase_two_damage_multiplier), 1)
 	match attack:
-		0: # 37 spears, one every five degrees, leave the general in the locked, warned semicircle.
+		0: # 19 spears, one every ten degrees, leave the general in the locked, warned semicircle.
 			while _phase_two_dash_count < FAN_COUNT-1 and t >= float(_phase_two_dash_count+1)*FAN_RELEASE_DURATION/float(FAN_COUNT-1):
 				_phase_two_dash_count += 1
 				var direction := _fan_direction(_phase_two_dash_count)
