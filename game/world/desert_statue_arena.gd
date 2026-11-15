@@ -392,6 +392,16 @@ func _win() -> void:
 		return
 	_won = true
 	_remove_phase_two_shield()
+	# _phase_two_step halts on hp<=0, so a slam shockwave telegraph live at the
+	# kill would freeze mid-expansion and keep drawing its ring forever.
+	_phase_two_impact_time = 0.0
+	# The bombardment never stops on its own: on the win path it would keep
+	# washing the arena red and drawing its gold safe-circle boundary forever,
+	# which reads as a wall after the barrier is gone. The lose path already
+	# stops it; do the same here.
+	if is_instance_valid(_phase_two_bombardment):
+		_phase_two_bombardment.active = false
+		_phase_two_bombardment.queue_redraw()
 	# The barrier falls with the general: the way out of the arena opens.
 	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
 		player.movement_constraint = Callable()
