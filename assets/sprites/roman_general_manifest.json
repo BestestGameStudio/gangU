@@ -1182,6 +1182,111 @@
           "to": 16
         }
       ]
+    },
+    {
+      "row": 27,
+      "name": "shield-plant-front",
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
+      "row": 28,
+      "name": "shield-plant-back",
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
+      "row": 29,
+      "name": "shield-plant-right",
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
     }
   ],
   "left": "mirror right"
