@@ -25,4 +25,4 @@ engage_fraction = 0.85
 ally_radius = 520.0
 rally_time = 2.5
 rally_interval = 0.5
-rod_tip_offset = Vector2(16, -22)
+rod_tip_offset = Vector2(15, -36)

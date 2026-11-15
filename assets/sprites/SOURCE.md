@@ -482,3 +482,12 @@ the released spear, aligns with the actual projectile release. Hit and death
 use their original timing; hurt reactions queue behind an active throw so
 they cannot obscure its release. Death finishes before the original rubble
 absorption begins. Rebuilding cancels death and restores the ring anchor.
+
+## fishy.png (SpriteU refresh, 2026-11)
+Regenerated from the SpriteU package `sprites/fishy.json` (SpriteU repo,
+commit 9f6f6dc) by `tools/sprites/pack_fishy_spriteu.py`; see
+`tools/sprites/specs/fishy_spriteu.md`. Contains the new front-view idle (subtle
+breath loop)/walk/attack/death/hit/cast (incl. up/down/left) design (walk +
+death added in the 2026-11-14 package; slowed walk + attack in the same-day
+v3 package, full set accepted by Colin 2026-11-14), with only the original
+hook cell carried over from the previous hand-drawn sheet.

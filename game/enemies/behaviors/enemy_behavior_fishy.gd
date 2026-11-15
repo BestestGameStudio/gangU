@@ -44,8 +44,19 @@ const ENGAGE_FRACTION := 0.85 ## walks closer until within this share of HOOK_RA
 const ALLY_RADIUS := 520.0 ## who hears the rally
 const RALLY_TIME := 2.5
 const RALLY_INTERVAL := 0.5
-## Rod tip relative to the body (art faces right; mirrored when flipped).
-const ROD_TIP := Vector2(16, -22)
+## Rod tip relative to the body while standing (idle art faces right;
+## mirrored when flipped). SpriteU front-view art (#662).
+const ROD_TIP := Vector2(15, -36)
+## Rod tip per cast direction while a cast is live (#662): the tip of the
+## extended rod in that direction's cast-hold frame (64x64 cell, sprite at
+## (0, -16)). Keyed by the _dir_suffix values below; not mirrored - the
+## directional art is never flipped.
+const ROD_TIPS := {
+	"": Vector2(28, -40),
+	"_up": Vector2(10, -47),
+	"_down": Vector2(18, 10),
+	"_left": Vector2(-29, -37),
+}
 
 ## #513: authored behavior tuning; constants remain compatibility defaults.
 @export var hook_range: float = HOOK_RANGE
@@ -73,6 +84,9 @@ var state: int = State.APPROACH
 var hooked_player: Player = null
 var hook_pos := Vector2.ZERO
 var aim_dir := Vector2.RIGHT
+## #662: which cast art the current cast uses ("" = right, "_up", "_down",
+## "_left"); picked from the aim when the wind-up starts, cleared on recover.
+var _dir_suffix := ""
 ## Why the last cast ended: &"miss", &"terrain", &"hooked", &"reeled",
 ## &"dash", &"blocked", &"timeout", &"stalled", &"dead". Read by tests.
 var last_result: StringName = &""
@@ -131,8 +145,8 @@ func is_hooked() -> bool:
 	return state == State.HOOKED
 
 func rod_tip(enemy: Enemy) -> Vector2:
-	var tip := rod_tip_offset
-	if enemy.sprite != null and enemy.sprite.flip_h:
+	var tip: Vector2 = ROD_TIPS.get(_dir_suffix, rod_tip_offset)
+	if _dir_suffix == "" and enemy.sprite != null and enemy.sprite.flip_h:
 		tip.x = -tip.x
 	return enemy.global_position + tip
 
@@ -187,8 +201,13 @@ func _begin_windup(enemy: Enemy, target: Player) -> void:
 	state = State.WINDUP
 	_t = 0.0
 	enemy.velocity = Vector2.ZERO
+	# #662: directional cast art - pick the SpriteU variant for the cast
+	# direction and un-mirror (the directional sheets are never flipped).
+	_dir_suffix = _cast_suffix(target.global_position - enemy.global_position)
+	if enemy.sprite != null:
+		enemy.sprite.flip_h = false
 	_aim_at(enemy, target)
-	enemy.play_action(&"cast", true)
+	enemy.play_action(StringName("cast" + _dir_suffix), true)
 	var tele := _telegraph(enemy)
 	if tele != null:
 		tele.show_line(aim_dir, hook_range, 5.0, windup_time)
@@ -209,7 +228,7 @@ func _windup(enemy: Enemy, target: Player, alive: bool, delta: float) -> void:
 		_traveled = 0.0
 		_cast_origin = rod_tip(enemy)
 		hook_pos = _cast_origin
-		enemy.play_action(&"cast_hold", true)
+		enemy.play_action(StringName("cast_hold" + _dir_suffix), true)
 		var tele := _telegraph(enemy)
 		if tele != null:
 			tele.clear()
@@ -246,7 +265,7 @@ func _begin_hooked(enemy: Enemy, target: Player) -> void:
 	_tick_t = 0.0 # first bite lands at once
 	_rally_t = 0.0
 	_stall_t = 0.0
-	enemy.play_action(&"reel", true)
+	enemy.play_action(StringName("reel" + _dir_suffix), true)
 
 # --- HOOKED -----------------------------------------------------------------
 
@@ -310,7 +329,7 @@ func _end_cast(enemy: Enemy, why: StringName) -> void:
 	_t = 0.0
 	_cooldown = cast_cooldown
 	enemy.clear_action()
-	enemy.play_action(&"retract")
+	enemy.play_action(StringName("retract" + _dir_suffix))
 	var tele := _telegraph(enemy)
 	if tele != null:
 		tele.clear()
@@ -321,8 +340,23 @@ func _recover(enemy: Enemy, delta: float) -> void:
 	hook_pos = hook_pos.move_toward(rod_tip(enemy), retract_speed * delta)
 	if _t >= recover_time and hook_pos.distance_to(rod_tip(enemy)) < 1.0:
 		state = State.APPROACH
+		_dir_suffix = ""
 
 # --- helpers ----------------------------------------------------------------
+
+## #662: cast-art suffix for an aim direction (screen coords: +y is down).
+## Right keeps the base name; the 90-degree cones centre on each cardinal.
+func _cast_suffix(dir: Vector2) -> String:
+	if dir.length_squared() <= 0.0:
+		return ""
+	var a := dir.angle()
+	if absf(a) < PI / 4.0:
+		return ""
+	if a >= PI / 4.0 and a < 3.0 * PI / 4.0:
+		return "_down"
+	if a <= -PI / 4.0 and a > -3.0 * PI / 4.0:
+		return "_up"
+	return "_left"
 
 ## Face the target, then aim the line from the rod tip so it runs straight
 ## through the player's centre.

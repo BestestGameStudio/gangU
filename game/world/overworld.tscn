@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=26 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
@@ -17,6 +17,8 @@
 
 
 [ext_resource type="Script" path="res://game/world/desert_statue_arena.gd" id="desert_arena"]
+[ext_resource type="PackedScene" path="res://game/enemies/enemy_fishy.tscn" id="662_fishy"]
+[ext_resource type="Resource" path="res://data/enemies/overworld_fishy.tres" id="662_fishy_def"]
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_0"]
 script = ExtResource("518_spawn_entry")
@@ -38,6 +40,20 @@ position = Vector2(300, 2720)
 enemy = ExtResource("631_red")
 reward_table = ExtResource("346_table")
 definition = ExtResource("631_red_def")
+
+[sub_resource type="Resource" id="Resource_spawn_fishy_0"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(520, 2520)
+enemy = ExtResource("662_fishy")
+reward_table = ExtResource("346_table")
+definition = ExtResource("662_fishy_def")
+
+[sub_resource type="Resource" id="Resource_spawn_fishy_1"]
+script = ExtResource("518_spawn_entry")
+position = Vector2(250, 2620)
+enemy = ExtResource("662_fishy")
+reward_table = ExtResource("346_table")
+definition = ExtResource("662_fishy_def")
 
 [sub_resource type="Resource" id="Resource_spawn_roamers_0"]
 script = ExtResource("518_spawn_entry")
@@ -127,6 +143,11 @@ player_path = NodePath("../../Player")
 [node name="RedMustachesSouth" type="Node" parent="."]
 script = ExtResource("373_spawn_data")
 entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_redsouth_0"), SubResource("Resource_spawn_redsouth_1"), SubResource("Resource_spawn_redsouth_2")])
+player_path = NodePath("../../Player")
+
+[node name="FishySouth" type="Node" parent="."]
+script = ExtResource("373_spawn_data")
+entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_fishy_0"), SubResource("Resource_spawn_fishy_1")])
 player_path = NodePath("../../Player")
 
 [node name="DesertStatueArena" type="Node2D" parent="."]

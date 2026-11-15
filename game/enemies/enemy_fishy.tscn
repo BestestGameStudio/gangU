@@ -27,7 +27,7 @@ polygon = PackedVector2Array(-14, 0, -10, -3.5, 0, -4.5, 10, -3.5, 14, 0, 10, 3.
 
 [node name="Sprite" parent="." index="2"]
 texture_filter = 1
-position = Vector2(0, -11)
+position = Vector2(0, -16)
 sprite_frames = ExtResource("3_frames")
 animation = &"idle"
 burst_color = Color(0.45, 0.82, 0.3, 1)
