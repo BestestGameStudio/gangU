@@ -10,10 +10,8 @@ const GENERAL_FRAMES: SpriteFrames = preload("res://assets/sprites/roman_general
 # Visual-only sampling of the arena clock. Damage, projectiles and movement
 # remain owned by DesertStatueArena, never by animation callbacks.
 const GENERAL_MOVES := ["projectile", "triple_slash", "charged_slash", "ground_slam", "shield_bash", "spear_throw", "shield_plant"]
-const GENERAL_WINDUPS := [0.65, 0.45, 0.85, 0.9, 0.55, 0.8, 0.75]
-const GENERAL_RELEASES := [1.15, 1.05, 1.2, 1.2, 0.8, 1.25, 1.0]
-const GENERAL_IMPACT_FRAMES := [[6, 9, 12], [4, 7, 10], [8], [7], [5], [7], [4]]
-const GENERAL_IMPACT_TIMES := [[0.18, 0.36, 0.54], [0.0, 0.28, 0.56], [0.3], [0.4], [0.0], [0.2], [0.28]]
+const GENERAL_IMPACT_FRAMES := [[7], [4, 7, 10], [8], [8], [5], [7], [4]]
+const GENERAL_IMPACT_TIMES := [[0.0], [0.22, 0.78, 1.34], [0.12], [0.4], [0.0], [0.0], [0.0]]
 
 var arena: Node2D
 var possessed := false
@@ -155,7 +153,7 @@ func _draw() -> void:
 	draw_ellipse_shadow()
 	if broken:
 		return # The supplied death animation supplies the rubble.
-	if hp < max_hp:
+	if hp < max_hp and (not _phase_two() or (arena as DesertStatueArena).general_height <= 120.0):
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
 
@@ -194,11 +192,13 @@ func _update_sprite(delta: float) -> void:
 		return
 	var attack := general_arena._phase_two_attack_index
 	var clock := general_arena._phase_two_attack_time
+	_sprite.position.y = -22.0-general_arena.general_height
+	_sprite.z_index = 100 if general_arena.general_height > 0.0 else -1
 	if is_instance_valid(general_arena.player):
 		# Follow aim during windup, then keep it locked through the strike.
 		# Triple slash retargets each dash in the arena and turns with travel.
-		if clock < 0.0 or attack >= GENERAL_MOVES.size() or clock < GENERAL_WINDUPS[attack]:
-			_general_direction(general_arena.player.global_position-global_position)
+		if clock < 0.0 or attack >= GENERAL_MOVES.size() or not general_arena._phase_two_locked:
+			_general_direction(general_arena._phase_two_direction if clock >= 0.0 else general_arena.player.global_position-global_position)
 		elif attack == 1 and movement.length_squared() > 0.001:
 			_general_direction(movement)
 	if general_arena.hp <= 0:
@@ -216,15 +216,24 @@ func _update_sprite(delta: float) -> void:
 		return
 	_general_locomotion_time = 0.0
 	var anim := StringName(GENERAL_MOVES[attack]+"_"+_general_facing)
-	var windup: float = GENERAL_WINDUPS[attack]
+	var windup: float = general_arena.MOVE_WINDUP[attack]
 	# Piecewise map source impact poses to the existing gameplay cues. The
 	# original slower GIF wind-down must not delay the next real attack.
+	if attack == 3:
+		# Source key poses: crouch, extended takeoff, tucked air, landing.
+		var times := [0.0,0.25,0.6,windup+0.18,windup+0.4,windup+general_arena.MOVE_RELEASE[3]]
+		var frames := [0,3,5,7,8,GENERAL_FRAMES.get_frame_count(anim)-1]
+		for i in range(1,times.size()):
+			if clock <= times[i]:
+				var fraction := clampf(inverse_lerp(times[i-1],times[i],clock),0.0,1.0)
+				_sample_general(anim,lerpf(_general_frame_start(anim,frames[i-1]),_general_frame_start(anim,frames[i]),fraction))
+				return
 	var target_times: Array[float] = [0.0]
 	var source_times: Array[float] = [_general_frame_start(anim, 1)]
 	for cue in GENERAL_IMPACT_FRAMES[attack].size():
 		target_times.append(windup+GENERAL_IMPACT_TIMES[attack][cue])
 		source_times.append(_general_frame_start(anim, GENERAL_IMPACT_FRAMES[attack][cue]))
-	target_times.append(windup+GENERAL_RELEASES[attack])
+	target_times.append(windup+general_arena.MOVE_RELEASE[attack])
 	source_times.append(_general_frame_start(anim, GENERAL_FRAMES.get_frame_count(anim))-0.001)
 	for i in range(1, target_times.size()):
 		if clock <= target_times[i]:
@@ -234,6 +243,8 @@ func _update_sprite(delta: float) -> void:
 	_sample_general(anim, source_times[-1])
 
 func draw_ellipse_shadow() -> void:
+	if _phase_two() and (arena as DesertStatueArena).general_height > 120.0:
+		return
 	draw_set_transform(Vector2(0, 24), 0, Vector2(1, 0.35))
 	draw_circle(Vector2.ZERO, 34, Color(0.22,0.16,0.1,0.24))
 	draw_set_transform(Vector2.ZERO)
