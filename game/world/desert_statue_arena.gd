@@ -36,8 +36,10 @@ var _sized := false
 @export var phase_two_attack_damage := 18
 @export var phase_two_attack_gap := 0.65
 @export var phase_two_shield_heal_per_second := 12.0
+@export var victory_coins := 500
 
 var hp := 2400
+var _won := false
 var state: State = State.DORMANT
 var statues: Array[DesertStatue] = []
 var _ring_points: Array[Vector2] = []
@@ -250,7 +252,7 @@ func is_active() -> bool:
 	return state != State.DORMANT and is_instance_valid(player) and player.hp > 0
 
 func constrain_player_position(destination: Vector2) -> Vector2:
-	if not is_active() or not is_visible_in_tree():
+	if _won or not is_active() or not is_visible_in_tree():
 		return destination
 	var offset := destination-global_position
 	return global_position+offset.limit_length(player_limit_radius)
@@ -383,6 +385,37 @@ func apply_damage(amount: int) -> void:
 	if hp <= 0 and state == State.PHASE_TWO:
 		_phase_two_bombardment.active = false
 		_details.text = "THE SAND GENERAL IS DEFEATED"
+		_win()
+
+func _win() -> void:
+	if _won:
+		return
+	_won = true
+	_remove_phase_two_shield()
+	# _phase_two_step halts on hp<=0, so a slam shockwave telegraph live at the
+	# kill would freeze mid-expansion and keep drawing its ring forever.
+	_phase_two_impact_time = 0.0
+	# The bombardment never stops on its own: on the win path it would keep
+	# washing the arena red and drawing its gold safe-circle boundary forever,
+	# which reads as a wall after the barrier is gone. The lose path already
+	# stops it; do the same here.
+	if is_instance_valid(_phase_two_bombardment):
+		_phase_two_bombardment.active = false
+		_phase_two_bombardment.queue_redraw()
+	# The barrier falls with the general: the way out of the arena opens.
+	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
+		player.movement_constraint = Callable()
+	_drop_reward.call_deferred()
+	queue_redraw()
+
+func _drop_reward() -> void:
+	var drop: RewardDrop = preload("res://game/economy/reward_drop.tscn").instantiate()
+	var coins := RewardEntry.new()
+	coins.kind = RewardEntry.Kind.CURRENCY
+	coins.currency_amount = victory_coins
+	drop.setup(coins)
+	get_parent().add_child(drop)
+	drop.global_position = possessed.global_position if is_instance_valid(possessed) else global_position
 
 func heal(amount: int) -> void:
 	var before := hp
@@ -962,7 +995,7 @@ func _draw() -> void:
 		var direction := (to-from).normalized()
 		var side := direction.orthogonal()
 		draw_polyline(PackedVector2Array([to-direction*9+side*3,to,to-direction*9-side*3]),Color("d9a5ff"),1.0,true)
-	if state != State.DORMANT:
+	if state != State.DORMANT and not _won:
 		var alpha := 0.65+sin(Time.get_ticks_msec()*0.003)*0.15
 		_circle(barrier_radius,Color(1,0.79,0.3,alpha),4)
 		_circle(barrier_radius-4,Color(1,0.86,0.49,0.2),8)
