@@ -491,3 +491,13 @@ breath loop)/walk/attack/death/hit/cast (incl. up/down/left) design (walk +
 death added in the 2026-11-14 package; slowed walk + attack in the same-day
 v3 package, full set accepted by Colin 2026-11-14), with only the original
 hook cell carried over from the previous hand-drawn sheet.
+
+## Roman Sand general (Phase 2, #664)
+
+- Source: custom Roman sandstone general v2 pixel art supplied by Mitra for this replacement. Native transparent 64x64 frames, purple eyes/sash/crest/shield sigil, no plinth. The reference photo is not included in the game assets.
+- `roman_general.png` losslessly repacks the supplied atlas: only redundant mirrored-left rows were removed. No resizing, repainting, interpolation or palette conversion. `roman_general_manifest.json` records every row, frame count, tag and source duration in milliseconds. `roman_general_frames.tres` uses those durations at speed 1.0.
+- Row order: idle, walk, run, projectile, triple-slash, charged-slash, ground-slam, shield-bash, spear-throw. Each move has front, back, right rows, in that order (27 rows total, 1408x1728). Left mirrors right in the renderer. Native cell center is (32,32); body feet are near y=55 and aligned to the existing y=24 ground line by the node offset. Effects may intentionally extend below the feet.
+- The mobile Phase 2 general alone uses this art. The 12 Phase 1 statues retain `stationary_statues.png` and its throw/hurt/crumble animations.
+- `desert_statue.gd` samples the attack animations against the existing arena clock, aligning impact poses with gameplay cues and fitting recovery inside the existing attack duration. Original GIF timing is preserved in the resource, but retimed in combat. Projectile art has three casts while the existing gameplay volley still fires five projectiles. The seventh shield-plant move has no supplied animation and uses idle; its existing planted shield remains visible. Walk/run are available for locomotion; the existing encounter moves during attack dashes rather than adding a new chase state.
+- Left lighting is mirrored. Back detail is cape-dominant. Effects are baked into the art; existing gameplay projectiles and ground warnings remain independently rendered. Spear throw ends empty-handed before the next animation restores it. No new death art was supplied: defeat holds a dimmed idle pose rather than reusing Phase 1 rubble.
+- Imported with Godot 4.5.1, lossless, mipmaps off, nearest node filtering. Repack method: copy each non-left 64-pixel row from the supplied sheet in manifest order, generate an AtlasTexture for each occupied cell, and set frame duration to source milliseconds / 1000.
