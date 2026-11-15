@@ -6,7 +6,14 @@ const STATIONARY_FRAMES: SpriteFrames = preload("res://assets/sprites/stationary
 # Frame 7 is the first source pose after the spear leaves the hand.
 const THROW_RELEASE_TIME := 1.17
 const THROW_DURATION := 2.14
-const STATUE_SHEET: Texture2D = preload("res://assets/sprites/sandstatues.png")
+const GENERAL_FRAMES: SpriteFrames = preload("res://assets/sprites/roman_general_frames.tres")
+# Visual-only sampling of the arena clock. Damage, projectiles and movement
+# remain owned by DesertStatueArena, never by animation callbacks.
+const GENERAL_MOVES := ["projectile", "triple_slash", "charged_slash", "ground_slam", "shield_bash", "spear_throw"]
+const GENERAL_WINDUPS := [0.65, 0.45, 0.85, 0.9, 0.55, 0.8]
+const GENERAL_RELEASES := [1.15, 1.05, 1.2, 1.2, 0.8, 1.25]
+const GENERAL_IMPACT_FRAMES := [[6, 9, 12], [4, 7, 10], [8], [7], [5], [7]]
+const GENERAL_IMPACT_TIMES := [[0.18, 0.36, 0.54], [0.0, 0.28, 0.56], [0.3], [0.4], [0.0], [0.2]]
 
 var arena: Node2D
 var possessed := false
@@ -14,7 +21,11 @@ var broken := false
 var destroyed_once := false
 var absorbed := false
 var flash := 0.0
-var _sprite: Sprite2D
+var _sprite: AnimatedSprite2D
+var _general_facing := "front"
+var _general_mirror := false
+var _general_last_position := Vector2.ZERO
+var _general_locomotion_time := 0.0
 var _stationary: AnimatedSprite2D
 var _hit_pending := false
 var _ring_position := Vector2.ZERO
@@ -84,15 +95,16 @@ func _ready() -> void:
 	collision_layer = PhysicsLayers.ENEMY
 	collision_mask = 0
 	add_to_group(&"enemies")
-	_sprite = Sprite2D.new()
-	_sprite.name = "StatueSprite"
-	_sprite.texture = STATUE_SHEET
-	_sprite.hframes = 4
-	_sprite.vframes = 2
+	_sprite = AnimatedSprite2D.new()
+	_sprite.name = "RomanGeneralSprite"
+	_sprite.sprite_frames = GENERAL_FRAMES
 	_sprite.scale = Vector2(1.22, 1.22)
+	# Native feet are at y=55. Keep them at the existing ground/shadow y=24.
+	_sprite.position.y = -4.06
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_sprite.z_index = -1
 	add_child(_sprite)
+	_general_last_position = position
 	_ring_position = position
 	_stationary = AnimatedSprite2D.new()
 	_stationary.name = "StationaryStatueSprite"
@@ -124,8 +136,8 @@ func _process(delta: float) -> void:
 	_sprite.visible = phase_two and not broken and not absorbed
 	_stationary.visible = not phase_two and not absorbed
 	if phase_two:
-		_update_sprite()
 		_sprite.modulate = Color(1.6,1.6,1.6,1.0) if flash > 0.0 else Color.WHITE
+		_update_sprite(delta)
 	else:
 		# Retain a distinct possessed host without replacing the supplied art.
 		_stationary.modulate = Color(1.35,1.1,0.7) if possessed else Color.WHITE
@@ -143,46 +155,83 @@ func _draw() -> void:
 	draw_ellipse_shadow()
 	if broken:
 		return # The supplied death animation supplies the rubble.
-	if arena is DesertStatueArena and (arena as DesertStatueArena).state == DesertStatueArena.State.PHASE_TWO and (arena as DesertStatueArena).possessed == self:
-		_draw_sand_shield()
 	if hp < max_hp:
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
 
-func _update_sprite() -> void:
-	if not is_instance_valid(_sprite):
-		return
-	var direction := Vector2.DOWN
-	if arena is DesertStatueArena and is_instance_valid((arena as DesertStatueArena).player):
-		direction = (arena as DesertStatueArena).player.global_position-global_position
+func _general_direction(direction: Vector2) -> void:
 	if direction.is_zero_approx():
-		direction = Vector2.DOWN
-	var angle := direction.angle()
-	var frame := 0
-	if angle >= -PI*0.25 and angle < PI*0.25:
-		frame = 1 # right
-	elif angle >= PI*0.25 and angle < PI*0.75:
-		frame = 0 # toward
-	elif angle >= -PI*0.75 and angle < -PI*0.25:
-		frame = 3 # away
-	else:
-		frame = 2 # left
-	_sprite.frame_coords = Vector2i(frame, 1 if possessed else 0)
-	# Turn by switching to the closest cardinal pose. Keep the pixel art upright.
-	_sprite.rotation = 0.0
-
-func _draw_sand_shield() -> void:
-	var general_arena := arena as DesertStatueArena
-	if general_arena._phase_two_attack_index != 4:
 		return
-	var facing := general_arena._phase_two_bash_direction
-	draw_set_transform(facing*34.0+Vector2(0,8), facing.angle(), Vector2.ONE)
-	var shield := PackedVector2Array([Vector2(-15,-20),Vector2(8,-17),Vector2(20,-9),Vector2(19,10),Vector2(8,24),Vector2(-8,24),Vector2(-19,10),Vector2(-20,-9)])
-	draw_colored_polygon(shield,Color("b86b35"))
-	var shield_outline := PackedVector2Array([Vector2(-15,-20),Vector2(8,-17),Vector2(20,-9),Vector2(19,10),Vector2(8,24),Vector2(-8,24),Vector2(-19,10),Vector2(-20,-9),Vector2(-15,-20)])
-	draw_polyline(shield_outline,Color("ffe3a0"),3.0,true)
-	draw_line(Vector2(0,-12),Vector2(0,17),Color("f2c76f"),3.0,true)
-	draw_set_transform(Vector2.ZERO)
+	_general_mirror = false
+	if absf(direction.x) > absf(direction.y):
+		_general_facing = "right"
+		_general_mirror = direction.x < 0.0
+	else:
+		_general_facing = "front" if direction.y >= 0.0 else "back"
+
+func _general_frame_start(anim: StringName, index: int) -> float:
+	var seconds := 0.0
+	for i in index:
+		seconds += GENERAL_FRAMES.get_frame_duration(anim, i)
+	return seconds
+
+func _sample_general(anim: StringName, seconds: float) -> void:
+	_sprite.animation = anim
+	_sprite.flip_h = _general_mirror
+	for i in GENERAL_FRAMES.get_frame_count(anim):
+		var duration := GENERAL_FRAMES.get_frame_duration(anim, i)
+		if seconds < duration:
+			_sprite.set_frame_and_progress(i, clampf(seconds / duration, 0.0, 1.0))
+			return
+		seconds -= duration
+	_sprite.set_frame_and_progress(GENERAL_FRAMES.get_frame_count(anim)-1, 1.0)
+
+func _update_sprite(delta: float) -> void:
+	var general_arena := arena as DesertStatueArena
+	var movement := position-_general_last_position
+	_general_last_position = position
+	if not is_instance_valid(general_arena):
+		return
+	var attack := general_arena._phase_two_attack_index
+	var clock := general_arena._phase_two_attack_time
+	if is_instance_valid(general_arena.player):
+		# Follow aim during windup, then keep it locked through the strike.
+		# Triple slash retargets each dash in the arena and turns with travel.
+		if clock < 0.0 or attack >= GENERAL_MOVES.size() or clock < GENERAL_WINDUPS[attack]:
+			_general_direction(general_arena.player.global_position-global_position)
+		elif attack == 1 and movement.length_squared() > 0.001:
+			_general_direction(movement)
+	if general_arena.hp <= 0:
+		_sample_general(StringName("idle_"+_general_facing), 0.0)
+		_sprite.modulate = Color(0.6, 0.5, 0.7, 0.55)
+		return
+	if clock < 0.0 or attack >= GENERAL_MOVES.size():
+		_general_locomotion_time += delta
+		var move := "idle"
+		if movement.length() > delta*10.0:
+			move = "run" if movement.length() > delta*220.0 else "walk"
+		var anim := StringName(move+"_"+_general_facing)
+		var duration := _general_frame_start(anim, GENERAL_FRAMES.get_frame_count(anim))
+		_sample_general(anim, fmod(_general_locomotion_time, duration))
+		return
+	_general_locomotion_time = 0.0
+	var anim := StringName(GENERAL_MOVES[attack]+"_"+_general_facing)
+	var windup: float = GENERAL_WINDUPS[attack]
+	# Piecewise map source impact poses to the existing gameplay cues. The
+	# original slower GIF wind-down must not delay the next real attack.
+	var target_times: Array[float] = [0.0]
+	var source_times: Array[float] = [_general_frame_start(anim, 1)]
+	for cue in GENERAL_IMPACT_FRAMES[attack].size():
+		target_times.append(windup+GENERAL_IMPACT_TIMES[attack][cue])
+		source_times.append(_general_frame_start(anim, GENERAL_IMPACT_FRAMES[attack][cue]))
+	target_times.append(windup+GENERAL_RELEASES[attack])
+	source_times.append(_general_frame_start(anim, GENERAL_FRAMES.get_frame_count(anim))-0.001)
+	for i in range(1, target_times.size()):
+		if clock <= target_times[i]:
+			var progress := inverse_lerp(target_times[i-1], target_times[i], clock)
+			_sample_general(anim, lerpf(source_times[i-1], source_times[i], clampf(progress, 0.0, 1.0)))
+			return
+	_sample_general(anim, source_times[-1])
 
 func draw_ellipse_shadow() -> void:
 	draw_set_transform(Vector2(0, 24), 0, Vector2(1, 0.35))
