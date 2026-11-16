@@ -119,13 +119,13 @@ func _flags(map: TerrainMap, cell: Vector2i) -> int:
 
 ## A cell no mover can enter: BLOCKING and not swimmable, or FALLING.
 func _hard_obstacle(map: TerrainMap, cell: Vector2i) -> bool:
-	return map.is_hard_obstacle_cell(cell)
+	return map.trunk_nav_blocked(cell) or map.is_hard_obstacle_cell(cell)
 
 ## A cell THIS mover may be routed through (can_swim-aware). FALLING tiles
 ## are never swimmable (TerrainTypes.apply_movement), so this is exactly
 ## walkable-or-swimmable.
 func _passable(map: TerrainMap, cell: Vector2i, can_swim: bool) -> bool:
-	return map.can_enter_cell(cell, can_swim)
+	return not map.trunk_nav_blocked(cell) and map.can_enter_cell(cell, can_swim)
 
 ## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
 ## cutting between blocked cells). Returns the cell path EXCLUDING the start
@@ -188,7 +188,7 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 		seqs[cur] = -1
 		var cp := pas[cur]
 		if cp == 0:
-			cp = 1 if map.can_enter_cell(Vector2i(cx + min_c.x, cy + min_c.y), can_swim) else 2
+			cp = 1 if _passable(map, Vector2i(cx + min_c.x, cy + min_c.y), can_swim) else 2
 			pas[cur] = cp
 		if cp == 1 and ch < best_h:
 			best = cur
@@ -206,7 +206,7 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 			var ni := cur + steps[k]
 			var np := pas[ni]
 			if np == 0:
-				np = 1 if map.can_enter_cell(Vector2i(nx + min_c.x, ny + min_c.y), can_swim) else 2
+				np = 1 if _passable(map, Vector2i(nx + min_c.x, ny + min_c.y), can_swim) else 2
 				pas[ni] = np
 			if np != 1:
 				continue
@@ -224,10 +224,10 @@ func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = fa
 						if qx >= 0 and qy >= 0 and qx < w and qy <= max_c.y - min_c.y:
 							qp = pas[qy * w + qx]
 							if qp == 0:
-								qp = 1 if map.can_enter_cell(q, can_swim) else 2
+								qp = 1 if _passable(map, q, can_swim) else 2
 								pas[qy * w + qx] = qp
 						else:
-							qp = 1 if map.can_enter_cell(q, can_swim) else 2
+							qp = 1 if _passable(map, q, can_swim) else 2
 						if qp != 1:
 							blocked += 1
 					pn = 0.75 * blocked

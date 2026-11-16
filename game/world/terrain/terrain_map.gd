@@ -98,6 +98,9 @@ var _type_props: Dictionary = {} ## StringName -> read-only Dictionary
 ## Vector3(x, y, radius). Kept apart from the cell store: OBSTACLE cells
 ## (dungeon borders, maze walls) keep letting shots through as before.
 var _shot_blockers: Array[Vector3] = []
+var _trunk_rects: Array[Rect2] = []
+var _trunk_cells: Dictionary = {}
+var _trunk_bodies: Node2D
 var _ground_layer: TileMapLayer = null
 var _obstacle_layer: TileMapLayer = null
 
@@ -220,6 +223,71 @@ func interact_cell(cell: Vector2i, spell_tags: Array) -> TerrainInteraction:
 func interact_at(world_pos: Vector2, spell_tags: Array) -> TerrainInteraction:
 	return interact_cell(world_to_cell(world_pos), spell_tags)
 
+## #771: exact world-space trunk boxes, indexed by coarse cell for queries.
+func set_trunk_blockers(rects: Array[Rect2]) -> void:
+	_trunk_rects = rects.duplicate()
+	_trunk_cells.clear()
+	if is_instance_valid(_trunk_bodies): _trunk_bodies.queue_free()
+	_trunk_bodies = Node2D.new()
+	_trunk_bodies.name = "TrunkCollision"
+	add_child(_trunk_bodies)
+	for rect in rects:
+		var lo := world_to_cell(rect.position)
+		var hi := world_to_cell(rect.end)
+		for x in range(lo.x, hi.x + 1):
+			for y in range(lo.y, hi.y + 1):
+				var cell := Vector2i(x, y)
+				if not _trunk_cells.has(cell): _trunk_cells[cell] = []
+				_trunk_cells[cell].append(rect)
+		var body := StaticBody2D.new()
+		body.z_index = 4 # debug collision overlay above canopy (body has no artwork)
+		body.collision_layer = 1
+		body.collision_mask = 0
+		body.position = to_local(rect.get_center())
+		var shape := CollisionShape2D.new()
+		var box := RectangleShape2D.new()
+		box.size = rect.size
+		shape.shape = box
+		body.add_child(shape)
+		_trunk_bodies.add_child(body)
+	revision += 1
+
+func trunk_blockers() -> Array[Rect2]:
+	return _trunk_rects.duplicate()
+
+func trunk_nav_blocked(cell: Vector2i) -> bool:
+	return _trunk_cells.has(cell)
+
+func trunk_contains(point: Vector2) -> bool:
+	for rect: Rect2 in _trunk_cells.get(world_to_cell(point), []):
+		if rect.has_point(point): return true
+	return false
+
+## Earliest exact rectangle entry. Starting inside permits escape.
+func trunk_block_t(from: Vector2, motion: Vector2) -> float:
+	var best := -1.0
+	var bounds := Rect2(from, Vector2.ZERO).expand(from + motion)
+	var lo := world_to_cell(bounds.position)
+	var hi := world_to_cell(bounds.end)
+	var seen := {}
+	for x in range(lo.x, hi.x + 1):
+		for y in range(lo.y, hi.y + 1):
+			for rect: Rect2 in _trunk_cells.get(Vector2i(x, y), []):
+				if seen.has(rect) or rect.has_point(from): continue
+				seen[rect] = true
+				var enter := 0.0
+				var leave := 1.0
+				for axis in 2:
+					if is_zero_approx(motion[axis]):
+						if from[axis] < rect.position[axis] or from[axis] > rect.end[axis]: leave = -1
+					else:
+						var a := (rect.position[axis] - from[axis]) / motion[axis]
+						var b := (rect.end[axis] - from[axis]) / motion[axis]
+						enter = maxf(enter, minf(a, b))
+						leave = minf(leave, maxf(a, b))
+				if enter <= leave and (best < 0 or enter < best): best = enter
+	return best
+
 ## #407: replaces the projectile-blocking circles (Vector3(x, y, radius),
 ## world space). Indestructible: hits never remove them.
 func set_projectile_blockers(circles: Array[Vector3]) -> void:
@@ -234,7 +302,7 @@ func projectile_blockers() -> Array[Vector3]:
 ## fired while standing against a canopy edge flies out instead of dying
 ## on its own first frame.
 func projectile_block_t(from: Vector2, motion: Vector2) -> float:
-	var best := -1.0
+	var best := trunk_block_t(from, motion)
 	var to := from + motion
 	for c in _shot_blockers:
 		var at := Vector2(c.x, c.y)
@@ -252,7 +320,7 @@ func projectile_block_t(from: Vector2, motion: Vector2) -> float:
 ## the tree's own cell). Every other solid cell - OBSTACLE walls, MOUNTAIN,
 ## BLOCK stone blocks, palette walls - is high cover.
 func is_low_cover_cell(cell: Vector2i) -> bool:
-	if tile_type_at_cell(cell) == TerrainTypes.TREE:
+	if trunk_nav_blocked(cell) or tile_type_at_cell(cell) == TerrainTypes.TREE:
 		return true
 	if _shot_blockers.is_empty():
 		return false
@@ -292,14 +360,14 @@ func tile_type_at(world_pos: Vector2) -> StringName:
 	return tile_type_at_cell(world_to_cell(world_pos))
 
 func is_walkable_at_cell(cell: Vector2i) -> bool:
-	return _cell_flags(cell) & _WALKABLE != 0
+	return not trunk_nav_blocked(cell) and _cell_flags(cell) & _WALKABLE != 0
 
 func is_walkable_type(type: StringName) -> bool:
 	var f: Variant = _type_flags.get(type)
 	return (f if f != null else _cache_type(type)) & _WALKABLE != 0
 
 func is_walkable_at(world_pos: Vector2) -> bool:
-	return is_walkable_at_cell(world_to_cell(world_pos))
+	return not trunk_contains(world_pos) and _cell_flags(world_to_cell(world_pos)) & _WALKABLE != 0
 
 ## #461: true when the cell at world_pos hides whoever stands there (tall
 ## grass). Palette-aware like every other property lookup.
