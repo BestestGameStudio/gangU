@@ -40,9 +40,9 @@ const SHIELD_TRACK := Color(0.08, 0.08, 0.1, 0.75)
 ## #460: spirit bar under the shield bar. Teal while filling, bright mint
 ## once full (ready to heal), and it shows the H channel progress while the
 ## heal is being held.
-const SPIRIT_FILLING := Color(0.3, 0.65, 0.85, 1.0)
-const SPIRIT_READY := Color(0.55, 1.0, 0.75, 1.0)
-const SPIRIT_TRACK := Color(0.06, 0.1, 0.14, 0.75)
+const SPIRIT_FILL_TEXTURE := preload("res://assets/sprites/spirit_bar_fill.png")
+const SPIRIT_READY_TEXTURE := preload("res://assets/sprites/spirit_bar_ready.png")
+const SPIRIT_TRACK_TEXTURE := preload("res://assets/sprites/spirit_bar_track.png")
 var _defense: DefenseEncounter
 var _area_loader: AreaLoader
 @onready var _defense_bar: DefenseWaveBar = $DefenseWaveBar
@@ -62,8 +62,7 @@ var _progress_elapsed := 0.0
 @onready var _hp_bar: ProgressBar = $Root/HPBar
 @onready var _shield_bar: ProgressBar = $Root/ShieldBar
 @onready var _shield_label: Label = $Root/ShieldBar/ShieldLabel
-@onready var _spirit_bar: ProgressBar = $Root/SpiritBar
-@onready var _spirit_label: Label = $Root/SpiritBar/SpiritLabel
+@onready var _spirit_bar: ProgressBar = $Root/HPBar/SpiritBar
 @onready var _spell_grid: GridContainer = $Root/SpellGrid
 
 func _ready() -> void:
@@ -85,8 +84,8 @@ func _ready() -> void:
 	_player.died.connect(_on_player_died)
 	_player.shield_changed.connect(_on_shield_changed)
 	_on_health_changed(_player.hp, _player.max_hp)
-	_spirit_bar.add_theme_stylebox_override("background", _flat_style(SPIRIT_TRACK))
-	_spirit_bar.add_theme_stylebox_override("fill", _flat_style(SPIRIT_FILLING))
+	_spirit_bar.add_theme_stylebox_override("background", _hp_bar_style(SPIRIT_TRACK_TEXTURE, 12.0))
+	_spirit_bar.add_theme_stylebox_override("fill", _hp_bar_style(SPIRIT_FILL_TEXTURE, 12.0))
 	_spirit = _player.get_node_or_null("SpiritMeter") as SpiritMeter
 	_spirit_bar.visible = _spirit != null
 	if _spirit != null:
@@ -183,23 +182,19 @@ func _on_shield_changed(current: int) -> void:
 	_shield_label.text = str(current)
 
 ## #460: spirit bar. Shows the spirit fill, or the channel progress while H
-## is held; the label says when the heal is ready.
+## is held; the mint texture shows when the heal is ready.
 func _refresh_spirit() -> void:
 	if not is_instance_valid(_spirit):
 		return
-	var fill := _spirit_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	var fill := _spirit_bar.get_theme_stylebox("fill") as StyleBoxTexture
 	_spirit_bar.max_value = 1.0
 	_spirit_bar.step = 0.0
 	if _spirit.is_channelling():
 		_spirit_bar.value = _spirit.channel_fraction()
-		_spirit_label.text = "HEALING..."
 	else:
 		_spirit_bar.value = _spirit.spirit / maxf(_spirit.max_spirit, 0.001)
-		_spirit_label.text = "HOLD H TO HEAL" if _spirit.is_full() else "SPIRIT"
-	_spirit_label.add_theme_color_override("font_color", Color("10232c") if _spirit.is_full() and not _spirit.is_channelling() else Color.WHITE)
-	_spirit_label.add_theme_constant_override("outline_size", 0 if _spirit.is_full() and not _spirit.is_channelling() else 1)
 	if fill != null:
-		fill.bg_color = SPIRIT_READY if (_spirit.is_full() or _spirit.is_channelling()) else SPIRIT_FILLING
+		fill.texture = SPIRIT_READY_TEXTURE if (_spirit.is_full() or _spirit.is_channelling()) else SPIRIT_FILL_TEXTURE
 
 func _on_player_died() -> void:
 	# Run restart is #6's job; the HUD only reflects the death state.

@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://bgangu6hud"]
+[gd_scene load_steps=6 format=3 uid="uid://bgangu6hud"]
 
 [ext_resource type="Script" path="res://game/ui/hud.gd" id="1_hud"]
 [ext_resource type="Texture2D" path="res://assets/sprites/hp_bar_frame.png" id="2_frame"]
@@ -6,6 +6,8 @@
 [ext_resource type="Script" path="res://game/ui/defense_wave_bar.gd" id="3_bar"]
 
 [ext_resource type="FontFile" path="res://assets/fonts/m5x7/m5x7.ttf" id="4_hp_font"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/spirit_bar_frame.png" id="5_spirit_frame"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -19,7 +21,7 @@ theme_override_constants/separation = 10
 
 [node name="HPBar" type="ProgressBar" parent="Root"]
 texture_filter = 1
-custom_minimum_size = Vector2(360, 60)
+custom_minimum_size = Vector2(360, 62)
 layout_mode = 2
 show_percentage = false
 
@@ -30,6 +32,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 texture = ExtResource("2_frame")
+offset_bottom = -2.0
 patch_margin_left = 48
 patch_margin_right = 48
 
@@ -64,22 +67,27 @@ text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="SpiritBar" type="ProgressBar" parent="Root"]
-custom_minimum_size = Vector2(360, 36)
-layout_mode = 2
+[node name="SpiritBar" type="ProgressBar" parent="Root/HPBar"]
+texture_filter = 1
+layout_mode = 0
+offset_left = 38.0
+offset_top = 46.0
+offset_right = 322.0
+offset_bottom = 62.0
+mouse_filter = 2
 show_percentage = false
 
-[node name="SpiritLabel" type="Label" parent="Root/SpiritBar"]
+[node name="SpiritFrame" type="NinePatchRect" parent="Root/HPBar/SpiritBar"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 1
-theme_override_font_sizes/font_size = 32
-text = "SPIRIT"
-horizontal_alignment = 1
-vertical_alignment = 1
+mouse_filter = 2
+texture = ExtResource("5_spirit_frame")
+patch_margin_left = 12
+patch_margin_right = 12
+patch_margin_top = 4
+patch_margin_bottom = 4
 
 [node name="SpellGrid" type="GridContainer" parent="Root"]
 layout_mode = 2
