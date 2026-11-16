@@ -81,6 +81,7 @@ class_name Spell
 @export var terrain_block: StringName = &""
 
 ## #740 Water Shot:0 disables hover; negative duration means indefinite.
+@export var water_shot_alternate_redirect: bool = false
 @export var water_shot_hover_duration: float = 0.0
 @export var water_shot_hover_cap: int = 0
 @export var water_shot_repeat_redirect: bool = false

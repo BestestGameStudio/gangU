@@ -352,7 +352,7 @@ func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, 
 		match event.command:
 			SpellTriggerRouter.Command.CAST:
 				if is_charging(source): continue # A held action owns this source until release/cancel.
-				if source.water_shot_hover_cap > 0 and event.alternate:
+				if source.water_shot_alternate_redirect and event.alternate:
 					if event.get("fresh", just_pressed): release_water_shots(source)
 					continue
 				var payload := source.trigger_payload(event.mode, event.alternate)
@@ -428,8 +428,10 @@ func release_water_shots(spell: Spell) -> int:
 	if spell.water_shot_repeat_redirect and _water_redirect_cooldown > 0.0: return 0
 	var count := 0
 	for p in live_shots(spell):
-		if p is WaterShotProjectile and (p as WaterShotProjectile).release_toward(aim_point()):
-			count += 1
+		if p is WaterShotProjectile:
+			if (p as WaterShotProjectile).alternate_toward(aim_point()): count += 1
+		elif p.can_redirect() and p.global_position.distance_squared_to(aim_point()) > 0.01:
+			if p.redirect(aim_point()): count += 1
 	if count > 0 and spell.water_shot_repeat_redirect:
 		_water_redirect_cooldown = spell.water_shot_redirect_cooldown
 	return count
