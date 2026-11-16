@@ -52,7 +52,8 @@ func _run() -> void:
 	arena.apply_damage(arena.hp)
 	_check(arena.hp == 0, "boss HP reaches 0")
 	await process_frame
-	await process_frame # _drop_reward is call_deferred from _win()
+	# #694: the reward drops once the death animation has finished.
+	await create_timer(DesertStatue.death_animation_seconds() + 0.1, false).timeout
 
 	var footprint := _find_footprint(arena)
 	_check(footprint != null, "a solid footprint appears on the fallen general")
