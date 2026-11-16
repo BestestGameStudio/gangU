@@ -89,13 +89,13 @@ func run() -> void:
 	check(not caster.is_charging(s) and credits.size() == 3, "actual action release casts one charge")
 	caster._trigger_router.cancel_all(); caster._cooldowns.clear()
 	other.mode = Spell.CastMode.NONE
-	for action: StringName in [&"cast", &"spell_slot_1", &"spell_slot_2", &"spell_slot_3", &"spell_slot_4", &"spell_slot_5", &"spell_slot_6"]:
+	for action: StringName in [&"cast", &"spell_slot_1", &"spell_slot_2", &"spell_slot_3", &"spell_slot_4", &"spell_slot_5"]:
 		Input.action_press(action)
 		caster._route_trigger_input(other, action, false, 0.01)
 		Input.action_release(action)
 		caster._route_trigger_input(other, action, false, 0.01)
 		caster._cooldowns.clear()
-	check(credits.size() == 10, "equipped and all six slot actions use shared routing")
+	check(credits.size() == 9, "equipped and all five slot actions use shared routing")
 	# Cross-action ownership: a held generic charge reserves its source.
 	credits.clear(); caster._cooldowns.clear(); caster._trigger_router = SpellTriggerRouter.new()
 	Input.action_press(&"cast")

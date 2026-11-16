@@ -9,7 +9,7 @@ extends ModalPanel
 ##
 ## (#375, Daniel 2026-11-09: "You can swap spells at the spell directory")
 ## Bounded swap lane: clicking a row selects that unlocked spell and shows
-## the six slot targets (cast-key labels + occupants); clicking a slot
+## the five slot targets (cast-key labels + occupants); clicking a slot
 ## equips the selection there - an occupied target SWAPS (the previous
 ## occupant stays unlocked, now unequipped), an empty target equips. The
 ## move is composed from the caster's strict clear_slot/assign_slot
@@ -295,7 +295,7 @@ func _on_slot_chosen(index: int) -> void:
 		_selected = null
 	_render()
 
-## (#375) Rebuild the six slot targets from live caster state; visible only
+## (#375) Rebuild the five slot targets from live caster state; visible only
 ## while a selection is active so the default directory stays a plain list.
 func _refresh_slot_bar() -> void:
 	for c in _slot_bar.get_children():

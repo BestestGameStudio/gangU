@@ -1,6 +1,6 @@
 extends CanvasLayer
 class_name HUD
-## Player health, spirit and six equipped spell slots. Encounters have no
+## Player health, spirit and five equipped spell slots. Encounters have no
 ## legacy objective system. The shipped defense wave bar remains.
 ##
 ## Self-contained: mounted by the scene that owns the player, by instancing

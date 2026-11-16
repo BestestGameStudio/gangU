@@ -1,9 +1,9 @@
 extends ModalPanel
 class_name EquipPanel
 ## #375 Tab menu (Daniel, 2026-11-09): "spell menu should only show your
-## slots and allow you to rearrange the 6 spells ... You can still upgrade
+## slots and allow you to rearrange the 5 spells ... You can still upgrade
 ## currently equipped spells from the tab menu." The panel shows ONLY the
-## six slots (plus the #376 stat grid); the old Unlocked column is gone -
+## five slots (plus the #376 stat grid); the old Unlocked column is gone -
 ## equipping from the unlock inventory lives at the hub spell directory
 ## (#375 directory slice, #393).
 ##
@@ -236,7 +236,7 @@ func _build_ui() -> void:
 	cols.add_theme_constant_override("separation", 20)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(cols)
-	# #375: the ONLY spell column is the six slots. Buttons stay DIRECT
+	# #375: the ONLY spell column is the five slots. Buttons stay DIRECT
 	# children of _slots_box (harnesses white-box that structure for
 	# keyboard focus).
 	_slots_box = VBoxContainer.new()
