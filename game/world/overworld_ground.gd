@@ -130,6 +130,10 @@ func _init() -> void:
 
 func _ready() -> void:
 	build_from(get_parent())
+	var fireflies := preload("res://game/world/overworld_fireflies.gd").new()
+	fireflies.name = "Fireflies"
+	fireflies.ground = self
+	add_child(fireflies)
 	_update_view()
 	queue_redraw()
 	_canopy.queue_redraw()
