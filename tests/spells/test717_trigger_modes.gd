@@ -295,7 +295,7 @@ func run() -> void:
 	tide._physics_process(0.51); tide._on_body_entered(target)
 	check(target.received == damage_before + sig.damage * 3 and tide._hit_bodies.count(target) == 1, "unfrozen contact resumes without duplicate retained-body entries")
 	tide.hovering = false; tide._life_t += 1.0; tide._on_body_entered(target)
-	check(target.received == damage_before + sig.damage * 3, "released Signature does not repeat contact on prior body")
+	check(target.received == damage_before + sig.damage * 4, "released Signature repeats contact after its interval")
 	var next_target := WaterTarget.new(); root.add_child(next_target)
 	tide.hovering = true; tide._on_body_entered(next_target)
 	check(next_target.received == sig.damage, "Signature tick cooldown is per enemy, not global")

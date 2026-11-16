@@ -93,10 +93,10 @@ func _spread_hover(delta: float) -> void:
 	global_position += motion
 	_sweep_segment(before, motion)
 
-## Signature only: stationary contact can repeat at the authored tick interval.
+## Signature only: travelling and stationary contact share the authored tick interval.
 ## Shared dispatch retains damage modifiers, source/friendly gates and hit signals.
 func _can_hit(body: Node2D) -> bool:
-	if hovering and spell.water_shot_contact_interval > 0.0:
+	if spell.water_shot_repeat_redirect and spell.water_shot_contact_interval > 0.0:
 		return not freeze.is_frozen() and (not _hit_times.has(body) or _life_t - _hit_times[body] >= spell.water_shot_contact_interval)
 	return super._can_hit(body)
 
