@@ -455,7 +455,7 @@ func _refresh() -> void:
 				description = "Upgrade content is not available yet."
 			b.setup(str(_path_field(path, &"display_name")) + _tier_suffix(path), description, needs_token)
 			# #451: border in the color of the tier this upgrade leads into.
-			b.set_border_color(UiStyle.RANK_COLORS[_path_tier(path)])
+			b.set_border_tier(_path_tier(path))
 			var pid: Variant = _path_field(path, &"id")
 			if needs_token:
 				b.pressed.connect(func() -> void: _on_token_upgrade_pressed(pid))
