@@ -1103,14 +1103,8 @@ class Backdrop extends Node2D:
 			else:
 				draw_arc(Vector2.ZERO,radius,0,TAU,128,color,width,true)
 		func _draw() -> void:
-			var arena_radius := owner_backdrop.arena_radius
-			for i in 9:
-				_circle(arena_radius+100-i*10,Color("bda076").lerp(Color("d8bd86"),float(i)/8))
-			_circle(arena_radius-12,Color("b39a70"))
-			for i in 650:
-				var a := float(i)*2.399963
-				var at := Vector2.from_angle(a)*sqrt(float(i)/650)*(arena_radius-15)
-				draw_arc(at,8+i%12,0.2,1.6,8,Color(0.52,0.38,0.22,0.15),1)
+			# The sand and sandstone floor is the overworld's dual-grid field
+			# (OverworldGround); only the statue ring marks are painted here.
 			_circle(owner_backdrop.statue_radius,Color(0.59,0.39,0.2,0.35),2)
 			for point in owner_backdrop.ring_points:
 				draw_circle(point,48,Color(0.65,0.48,0.27,0.25))
