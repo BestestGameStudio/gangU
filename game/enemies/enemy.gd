@@ -313,6 +313,8 @@ var freeze := FreezeHold.new()
 ## An external displacement owns locomotion, never damage or lifecycle.
 var displacement_owner: Node = null
 var stun_left := 0.0
+var hook_taunt_target: Node2D = null
+var hook_taunt_left := 0.0
 
 func stun(seconds: float) -> void:
 	stun_left = maxf(stun_left, seconds)
@@ -336,6 +338,12 @@ func _physics_process(delta: float) -> void:
 	if freeze.is_frozen(): return
 	stun_left = maxf(stun_left - delta, 0.0)
 	if stun_left > 0.0 or is_instance_valid(displacement_owner): return
+	hook_taunt_left = maxf(hook_taunt_left - delta, 0.0)
+	if hook_taunt_left > 0.0 and is_instance_valid(hook_taunt_target):
+		velocity = global_position.direction_to(hook_taunt_target.global_position) * speed
+		terrain_move_and_slide()
+		global_position = constrain_movement(global_position)
+		return
 	_rally_left = maxf(_rally_left - delta, 0.0)
 	# #331: a strong knockback owns the body until it decays below
 	# KNOCKBACK_CONTROL, so the push reads; the behavior resumes after.
