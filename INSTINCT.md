@@ -51,6 +51,12 @@ only.
 
 ## 5. Independent review on the exact head
 
+- Before merging, require an independent **APPROVED** review whose body or verdict
+  explicitly covers the current head SHA. The review's automatic commit association
+  alone is not enough if its text names a different head or limits its scope.
+- Every changed head needs a fresh explicit approval, even when the old and new trees
+  are identical. Ask for a new verdict first. A comment confirming equal trees or
+  carrying forward a source/pixel finding is not an APPROVED review of the new head.
 - Every PR is reviewed by another Instinct, never its author. Reviewers are assigned
   automatically as individuals: no one manually requests, adds, or reallocates
   reviewers, and only the individually assigned reviewer acts on the request. After
