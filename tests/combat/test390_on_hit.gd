@@ -223,7 +223,18 @@ func _check_splash() -> void:
 	await _clear_area()
 
 func _check_bubble() -> void:
-	var bubble := _spell("water_bubble")
+	# #703: the Water Bubble spell is gone with the upgrade paths, but the
+	# shield mechanic it exercised still serves the desert possession star.
+	# Build the shield spell in code (same fields as the deleted .tres).
+	var bubble := Spell.new()
+	bubble.spell_name = "Shield Probe"
+	bubble.mode = Spell.CastMode.SHIELD
+	bubble.cooldown = 7.0
+	bubble.damage = 6.0
+	bubble.shield_radius = 48.0
+	bubble.shield_duration = 4.0
+	bubble.shield_charges = 3
+	bubble.shield_tick = 0.5
 	var e := _enemy(Vector2(440, 300))
 	await physics_frame
 	_cast(bubble, Vector2(800, 300))
@@ -231,7 +242,7 @@ func _check_bubble() -> void:
 	var got := _for(e)
 	_check(got.size() >= 1, "bubble: touch reports a hit (%d)" % got.size())
 	if got.size() >= 1:
-		_check(got[0].delivery == OnHit.DELIVERY_CONTACT and got[0].spell == bubble, "bubble: delivery = contact, spell = Water Bubble")
+		_check(got[0].delivery == OnHit.DELIVERY_CONTACT and got[0].spell == bubble, "bubble: delivery = contact, spell = the shield probe")
 	await _clear_area()
 
 func _check_summon() -> void:

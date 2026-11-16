@@ -14,8 +14,7 @@ signal upgrades_changed(spell: Spell)
 
 ## Explicit caster wiring (no-group convention from #34).
 @export var caster_path: NodePath
-## Available upgrade paths. Contents beyond the approved placeholder paths
-## are human-open.
+## Upgrade rows (one fixed linear chain per spell, #703 - no branch choice).
 @export var upgrades: Array[SpellUpgrade] = []
 
 var _cast_counts: Dictionary = {} # Spell -> int, read-only XP observation
@@ -53,56 +52,16 @@ func restore_run_state(state: Dictionary) -> void:
 	tokens_changed.emit(_upgrade_tokens)
 	upgrades_changed.emit(null)
 
-## Upgrade paths offered for a spell: [{id, name}] per the pinned provider
-## shape; returns full SpellUpgrade resources, F reads id/display_name.
-func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
-	var out: Array[SpellUpgrade] = []
-	if spell == null or route_taken(spell):
-		return out
+## Next upgrade in a spell's fixed linear chain (#703): the single
+## SpellUpgrade whose source is `spell`, or null when the spell has none
+## (chain finished or no chain). F reads id/display_name off the resource.
+func next_upgrade(spell: Spell) -> SpellUpgrade:
+	if spell == null:
+		return null
 	for u in upgrades:
 		if u != null and u.source_spell == spell:
-			out.append(u)
-	return out
-
-## #331: Water Ball (and, #370, Stone Hammer) uses ONE progression route. Once the
-## player holds any upgrade descended from `spell` (e.g. Water Splash
-## from Water Ball), that spell's other branches stay closed, even if a
-## second copy of the base is looted later. Other spell trees keep their
-## existing duplicate-copy behavior. False without a caster.
-func route_taken(spell: Spell) -> bool:
-	if _caster == null:
-		return false
-	var parent_of: Dictionary = {} # result Spell -> source Spell
-	for u in upgrades:
-		if u != null and u.result_spell != null and u.source_spell != null:
-			parent_of[u.result_spell] = u.source_spell
-	# Scope the owner-requested rule to the actual Water Ball resource and
-	# its descendants, not spell names or unrelated upgrade trees.
-	# #370: the Stone Hammer tree (two routes) follows the same one-route rule.
-	var roots: Array[Spell] = [
-		load("res://data/spells/water_ball.tres"),
-		load("res://data/spells/stone_hammer.tres"),
-	]
-	var ancestor := spell
-	var one_route := roots.has(ancestor)
-	for _i in 16:
-		if one_route or not parent_of.has(ancestor):
-			break
-		ancestor = parent_of[ancestor]
-		one_route = roots.has(ancestor)
-	if not one_route:
-		return false
-	for held: Spell in _caster.get_unlocked():
-		if held == spell:
-			continue
-		var cur: Spell = held
-		for _i in 16: # trees are 3 tiers deep; the cap only guards bad data
-			if not parent_of.has(cur):
-				break
-			cur = parent_of[cur]
-			if cur == spell:
-				return true
-	return false
+			return u
+	return null
 
 ## Tier of a held spell (#36): 1/2/3 = Specialization/Mastery/Signature,
 ## 0 = Base or never-upgraded. Written only by a successful apply_upgrade;
@@ -115,36 +74,31 @@ func can_upgrade(spell: Spell) -> bool:
 		return false
 	if spell not in _caster.get_unlocked():
 		return false
-	for u in get_upgrade_paths(spell):
-		if u.result_spell != null and int(_cast_counts.get(spell, 0)) >= u.xp_threshold:
-			return true
-	return false
+	var u := next_upgrade(spell)
+	return u != null and u.result_spell != null and int(_cast_counts.get(spell, 0)) >= u.xp_threshold
 
 ## Refusal-bool. Currently ALWAYS refuses: the replace_spell caster seam is
 ## Mitra's post-#63 follow-up and has not landed. Once it lands this
 ## delegates: _caster.replace_spell(u.source_spell, u.result_spell), then
 ## upgrades_changed.emit(spell). No direct array mutation here ever.
 func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
-	if route_taken(spell):
-		push_warning("SpellProgress: a route from %s is already taken; refusing '%s'." % [spell, upgrade_id])
-		return false
-	for u in get_upgrade_paths(spell):
-		if u.id == upgrade_id:
-			if _caster == null:
-				push_warning("SpellProgress: replace_spell seam not landed yet (Mitra post-#63 follow-up); refusing.")
-				return false
-			if u.result_spell == null:
-				push_warning("SpellProgress: placeholder upgrade has no result_spell content yet; refusing.")
-				return false
-			var ok: bool = _caster.replace_spell(u.source_spell, u.result_spell)
-			if ok:
-				# #36: record tier ON successful apply only. The result
-				# instance becomes the tier source of truth; the consumed
-				# source drops back to Base (0).
-				_tiers.erase(u.source_spell)
-				_tiers[u.result_spell] = u.tier
-				upgrades_changed.emit(spell)
-			return ok
+	var u := next_upgrade(spell)
+	if u != null and u.id == upgrade_id:
+		if _caster == null:
+			push_warning("SpellProgress: replace_spell seam not landed yet (Mitra post-#63 follow-up); refusing.")
+			return false
+		if u.result_spell == null:
+			push_warning("SpellProgress: placeholder upgrade has no result_spell content yet; refusing.")
+			return false
+		var ok: bool = _caster.replace_spell(u.source_spell, u.result_spell)
+		if ok:
+			# #36: record tier ON successful apply only. The result
+			# instance becomes the tier source of truth; the consumed
+			# source drops back to Base (0).
+			_tiers.erase(u.source_spell)
+			_tiers[u.result_spell] = u.tier
+			upgrades_changed.emit(spell)
+		return ok
 	push_warning("SpellProgress: unknown upgrade id '%s' for %s." % [upgrade_id, spell])
 	return false
 
@@ -152,9 +106,9 @@ func apply_upgrade(spell: Spell, upgrade_id: StringName) -> bool:
 ## Daniel 2026-11-08: "a special upgrade token item dropped only by the boss, it
 ## can upgrade a spell by one tier". Run-scoped count (reset free with the
 ## RunManager reload). PROVISIONAL mechanics, all open human choices:
-##   - one token = one tier step on ONE upgrade path the spell already offers
-##     (no skipping: tier N -> N+1 only, same paths as the cast route);
-##   - the token IGNORES the path's cast-count threshold, and is only spent
+##   - one token = one tier step on the spell's fixed chain
+##     (no skipping: tier N -> N+1 only, same next upgrade as the cast route);
+##   - the token IGNORES the upgrade's cast-count threshold, and is only spent
 ##     when that threshold is NOT yet met (a qualified spell uses the free
 ##     cast route, so a token is never wasted);
 ##   - cast counts are left untouched (the result spell starts its own count
@@ -175,9 +129,10 @@ func add_upgrade_token(n: int = 1) -> void:
 	tokens_changed.emit(_upgrade_tokens)
 	upgrades_changed.emit(null)
 
-## True when this path is offered only because a token is held: the caster
-## has the spell, the path has content, and the cast threshold is not met.
-func path_needs_token(spell: Spell, u: SpellUpgrade) -> bool:
+## True when this upgrade is offered only because a token is held: the
+## caster has the spell, the upgrade has content, and the cast threshold
+## is not met.
+func upgrade_needs_token(spell: Spell, u: SpellUpgrade) -> bool:
 	return u != null and int(_cast_counts.get(spell, 0)) < u.xp_threshold
 
 ## A token could advance this spell one tier right now.
@@ -186,12 +141,10 @@ func can_token_upgrade(spell: Spell) -> bool:
 		return false
 	if spell not in _caster.get_unlocked():
 		return false
-	for u in get_upgrade_paths(spell):
-		if u.result_spell != null and path_needs_token(spell, u):
-			return true
-	return false
+	var u := next_upgrade(spell)
+	return u != null and u.result_spell != null and upgrade_needs_token(spell, u)
 
-## Spend one token on one path through the SAME apply_upgrade -> replace_spell
+## Spend one token on the next chain upgrade through the SAME apply_upgrade -> replace_spell
 ## route; the token is consumed only when the upgrade actually applies.
 func apply_upgrade_with_token(spell: Spell, upgrade_id: StringName) -> bool:
 	if _upgrade_tokens <= 0:

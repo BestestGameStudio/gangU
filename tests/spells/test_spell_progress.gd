@@ -1,6 +1,6 @@
 extends SceneTree
-## Progression provider harness (#33/#36), post-#67: placeholder upgrade paths
-## resolve against the REAL B caster; apply_upgrade now EXECUTES through the
+## Progression provider harness (#33/#36), post-#67, #703 chains: the next
+## upgrade resolves against the REAL B caster; apply_upgrade now EXECUTES through the
 ## landed replace_spell seam (atomic own-index swap, slot preserved, cooldown
 ## transfer); XP accrual stays read-only via spell_cast. Synthetic headless
 ## complement only - browser evidence belongs to F's panel proof. Provider
@@ -33,9 +33,9 @@ func _process(delta: float) -> bool:
 			prog.name = "SpellProgress"
 			scene.add_child(prog)
 			prog.caster_path = NodePath("../Player/SpellCaster") # resolved relative to the provider (ReviveSatchel convention)
+			# #703: one fixed linear chain - Fire Ball upgrades to Split only.
 			var split: SpellUpgrade = load("res://data/upgrades/fireball_split.tres")
-			var beam: SpellUpgrade = load("res://data/upgrades/fireball_beam.tres")
-			prog.upgrades = [split, beam]
+			prog.upgrades = [split]
 			prog._ready()
 			prog.upgrades_changed.connect(func(sp): upsig_seen.append(sp))
 			caster.spell_replaced.connect(func(o, n): replaced_seen.append([o, n]))
@@ -45,11 +45,11 @@ func _process(delta: float) -> bool:
 			if t > 0.3:
 				var fire: Spell = load("res://data/spells/fire_ball.tres")
 				var split: Spell = load("res://data/spells/fire_ball_split.tres")
-				var paths := prog.get_upgrade_paths(fire)
-				if paths.size() != 2 or paths[0].id != &"fireball_split" or paths[1].id != &"fireball_beam":
-					print("[PROG] FAIL upgrade paths: ", paths.map(func(u): return u.id)); ok = false
+				var next := prog.next_upgrade(fire)
+				if next == null or next.id != &"fireball_split":
+					print("[PROG] FAIL next upgrade in chain: ", next.id if next != null else "null"); ok = false
 				else:
-					print("[PROG] placeholder upgrade paths resolve OK (split + beam)")
+					print("[PROG] chain next upgrade resolves OK (split)")
 				# Real B starting loadout pre-unlocks fire+mana via add_spell.
 				if not caster.get_unlocked().has(fire):
 					caster.unlock_spell(fire)
@@ -121,10 +121,10 @@ func _process(delta: float) -> bool:
 					print("[PROG] FAIL tier: split not recorded Specialization on apply"); ok = false
 				elif prog.get_tier(fire) != 0:
 					print("[PROG] FAIL tier: consumed source not back to Base/0"); ok = false
-				elif load("res://data/upgrades/fireball_split.tres").get("tier") != 1 or load("res://data/upgrades/fireball_beam.tres").get("tier") != 1:
-					print("[PROG] FAIL tier: spec resources missing tier=1"); ok = false
+				elif load("res://data/upgrades/fireball_split.tres").get("tier") != 1 or load("res://data/upgrades/fireball_m2_split_wide.tres").get("tier") != 2:
+					print("[PROG] FAIL tier: chain resources missing tier=1/2"); ok = false
 				else:
-					print("[PROG] tier recorded on apply (result=1, consumed source=0, spec resources tier=1) OK")
+					print("[PROG] tier recorded on apply (result=1, consumed source=0, chain resources tier=1/2) OK")
 				if upsig_seen.size() != 1 or upsig_seen[0] != fire:
 					print("[PROG] FAIL upgrades_changed: ", upsig_seen.size(), " calls, payload=", upsig_seen[0] if upsig_seen.size() > 0 else "none"); ok = false
 				else:

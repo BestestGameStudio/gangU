@@ -44,21 +44,29 @@ func _run() -> void:
 		seen[u.resource_path] = true
 	_check("every row is a distinct upgrade .tres", all_ok)
 	_check("every upgrade .tres is a row (%d files)" % files, seen.size() == files)
-	# #700: a spell offers at most 2 Specialization (tier-1) upgrade paths
-	# (Daniel 2026-11-15: "Spell upgrades should be limited to 2 upgrade
-	# paths"). Mastery/Signature rows advance a path already taken and are
-	# not new paths.
-	var tier1_per_source := {}
+	# #703: upgrade PATHS are gone (Daniel 2026-11-15). Each spell has one
+	# fixed linear chain: at most ONE successor row per source spell, and a
+	# tier-2/3 row's source must itself be the result of a chain row.
+	var rows_per_source := {}
+	var results := {}
 	for u in b:
 		_check("row %s has its script instanced" % u.resource_path, u.get("tier") != null)
-		if u.get("tier") != null and u.tier == 1 and u.source_spell != null:
-			tier1_per_source[u.source_spell] = int(tier1_per_source.get(u.source_spell, 0)) + 1
-	var paths_ok := true
-	for source in tier1_per_source:
-		if int(tier1_per_source[source]) > 2:
-			paths_ok = false
-			print("[512u] OVER LIMIT: ", source.resource_path, " offers ", tier1_per_source[source], " tier-1 paths")
-	_check("no spell offers more than 2 Specialization paths", paths_ok)
+		if u.source_spell != null:
+			rows_per_source[u.source_spell] = int(rows_per_source.get(u.source_spell, 0)) + 1
+		if u.result_spell != null:
+			results[u.result_spell] = u
+	var chain_ok := true
+	for source in rows_per_source:
+		if int(rows_per_source[source]) > 1:
+			chain_ok = false
+			print("[512u] BRANCH: ", source.resource_path, " has ", rows_per_source[source], " successor rows")
+	_check("no spell has more than one successor upgrade (linear chains)", chain_ok)
+	var link_ok := true
+	for u in b:
+		if u.tier >= 2 and not results.has(u.source_spell):
+			link_ok = false
+			print("[512u] BROKEN CHAIN: ", u.resource_path, " tier ", u.tier, " source has no incoming row")
+	_check("tier 2/3 rows extend an existing chain link", link_ok)
 	print("test512u done: %d checks, %d failures" % [_checks, _fails])
 	print("[512u] RESULT: ", "ALL PASS" if _fails == 0 else "FAIL")
 	quit(0 if _fails == 0 else 1)

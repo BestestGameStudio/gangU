@@ -48,9 +48,10 @@ func _initialize() -> void:
 			dispatched += 1
 			_check(spr != null and spr.animation == StringName("%s_start" % row) and spr.sprite_frames.has_animation(row), "%s plays %s_start with a %s flight row" % [f, row, row])
 		proj.free()
-	_check(dispatched >= 25, "%d spells dispatched to a sprite row" % dispatched)
-	# Floor drops 40 -> 36 with #700 (Water Ball Steer branch removed).
-	_check(n >= 36, "scanned %d shipped spells" % n)
+	_check(dispatched >= 15, "%d spells dispatched to a sprite row" % dispatched)
+	# Floor drops 36 -> 25 with #703 (path-removal deletes 11 sprite-mapped
+	# spells; 14 shipped spells total removed).
+	_check(n >= 25, "scanned %d shipped spells" % n)
 	var code := Spell.new()
 	code.mode = Spell.CastMode.PROJECTILE
 	code.spell_name = "Fire Ball"
