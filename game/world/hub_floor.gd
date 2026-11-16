@@ -1,7 +1,8 @@
 extends Node2D
 class_name HubFloor
 ## The hub uses the same 64 px dual-grid terrain and stone-brick sheets as
-## the overworld. Ground blends at lattice points; hub props stay in the scene.
+## the overworld. The raised wall ring reuses those bricks as a shaded cap;
+## hub props stay in the scene.
 
 const CENTER := Vector2(576, 410)
 const HALF := Vector2(460, 310)
@@ -45,8 +46,16 @@ func _ready() -> void:
 	for cy in range(lo.y, hi.y + 1):
 		for cx in range(lo.x, hi.x + 1):
 			var at := terrain.cell_to_world(Vector2i(cx, cy))
-			if Geometry2D.is_point_in_polygon(at, _wall_outer) and not covers(at):
-				cells[Vector2i(cx, cy)] = TerrainTypes.OBSTACLE
+			var half_cell := Vector2.ONE * terrain.cell_size * 0.5
+			var square := PackedVector2Array([at - half_cell,
+				at + Vector2(half_cell.x, -half_cell.y), at + half_cell,
+				at + Vector2(-half_cell.x, half_cell.y)])
+			# Block any cell touching the wall footprint, not only centres.
+			# This keeps the player's point-motion seam off the visible cap.
+			for outside: PackedVector2Array in Geometry2D.clip_polygons(square, outline):
+				if not Geometry2D.intersect_polygons(outside, _wall_outer).is_empty():
+					cells[Vector2i(cx, cy)] = TerrainTypes.OBSTACLE
+					break
 	terrain.set_cells(cells)
 
 ## Full stone tiles use the shared deterministic variant selection. Clip
