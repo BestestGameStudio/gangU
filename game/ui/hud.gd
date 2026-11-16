@@ -195,7 +195,9 @@ func _refresh_spirit() -> void:
 		_spirit_label.text = "HEALING..."
 	else:
 		_spirit_bar.value = _spirit.spirit / maxf(_spirit.max_spirit, 0.001)
-		_spirit_label.text = "SPIRIT READY - HOLD H TO HEAL" if _spirit.is_full() else "SPIRIT"
+		_spirit_label.text = "HOLD H TO HEAL" if _spirit.is_full() else "SPIRIT"
+	_spirit_label.add_theme_color_override("font_color", Color("10232c") if _spirit.is_full() and not _spirit.is_channelling() else Color.WHITE)
+	_spirit_label.add_theme_constant_override("outline_size", 0 if _spirit.is_full() and not _spirit.is_channelling() else 1)
 	if fill != null:
 		fill.bg_color = SPIRIT_READY if (_spirit.is_full() or _spirit.is_channelling()) else SPIRIT_FILLING
 

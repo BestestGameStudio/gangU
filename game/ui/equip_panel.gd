@@ -230,7 +230,7 @@ func _build_ui() -> void:
 	panel.add_child(vbox)
 	var title := Label.new()
 	title.text = "Spells"
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 32)
 	vbox.add_child(title)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 20)
@@ -244,11 +244,11 @@ func _build_ui() -> void:
 	cols.add_child(_slots_box)
 	var slots_header := Label.new()
 	slots_header.text = "Slots"
-	slots_header.add_theme_font_size_override("font_size", 22)
+	slots_header.add_theme_font_size_override("font_size", 32)
 	_slots_box.add_child(slots_header)
 	for i in 6:
 		var b := Button.new()
-		b.add_theme_font_size_override("font_size", 22)
+		b.add_theme_font_size_override("font_size", 32)
 		b.custom_minimum_size = Vector2(220, 0)
 		var idx := i
 		b.pressed.connect(func() -> void: _on_slot_pressed(idx))
@@ -296,7 +296,7 @@ func _build_relics_section(parent: VBoxContainer) -> void:
 	var header := Label.new()
 	header.name = "RelicsHeader"
 	header.text = "Relics"
-	header.add_theme_font_size_override("font_size", 22)
+	header.add_theme_font_size_override("font_size", 32)
 	_relics_box.add_child(header)
 	_relics_list = HFlowContainer.new()
 	_relics_list.name = "RelicsList"
@@ -316,7 +316,7 @@ func _refresh_relics() -> void:
 		var empty := Label.new()
 		empty.name = "RelicsEmpty"
 		empty.text = "No relics yet"
-		empty.add_theme_font_size_override("font_size", 18)
+		empty.add_theme_font_size_override("font_size", 32)
 		empty.modulate = Color(1, 1, 1, 0.6)
 		_relics_list.add_child(empty)
 		return
@@ -413,7 +413,7 @@ func _refresh() -> void:
 	var tokens: int = _upgrader.call(&"upgrade_tokens") if _upgrader.has_method(&"upgrade_tokens") else 0
 	if tokens > 0:
 		uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
-	uheader.add_theme_font_size_override("font_size", 22)
+	uheader.add_theme_font_size_override("font_size", 32)
 	_upgrade_box.add_child(uheader)
 	var scroll := ScrollContainer.new()
 	scroll.name = "UpgradeScroll"

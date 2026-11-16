@@ -264,7 +264,7 @@ func _build_ui() -> void:
 	vbox.add_child(top)
 	var title := Label.new()
 	title.text = "MAP"
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", 32)
 	top.add_child(title)
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(16, 0)
@@ -318,7 +318,7 @@ func _build_ui() -> void:
 	_selection = Label.new()
 	_selection.name = "Selection"
 	_selection.add_theme_color_override("font_color", MapCanvas.SITE_COLOR)
-	_selection.add_theme_font_size_override("font_size", 14)
+	_selection.add_theme_font_size_override("font_size", 16)
 	_selection.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	travel_row.add_child(_selection)
 	_travel_button = Button.new()
@@ -334,13 +334,13 @@ func _build_ui() -> void:
 	_status = Label.new()
 	_status.name = "Status"
 	_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
-	_status.add_theme_font_size_override("font_size", 12)
+	_status.add_theme_font_size_override("font_size", 16)
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bottom.add_child(_status)
 	var hint := Label.new()
 	hint.text = "LMB: use tool   RMB: erase   MMB / Space+LMB: pan   M / Esc: close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", 16)
 	bottom.add_child(hint)
 
 class _SymbolIcon extends Control:

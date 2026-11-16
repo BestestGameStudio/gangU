@@ -18,8 +18,8 @@ extends VBoxContainer
 const COLUMNS := 3
 const CELL_WIDTH := 112.0
 const ICON_SIZE := 26.0
-const VALUE_FONT := 20
-const TITLE_FONT := 22
+const VALUE_FONT := 32
+const TITLE_FONT := 32
 
 var _description: Label
 var _header: Label
@@ -96,7 +96,7 @@ static func make_tooltip(p_title: String, p_value: String, p_details: String) ->
 	panel.add_child(box)
 	var head := Label.new()
 	head.name = "Title"
-	head.add_theme_font_size_override("font_size", 20)
+	head.add_theme_font_size_override("font_size", 32)
 	head.add_theme_color_override("font_color", UiStyle.B_ACCENT)
 	box.add_child(head)
 	var body := Label.new()

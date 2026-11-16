@@ -29,7 +29,7 @@ func _ready() -> void:
 	var title := Label.new()
 	title.text = "FAST TRAVEL"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", 32)
 	box.add_child(title)
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 8)

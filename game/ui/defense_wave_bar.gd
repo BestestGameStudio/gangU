@@ -32,7 +32,7 @@ func _ready() -> void:
 	_countdown.position = Vector2(0, COUNTDOWN_TOP)
 	_countdown.size = Vector2(BAR_WIDTH, 18.0)
 	_countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_countdown.add_theme_font_size_override("font_size", 14)
+	_countdown.add_theme_font_size_override("font_size", 16)
 	_countdown.add_theme_color_override("font_outline_color", Color.BLACK)
 	_countdown.add_theme_constant_override("outline_size", 4)
 	add_child(_countdown)
