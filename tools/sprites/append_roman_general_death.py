@@ -92,9 +92,10 @@ def main():
     added = sum(len(anims[n]["frames"]) for n, _ in DEATH)
     tres = tres.replace("load_steps=%d" % old_steps,
                         "load_steps=%d" % (old_steps + added), 1)
-    anchor = "animations = ["
-    i = tres.index(anchor) + len(anchor)
-    tres = tres[:i] + "\n" + subs.rstrip("\n") + "\n\n" + tres[i:].lstrip("\n")
+    # Sub-resources must precede the [resource] section.
+    anchor = "[resource]"
+    i = tres.index(anchor)
+    tres = tres[:i] + subs + tres[i:]
     assert tres.rstrip().endswith("}]"), "unexpected animations array tail"
     tail = tres.rstrip()[:-2]
     tres = tail + "}, " + ", ".join(dicts) + "]\n"
