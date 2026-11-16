@@ -180,3 +180,7 @@ func value_of(id: StringName) -> String:
 func details_of(id: StringName) -> String:
 	var c := cell(id)
 	return c.details if c != null else ""
+
+## Selected spells use one row for the four core stats; extra stats wrap.
+func set_columns(count: int) -> void:
+	_grid.columns = maxi(count, 1)

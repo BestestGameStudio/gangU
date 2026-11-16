@@ -84,19 +84,10 @@ const UPGRADE_CARD_GAP := 12
 # #712: all three 176px tier cards visible together at the default viewport.
 # Fixed width still prevents resizing when selecting/deselecting a spell.
 const DETAIL_WIDTH := 568.0
-## #441 (Daniel, 2026-11-09): the plate hugs its content instead of the old
-## 620px fixed height ("a lot of empty vertical space below the spell
-## slots"). Measured composition on the pinned harness: title 36 + sep 10 +
-## columns 376 (player stats 115 + sep + upgrades header ~35 + one full
-## upgrade card 216 at the #441 card width; the slots column needs 289) +
-## plate margins 20. Still FIXED so the #416 no-resize rule holds.
-## #427 rebase: the relics section (separator + header + one names row, 83)
-## sits below the columns, so the fixed height grows 442 -> 525 to keep the
-## tallest state (upgrade cards + relics) inside it without resizing.
-## #700 re-measure (2 cards, 3-column grid): the tallest state shrinks to
-## ~360 (player stats 115 at 3 columns + sep + header ~35 + card ~200),
-## so 525 still covers it with slack and stays fixed.
-const PANEL_HEIGHT := 525.0
+## #715: four core spell stats share one row before adding height. The
+## original 525px plate still clipped the native 3:4 frames, so add 48px
+## of fixed height; width stays unchanged. Smaller viewports retain scroll.
+const PANEL_HEIGHT := 573.0
 const SCREEN_MARGIN := 16.0
 var _relics_box: VBoxContainer
 var _relics_list: HFlowContainer
@@ -392,6 +383,7 @@ func hide_panel() -> void:
 func _refresh_stats() -> void:
 	if _player == null:
 		return
+	_stats_box.set_columns(4 if _selected != null else StatGrid.COLUMNS)
 	_stats_box.set_description(SpellDescription.for_spell(_selected))
 	if _selected != null:
 		_stats_box.set_entries(_selected.spell_name, StatSheet.spell_entries(_selected, _player, _caster))

@@ -35,6 +35,12 @@ func run() -> void:
 	await tick()
 	var viewport_rect := panel._upgrade_scroll.get_global_rect()
 	check(panel._upgrade_cards.all(func(card): return viewport_rect.encloses(card.progress_bar.get_global_rect()) and viewport_rect.encloses(card.progress_label.get_global_rect())), "three progress bars and counts fit without scrolling")
+	check(panel._upgrade_cards.all(func(card): return not card.name_label.visible and not card.description_label.visible and not card.action_label.visible), "locked cards hide name description and action")
+	check(panel._upgrade_cards.all(func(card): return card.tooltip_text == card.progress_label.text and not card.progress_label.text.contains(" - ")), "locked tooltips and counts do not reveal names")
+	check(panel._upgrade_cards.all(func(card): return is_equal_approx(card.size.y / card.size.x, 64.0 / 48.0) and card._frame.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED), "all card frames preserve native aspect ratio")
+	check(panel._upgrade_cards.all(func(card): return card._frame.texture == UpgradeCard.TIER_FRAMES[0] and card._frame.material == card._grey_material), "locked tiers share grey border")
+	check(panel._upgrade_cards.all(func(card): return viewport_rect.encloses(card.get_global_rect())), "entire aspect-correct cards fit upgrade viewport")
+	check(panel._stats_box._grid.columns == 4, "four spell stats in one row")
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
@@ -54,6 +60,7 @@ func run() -> void:
 	check(progress.upgrade_menu(water)[1].state == "locked", "token never enables future step")
 	for i in 5: caster.spell_cast.emit(water)
 	check(progress.upgrade_menu(water)[0].state == "ready", "cast gate takes precedence over token")
+	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0]._frame.material == null, "ready card restores details and tier border")
 	panel._upgrade_cards[0].pressed.emit()
 	await tick()
 	check(caster.get_slots()[2] == chain[0].result_spell, "click replaces only the next spell")
@@ -61,6 +68,7 @@ func run() -> void:
 	check(panel._selected == chain[0].result_spell, "selection follows replacement")
 	menu = progress.upgrade_menu(chain[0].result_spell)
 	check(menu[0].state == "applied" and menu[1].state == "ready" and menu[2].state == "locked", "applied/current/future states after evolution")
+	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].action_label.text == "Applied", "applied card keeps name details and status")
 	# Fresh state for token-only advancement, then a later tier's own XP.
 	progress._cast_counts.erase(chain[1].source_spell)
 	panel._refresh()
