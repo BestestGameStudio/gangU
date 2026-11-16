@@ -413,7 +413,11 @@ func _win() -> void:
 	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
 		player.movement_constraint = Callable()
 	_add_corpse_footprint()
-	_drop_reward.call_deferred()
+	# #694: the coins and token pop out when the death animation finishes, not
+	# on the kill frame. A scene-tree timer runs on game time, so it follows
+	# the boss-finisher slow-mo; it is bound to this arena, so leaving the
+	# area frees it without a stray drop.
+	get_tree().create_timer(DesertStatue.death_animation_seconds(), false).timeout.connect(_drop_reward)
 	queue_redraw()
 
 ## #685: the fallen general keeps a solid footprint on the WORLD layer so

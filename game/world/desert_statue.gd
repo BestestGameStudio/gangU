@@ -167,6 +167,21 @@ func _draw() -> void:
 func is_defeated_general() -> bool:
 	return possessed and arena is DesertStatueArena and (arena as DesertStatueArena)._won
 
+## #694: game-seconds from the kill until the general's death animation lands
+## on its final held pose (the long last frame is the hold, not the fall).
+## Game time, so it stretches with the boss-finisher slow-mo exactly like the
+## animation does.
+static func death_animation_seconds() -> float:
+	var total := 0.0
+	for facing in ["front", "back", "right"]:
+		var anim := StringName("death_" + facing)
+		var seconds := 0.0
+		var frames := GENERAL_FRAMES.get_frame_count(anim)
+		for i in frames - 1:
+			seconds += GENERAL_FRAMES.get_frame_duration(anim, i)
+		total = maxf(total, seconds)
+	return total
+
 func _general_direction(direction: Vector2) -> void:
 	if direction.is_zero_approx():
 		return
