@@ -330,7 +330,7 @@ func _process(delta: float) -> void:
 	if _input_casts_suppressed() or not _owner_alive():
 		_consume_trigger_commands(_trigger_router.cancel_all(), &"", false)
 		return
-	var alternate := Input.is_physical_key_pressed(KEY_ALT)
+	var alternate := Input.is_physical_key_pressed(KEY_CTRL)
 	_route_trigger_input(equipped_spell, &"cast", alternate, delta)
 	if InputMap.has_action(&"switch_spell") and Input.is_action_just_pressed(&"switch_spell"):
 		next_spell()

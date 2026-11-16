@@ -549,7 +549,7 @@ func _on_body_entered(body: Node2D) -> void:
 		else:
 			body.call(&"apply_damage", result.amount)
 		OnHit.end(receipt, body)
-		_hit_bodies.append(body)
+		if not _hit_bodies.has(body): _hit_bodies.append(body)
 		_hit_times[body] = _life_t
 		_hit_count += 1
 		hit.emit(body)

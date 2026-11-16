@@ -26,7 +26,7 @@ func run() -> void:
 	e = router.sample(&"q", s, false, false, 0.01)
 	check(e.size() == 1 and e[0].command == SpellTriggerRouter.Command.RELEASE_CHARGE, "charged release never also taps")
 	e = router.sample(&"q", s, true, true, 0.5)
-	check(e.size() == 1 and e[0].mode == Spell.TriggerMode.ALTERNATE and e[0].command == SpellTriggerRouter.Command.CAST, "Alt selects alternate without plain charge")
+	check(e.size() == 1 and e[0].mode == Spell.TriggerMode.ALTERNATE and e[0].command == SpellTriggerRouter.Command.CAST, "Ctrl selects alternate without plain charge")
 	e = router.sample(&"q", s, true, false, 0.5)
 	check(e.size() == 1 and e[0].mode == Spell.TriggerMode.ALTERNATE, "modifier choice latched per press")
 	router.cancel_all()
@@ -187,9 +187,10 @@ func run() -> void:
 	before = credits.size()
 	var alt_router := SpellTriggerRouter.new()
 	caster._consume_trigger_commands(alt_router.sample(&"water_test", hover, true, true, 0.01), &"water_test", true)
-	check(not hp.hovering and hp.released and hp._redirect_curve_left > 0.0 and credits.size() == before, "Alt-fire releases hover without casting or XP")
+	check(not hp.hovering and hp.released and hp._redirect_curve_left > 0.0 and credits.size() == before, "Ctrl-fire releases hover without casting or XP")
 	hp._physics_process(0.3)
 	check(not hp.hovering and hp.released and not hp.release_toward(Vector2.ZERO), "specialization released shot never hovers or redirects again")
+
 	caster.aim_override = caster.global_position + Vector2(100, 0); caster._cast_spell(hover)
 	var expires := caster.live_shots(hover)[-1] as WaterShotProjectile
 	expires.set_physics_process(false); expires._physics_process(1.0); expires._physics_process(1.99)
@@ -233,6 +234,28 @@ func run() -> void:
 	check(target.received == before_damage + reservoir.damage and not piercing.is_queued_for_deletion() and piercing.hovering, "Mastery contact deals normal damage and retains hovering shot")
 	piercing._physics_process(4.99); check(not piercing.is_queued_for_deletion(), "Mastery hover survives before5s")
 	piercing._physics_process(0.02); check(piercing.is_queued_for_deletion(), "Mastery hover expires after5s")
+	# Repeat hover damage uses normal dispatch, bounded per target and ball.
+	tide.hovering = true
+	var damage_before := target.received
+	tide._on_body_entered(target)
+	tide._on_body_entered(target)
+	check(target.received == damage_before + sig.damage, "Signature immediate contact hits once, not per-frame")
+	tide._physics_process(0.49); tide._on_body_entered(target)
+	check(target.received == damage_before + sig.damage, "Signature cannot tick early")
+	tide._physics_process(0.011); tide._on_body_entered(target)
+	check(target.received == damage_before + sig.damage * 2, "Signature ticks again after contact interval")
+	tide.set_frozen(true); tide._physics_process(2.0); tide._on_body_entered(target)
+	check(target.received == damage_before + sig.damage * 2, "frozen hover ball cannot tick or advance clock")
+	tide.set_frozen(false)
+	tide._physics_process(0.51); tide._on_body_entered(target)
+	check(target.received == damage_before + sig.damage * 3 and tide._hit_bodies.count(target) == 1, "unfrozen contact resumes without duplicate retained-body entries")
+	tide.hovering = false; tide._life_t += 1.0; tide._on_body_entered(target)
+	check(target.received == damage_before + sig.damage * 3, "released Signature does not repeat contact on prior body")
+	var next_target := WaterTarget.new(); root.add_child(next_target)
+	tide.hovering = true; tide._on_body_entered(next_target)
+	check(next_target.received == sig.damage, "Signature tick cooldown is per enemy, not global")
+
+	check(SpellDescription.for_spell(sig).contains("Ctrl + fire") and SpellDescription.for_spell(sig).contains("every 0.5s"), "panel uses Ctrl and explains Signature contact tick")
 	for shot in caster.live_shots(sig): shot.queue_free()
 	await process_frame
 	caster.aim_override = caster.global_position + Vector2(100, 0)

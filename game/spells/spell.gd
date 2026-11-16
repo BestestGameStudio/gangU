@@ -84,6 +84,7 @@ class_name Spell
 @export var water_shot_hover_duration: float = 0.0
 @export var water_shot_hover_cap: int = 0
 @export var water_shot_repeat_redirect: bool = false
+@export var water_shot_contact_interval: float = 0.0
 @export var water_shot_redirect_cooldown: float = 0.5
 @export var water_shot_hover_spread_radius: float = 14.0
 @export var water_shot_hover_spread_speed: float = 12.0
