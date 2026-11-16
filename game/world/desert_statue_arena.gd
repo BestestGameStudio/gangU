@@ -215,7 +215,9 @@ func _physics_process(delta: float) -> void:
 	var next_visit := state != State.DORMANT and player.hp > 0 and is_visible_in_tree()
 	if visiting != next_visit:
 		visiting = next_visit
-	_ui.visible = visiting
+	# #684: the fight UI (panel, boss HP bar, title) hides with the win; the
+	# player HUD is a separate layer and stays. Rewards/exit are untouched.
+	_ui.visible = visiting and not _won
 	if not visiting:
 		return
 	for enemy in _enemy_boundaries.keys():
