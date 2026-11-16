@@ -45,14 +45,12 @@ definition = ExtResource("631_red_def")
 script = ExtResource("518_spawn_entry")
 position = Vector2(520, 2520)
 enemy = ExtResource("662_fishy")
-reward_table = ExtResource("346_table")
 definition = ExtResource("662_fishy_def")
 
 [sub_resource type="Resource" id="Resource_spawn_fishy_1"]
 script = ExtResource("518_spawn_entry")
 position = Vector2(250, 2620)
 enemy = ExtResource("662_fishy")
-reward_table = ExtResource("346_table")
 definition = ExtResource("662_fishy_def")
 
 [sub_resource type="Resource" id="Resource_spawn_roamers_0"]
