@@ -2,7 +2,7 @@
 
 Snapshot aim at cast, clamped560px;750px/s hook;1s cooldown. Shared swept circle collision selects the first body and respects world/terrain blockers without damaging either enemies or terrain. Hooked enemies reel to the player's CURRENT location, not the original cast point. Normal enemy locomotion is suspended only while a live displacement owner holds them; lifecycle/damage remains active.
 
-Reel speed = min(1200,600 * displacement_force / max(weight,0.1)) px/s. Displacement1 by default. Steering acceleration2400px/s² retains side-to-side velocity as the player changes direction; resultant speed stays capped. Arrival18px, timeout8s, wall/terrain/boundary respecting movement; target death, owner loss, scene exit and timeout release control.
+Reel speed = min(2400,1500 * displacement_force / max(weight,0.1)) px/s. Displacement1 by default. Steering acceleration2400px/s² retains side-to-side velocity as the player changes direction; resultant speed stays capped. Arrival18px, timeout8s, wall/terrain/boundary respecting movement; target death, owner loss, scene exit and timeout release control.
 
 Both Fishy definitions drop Hook Shot through the existing reward pool until pickup. Hook Shot is also in the base-spell shop catalog at its established10c price, preserving the catalog's all-base-spells rule.
 
