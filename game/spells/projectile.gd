@@ -119,6 +119,7 @@ var _redirect_count := 0
 var _redirect_curve_left := 0.0
 var _redirect_curve_heading := Vector2.RIGHT
 var _redirect_curve_offset := 0.0
+var _redirect_convergence_target := Vector2.ZERO
 
 func set_frozen(frozen: bool) -> void:
 	freeze.apply(frozen, _sprite)
@@ -211,6 +212,7 @@ func redirect(target: Vector2) -> bool:
 ## Nearby targets use a straight bearing so the bend cannot carry past them.
 func _begin_redirect_curve(target: Vector2) -> void:
 	var d := target - global_position
+	_redirect_convergence_target = target
 	_redirect_curve_heading = d.normalized()
 	_redirect_curve_left = spell.redirect_curve_duration
 	if d.length() <= spell.projectile_speed * _redirect_curve_left:
@@ -392,6 +394,10 @@ func _physics_process(delta: float) -> void:
 		_turn_toward(cursor_point(), spell.cursor_turn_rate * delta)
 	if _redirect_curve_left > 0.0:
 		_redirect_curve_left = maxf(_redirect_curve_left - delta, 0.0)
+		# Aim each shot from its own current position at the shared fixed point.
+		# This removes the lateral miss left by an offset fixed heading.
+		if spell.water_shot_alternate_redirect:
+			_redirect_curve_heading = global_position.direction_to(_redirect_convergence_target)
 		var fraction := _redirect_curve_left / maxf(spell.redirect_curve_duration, 0.001)
 		direction = _redirect_curve_heading.rotated(_redirect_curve_offset * fraction)
 		rotation = direction.angle()
