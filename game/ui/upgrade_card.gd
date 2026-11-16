@@ -96,7 +96,11 @@ func _init() -> void:
 	progress_bar.custom_minimum_size.y = 10
 	progress_bar.show_percentage = false
 	progress_bar.visible = false
-	_content.add_child(progress_bar)
+	var progress_margin := MarginContainer.new()
+	progress_margin.add_theme_constant_override("margin_left", 12)
+	progress_margin.add_theme_constant_override("margin_right", 12)
+	_content.add_child(progress_margin)
+	progress_margin.add_child(progress_bar)
 	progress_label = Label.new()
 	progress_label.name = "UnlockProgressText"
 	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -116,9 +120,9 @@ func _init() -> void:
 	lock_sign.name = "LockSign"
 	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	lock_sign.offset_left = -24
-	lock_sign.offset_top = -24
+	lock_sign.offset_top = -28
 	lock_sign.offset_right = 24
-	lock_sign.offset_bottom = 24
+	lock_sign.offset_bottom = 28
 	lock_sign.visible = false
 	add_child(lock_sign)
 	for child: Control in find_children("*", "Control", true, false):
