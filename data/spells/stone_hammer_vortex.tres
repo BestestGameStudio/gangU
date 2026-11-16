@@ -24,3 +24,6 @@ hammer_crit_scale = 1.0
 hammer_max_scale = 3.0
 hammer_vortex_radius = 200.0
 hammer_vortex_pull = 280.0
+
+trigger_modes = 4
+charge_delay = 0.0
