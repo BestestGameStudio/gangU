@@ -44,6 +44,8 @@ func run() -> void:
 	check(panel._upgrade_cards.all(func(card): return card.find_child("CardContentScroll", true, false).mouse_filter == Control.MOUSE_FILTER_PASS), "card scroll accepts wheel and passes clicks to button")
 	check(panel._upgrade_cards.all(func(card): return card.progress_label.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER), "progress text centered")
 	check(panel._upgrade_cards.all(func(card): return not card.name_label.text.contains("[S]") and not card.name_label.text.contains("[M]") and not card.name_label.text.contains("[G]")), "upgrade names omit tier suffixes")
+	check(panel._upgrade_cards.all(func(card): return card.lock_sign.get_global_rect().get_center().is_equal_approx(card.get_global_rect().get_center())), "lock sprite centered on card on both axes")
+	check(panel._upgrade_cards.all(func(card): return card.lock_sign is TextureRect and card.lock_sign.texture == UpgradeCard.LOCK_TEXTURE), "SpriteU exported lock texture used")
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
