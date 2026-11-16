@@ -81,6 +81,11 @@ func _init() -> void:
 	progress_bar.name = "UnlockProgress"
 	progress_bar.custom_minimum_size.y = 10
 	progress_bar.show_percentage = false
+	var progress_track := StyleBoxFlat.new()
+	progress_track.bg_color = Color("29323d")
+	progress_track.border_color = Color("56616b")
+	progress_track.set_border_width_all(1)
+	progress_bar.add_theme_stylebox_override("background", progress_track)
 	var progress_fill := StyleBoxFlat.new()
 	progress_fill.bg_color = UiStyle.B_DIM
 	progress_bar.add_theme_stylebox_override("fill", progress_fill)
@@ -164,7 +169,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	progress_bar.visible = _concealed
 	progress_label.visible = progress_bar.visible
 	var progress_fill := progress_bar.get_theme_stylebox("fill") as StyleBoxFlat
-	progress_fill.bg_color = SATISFIED_PROGRESS if state == "ready" and casts >= threshold else UiStyle.B_DIM
+	progress_fill.bg_color = SATISFIED_PROGRESS if not objective.is_empty() or (state == "ready" and casts >= threshold) else UiStyle.B_DIM
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
 	var count_text := "%d / %d" % [mini(casts, maxi(threshold, 0)), threshold]
