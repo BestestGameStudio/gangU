@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=4 format=3]
+[ext_resource type="Script" path="res://game/spells/spell.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/spells/water-shot-icon.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/spells/water-shot-projectile.png" id="3"]
+[resource]
+script = ExtResource("1")
+icon = ExtResource("2")
+projectile_art = ExtResource("3")
+spell_name = "Water Shot Reservoir"
+cooldown = 0.5
+damage = 12.0
+radius = 7.0
+range = 560.0
+projectile_speed = 480.0
+projectile_color = Color(0.3, 0.65, 1, 1)
+tags = Array[StringName]([&"projectile", &"water", &"piercing"])
+recast_redirect = false
+redirect_limit = 1
+water_shot_hover_duration = 5
+water_shot_hover_cap = 5
+water_shot_repeat_redirect = false
+trigger_modes = 3

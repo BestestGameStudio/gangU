@@ -310,6 +310,15 @@ static func sprite_anim_for(s: Spell) -> StringName:
 ## animation instead. The root already faces the flight direction and the art
 ## is authored pointing +X, so no extra rotation is needed.
 func _wire_sprite() -> void:
+	if spell.projectile_art != null:
+		var art := Sprite2D.new()
+		art.name = "WaterShotArt"
+		art.texture = spell.projectile_art
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		add_child(art)
+		_dart.hide()
+		_visual.hide()
+		return
 	var anim: StringName = sprite_anim_for(spell)
 	if anim == &"":
 		return
