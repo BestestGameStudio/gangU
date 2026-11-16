@@ -81,9 +81,11 @@ const DRAG_THRESHOLD := 10.0
 ## viewport); the upgrade scroll fills whatever height is left, so content
 ## changes never resize the panel.
 const UPGRADE_CARD_GAP := 12
-# #712: all three 176px tier cards visible together at the default viewport.
+# #763: three174px tier cards and two12px gaps fit the detail column.
 # Fixed width still prevents resizing when selecting/deselecting a spell.
 const DETAIL_WIDTH := 568.0
+# #763: descriptions and extra stat rows scroll here, never move the cards.
+const STATS_HEIGHT := 128.0
 ## #715: four core spell stats share one row before adding height. The
 ## original 525px plate still clipped the native 3:4 frames, so add 48px
 ## of fixed height; width stays unchanged. Smaller viewports retain scroll.
@@ -250,6 +252,8 @@ func _build_ui() -> void:
 		var b := Button.new()
 		b.add_theme_font_size_override("font_size", 32)
 		b.custom_minimum_size = Vector2(220, 0)
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		var idx := i
 		b.pressed.connect(func() -> void: _on_slot_pressed(idx))
 		b.gui_input.connect(func(ev: InputEvent) -> void: _on_slot_gui_input(ev, idx))
@@ -270,8 +274,16 @@ func _build_ui() -> void:
 	_detail_box.custom_minimum_size = Vector2(DETAIL_WIDTH, 0)
 	_detail_box.add_theme_constant_override("separation", 10)
 	cols.add_child(_detail_box)
+	var stats_scroll := ScrollContainer.new()
+	stats_scroll.name = "FixedStatsScroll"
+	stats_scroll.custom_minimum_size = Vector2(DETAIL_WIDTH, STATS_HEIGHT)
+	stats_scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	stats_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_detail_box.add_child(stats_scroll)
 	_stats_box = StatGrid.new()
-	_detail_box.add_child(_stats_box)
+	_stats_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stats_box.clip_contents = true
+	stats_scroll.add_child(_stats_box)
 	_upgrade_box = VBoxContainer.new()
 	_upgrade_box.name = "UpgradeBox"
 	_upgrade_box.add_theme_constant_override("separation", 4)
@@ -390,6 +402,7 @@ func _refresh() -> void:
 	for i in _slot_buttons.size():
 		var occupant: Spell = slots[i] if i < slots.size() else null
 		_slot_buttons[i].text = "%s: %s" % [SpellCaster.slot_key_label(i), occupant.spell_name if occupant != null else "(empty)"] # #319: show cast key, not digit
+		_slot_buttons[i].tooltip_text = _slot_buttons[i].text
 		var move_source := occupant != null and (occupant == _selected or i == _drag_from)
 		var sborder := UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM
 		if move_source:
