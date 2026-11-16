@@ -149,7 +149,7 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 
 ## #712: state is supplied by the progression provider, never inferred from
 ## button tint. Locked tiers expose only a grey frame, lock and cast progress.
-func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "", objective: String = "") -> void:
+func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "", objective: String = "", quest_hidden: bool = false) -> void:
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
 	_locked = state == "locked"
@@ -166,7 +166,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	_concealed_spacer.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0
 	(get_node("CardMargin") as MarginContainer).add_theme_constant_override("margin_top", 12 if _concealed else 32)
 	_refresh_frame()
-	progress_bar.visible = _concealed
+	progress_bar.visible = _concealed and not quest_hidden
 	progress_label.visible = progress_bar.visible
 	var progress_fill := progress_bar.get_theme_stylebox("fill") as StyleBoxFlat
 	progress_fill.bg_color = SATISFIED_PROGRESS if not objective.is_empty() or (state == "ready" and casts >= threshold) else UiStyle.B_DIM
@@ -185,7 +185,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 		tooltip_text += "\n" + progress_label.text
 	if _concealed:
 		tooltip_text = progress_label.text
-	if _unavailable:
+	if _unavailable or quest_hidden:
 		tooltip_text = ""
 	call_deferred("_fit_content")
 

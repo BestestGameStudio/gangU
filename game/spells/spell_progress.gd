@@ -124,7 +124,10 @@ func upgrade_menu(spell: Spell) -> Array[Dictionary]:
 			item.upgrade = row
 			item.casts = qualification_count(row)
 			item.threshold = qualification_goal(row)
-			item["objective"] = row.quest.objective if row.quest != null else ""
+			item["objective"] = row.quest.objective if row.quest != null and i <= current_index else ""
+			item["quest_hidden"] = row.quest != null and i > current_index
+			if item.quest_hidden:
+				item.casts = 0; item.threshold = 0
 			if i < current_index:
 				item.state = "applied"
 			elif i == current_index and can_upgrade(spell):
