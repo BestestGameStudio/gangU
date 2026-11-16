@@ -9,6 +9,10 @@ var taunt_left := 0.0
 var whistle_left := 0.0
 var _voice: AudioStreamPlayer2D
 var note_age := 0.0
+const ROPE := preload("res://assets/spells/hook_shot/rope.png")
+const ANCHOR := preload("res://assets/spells/hook_shot/anchor.png")
+const LURE := preload("res://assets/spells/hook_shot/lure.png")
+const NOTES := preload("res://assets/spells/hook_shot/music_notes.png")
 var caught_enemy: Enemy = null
 var active_reel: HookReel = null
 var consumed := false
@@ -65,11 +69,16 @@ func _tick_emitter(delta: float) -> void:
 
 func _draw() -> void:
  if not is_instance_valid(anchor) or not is_instance_valid(lure):return
- draw_line(to_local(anchor.global_position),to_local(lure.global_position),Color(0.7,0.8,0.8),1)
- draw_circle(to_local(anchor.global_position),8,Color.GRAY)
- draw_circle(to_local(lure.global_position),5,Color.ORANGE)
+ var a := to_local(anchor.global_position); var b := to_local(lure.global_position)
+ draw_set_transform(a,(b-a).angle())
+ draw_texture_rect(ROPE,Rect2(0,-2,a.distance_to(b),4),true)
+ draw_set_transform(Vector2.ZERO)
+ draw_texture(ANCHOR,a-Vector2(12,21))
+ draw_texture(LURE,b-Vector2(8,12))
  if is_instance_valid(owner_player) and note_age>0:
-  draw_circle(to_local(owner_player.global_position+Vector2(10,-24-fmod(note_age*12,18))),2,Color.CYAN)
+  var frame := int(note_age/0.12)%3
+  var point := to_local(owner_player.global_position+Vector2(8,-24-fmod(note_age*12,18)))
+  draw_texture_rect_region(NOTES,Rect2(point,Vector2(8,12)),Rect2(frame*8,0,8,12))
 
 func _exit_tree() -> void:
  if not is_inside_tree():return

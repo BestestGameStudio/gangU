@@ -9,6 +9,7 @@ var age := 0.0
 var arrived := false
 const PLAYER_STOP_DISTANCE := 32.0
 const ANCHOR_STOP_DISTANCE := 18.0
+const ROPE_ART := preload("res://assets/spells/hook_shot/rope.png")
 
 static func speed_for(s: Spell, weight: float) -> float:
  return minf(maxf(s.hook_max_reel_speed, 0.0), maxf(s.hook_reel_speed * s.displacement_force, 0.0) / maxf(weight, 0.1))
@@ -68,7 +69,10 @@ func _arrive() -> void:
 
 func _draw() -> void:
  if is_instance_valid(enemy) and is_instance_valid(target):
-  draw_line(to_local(target.global_position), to_local(enemy.global_position), Color(0.7, 0.8, 0.8), 1.0)
+  var start := to_local(target.global_position)
+  var end := to_local(enemy.global_position)
+  draw_set_transform(start, (end-start).angle())
+  draw_texture_rect(ROPE_ART, Rect2(0,-2,start.distance_to(end),4), true)
 
 func _exit_tree() -> void:
  if is_instance_valid(enemy) and enemy.displacement_owner == self:

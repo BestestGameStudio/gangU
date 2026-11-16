@@ -7,6 +7,7 @@ var spell: Spell
 var reel_velocity := Vector2.ZERO
 var age := 0.0
 var _axis := Vector2.RIGHT
+const ROPE := preload("res://assets/spells/hook_shot/rope.png")
 
 static func begin(parent: Node, candidates: Array[Enemy], destination: Node2D, definition: Spell) -> HookGroupReel:
  var group := HookGroupReel.new();group.target=destination;group.spell=definition
@@ -72,7 +73,10 @@ func _arrive() -> void:
  queue_free()
 
 func _draw() -> void:
- if is_instance_valid(target):draw_line(to_local(target.global_position),Vector2.ZERO,Color(0.7,0.8,0.8),1.0)
+ if is_instance_valid(target):
+  var end := to_local(target.global_position)
+  draw_set_transform(Vector2.ZERO,end.angle())
+  draw_texture_rect(ROPE,Rect2(0,-2,end.length(),4),true)
 
 func _exit_tree() -> void:
  for enemy in enemies:
