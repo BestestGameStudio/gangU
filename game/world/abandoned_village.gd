@@ -14,21 +14,31 @@ const CLEAR_COINS := 100
 const SPAWN_RADIUS := 540.0
 ## Doors are bottom-centre of each house sprite, facing south.
 const DOOR_OFFSET := Vector2(0.0, 62.0 - 0.0)
-const PATH_HALF_WIDTH := 30.0
+const PATH_HALF_WIDTH := 24.0
+const LANE_HALF_WIDTH := 27.0
 
-## Stone path segments (village-local) from the central walk to every door.
+## Lane centre line y at village-local x: a slow S-curve.
+static func lane_y(x: float) -> float:
+	return 16.0 * sin(x / 120.0) + 7.0 * sin(x / 47.0 + 1.0)
+
+## Cobble lane (narrow, winding) plus short flagstone walks to every door.
 static func path_segments() -> Array[PackedVector2Array]:
 	var segs: Array[PackedVector2Array] = []
-	segs.append(PackedVector2Array([Vector2(-250, 0), Vector2(250, 0)]))
+	var lane := PackedVector2Array()
+	var x := -270.0
+	while x <= 290.0:
+		lane.append(Vector2(x, lane_y(x)))
+		x += 30.0
+	segs.append(lane)
 	for column: int in [-1, 0, 1]:
 		var cx := column * 170.0
-		# North houses: straight down from the door to the walk.
-		var nd := Vector2(cx, -170.0 + HOUSE_FOOT_DY + 14.0)
-		segs.append(PackedVector2Array([nd, Vector2(cx, 0)]))
+		# North houses: short walk from the door straight down to the lane.
+		var nd := house_foot(column, -1) + Vector2(0, 14)
+		segs.append(PackedVector2Array([nd, Vector2(cx, lane_y(cx))]))
 		# South houses: down the gap beside the house, then across to the door.
-		var sd := Vector2(cx, 170.0 + HOUSE_FOOT_DY + 14.0)
-		var gap := cx + 85.0
-		segs.append(PackedVector2Array([Vector2(gap, 0), Vector2(gap, sd.y), sd]))
+		var sd := house_foot(column, 1) + Vector2(0, 14)
+		var gap := cx + 88.0
+		segs.append(PackedVector2Array([Vector2(gap, lane_y(gap)), Vector2(gap, sd.y), sd]))
 	return segs
 
 const HOUSE_HALF := Vector2(44, 30)
@@ -54,7 +64,8 @@ const TOWER_HALF := Vector2(20, 14)
 const HOUSE_FOOT_DY := 50.0
 
 static func house_foot(column: int, side: int) -> Vector2:
-	return Vector2(column * 170.0, side * 170.0 + HOUSE_FOOT_DY)
+	# North row sits close to the lane; the south row keeps its old spot.
+	return Vector2(column * 170.0, -62.0 if side < 0 else 170.0 + HOUSE_FOOT_DY)
 const ENEMY := preload("res://game/enemies/enemy.tscn")
 const LOOT := preload("res://data/rewards/demo_table.tres")
 

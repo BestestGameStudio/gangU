@@ -544,14 +544,20 @@ func _compute_lattice_type(p: Vector2) -> int:
 	if vil != null:
 		var q: Vector2 = p - (vil as Node2D).position
 		if absf(q.x) < 420.0 and absf(q.y) < 300.0:
-			var near := 1e9
-			for seg in AbandonedVillage.path_segments():
+			var segs := AbandonedVillage.path_segments()
+			for i in segs.size():
+				var seg: PackedVector2Array = segs[i]
+				var near := 1e9
 				for k in range(seg.size() - 1):
-					var c := Geometry2D.get_closest_point_to_segment(q, seg[k], seg[k + 1])
-					near = minf(near, q.distance_to(c))
-			var half_w := AbandonedVillage.PATH_HALF_WIDTH + 12.0 * sin(q.x / 53.0 + q.y / 71.0) * sin(q.y / 29.0 + q.x / 41.0)
-			if near < half_w:
-				return DualGrid.T.STONE
+					near = minf(near, q.distance_to(Geometry2D.get_closest_point_to_segment(q, seg[k], seg[k + 1])))
+				var base := AbandonedVillage.LANE_HALF_WIDTH if i == 0 else AbandonedVillage.PATH_HALF_WIDTH
+				# Irregular, worn edges: the width wanders along the lane.
+				var half_w := base + 9.0 * sin(q.x / 37.0 + q.y / 53.0) * sin(q.y / 23.0 + q.x / 61.0)
+				if near < half_w:
+					return DualGrid.T.COBBLE
+		# No stray dirt patches around the village.
+		if q.length() < 470.0:
+			return DualGrid.T.GRASS
 	if not desert_near:
 		for l in landmarks:
 			if p.distance_to(l) <= GATE_PAD_R:
