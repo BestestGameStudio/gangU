@@ -9,3 +9,5 @@ Both Fishy definitions drop Hook Shot through the existing reward pool until pic
 Quest plumbing: non-damaging hook result signals, separate from OnHit. Three consecutive successful casts qualify; an unsuccessful cast resets an unfinished streak. A completed quest stays complete. Actual Magnet Fishing row is in the next stacked PR. Spell art remains temporary geometry until SpriteU PR790.
 
 Focused test781: actual swept first-enemy detection, HP unchanged, moving target/lateral inertia, force/weight/cap math, single owner, cleanup, streak reset/completion, both Fishy rewards and grant exclusion. Existing shop test passes after catalog integration.
+
+Running-game clip: hook-demo.mp4 and still hook-demo.png. Real main scene/caster, spawned enemy at weight3 for slower visible reel; scripted player movement reverses vertically while the reel continues. Temporary geometry pending SpriteU art.
