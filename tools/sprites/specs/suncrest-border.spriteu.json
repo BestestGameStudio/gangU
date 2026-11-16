@@ -1,0 +1,50 @@
+{
+  "name": "player-hp-suncrest",
+  "w": 64,
+  "h": 30,
+  "palette": {
+    "a": "#2f1d1b",
+    "b": "#bc8650",
+    "c": "#fff0c4",
+    "d": "#e8bd75",
+    "e": "#694330",
+    "f": "#b94145"
+  },
+  "frames": [
+    {
+      "ms": 100,
+      "rows": [
+        "..............a..................................a..............",
+        ".............aaaaa............................aaaaa.............",
+        "............aaaaaa............................aaaaaa............",
+        "............aabaaa............................aaabaa............",
+        ".......a...aabbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaa...a.......",
+        ".......aaaaabbcaaddddddddddddddddddddddddddddddaacbbaaaaa.......",
+        ".......aaaabbcbaaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaabcbbaaaa.......",
+        "........aabbbcbaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaabcbbbaa........",
+        "........aabbcbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbcbbaa........",
+        "........aabbcbbaaa............................aaabbcbbaa........",
+        ".....aaaaaababbaaaa..........................aaaabbabaaaaaa.....",
+        "....aaaacccaaabbbaaaa......................aaaabbbaaacccaaaa....",
+        "...aaaccbbaafaabbbaaaa....................aaaabbbaafaabbccaaa...",
+        "..aaccbbbaafffaabbbbaa....................aabbbbaafffaabbbccaa..",
+        ".aacbbbbaafcfffaabbbaa....................aabbbaafffcfaabbbbcaa.",
+        "aabbbbbaafffffffaabbaa....................aabbaafffffffaabbbbbaa",
+        ".aaabbbbaafffffaabbbaa....................aabbbaafffffaabbbbaaa.",
+        "..aaabbbbaafffaabbbbaa....................aabbbbaafffaabbbbaaa..",
+        "...aaaabbbaafaabbbaaaa....................aaaabbbaafaabbbaaaa...",
+        "....aaaaaaaaaabbbaaaa......................aaaabbbaaaaaaaaaa....",
+        ".....aaaaaababbaaaa..........................aaaabbabaaaaaa.....",
+        "........aaabbbbaaaddddddddddddddddddddddddddddaaabbbbaaa........",
+        "........aabbbbbaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaabbbbbaa........",
+        "........aabbbbbaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaabbbbbaa........",
+        ".......aaaabbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbaaaa.......",
+        ".......aaaaaabbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaa.......",
+        "...........aaabaaa............................aaabaaa...........",
+        "............aaaaaa............................aaaaaa............",
+        ".............aaaaa............................aaaaa.............",
+        "..............aaaa............................aaaa.............."
+      ]
+    }
+  ]
+}

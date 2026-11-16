@@ -571,3 +571,14 @@ Visual references only (not licensed or shipped as game assets):
   https://max-m42.itch.io/desert-ruins-16x16-pixel-art-asset
 - princess-phoenix, Desert interior tileset: warm golden stone and edge lights.
   https://www.deviantart.com/princess-phoenix/art/Desert-interior-tileset-656502636
+
+## Suncrest player healthbar (#753)
+
+Original Suncrest gold/red-enamel frame authored in SpriteU format for this project;
+source: `tools/sprites/specs/suncrest-border.spriteu.json`. Validated/exported with
+SpriteU at 7fd4617ebb9a084450fef7e428bee61357b26227 (read-only source).
+The exported 64x30 source is assembled with fixed 24px caps to 180x30, then scaled
+2x nearest to `hp_bar_frame.png` (360x60). HUD NinePatchRect cap margins are48px.
+`hp_bar_track.png` retains the existing151x60 alpha/star pattern, recolored from
+purple to warm charcoal/bronze. Track cap42px and original diagonal-striped
+`hp_bar_fill.png` are unchanged. No third-party art added.
