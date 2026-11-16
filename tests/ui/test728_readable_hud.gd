@@ -6,7 +6,7 @@ func run():
  var h:HUD=main.get_node("HUD")
  var s:SpiritMeter=main.get_node("Player/SpiritMeter")
  s.set_process(false)
- var checks:Array[bool]=[h._hp_label.get_theme_font_size("font_size")==32,h._spirit_label.get_theme_font_size("font_size")==32,h._spirit_bar.size.y>=36,h._hp_label.get_theme_constant("outline_size")==1]
+ var checks:Array[bool]=[h._hp_label.get_theme_font_size("font_size")==24,h._hp_label.get_theme_font("font").resource_path=="res://assets/fonts/m5x7/m5x7.ttf",h._spirit_label.get_theme_font_size("font_size")==32,h._spirit_bar.size.y>=36,h._hp_label.get_theme_constant("outline_size")==1]
  main.get_node("Player").hp=55;s.add_spirit(s.max_spirit);h._refresh_spirit()
  checks.append(h._spirit_label.text=="HOLD H TO HEAL")
  checks.append(h._spirit_label.get_theme_color("font_color")==Color("10232c"))
