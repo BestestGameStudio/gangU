@@ -45,17 +45,25 @@ func boss_focus(point: Vector2, amount: float, in_time: float, hold_time: float,
 	if amount <= 0.0:
 		return
 	_focus_left = in_time + hold_time
+	# #692: the pan ORIGINATES on the player - start centered on them (the
+	# follow trails a few px behind) so it visibly travels player -> boss.
+	if target:
+		global_position = target.global_position
 	_focus_tween = create_tween()
+	# #692: the beat runs in slow-mo; its times are real seconds.
+	_focus_tween.set_ignore_time_scale(true)
 	_focus_tween.set_parallel(true)
-	_focus_tween.tween_property(self, ^"zoom", _base_zoom * amount, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_focus_tween.tween_property(self, ^"global_position", point, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# #692: a soft S-curve ramp (ease in AND out) so the pan and zoom glide
+	# onto the boss instead of snapping.
+	_focus_tween.tween_property(self, ^"zoom", _base_zoom * amount, in_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_focus_tween.tween_property(self, ^"global_position", point, in_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_focus_tween.set_parallel(false)
 	_focus_tween.tween_interval(hold_time)
 	_focus_tween.tween_property(self, ^"zoom", _base_zoom, out_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 
 func _physics_process(delta: float) -> void:
 	if _focus_left > 0.0:
-		_focus_left = maxf(_focus_left - delta, 0.0)
+		_focus_left = maxf(_focus_left - delta / maxf(Engine.time_scale, 0.001), 0.0)
 		return
 	if target:
 		# Frame-rate independent exponential smoothing toward the target.

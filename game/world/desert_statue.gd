@@ -160,6 +160,13 @@ func _draw() -> void:
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
 
+## #692: true for the killing blow's target once the Sand General has fallen
+## (the arena sets _won before it records the hit). The general is a
+## DesertStatue, not an Enemy in the "boss" group, so HitStop asks this to
+## stage the boss finisher for him; the small statues never qualify.
+func is_defeated_general() -> bool:
+	return possessed and arena is DesertStatueArena and (arena as DesertStatueArena)._won
+
 func _general_direction(direction: Vector2) -> void:
 	if direction.is_zero_approx():
 		return
@@ -197,7 +204,9 @@ func _update_sprite(delta: float) -> void:
 	var clock := general_arena._phase_two_attack_time
 	_sprite.position.y = -22.0-general_arena.general_height
 	_sprite.z_index = 100 if general_arena.general_height > 0.0 else -1
-	if is_instance_valid(general_arena.player):
+	# #692: once defeated the general keeps the facing he fell with - the
+	# corpse must not turn or mirror as the player walks past.
+	if is_instance_valid(general_arena.player) and general_arena.hp > 0:
 		# Follow aim during windup, then keep it locked through the strike.
 		# Triple slash retargets each dash in the arena and turns with travel.
 		if clock < 0.0 or attack >= GENERAL_MOVES.size() or not general_arena._phase_two_locked:

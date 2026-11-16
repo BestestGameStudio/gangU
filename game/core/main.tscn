@@ -1,8 +1,9 @@
-[gd_scene load_steps=26 format=3 uid="uid://bgangu1main"]
+[gd_scene load_steps=27 format=3 uid="uid://bgangu1main"]
 
 [ext_resource type="Script" path="res://game/core/main.gd" id="1_main"]
 [ext_resource type="PackedScene" uid="uid://bgangu2player" path="res://game/player/player.tscn" id="2_player"]
 [ext_resource type="Script" path="res://game/core/camera_follow.gd" id="3_camera"]
+[ext_resource type="Script" path="res://game/combat/hit_stop.gd" id="5_hitstop"]
 [ext_resource type="Texture2D" uid="uid://b3uskwef8wg77" path="res://assets/sprites/main_character.png" id="4_sheet"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_idle_down_0"]
@@ -1004,3 +1005,8 @@ animation = &"idle_down"
 
 [node name="FollowCamera" type="Camera2D" parent="."]
 script = ExtResource("3_camera")
+
+## #692: in the scene so the hit-stop and boss-finisher knobs show up in the
+## editor Inspector (group "Boss finisher") and can be tuned in place.
+[node name="HitStop" type="Node" parent="."]
+script = ExtResource("5_hitstop")
