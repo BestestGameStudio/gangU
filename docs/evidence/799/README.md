@@ -7,3 +7,5 @@ Single reels accelerate in speed, but their direction points directly inward eac
 Actual running-main-scene recording reel-stop.mp4: base Hook, then three-enemy Magnet. The player moves during the pull. Both stop on the near side without swinging, and remain still after release. The displayed distance can grow slightly above32px because the scripted player finishes moving after the enemy stops. Script only stages casts, movement and enemies; production caster/projectile/reel/enemy code runs unchanged apart from this fix. Initial art is still the current-main placeholder, not pending#790 sprites.
 
 Validation: full53/53 local suite PASS, including new test799 covering all currently landed tiers, single and group arrival, injected lateral momentum and swept long steps. The same regression includes Rock automatically once its resource lands. Review/CI are still required before merge.
+
+Composed onto landed Rock/main26a7f4c. Test799 now exercises Rock primary too. Full54/54 PASS after adding the generated committed script UID.
