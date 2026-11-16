@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bgangu7hub"]
+[gd_scene load_steps=8 format=3 uid="uid://bgangu7hub"]
 
 [ext_resource type="Script" path="res://game/world/hub_floor.gd" id="hub_floor"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://game/world/gate.tscn" id="2"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" uid="uid://bgangu325sta" path="res://game/ui/bestiary_station.tscn" id="9_best"]
 
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="terrain"]
+
+[ext_resource type="Script" path="res://game/world/hub_lights.gd" id="hub_lights"]
 
 [node name="Hub" type="Node2D"]
 
@@ -19,46 +21,8 @@ art_enabled = false
 [node name="Floor" type="Node2D" parent="."]
 script = ExtResource("hub_floor")
 
-[node name="Background" type="Node2D" parent="."]
-z_index = -50
-
-[node name="SpawnDiamond" type="Polygon2D" parent="Background"]
-position = Vector2(576, 480)
-color = Color(0.36, 0.41, 0.49, 1)
-polygon = PackedVector2Array(0, -34, 34, 0, 0, 34, -34, 0)
-
-[node name="SpawnDiamondInner" type="Polygon2D" parent="Background"]
-position = Vector2(576, 480)
-color = Color(0.24, 0.27, 0.33, 1)
-polygon = PackedVector2Array(0, -22, 22, 0, 0, 22, -22, 0)
-
-[node name="CornerNW" type="ColorRect" parent="Background"]
-offset_left = 216.0
-offset_top = 190.0
-offset_right = 230.0
-offset_bottom = 204.0
-color = Color(0.36, 0.41, 0.49, 1)
-
-[node name="CornerNE" type="ColorRect" parent="Background"]
-offset_left = 922.0
-offset_top = 190.0
-offset_right = 936.0
-offset_bottom = 204.0
-color = Color(0.36, 0.41, 0.49, 1)
-
-[node name="CornerSW" type="ColorRect" parent="Background"]
-offset_left = 216.0
-offset_top = 616.0
-offset_right = 230.0
-offset_bottom = 630.0
-color = Color(0.36, 0.41, 0.49, 1)
-
-[node name="CornerSE" type="ColorRect" parent="Background"]
-offset_left = 922.0
-offset_top = 616.0
-offset_right = 936.0
-offset_bottom = 630.0
-color = Color(0.36, 0.41, 0.49, 1)
+[node name="Lights" type="Node2D" parent="."]
+script = ExtResource("hub_lights")
 
 [node name="TitleLayer" type="CanvasLayer" parent="."]
 layer = 2
