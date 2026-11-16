@@ -62,6 +62,13 @@ func _ready() -> void:
 	var caster: SpellCaster = $Player/SpellCaster
 	for i in mini(caster.starting_spells.size(), SpellCaster.SLOT_COUNT):
 		caster.assign_slot(i, caster.starting_spells[i])
+	## #678: hit stop - one service node subscribed to the OnHit bus. It
+	## freezes movers briefly on every landed spell impact against an enemy
+	## and stages the boss stop (flash + camera zoom punch) on a boss kill.
+	var hit_stop := HitStop.new()
+	hit_stop.name = "HitStop"
+	hit_stop.camera = $FollowCamera
+	add_child(hit_stop)
 	## #12 production wiring: ONE persistent satchel mounted on Main so carried
 	## count survives area swaps. Code assign, not a tscn NodePath - a scene-set
 	## NodePath on a typed export resolves null silently (verified in #12 prep).
