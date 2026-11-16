@@ -569,6 +569,8 @@ func _compute_lattice_type(p: Vector2) -> int:
 				return DualGrid.T.DIRT
 	return DualGrid.T.GRASS
 
+## Set false (and drop _dirt_nodes) once the cobble sheet has a baked dirt rim.
+const VILLAGE_DIRT_RING := true
 var _cobble_nodes: Dictionary = {}
 var _dirt_nodes: Dictionary = {}
 var _lane_nodes: Dictionary = {}
@@ -599,7 +601,7 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 				prev = node
 	# Cobble -> dirt -> grass: a ragged dirt ring around the trail. Every
 	# neighbour is dirt except hashed gaps, plus a patchy second ring.
-	for c: Vector2i in _lane_nodes.keys():
+	for c: Vector2i in (_lane_nodes.keys() if VILLAGE_DIRT_RING else []):
 		for dy in range(-2, 3):
 			for dx in range(-2, 3):
 				var n := c + Vector2i(dx, dy)
