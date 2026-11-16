@@ -11,7 +11,7 @@ static func for_spell(s: Spell) -> String:
 	var parts: PackedStringArray = []
 	if s.water_shot_hover_cap > 0:
 		var duration := "indefinitely" if s.water_shot_hover_duration < 0 else "for %ds" % int(s.water_shot_hover_duration)
-		return "Stops at the aimed point %s. Up to %d hover; oldest excess disappears. Alt + fire releases hovering shots toward the cursor. %s" % [duration, s.water_shot_hover_cap, "Pierces enemies. Alt + fire re-aims all shots (0.5s cooldown); they hover again at the target." if s.water_shot_repeat_redirect else ("Pierces enemies." if s.tags.has(SpellTags.PIERCING) else "Damages enemies on contact, then disappears.")]
+		return "Stops at the aimed point %s. Up to %d hover; oldest excess disappears. Ctrl + fire releases hovering shots toward the cursor. %s" % [duration, s.water_shot_hover_cap, "Pierces enemies. Hovering contact deals %s damage every %ss. Ctrl + fire re-aims all shots (0.5s cooldown); they hover again at the target." % [s.damage, s.water_shot_contact_interval] if s.water_shot_repeat_redirect else ("Pierces enemies." if s.tags.has(SpellTags.PIERCING) else "Damages enemies on contact, then disappears.")]
 	if s.recast_redirect and s.projectile_art != null:
 		return "Fires toward the cursor. Fire again during flight to redirect once toward the cursor's new position."
 	if s.terrain_block != &"":

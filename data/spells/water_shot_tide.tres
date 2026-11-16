@@ -25,4 +25,5 @@ redirect_limit = 1
 water_shot_hover_duration = -1
 water_shot_hover_cap = 10
 water_shot_repeat_redirect = true
+water_shot_contact_interval = 0.5
 trigger_modes = 3

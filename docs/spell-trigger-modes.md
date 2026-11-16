@@ -6,7 +6,7 @@
 Spell resources declare `trigger_modes` as flags:
 
 - `1`: DEFAULT. Press casts immediately, and hold repeats at cooldown.
-- `2`: ALTERNATE. Alt+key selects the alternate for that press. Hold repeats
+- `2`: ALTERNATE. Ctrl+key selects the alternate for that press. Hold repeats
   at cooldown unless alternate charging is explicitly enabled.
 - `4`: CHARGING. Hold starts charging after `charge_delay` (default 0.25s),
   release casts the charged effect. With DEFAULT also enabled, releasing
@@ -17,7 +17,7 @@ Examples:
 - Ordinary spell: `trigger_modes = 1` (the default, no resource edits needed).
 - Alternate + ordinary spell: `trigger_modes = 3`.
 - Tap + hold: `trigger_modes = 5`, `charge_delay = 0.25`.
-- All three: `trigger_modes = 7`; Alt chooses alternate only by default.
+- All three: `trigger_modes = 7`; Ctrl chooses alternate only by default.
 - Existing Vortex Hammer: `trigger_modes = 4`, `charge_delay = 0.0`. It still
   opens its vortex on press and swings on release, without a tap attack.
 
@@ -26,10 +26,10 @@ Null reuses the source's effect. The source owns cooldown and cast/XP credit,
 so changing mode cannot bypass cooldown. These references are effect payloads,
 not recursive input routing. Payloads retain their own damage/cooldown values.
 
-`alternate_can_charge` is opt-in. When true alongside CHARGING, holding Alt
+`alternate_can_charge` is opt-in. When true alongside CHARGING, holding Ctrl
 uses the same delay. Its charged payload is `alternate_spell.charged_spell`
 when present, otherwise the alternate payload itself. Without an alternate
-payload it uses the source's charged payload. Alt is latched on key press,
+payload it uses the source's charged payload. Ctrl is latched on key press,
 so changing the modifier during a hold cannot switch payload halfway through.
 
 `SpellTriggerRouter` is the shared, scene-independent input state machine.
