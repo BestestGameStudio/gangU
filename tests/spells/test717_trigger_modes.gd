@@ -135,7 +135,7 @@ func run() -> void:
 	caster._cast_spell(ws)
 	var base_shot: Projectile = caster.live_shots(ws)[0]
 	base_shot.set_physics_process(false)
-	caster.aim_override = base_shot.global_position + Vector2(0, 100)
+	caster.aim_override = base_shot.global_position + Vector2(0, 200)
 	before = credits.size()
 	check(caster._redirect_gate(ws, true) and base_shot._redirect_curve_left > 0.0 and credits.size() == before, "Water Shot base redirects once without extra cast credit")
 	base_shot._physics_process(0.025)
