@@ -85,6 +85,8 @@ var _patch_slots: Dictionary = {}
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
 var decor: Array[Dictionary] = []
 var _canopy: Node2D
+const TREE_SPRITES := 3
+static var _tree_textures: Array[Texture2D] = []
 ## #461: tall-grass patches. Centres/radii are hashed like the decor; the
 ## patch is the set of Terrain cells whose centre falls inside the circle,
 ## so what is drawn is exactly what conceals. Cells are in the area's
@@ -113,6 +115,12 @@ func _init() -> void:
 	z_index = -80
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
+	var black := Node2D.new()
+	black.name = "BlackBackdrop"
+	black.z_as_relative = false
+	black.z_index = -99 ## above BackgroundGrid (-100), below the ground
+	black.draw.connect(func() -> void: black.draw_rect(Rect2(-20000, -20000, 40000, 40000), Color.BLACK))
+	add_child(black)
 	_grass_top = Node2D.new()
 	_grass_top.name = "GrassTop"
 	_grass_top.z_as_relative = false
@@ -154,26 +162,29 @@ func _make_canopy() -> Node2D:
 	c.name = "Canopy"
 	c.z_as_relative = false
 	c.z_index = CANOPY_Z
-	c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	c.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	c.draw.connect(_draw_canopy.bind(c))
 	add_child(c)
 	return c
 
 func _draw_canopy(c: Node2D) -> void:
-	var row := TerrainArt.row(&"tree_summer") * TerrainArt.OBJ_CELL
+	if _tree_textures.is_empty():
+		for n in TREE_SPRITES:
+			_tree_textures.append(load("res://assets/sprites/terrain/tree_%d.png" % (n + 1)) as Texture2D)
 	for d in decor:
 		if d["kind"] != "tree":
 			continue
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
-		if not _view.grow(r*2.0).has_point(at): continue
-		# The sprite's crown is ~70 of its 80 px and centred ~38 px down:
-		# scale it so the crown spans the collision circle (slightly over).
-		var sz := TerrainArt.OBJ_CELL * (2.0 * r * 1.15) / 70.0
-		var col := TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 4)
-		c.draw_texture_rect_region(TerrainArt.OBJECTS,
-			Rect2(at - Vector2(sz * 0.5, sz * 0.47), Vector2(sz, sz)),
-			Rect2(col * TerrainArt.OBJ_CELL, row, TerrainArt.OBJ_CELL, TerrainArt.OBJ_CELL))
+		if not _view.grow(r*3.0).has_point(at): continue
+		var tex := _tree_textures[TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 7, TREE_SPRITES)]
+		# Bottom-centre anchored: the crown (~90% of the sprite width) spans
+		# the collision circle (slightly over), the trunk foot sits just
+		# below the circle's centre.
+		var k := (2.0 * r * 1.3) / (tex.get_width() * 0.9)
+		var size := tex.get_size() * k
+		var foot := at + Vector2(0.0, r * 0.85)
+		c.draw_texture_rect(tex, Rect2(foot - Vector2(size.x * 0.5, size.y), size), false)
 
 ## Harness introspection: the node that draws the tree crowns.
 func canopy() -> Node2D:
@@ -205,6 +216,7 @@ func build_from(area: Node) -> void:
 	if desert != null:
 		desert.shape_decor(self)
 	_plant_tree_collision(area)
+	_plant_border_collision(area)
 	_build_tall_grass()
 	_plant_tall_grass(area)
 
@@ -231,7 +243,7 @@ func _blob(d: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in OUTLINE_POINTS:
 		var a := TAU * i / OUTLINE_POINTS
-		var wob := 1.0 + (_hash01(i, 0, 11) - 0.5) * 0.12
+		var wob := 1.0 + 0.027 * (sin(3.0 * a + 1.0) + 0.7 * sin(5.0 * a + 2.0) + 0.5 * sin(9.0 * a))
 		# #635: asymmetric south radius - the outline stays a superset of
 		# the old ellipse, so no existing slot check changes result.
 		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
@@ -371,29 +383,38 @@ func _plant_tall_grass(area: Node) -> void:
 				cells[cell] = TerrainTypes.TALL_GRASS
 	map.set_cells(cells)
 	grass_cells.assign(cells.keys())
+	grass_cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
 
 func _grass_rect(cell: Vector2i) -> Rect2:
 	var s := float(_grass_cell_size)
 	return Rect2(Vector2(cell) * s, Vector2(s, s))
 
-## Floor layer: the dark mat under each tall-grass cell.
-func _draw_grass_floor() -> void:
-	for cell in grass_cells:
-		if _view.intersects(_grass_rect(cell)):
-			draw_rect(_grass_rect(cell).grow(2.0), TALL_GRASS)
+const GRASS_SPRITES := 5
+const GRASS_SPRITE_SIZE := 48.0
+static var _grass_textures: Array[Texture2D] = []
 
-## Above characters: a few hashed blades per cell.
+static func _grass_texture(k: int) -> Texture2D:
+	if _grass_textures.is_empty():
+		for n in GRASS_SPRITES:
+			_grass_textures.append(load("res://assets/sprites/terrain/tallgrass_%d.png" % (n + 1)) as Texture2D)
+	return _grass_textures[k]
+
+## Tall grass is placed sprites now: no floor mat, the ground tile shows
+## between the tufts (kept so the old draw hook still exists for callers).
+func _draw_grass_floor() -> void:
+	pass
+
+## Above characters: one tuft sprite per tall-grass cell, bottom-anchored with
+## a hashed offset and variant, drawn back to front (grass_cells is y-sorted).
 func _draw_grass_top() -> void:
 	for cell in grass_cells:
 		var rect := _grass_rect(cell)
-		if not _view.intersects(rect): continue
-		for k in 4:
-			var base := rect.position + Vector2(_hash01(cell.x, cell.y, 50 + k), 0.55 + 0.45 * _hash01(cell.x, cell.y, 60 + k)) * rect.size
-			var h := rect.size.y * (0.45 + 0.35 * _hash01(cell.x, cell.y, 70 + k))
-			var lean := (_hash01(cell.x, cell.y, 80 + k) - 0.5) * 10.0
-			var c := TALL_GRASS_BLADE if k % 2 == 0 else TALL_GRASS_BLADE_DARK
-			_grass_top.draw_colored_polygon(PackedVector2Array([
-				base + Vector2(-3.5, 0), base + Vector2(lean, -h), base + Vector2(3.5, 0)]), c)
+		if not _view.intersects(rect.grow(GRASS_SPRITE_SIZE)): continue
+		for n in 2:
+			var k := int(_hash01(cell.x, cell.y, 50 + n) * GRASS_SPRITES) % GRASS_SPRITES
+			var jitter := Vector2(_hash01(cell.x, cell.y, 53 + n) - 0.5, _hash01(cell.x, cell.y, 56 + n) - 0.5) * 22.0
+			var base := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * (0.4 + 0.5 * n)) + jitter
+			_grass_top.draw_texture(_grass_texture(k), base - Vector2(GRASS_SPRITE_SIZE * 0.5, GRASS_SPRITE_SIZE - 4.0))
 
 ## Harness introspection: the node that draws the blades over characters.
 func grass_top() -> Node2D:
@@ -468,53 +489,175 @@ func _in_patch(p: Vector2) -> bool:
 				return true
 	return false
 
-## The field as TerrainArt floor tiles: every 64 px cell whose centre is
-## inside the outline (grown by half a cell so the tiles reach the edge
-## band), one of 4 hashed grass variants, meadow inside a patch.
-func _draw_grass_tiles() -> void:
-	var cell := float(TerrainArt.CELL)
-	var grown := _blob(cell * 0.5)
-	var lo := Vector2i(((CENTER - RADII * 1.1) / cell).floor())
-	var hi := Vector2i(((CENTER + (RADII + Vector2(0, SOUTH_EXTEND)) * 1.1) / cell).ceil())
-	lo = lo.max(Vector2i((_view.position / cell).floor()))
-	hi = hi.min(Vector2i((_view.end / cell).ceil()))
-	var grass := TerrainArt.row(&"grass_summer") * TerrainArt.CELL
-	var meadow := TerrainArt.row(&"meadow") * TerrainArt.CELL
-	for y in range(lo.y, hi.y + 1):
-		for x in range(lo.x, hi.x + 1):
-			var at := Vector2(x + 0.5, y + 0.5) * cell
-			if not Geometry2D.is_point_in_polygon(at, grown):
-				continue
-			var v := TerrainArt.variant(Vector2i(x, y), 5)
-			var src_y := meadow if _in_patch(at) else grass
-			draw_texture_rect_region(TerrainArt.TILES, Rect2(Vector2(x, y) * cell, Vector2(cell, cell)),
-				Rect2(v * TerrainArt.CELL, src_y, TerrainArt.CELL, TerrainArt.CELL))
+## Dual-grid terrain (DualGrid): the field's terrain type lives on 64 px
+## lattice points, every drawn tile blends the four points around it. Grass
+## everywhere inside the outline, a stone-brick clearing at the arrival,
+## dirt pads under the gates and in some of the old patch slots, the desert
+## arena as sandstone slabs ringed by sand, and a cliff border outside the
+## outline (the cliff set, DualGrid.T.CLIFF). Layout, decor and collision are
+## unchanged: this is presentation only.
+const ARRIVAL_STONE_R := 88.0
+const GATE_PAD_R := 76.0
+## Cells past the outline that the border covers (drawn) and blocks (collision).
+const BORDER_DRAWN := 112.0
+const BORDER_BLOCKED := 192.0
+var _lattice_memo: Dictionary = {}
+var _desert_noise: FastNoiseLite
 
-func _draw_band(inner: PackedVector2Array, outer: PackedVector2Array, ci: Color, co: Color) -> void:
-	var n := inner.size()
-	for i in n:
-		var j := (i + 1) % n
-		draw_polygon(PackedVector2Array([inner[i], inner[j], outer[j], outer[i]]), PackedColorArray([ci, ci, co, co]))
+## Terrain type at a lattice point (world position = point * 64).
+func _lattice_type(x: int, y: int) -> int:
+	var key := Vector2i(x, y)
+	if _lattice_memo.has(key):
+		return _lattice_memo[key]
+	var t := _compute_lattice_type(Vector2(x, y) * float(DualGrid.CELL))
+	_lattice_memo[key] = t
+	return t
+
+func _compute_lattice_type(p: Vector2) -> int:
+	if not covers(p):
+		return DualGrid.T.CLIFF
+	# Only grass meets the cliff edge (the edge art is grass over void).
+	if _inner_edge.is_empty():
+		_inner_edge = _blob(-140.0)
+	if not Geometry2D.is_point_in_polygon(p, _inner_edge):
+		return DualGrid.T.GRASS
+	var parent := get_parent()
+	var desert := parent.get_node_or_null("DesertStatueArena") as DesertStatueArena if parent != null else null
+	var desert_near := false
+	if desert != null:
+		var r := desert.arena_radius
+		var to := p - desert.position
+		var d := to.length()
+		var ang := to.angle()
+		# Wobbly edge so the desert is not a perfect circle.
+		var wob := 1.0 + 0.06 * sin(ang * 3.0 + 1.3) + 0.04 * sin(ang * 7.0 + 0.4)
+		if _desert_noise == null:
+			_desert_noise = FastNoiseLite.new()
+			_desert_noise.seed = 698
+			_desert_noise.frequency = 1.0 / 210.0
+		if d < r * 0.78 * wob:
+			# Sandstone slabs and sand blown across them.
+			return DualGrid.T.SANDSTONE if _desert_noise.get_noise_2dv(p) > -0.12 else DualGrid.T.SAND
+		if d < r * 1.08 * wob:
+			return DualGrid.T.SAND
+		desert_near = d < r * 1.08 * wob + 220.0
+	# Arrival clearing and the pad under every gate.
+	if p.distance_to(spawn) <= ARRIVAL_STONE_R:
+		return DualGrid.T.STONE
+	# Abandoned village: worn stone paths from a central walk to every door.
+	var vil := get_parent().get_node_or_null("AbandonedVillage") if get_parent() != null else null
+	if vil != null:
+		var q: Vector2 = p - (vil as Node2D).position
+		if absf(q.x) < 420.0 and absf(q.y) < 300.0:
+			if _cobble_nodes.is_empty():
+				_build_cobble_nodes((vil as Node2D).position)
+			if _cobble_nodes.has(Vector2i((p / 64.0).round())):
+				return DualGrid.T.COBBLE
+			if _dirt_nodes.has(Vector2i((p / 64.0).round())):
+				return DualGrid.T.DIRT
+		# No stray dirt patches around the village.
+		if q.length() < 470.0:
+			return DualGrid.T.GRASS
+	if not desert_near:
+		for l in landmarks:
+			if p.distance_to(l) <= GATE_PAD_R:
+				return DualGrid.T.DIRT
+		# Some of the old darker/lighter patch slots become bare dirt.
+		if _in_patch(p):
+			var g := Vector2i(((p - CENTER) / 190.0).round())
+			if _hash01(g.x, g.y, 61) < 0.25 and p.distance_to(spawn) > ARRIVAL_STONE_R + 128.0:
+				return DualGrid.T.DIRT
+	return DualGrid.T.GRASS
+
+## Set false (and drop _dirt_nodes) once the cobble sheet has a baked dirt rim.
+const VILLAGE_DIRT_RING := false
+var _cobble_nodes: Dictionary = {}
+var _dirt_nodes: Dictionary = {}
+var _lane_nodes: Dictionary = {}
+var _inner_edge := PackedVector2Array()
+
+## One-tile-wide trails: snap every path polyline onto the 64px lattice and
+## fill the corner of each diagonal step so the trail stays connected.
+func _build_cobble_nodes(origin: Vector2) -> void:
+	var seg_i := 0
+	for seg: PackedVector2Array in AbandonedVillage.path_segments():
+		seg_i += 1
+		var prev := Vector2i(-99999, -99999)
+		for k in range(seg.size() - 1):
+			var a := seg[k] + origin
+			var b := seg[k + 1] + origin
+			var n := int(a.distance_to(b) / 8.0) + 1
+			for t in n + 1:
+				var node := Vector2i((a.lerp(b, float(t) / n) / 64.0).round())
+				if node == prev:
+					continue
+				if prev.x != -99999 and node.x != prev.x and node.y != prev.y:
+					_cobble_nodes[Vector2i(node.x, prev.y)] = true
+					if seg_i == 1:
+						_lane_nodes[Vector2i(node.x, prev.y)] = true
+				_cobble_nodes[node] = true
+				if seg_i == 1:
+					_lane_nodes[node] = true
+				prev = node
+	# Cobble -> dirt -> grass: a ragged dirt ring around the trail. Every
+	# neighbour is dirt except hashed gaps, plus a patchy second ring.
+	for c: Vector2i in (_lane_nodes.keys() if VILLAGE_DIRT_RING else []):
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				var n := c + Vector2i(dx, dy)
+				if _cobble_nodes.has(n):
+					continue
+				var ring := maxi(absi(dx), absi(dy))
+				var keep := 0.55 if ring == 1 else 0.0
+				if _hash01(n.x, n.y, 313) < keep:
+					_dirt_nodes[n] = true
+
+func _draw_dual_grid() -> void:
+	var grown := _blob(BORDER_DRAWN)
+	var lo := Vector2i(((CENTER - RADII * 1.1) / 64.0).floor()) - Vector2i(8, 8)
+	var hi := Vector2i(((CENTER + (RADII + Vector2(0, SOUTH_EXTEND)) * 1.1) / 64.0).ceil()) + Vector2i(8, 8)
+	lo = lo.max(Vector2i((_view.position / 64.0).floor()))
+	hi = hi.min(Vector2i((_view.end / 64.0).ceil()))
+	for j in range(lo.y, hi.y + 1):
+		for i in range(lo.x, hi.x + 1):
+			if not Geometry2D.is_point_in_polygon(Vector2(i + 0.5, j + 0.5) * 64.0, grown):
+				continue
+			var tl := (_lattice_type(i, j))
+			var tr := (_lattice_type(i + 1, j))
+			var br := (_lattice_type(i + 1, j + 1))
+			var bl := (_lattice_type(i, j + 1))
+			var t := DualGrid.tile(i, j, [tl, tr, br, bl])
+			if t.is_empty():
+				continue
+			draw_texture_rect_region(t["tex"], Rect2(Vector2(i, j) * 64.0, Vector2(64, 64)), t["src"])
+
+## Block the border band so the playable area ends at the cliff: every
+## Terrain cell whose centre lies between the outline and the blocked band
+## becomes OBSTACLE (indestructible, like tree collision).
+func _plant_border_collision(area: Node) -> void:
+	var map := area.get_node_or_null("Terrain") as TerrainMap if area != null else null
+	if map == null:
+		return
+	var band := _blob(BORDER_BLOCKED)
+	var cells := {}
+	var lo := map.world_to_cell(CENTER - (RADII + Vector2(BORDER_BLOCKED, BORDER_BLOCKED)) * 1.1)
+	var hi := map.world_to_cell(CENTER + (RADII + Vector2(BORDER_BLOCKED, BORDER_BLOCKED + SOUTH_EXTEND)) * 1.1)
+	for cx in range(lo.x, hi.x + 1):
+		for cy in range(lo.y, hi.y + 1):
+			var at := map.cell_to_world(Vector2i(cx, cy))
+			if covers(at) or not Geometry2D.is_point_in_polygon(at, band):
+				continue
+			cells[Vector2i(cx, cy)] = TerrainTypes.OBSTACLE
+	map.set_cells(cells)
 
 func _draw() -> void:
-	_draw_band(outline, _blob(OUTER_FADE), Color(GRASS, 0.85), Color(GRASS, 0.0))
-	_draw_grass_tiles()
+	_draw_dual_grid()
 	_draw_grass_floor() # #461
 	# #419: roads are no longer drawn (cosmetic only). Their polylines are
 	# still laid out in build_from so decor/tree placement - and with it the
 	# tree collision on the Terrain grid - stays exactly as before.
-	# Arrival clearing: a flagstone ring where the hub passage drops you off.
-	draw_circle(spawn, ARRIVAL_R + 6.0, ROAD_EDGE_COLOR)
-	draw_circle(spawn, ARRIVAL_R, ROAD)
-	draw_arc(spawn, ARRIVAL_R - 12.0, 0.0, TAU, 64, STONE_DARK, 3.0, true)
-	for k in 8:
-		var d := Vector2.from_angle(TAU * k / 8.0)
-		draw_circle(spawn + d * (ARRIVAL_R - 12.0), 5.0, STONE)
-	# Landing pad under every gate.
-	for l in landmarks:
-		draw_circle(l, 54.0, ROAD_EDGE_COLOR)
-		draw_circle(l, 48.0, ROAD)
-		draw_arc(l, 48.0, 0.0, TAU, 48, STONE_DARK, 3.0, true)
+	# The arrival clearing (stone brick) and the dirt pad under every gate are
+	# part of the dual-grid field (see _lattice_type).
 	for d in decor:
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
@@ -522,7 +665,7 @@ func _draw() -> void:
 		if d["kind"] == "tree":
 			# #418: only the ground shadow stays on the floor layer; the
 			# canopy itself is drawn by the Canopy child, above characters.
-			draw_circle(at + Vector2(4, r * 0.55), r * 0.9, Color(SHADOW, 0.45))
+			pass  # new tree sprites carry their own baked shadow
 		else:
 			var rock := PackedVector2Array()
 			for i in 6:
