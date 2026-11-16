@@ -23,4 +23,4 @@ Original 24x28 grey padlock authored in SpriteU JSON format at
 `7fd4617ebb9a084450fef7e428bee61357b26227`. Exact first-frame PNG copied
 into gangU. SpriteU source was read-only: no edits, issues, commits or PRs.
 Silhouette narrowed and extended vertically per owner feedback.
-Drawn at 2x nearest in the exact center of each locked upgrade card.
+Drawn at 2x nearest horizontally centered, above the mid-card progress bar per latest owner layout.
