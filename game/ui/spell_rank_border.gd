@@ -7,9 +7,11 @@ extends Control
 ## format (assets/sprites/ui/icon-frame-*.png, provenance in
 ## assets/sprites/ui/SOURCE.md): a 3-tone metal frame with a top crest gem and
 ## corner studs, one colorway per tier, palette-true to UiStyle.RANK_COLORS.
-## The frame's interior is transparent, so the icon art shows through; it is
-## drawn slightly LARGER than the icon rect so its rails wrap the icon's own
-## baked frame. tier = NONE hides it (empty slots, shop, directory).
+## The frame's interior is transparent, so the icon art shows through. It is
+## drawn at EXACTLY the icon rect (Daniel 2026-11-15: no gap between the
+## icon edge and the border): the ornate rails land on the icon's own baked
+## edge ring, hugging the glyph. tier = NONE hides it (empty slots, shop,
+## directory).
 
 const NONE := -1
 const MAX_TIER := 3
@@ -45,13 +47,11 @@ func unit() -> float:
 func color() -> Color:
 	return UiStyle.RANK_COLORS[tier] if tier != NONE else Color.TRANSPARENT
 
-## Outermost extent of the drawing past the icon rect, per side, in px: the
-## frame's 3 px rails (in art pixels) scaled by the pixel unit.
+## The frame hugs the icon rect exactly; nothing extends past it.
 func overhang() -> float:
-	return 3.0 * unit()
+	return 0.0
 
 func _draw() -> void:
 	if tier == NONE:
 		return
-	var m := overhang()
-	draw_texture_rect(TIER_FRAMES[tier], Rect2(Vector2(-m, -m), size + Vector2(2.0 * m, 2.0 * m)), false)
+	draw_texture_rect(TIER_FRAMES[tier], Rect2(Vector2.ZERO, size), false)
