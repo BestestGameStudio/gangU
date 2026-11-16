@@ -593,7 +593,7 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 				if _cobble_nodes.has(n):
 					continue
 				var ring := maxi(absi(dx), absi(dy))
-				var keep := 0.85 if ring == 1 else 0.12
+				var keep := 0.7 if ring == 1 else 0.0
 				if _hash01(n.x, n.y, 313) < keep:
 					_dirt_nodes[n] = true
 

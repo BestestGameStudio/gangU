@@ -26,7 +26,7 @@ const PAIRS: Array = [
 	[T.STONE, T.DIRT, "dualgrid_stonebrick_on_dirt"],
 	[T.COBBLE, T.GRASS, "dualgrid_cobble_on_grass"],
 	[T.COBBLE, T.DIRT, "dualgrid_cobble_on_dirt"],
-	[T.CLIFF, T.GRASS, "dualgrid_cliff_on_grass"],
+	[T.GRASS, T.CLIFF, "dualgrid_cliffedge_on_void"],
 	[T.CLIFF, T.DIRT, "dualgrid_cliff_on_dirt"],
 	[T.CLIFF, T.SAND, "dualgrid_cliff_on_sand"],
 	[T.CLIFF, T.STONE, "dualgrid_cliff_on_stonebrick"],
