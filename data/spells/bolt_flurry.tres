@@ -7,7 +7,7 @@
 script = ExtResource("1_spell")
 mode = 5
 icon_frames = ExtResource("2_frames")
-icon_prefix = &"bolt"
+icon_prefix = &"bolt_flurry"
 icon_upgraded = true
 spell_name = "Bolt Flurry"
 cooldown = 0.35

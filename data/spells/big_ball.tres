@@ -1,10 +1,13 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="Spell" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
 [ext_resource type="Resource" path="res://data/spells/water_ball.tres" id="2_shot"]
 
 [resource]
 script = ExtResource("1_spell")
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"big_ball"
 mode = 2
 spell_name = "Big Ball"
 icon_upgraded = true

@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=22 format=3]
+[gd_resource type="Resource" script_class="Spell" load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
 [ext_resource type="Script" path="res://game/economy/reward_table.gd" id="2_table"]
 [ext_resource type="Script" path="res://game/economy/reward_entry.gd" id="3_entry"]
 
@@ -102,6 +103,8 @@ entries = Array[ExtResource("3_entry")]([SubResource("e6a"), SubResource("e6b")]
 
 [resource]
 script = ExtResource("1_spell")
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"hammer_gambler"
 mode = 1
 spell_name = "Gambler's Hammer"
 icon_upgraded = true
