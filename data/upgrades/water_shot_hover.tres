@@ -6,7 +6,7 @@
 [sub_resource type="Resource" id="quest"]
 script = ExtResource("4")
 kind = 1
-objective = "Land 5 redirected projectile hits. Same enemy allowed."
+objective = "Land 5 redirected projectile hits."
 goal = 5
 [resource]
 script = ExtResource("1")
