@@ -133,6 +133,7 @@ func _process(delta: float) -> bool:
 					print("[PROG] FAIL re-replace of consumed source accepted"); ok = false
 				else:
 					print("[PROG] refusal: consumed source re-replace refused OK")
+				check_quests()
 				print("[PROG] ", "PASS" if ok else "FAIL")
 				quit(0 if ok else 1)
 				return true
@@ -144,3 +145,51 @@ func _process(delta: float) -> bool:
 		quit(0 if ok else 1)
 		return true
 	return false
+
+func quest_check(value: bool, label: String) -> void:
+	if not value: ok = false
+	print("[PROG] quest ", label, " ", "OK" if value else "FAIL")
+
+func check_quests() -> void:
+	var base: Spell = load("res://data/spells/water_shot.tres")
+	var first: SpellUpgrade = load("res://data/upgrades/water_shot_hover.tres")
+	var second: SpellUpgrade = load("res://data/upgrades/water_shot_reservoir.tres")
+	var third: SpellUpgrade = load("res://data/upgrades/water_shot_tide.tres")
+	prog.upgrades.append_array([first, second, third])
+	for i in 20: prog._on_spell_cast(base)
+	quest_check(not prog.can_upgrade(base), "casts cannot bypass authored hit quest")
+	var target := Enemy.new()
+	var e := HitEvent.new(); e.attacker = p; e.spell = base; e.target = target
+	e.delivery = OnHit.DELIVERY_PROJECTILE; e.hp_lost = 1; e.projectile_id = 101
+	prog._on_quest_hit(e)
+	quest_check(prog.qualification_count(first) == 0, "unredirected hit excluded")
+	e.redirected = true
+	prog._on_quest_hit(e); prog._on_quest_hit(e)
+	quest_check(prog.qualification_count(first) == 1, "same shot enemy pair counted once")
+	e.hp_lost = 0; e.projectile_id = 102; prog._on_quest_hit(e)
+	quest_check(prog.qualification_count(first) == 1, "no damage excluded")
+	e.hp_lost = 1
+	for i in range(102, 106): e.projectile_id = i; prog._on_quest_hit(e)
+	quest_check(prog.can_upgrade(base), "five redirected shots may hit same enemy")
+	var carried := prog.capture_run_state(); prog._quest_counts.clear(); prog.restore_run_state(carried)
+	quest_check(prog.can_upgrade(base), "quest count follows progression death carry")
+	quest_check(prog.apply_upgrade(base, first.id), "qualified quest applies normal replacement")
+	e.spell = first.result_spell; e.projectile_id = 201; prog._on_quest_hit(e); prog._on_quest_hit(e)
+	quest_check(prog.qualification_count(second) == 0, "one shot repeated cannot satisfy volley")
+	e.projectile_id = 202; prog._on_quest_hit(e)
+	quest_check(not prog.can_upgrade(e.spell), "two distinct shots insufficient")
+	for target_key in prog._quest_volleys:
+		for shot_key in prog._quest_volleys[target_key]: prog._quest_volleys[target_key][shot_key] -= 1000
+	e.projectile_id = 203; prog._on_quest_hit(e)
+	quest_check(not prog.can_upgrade(e.spell), "expired volley shots excluded")
+	e.projectile_id = 204; prog._on_quest_hit(e)
+	e.projectile_id = 205; prog._on_quest_hit(e)
+	quest_check(prog.can_upgrade(e.spell), "three distinct shots same enemy short window")
+	quest_check(prog.apply_upgrade(e.spell, second.id), "volley qualification applies")
+	for i in 4: prog._on_spell_cast(second.result_spell)
+	quest_check(not prog.can_upgrade(second.result_spell), "five cast quest closed at four")
+	prog._on_spell_cast(second.result_spell)
+	quest_check(prog.can_upgrade(second.result_spell), "five cast quest qualifies at five")
+	var menu := prog.upgrade_menu(second.result_spell)
+	quest_check(menu[2].objective == third.quest.objective and menu[2].threshold == 5, "menu exposes quest objective and count")
+	target.free()

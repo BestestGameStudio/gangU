@@ -220,6 +220,9 @@ func run() -> void:
 		check(forward, "Signature release makes forward progress without looping: " + str(offset))
 	check(load("res://data/spells/water_shot_reservoir.tres").tags.has(SpellTags.PIERCING) and sig.tags.has(SpellTags.PIERCING) and not hover.tags.has(SpellTags.PIERCING), "only Mastery/Signature pierce")
 	# Real Projectile hit dispatch while stationary: normal damage, with tier-specific survival.
+	var landed: Array[HitEvent] = []
+	var capture_hit := func(event: HitEvent): landed.append(event)
+	OnHit.bus().hit_landed.connect(capture_hit)
 	var target := WaterTarget.new(); root.add_child(target)
 	caster._cast_spell(hover)
 	var fragile := caster.live_shots(hover)[-1] as WaterShotProjectile
@@ -240,6 +243,7 @@ func run() -> void:
 	tide._on_body_entered(target)
 	tide._on_body_entered(target)
 	check(target.received == damage_before + sig.damage, "Signature immediate contact hits once, not per-frame")
+	check(landed[-1].projectile_id == tide.get_instance_id() and landed[-1].redirected, "landed projectile event snapshots redirect identity for quests")
 	tide._physics_process(0.49); tide._on_body_entered(target)
 	check(target.received == damage_before + sig.damage, "Signature cannot tick early")
 	tide._physics_process(0.011); tide._on_body_entered(target)
@@ -272,6 +276,8 @@ func run() -> void:
 	check(spread_shots[0].global_position.distance_to(spread_shots[1].global_position) > 20 and spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_radius + 0.1), "coincident hover shots spread inside14px radius without overlap")
 	target.queue_free()
 
+	OnHit.bus().hit_landed.disconnect(capture_hit)
+	landed.clear()
 	main.queue_free();await process_frame
 	print("[717] ",checks," checks, ",failed," failures")
 	quit(1 if failed else 0)

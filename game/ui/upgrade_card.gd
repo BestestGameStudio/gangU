@@ -144,7 +144,7 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 
 ## #712: state is supplied by the progression provider, never inferred from
 ## button tint. Locked tiers expose only a grey frame, lock and cast progress.
-func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "") -> void:
+func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "", objective: String = "") -> void:
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
 	_locked = state == "locked"
@@ -167,7 +167,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	progress_fill.bg_color = SATISFIED_PROGRESS if state == "ready" and casts >= threshold else UiStyle.B_DIM
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
-	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
+	progress_label.text = (objective + "\n%d / %d" if not objective.is_empty() else "%d / %d casts") % [mini(casts, maxi(threshold, 0)), threshold]
 	match state:
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = ""

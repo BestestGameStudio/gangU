@@ -482,6 +482,9 @@ func _turn_toward(target: Vector2, max_turn: float) -> void:
 ## Legacy/#37 shots: one hit per body ever. pierce_hits Signature shots: one
 ## hit per body per rehit_delay window, so a looped-back pass on the same
 ## boss lands again instead of orbiting harmlessly after the first hit.
+func was_redirected() -> bool:
+	return _redirect_count > 0
+
 func _can_hit(body: Node2D) -> bool:
 	if spell.pierce_hits > 0:
 		return not _hit_times.has(body) or _life_t - _hit_times[body] >= spell.rehit_delay
@@ -556,7 +559,7 @@ func _on_body_entered(body: Node2D) -> void:
 		hit_resolved.emit(body, result)
 		# #390: `source` may have been freed while the shot flew; report() takes
 		# it untyped and normalizes it to null, so this never script-errors.
-		OnHit.report(source, spell, body, result, OnHit.DELIVERY_PROJECTILE, receipt)
+		OnHit.report(source, spell, body, result, OnHit.DELIVERY_PROJECTILE, receipt, get_instance_id(), was_redirected())
 		# #37: a PIERCING-tagged spell damages, then CONTINUES past the body.
 		# Untagged spells keep the original despawn-on-hit, and range expiry
 		# is unchanged for both.

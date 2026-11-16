@@ -171,7 +171,7 @@ static func end(r: Receipt, target: Variant = null) -> Receipt:
 
 ## Builds the payload from a closed receipt and emits hit_landed. Returns the
 ## event, or null when the receiver refused the hit (nothing is emitted).
-static func report(attacker: Variant, spell: Spell, target: Variant, result: DamageResult, delivery: StringName, receipt: Receipt) -> HitEvent:
+static func report(attacker: Variant, spell: Spell, target: Variant, result: DamageResult, delivery: StringName, receipt: Receipt, projectile_id: int = 0, redirected: bool = false) -> HitEvent:
 	if receipt == null or not receipt.closed or not receipt.accepted:
 		return null
 	var e := HitEvent.new()
@@ -181,6 +181,8 @@ static func report(attacker: Variant, spell: Spell, target: Variant, result: Dam
 	e.target = t as Node
 	e.result = result
 	e.delivery = delivery
+	e.projectile_id = projectile_id
+	e.redirected = redirected
 	e.killed = receipt.killed
 	e.hp_lost = receipt.hp_lost
 	if t is Node2D:

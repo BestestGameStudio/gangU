@@ -30,3 +30,7 @@ var killed: bool = false
 var delivery: StringName = &""
 ## World position of the target when hit (Vector2.ZERO when it is not a Node2D).
 var position: Vector2 = Vector2.ZERO
+
+## Immutable delivery facts for progression; zero/false on non-projectile hits.
+var projectile_id: int = 0
+var redirected: bool = false

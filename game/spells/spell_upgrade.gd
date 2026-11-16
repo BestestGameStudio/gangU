@@ -23,3 +23,6 @@ extends Resource
 ## SpellProgress records this on the result spell at a successful apply -
 ## the source of truth #38's tier display reads via get_tier().
 @export var tier: int = 1
+
+## Optional authored quest replaces xp_threshold for this row only.
+@export var quest: SpellUpgradeQuest
