@@ -22,7 +22,7 @@ func _physics_process(delta: float) -> void:
  if is_queued_for_deletion(): return
  global_position += motion
  queue_redraw()
- if global_position.distance_to(destination) < 0.1: finish(0)
+ if global_position.distance_to(destination) < 0.1: _at_destination()
 
 func _sweep_segment(from: Vector2, motion: Vector2) -> void:
  var events := _body_events(from, motion)
@@ -35,6 +35,7 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
   if event.has("body"):
    var body: Node2D = event.body
    if body == source: continue
+   if body is Enemy and spell.hook_magnet_radius > 0.0: continue
    global_position = from + motion * float(event.t)
    _on_body_entered(body)
   else:
@@ -44,6 +45,7 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 
 func _on_body_entered(body: Node2D) -> void:
  if _resolved or body == source: return
+ if body is Enemy and spell.hook_magnet_radius > 0.0: return
  var count := 0
  if body is Enemy and HookReel.begin(get_parent(), body, source, spell) != null: count = 1
  finish(count)
@@ -57,3 +59,13 @@ func finish(count: int) -> void:
 func _draw() -> void:
  if is_instance_valid(source):
   draw_line(to_local(source.global_position), Vector2.ZERO, Color(0.7, 0.8, 0.8), 1.0)
+
+func _at_destination() -> void:
+ var candidates: Array[Enemy] = []
+ if spell.hook_magnet_radius > 0.0:
+  for node in get_tree().get_nodes_in_group("enemies"):
+   var enemy := node as Enemy
+   if enemy == null or enemy.hp <= 0 or enemy.global_position.distance_to(destination) > spell.hook_magnet_radius: continue
+   candidates.append(enemy)
+ var group := HookGroupReel.begin(get_parent(), candidates, source, spell)
+ finish(group.enemies.size() if group != null else 0)
