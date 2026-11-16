@@ -41,6 +41,7 @@ func run() -> void:
 	check(panel._upgrade_cards.all(func(card): return card._frame.texture == UpgradeCard.TIER_FRAMES[0] and card._frame.material == card._grey_material), "locked tiers share grey border")
 	check(panel._upgrade_cards.all(func(card): return viewport_rect.encloses(card.get_global_rect())), "entire aspect-correct cards fit upgrade viewport")
 	check(panel._stats_box._grid.columns == 4, "four spell stats in one row")
+	check(panel._upgrade_cards.all(func(card): return card.find_child("CardContentScroll", true, false).mouse_filter == Control.MOUSE_FILTER_PASS), "card scroll accepts wheel and passes clicks to button")
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
