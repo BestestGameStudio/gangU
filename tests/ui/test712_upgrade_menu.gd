@@ -69,12 +69,14 @@ func run() -> void:
 	progress.add_upgrade_token()
 	await tick()
 	check(progress.upgrade_menu(water)[0].state == "token", "one token enables next locked step")
+	check(not panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].tooltip_text == panel._upgrade_cards[0].progress_label.text and panel._upgrade_cards[0]._frame.material == panel._upgrade_cards[0]._grey_material, "token readiness leaks no upgrade details")
 	check(progress.upgrade_menu(water)[1].state == "locked", "token never enables future step")
-	check(not panel._upgrade_cards[0].progress_bar.visible and not panel._upgrade_cards[0].progress_label.visible and panel._upgrade_cards[0].splash.custom_minimum_size.y <= 48, "token-eligible card replaces progress with art")
+	check(panel._upgrade_cards[0].progress_bar.visible and panel._upgrade_cards[0].progress_label.visible and panel._upgrade_cards[0].lock_sign.texture == UpgradeCard.OPEN_LOCK_TEXTURE and not panel._upgrade_cards[0].name_label.visible, "token-eligible card stays concealed with open lock and progress")
 	for i in 5: caster.spell_cast.emit(water)
 	check(progress.upgrade_menu(water)[0].state == "ready", "cast gate takes precedence over token")
-	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and not panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0].action_label.text.is_empty() and panel._upgrade_cards[0]._frame.material == null, "ready card restores details and tier border without choose text")
-	check(not panel._upgrade_cards[0].progress_bar.visible and not panel._upgrade_cards[0].progress_label.visible and panel._upgrade_cards[0].splash.custom_minimum_size.y <= 48, "ready card replaces progress with larger art")
+	check(not panel._upgrade_cards[0].name_label.visible and not panel._upgrade_cards[0].description_label.visible and not panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0]._frame.material == panel._upgrade_cards[0]._grey_material, "ready card stays concealed with grey border")
+	check(panel._upgrade_cards[0].progress_bar.visible and panel._upgrade_cards[0].progress_label.visible and panel._upgrade_cards[0].lock_sign.texture == UpgradeCard.OPEN_LOCK_TEXTURE and panel._upgrade_cards[0].tooltip_text == panel._upgrade_cards[0].progress_label.text, "ready card changes only lock to open without content leak")
+	check(absf(panel._upgrade_cards[0].progress_bar.get_global_rect().get_center().y - panel._upgrade_cards[0].get_global_rect().get_center().y) < 1.0, "ready bar preserves locked midpoint")
 	panel._upgrade_cards[0].pressed.emit()
 	await tick()
 	check(caster.get_slots()[2] == chain[0].result_spell, "click replaces only the next spell")
@@ -138,7 +140,7 @@ func run() -> void:
 	for path in DirAccess.get_files_at("res://data/upgrades"):
 		if not path.ends_with(".tres"): continue
 		var upgrade: SpellUpgrade = load("res://data/upgrades/" + path)
-		for state in ["ready", "applied"]:
+		for state in ["applied"]:
 			fit_card.setup(upgrade.display_name, SpellDescription.for_spell(upgrade.result_spell), false)
 			fit_card.set_unlock_state(state, 10, 10)
 			await tick()

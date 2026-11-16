@@ -24,3 +24,10 @@ Original 24x28 grey padlock authored in SpriteU JSON format at
 into gangU. SpriteU source was read-only: no edits, issues, commits or PRs.
 Silhouette narrowed and extended vertically per owner feedback.
 Drawn at 2x nearest horizontally centered, above the mid-card progress bar per latest owner layout.
+
+## upgrade-open-lock.png (#730)
+Original24x28 open-shackle variant of upgrade-lock.png, same palette/body,
+authored at `tools/sprites/specs/upgrade_open_lock.json`. Validated by SpriteU
+`tools/check_sprite.py`; PNG exported by `tools/render_preview.py --scale 1`
+at read-only source revision7fd4617ebb9a084450fef7e428bee61357b26227.
+SpriteU remains unchanged. Same2x nearest placement as the closed lock.
