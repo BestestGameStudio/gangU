@@ -6,6 +6,7 @@ var _portal_pool: Sprite2D
 var _lamp_light: PointLight2D
 
 func _ready() -> void:
+	z_index = 1 # Draw the counter lantern above the shop sprite.
 	var gradient := Gradient.new()
 	gradient.offsets = PackedFloat32Array([0.0, 0.2, 0.55, 1.0])
 	gradient.colors = PackedColorArray([Color(1, 1, 1, 0.65),
@@ -17,8 +18,8 @@ func _ready() -> void:
 	texture.fill = GradientTexture2D.FILL_RADIAL
 	texture.fill_from = Vector2(0.5, 0.5)
 	texture.fill_to = Vector2(1, 0.5)
-	_portal_pool = _pool(texture, Vector2(576, 272), Vector2(1.35, 0.66), 0.30)
-	_pool(texture, Vector2(814, 596), Vector2(0.72, 0.36), 0.25)
+	_portal_pool = _pool(texture, Vector2(576, 272), Vector2(1.60, 0.80), 0.55)
+	_pool(texture, Vector2(814, 596), Vector2(0.86, 0.44), 0.42)
 	_lamp_light = PointLight2D.new()
 	_lamp_light.position = Vector2(814, 556)
 	_lamp_light.texture = texture
@@ -34,6 +35,7 @@ func _pool(texture: Texture2D, at: Vector2, spread: Vector2, alpha: float) -> Sp
 	pool.texture = texture
 	pool.position = at
 	pool.scale = spread
+	pool.z_as_relative = false
 	pool.z_index = -70 # Above brick, below every prop and actor.
 	pool.modulate = Color(1.0, 0.52, 0.18, alpha)
 	var material := CanvasItemMaterial.new()
@@ -55,5 +57,5 @@ func _draw() -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	var pulse := 1.0 + 0.025 * sin(_time * 2.0)
-	_portal_pool.modulate.a = 0.30 * pulse
+	_portal_pool.modulate.a = 0.55 * pulse
 	_lamp_light.energy = 0.55 * (1.0 + 0.018 * sin(_time * 3.1))
