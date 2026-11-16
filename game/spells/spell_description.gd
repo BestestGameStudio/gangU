@@ -9,6 +9,8 @@ static func for_spell(s: Spell) -> String:
 	if s == null:
 		return ""
 	if s.cast_mode() == Spell.CastMode.HOOK:
+		if s.hook_anchor_mode or s.alternate_spell != null:
+			return "Primary reels a bunch to you and stuns1.5s. Ctrl + fire places up to3fixed anchor/lure pairs. Lures taunt every5s; a caught lure reels with its enemy and the pair disappears on arrival. Deals no damage."
 		return ("At the aimed endpoint, reels enemies within %dpx toward you.%s Deals no damage." % [int(s.hook_magnet_radius), " Stuns for1.5s on arrival." if s.hook_arrival_stun > 0 else ""]) if s.hook_magnet_radius > 0 else "Hooks the first enemy toward your moving position. Weight and displacement force set the capped reel speed. Deals no damage."
 	var parts: PackedStringArray = []
 	if s.water_shot_hover_cap > 0:
