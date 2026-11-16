@@ -2,8 +2,10 @@ class_name HitStop
 extends Node
 ## #678: hit stop - a short freeze of gameplay movers on every landed spell
 ## impact against an enemy, plus a heavier staged "boss stop" on the killing
-## blow against a boss: a longer freeze and a camera zoom punch, then a snap
-## back to normal play. Direction reference: Sakurai's "Breaking Down Attack
+## blow against a boss: a longer freeze plus a camera cinematic - a hard
+## zoom onto the fallen boss, a held beat while the death animation plays
+## zoomed, then an ease back to normal play (#687). Direction reference:
+## Sakurai's "Breaking Down Attack
 ## Animations" - holding the impact frame is what sells the hit. (Mitra,
 ## 2026-11-15 demo feedback: no screen flash - the freeze and zoom carry it.)
 ##
@@ -45,15 +47,18 @@ extends Node
 ## Boss stop: freeze seconds on the killing blow against a boss. Replaces
 ## the normal stop for that hit. PLACEHOLDER.
 @export var boss_stop_duration: float = 0.4
-## Boss stop camera punch: zoom multiplier at the peak (1.15 = 15% in),
-## reaching it in zoom_in_time seconds and easing back to neutral over
-## zoom_out_time seconds as play resumes. PLACEHOLDERs.
-@export var zoom_amount: float = 1.15
-@export var zoom_in_time: float = 0.08
-@export var zoom_out_time: float = 0.35
+## Boss stop camera beat (#687): zoom multiplier at the peak (1.3 = 30%
+## in), reached in zoom_in_time seconds, the frame then HOLDS on the fallen
+## boss for boss_focus_hold seconds while the death animation plays zoomed,
+## and the zoom eases back to neutral over zoom_out_time as the follow
+## returns to the player. PLACEHOLDERs - Mitra's ask is maximum impact.
+@export var zoom_amount: float = 1.3
+@export var zoom_in_time: float = 0.1
+@export var boss_focus_hold: float = 1.6
+@export var zoom_out_time: float = 0.5
 
-## The follow camera the boss stop punches. Assigned by main.gd; null only
-## in harness scenes without one.
+## The follow camera that plays the boss-stop beat. Assigned by main.gd;
+## null only in harness scenes without one.
 @export var camera: FollowCamera = null
 
 ## Groups whose members freeze during a stop (players, enemies, summons and
@@ -123,7 +128,7 @@ func _on_hit_landed(e: HitEvent) -> void:
 	if e.target == null or not e.target.is_in_group(PhysicsLayers.ENEMY_GROUP):
 		return
 	if e.killed and e.target.is_in_group(&"boss"):
-		_boss_stop()
+		_boss_stop(e.position)
 		return
 	# Per-spell feel knob (#678): heavier spells carry a higher multiplier.
 	var mult := 1.0
@@ -150,11 +155,12 @@ func _extend_stop(duration: float, cap: float) -> void:
 
 
 ## The killing blow on a boss: restarts the window at the boss duration and
-## punches the camera. Play snaps back when the window ends.
-func _boss_stop() -> void:
+## starts the camera cinematic on the fallen boss's position. Play snaps
+## back when the window ends; the camera hold outlasts the freeze.
+func _boss_stop(at: Vector2) -> void:
 	_active = true
 	_elapsed = 0.0
 	_stop_length = boss_stop_duration
 	_claim_sweep()
 	if camera != null:
-		camera.zoom_punch(zoom_amount, zoom_in_time, zoom_out_time)
+		camera.boss_focus(at, zoom_amount, zoom_in_time, boss_focus_hold, zoom_out_time)
