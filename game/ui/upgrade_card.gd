@@ -4,6 +4,7 @@ extends Button
 ## Splash is deliberately a code-drawn placeholder, never claimed final art.
 const CARD_WIDTH := 176.0
 const CARD_HEIGHT := CARD_WIDTH * 64.0 / 48.0
+const LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-lock.png")
 var name_label: Label
 var description_label: Label
 var action_label: Label
@@ -40,14 +41,6 @@ class PlaceholderSplash extends Control:
 		draw_colored_polygon(points, Color(tint, 0.24))
 		draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), tint, 2.0, true)
 
-## Vector padlock: no font-dependent emoji or missing-glyph square.
-class LockSign extends Control:
-	func _draw() -> void:
-		var c := size * 0.5
-		draw_style_box(UiStyle.row(Color(0.65, 0.67, 0.72), 4), Rect2(c + Vector2(-11, -2), Vector2(22, 18)))
-		draw_arc(c + Vector2(0, -2), 8, PI, TAU, 16, Color(0.8, 0.82, 0.86), 3, true)
-		draw_circle(c + Vector2(0, 5), 2, Color(0.85, 0.87, 0.9))
-
 func _init() -> void:
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -65,6 +58,7 @@ func _init() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	_content = VBoxContainer.new()
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 5)
 	scroll.add_child(_content)
 	splash = PlaceholderSplash.new()
@@ -113,11 +107,20 @@ func _init() -> void:
 	# Qualification is always above the long description, so the lock/bar
 	# stay visible without scrolling even when an upgrade has lengthy text.
 	_content.move_child(description_label, _content.get_child_count() - 1)
-	lock_sign = LockSign.new()
+	var lock_texture := TextureRect.new()
+	lock_texture.texture = LOCK_TEXTURE
+	lock_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lock_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lock_texture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	lock_sign = lock_texture
 	lock_sign.name = "LockSign"
-	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	lock_sign.offset_left = -24
+	lock_sign.offset_top = -24
+	lock_sign.offset_right = 24
+	lock_sign.offset_bottom = 24
 	lock_sign.visible = false
-	splash.add_child(lock_sign)
+	add_child(lock_sign)
 	for child: Control in find_children("*", "Control", true, false):
 		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -159,7 +162,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	description_label.visible = not _locked
 	action_label.visible = not _locked
 	(splash as PlaceholderSplash).plain = _locked
-	splash.custom_minimum_size.y = 100.0 if _locked else 32.0
+	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 + 12.0 if _locked else 32.0
 	splash.queue_redraw()
 	_refresh_frame()
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
