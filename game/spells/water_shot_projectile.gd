@@ -55,8 +55,19 @@ func _enter_hover() -> void:
 	while others.size() > spell.water_shot_hover_cap:
 		others.pop_front().queue_free()
 
+## Alternate on initial non-Signature flight releases it permanently.
+func alternate_toward(target: Vector2) -> bool:
+	if hovering or spell.water_shot_repeat_redirect:
+		return release_toward(target)
+	if not can_redirect() or global_position.distance_squared_to(target) < 0.01:
+		return false
+	if not redirect(target): return false
+	# Premature alternate release at Hover/Mastery flies on and never hovers.
+	released = true
+	return true
+
 func release_toward(target: Vector2) -> bool:
-	if not hovering and not (released and spell.water_shot_repeat_redirect): return false
+	if not hovering and not spell.water_shot_repeat_redirect: return false
 	var d := target - global_position
 	if d.length_squared() < 0.01: return false
 	_begin_redirect_curve(target)

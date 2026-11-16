@@ -162,7 +162,28 @@ func run() -> void:
 			forward = forward and probe.direction.dot(offset.normalized()) > 0.96
 		check(forward, "redirect stays in narrow forward cone without looping: " + str(offset))
 		probe.queue_free()
+	# Fresh alternate redirects travelling shots, not casts; all eligible shots.
+	var credit_before := credits.size()
+	caster._cast_spell(ws); caster._cast_spell(ws)
+	var base_before := caster.live_shots(ws).size()
+	caster.aim_override = caster.global_position + Vector2(-200, -100)
+	var alt_base := SpellTriggerRouter.new()
+	var alt_credits := credits.size()
+	caster._consume_trigger_commands(alt_base.sample(&"base_alt", ws, true, true, 0.01), &"base_alt", true)
+	check(caster.live_shots(ws).size() == base_before and credits.size() == alt_credits and caster.live_shots(ws).all(func(p): return not p.can_redirect()), "base Ctrl redirects all eligible travelling shots without a cast")
+	caster._consume_trigger_commands(alt_base.sample(&"base_alt", ws, false, true, 0.01), &"base_alt", false)
+	caster._consume_trigger_commands(alt_base.sample(&"base_alt", ws, true, true, 0.01), &"base_alt", true)
+	check(credits.size() == alt_credits, "base exhausted Ctrl does not spawn a shot")
 	var hover: Spell = load("res://data/spells/water_shot_hover.tres")
+	caster._cast_spell(hover)
+	var travelling := caster.live_shots(hover)[-1] as WaterShotProjectile
+	travelling.set_physics_process(false)
+	var new_target := travelling.global_position + Vector2(100, -60)
+	check(travelling.alternate_toward(new_target) and travelling.released and travelling._redirect_curve_left > 0.0, "Hover premature alternate re-aims and permanently releases initial flight")
+	check(not travelling.alternate_toward(new_target + Vector2(0, 20)), "Hover travelling redirect is once per shot")
+	travelling._physics_process(0.4)
+	check(not travelling.hovering and travelling.released, "prematurely released Hover passes target without hovering")
+	travelling.queue_free(); await process_frame
 	var made: Array[WaterShotProjectile] = []
 	for i in 4:
 		caster.aim_override = caster.global_position + Vector2(100 + i * 20, 0)
@@ -218,6 +239,11 @@ func run() -> void:
 			if not tide.hovering:
 				forward = forward and (tide.global_position - was).dot(offset.normalized()) > 0.0
 		check(forward, "Signature release makes forward progress without looping: " + str(offset))
+	caster._cast_spell(sig)
+	var initial_tide := caster.live_shots(sig)[-1] as WaterShotProjectile
+	initial_tide.set_physics_process(false)
+	check(not initial_tide.released and initial_tide.alternate_toward(initial_tide.global_position + Vector2(-100, -40)) and initial_tide.released, "Signature alternate redirects first flight, not just released shots")
+	check(initial_tide.alternate_toward(initial_tide.global_position + Vector2(100, -40)), "Signature travelling redirect remains repeatable behind caster cooldown")
 	check(load("res://data/spells/water_shot_reservoir.tres").tags.has(SpellTags.PIERCING) and sig.tags.has(SpellTags.PIERCING) and not hover.tags.has(SpellTags.PIERCING), "only Mastery/Signature pierce")
 	# Real Projectile hit dispatch while stationary: normal damage, with tier-specific survival.
 	var landed: Array[HitEvent] = []

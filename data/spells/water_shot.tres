@@ -25,4 +25,6 @@ redirect_limit = 1
 water_shot_hover_duration = 0
 water_shot_hover_cap = 0
 water_shot_repeat_redirect = false
-trigger_modes = 1
+trigger_modes = 3
+
+water_shot_alternate_redirect = true
