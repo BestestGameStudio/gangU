@@ -29,6 +29,7 @@ func _physics_process(delta: float) -> void:
  var offset := target.global_position - enemy.global_position
  if offset.length() <= 18.0:
   arrived = true
+  if spell.hook_arrival_stun > 0.0: enemy.stun(spell.hook_arrival_stun)
   queue_free(); return
  var speed := speed_for(spell, enemy.weight)
  # Acceleration limits preserve lateral velocity as a moving player changes aim.

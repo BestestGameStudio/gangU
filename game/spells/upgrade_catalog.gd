@@ -10,6 +10,7 @@ extends RefCounted
 
 const ROWS: Array[SpellUpgrade] = [
 	preload("res://data/upgrades/hook_shot_magnet.tres"),
+	preload("res://data/upgrades/hook_shot_catch.tres"),
 	preload("res://data/upgrades/water_shot_hover.tres"),
 	preload("res://data/upgrades/water_shot_reservoir.tres"),
 	preload("res://data/upgrades/water_shot_tide.tres"),

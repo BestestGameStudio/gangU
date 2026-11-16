@@ -240,3 +240,5 @@ func trigger_payload(trigger: TriggerMode, alternate: bool = false) -> Spell:
 @export var hook_timeout: float = 8.0
 
 @export var hook_magnet_radius: float = 0.0
+
+@export var hook_arrival_stun: float = 0.0

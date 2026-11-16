@@ -56,6 +56,8 @@ func _physics_process(delta: float) -> void:
  queue_redraw()
 
 func _arrive() -> void:
+ for enemy in enemies:
+  if spell.hook_arrival_stun>0.0:enemy.stun(spell.hook_arrival_stun)
  queue_free()
 
 func _draw() -> void:

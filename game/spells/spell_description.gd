@@ -9,7 +9,7 @@ static func for_spell(s: Spell) -> String:
 	if s == null:
 		return ""
 	if s.cast_mode() == Spell.CastMode.HOOK:
-		return ("At the aimed endpoint, reels enemies within %dpx toward you. Deals no damage." % int(s.hook_magnet_radius)) if s.hook_magnet_radius > 0 else "Hooks the first enemy toward your moving position. Weight and displacement force set the capped reel speed. Deals no damage."
+		return ("At the aimed endpoint, reels enemies within %dpx toward you.%s Deals no damage." % [int(s.hook_magnet_radius), " Stuns for1.5s on arrival." if s.hook_arrival_stun > 0 else ""]) if s.hook_magnet_radius > 0 else "Hooks the first enemy toward your moving position. Weight and displacement force set the capped reel speed. Deals no damage."
 	var parts: PackedStringArray = []
 	if s.water_shot_hover_cap > 0:
 		var duration := "indefinitely" if s.water_shot_hover_duration < 0 else "for %ds" % int(s.water_shot_hover_duration)
