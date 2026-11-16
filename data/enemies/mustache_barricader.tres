@@ -5,6 +5,7 @@
 
 [resource]
 script = ExtResource("1_def")
+weight = 1.0
 max_hp = 40
 speed = 105.0
 contact_damage = 10
