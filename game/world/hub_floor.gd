@@ -1,143 +1,113 @@
 extends Node2D
 class_name HubFloor
-## Code-drawn stone plaza under the hub. It lives in hub.tscn rather than on
-## the global BackgroundGrid so it is freed with the hub and dungeons keep the
-## plain grid. Geometry is built once in _init and drawn once.
+## Shared 64px dual-grid layout, with hub-specific dark stone bricks and thin wall art.
+## Wall lives on lattice points. Each tile reads TL=1 TR=2 BR=4 BL=8.
 
 const CENTER := Vector2(576, 410)
 const HALF := Vector2(460, 310)
 const CHAMFER := 140.0
-const SPAWN := Vector2(576, 480)
-## #346: the dungeon gates moved to the overworld; the hub keeps one landing
-## under its overworld passage and one at the shop. The passage sits at y 240,
-## clear of main.tscn's pre-swap Player position (576, 324).
-const LANDINGS: Array[Vector2] = [Vector2(576, 240), Vector2(852, 600)]
-
-const HEIGHTS: Array[float] = [40.0, 52.0, 64.0]
-const WIDTHS: Array[float] = [52.0, 72.0, 96.0]
-const MORTAR := 3.0
-const OUTER_FADE := 120.0
-const INNER_FADE := 70.0
-const EMBLEM_R := 86.0
-const LANDING_R := 58.0
-const PATH_W := 40.0
-
-const MORTAR_COLOR := Color(0.145, 0.16, 0.195)
-const TILE_BASE := Color(0.205, 0.225, 0.27)
-const PATH_COLOR := Color(0.24, 0.265, 0.315)
-const INLAY := Color(0.31, 0.35, 0.42)
-const DARK_INLAY := Color(0.15, 0.165, 0.205)
-const SHADOW := Color(0.06, 0.07, 0.09)
+const WALL_WIDTH := 32.0
+## Tile transitions extend up to half a cell inside the nominal outline.
+## Keep movement cells wholly within that inner floor, clear of the wall art.
+const WALL_CLEARANCE := 48.0
+const WALL_SHEET = preload("res://assets/sprites/terrain/dualgrid_brickwall_on_stonebrick.png")
+const FLOOR_VARIANTS = preload("res://assets/sprites/terrain/dualgrid_variants_stonebrick_hub.png")
 
 var outline: PackedVector2Array
-var tiles: Array[PackedVector2Array] = []
-var tile_colors := PackedColorArray()
+var _wall_outer: PackedVector2Array
+var _walk_outline: PackedVector2Array
+var _tiles: Array[Dictionary] = []
+var _thin_wall: Texture2D
 
 func _init() -> void:
 	z_index = -80
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	outline = _octagon(0.0)
+	_walk_outline = _octagon(-WALL_CLEARANCE)
+	_wall_outer = _octagon(WALL_WIDTH)
+	_prepare_thin_wall()
 	_build_tiles()
 
 func covers(p: Vector2) -> bool:
 	return Geometry2D.is_point_in_polygon(p, outline)
 
-## Offsetting an octagon outward by d keeps its 45-degree edges parallel only
-## if the chamfer grows by d * (2 - sqrt 2); same vertex order at every offset
-## lets the fade bands be drawn as quads between two rings.
-func _octagon(d: float) -> PackedVector2Array:
-	var h := HALF + Vector2(d, d)
-	var c := CHAMFER + d * (2.0 - sqrt(2.0))
+func _octagon(expand: float) -> PackedVector2Array:
+	var half := HALF + Vector2.ONE * expand
+	var chamfer := CHAMFER + expand * (2.0 - sqrt(2.0))
 	var pts := PackedVector2Array()
 	for v: Vector2 in [
-		Vector2(-h.x + c, -h.y), Vector2(h.x - c, -h.y), Vector2(h.x, -h.y + c), Vector2(h.x, h.y - c),
-		Vector2(h.x - c, h.y), Vector2(-h.x + c, h.y), Vector2(-h.x, h.y - c), Vector2(-h.x, -h.y + c),
+		Vector2(-half.x + chamfer, -half.y), Vector2(half.x - chamfer, -half.y),
+		Vector2(half.x, -half.y + chamfer), Vector2(half.x, half.y - chamfer),
+		Vector2(half.x - chamfer, half.y), Vector2(-half.x + chamfer, half.y),
+		Vector2(-half.x, half.y - chamfer), Vector2(-half.x, -half.y + chamfer),
 	]:
 		pts.append(CENTER + v)
 	return pts
 
-static func _hash01(x: int, y: int, salt: int) -> float:
-	var h := (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
-	h = (h ^ (h >> 13)) * 1274126177
-	h = h ^ (h >> 16)
-	return float(h & 0xFFFF) / 65535.0
+func _ready() -> void:
+	var terrain := get_parent().get_node("Terrain") as TerrainMap
+	var cells := {}
+	var lo := terrain.world_to_cell(CENTER - HALF - Vector2.ONE * WALL_WIDTH)
+	var hi := terrain.world_to_cell(CENTER + HALF + Vector2.ONE * WALL_WIDTH)
+	for cy in range(lo.y, hi.y + 1):
+		for cx in range(lo.x, hi.x + 1):
+			var at := terrain.cell_to_world(Vector2i(cx, cy))
+			var half_cell := Vector2.ONE * terrain.cell_size * 0.5
+			var square := PackedVector2Array([at - half_cell,
+				at + Vector2(half_cell.x, -half_cell.y), at + half_cell,
+				at + Vector2(-half_cell.x, half_cell.y)])
+			for outside: PackedVector2Array in Geometry2D.clip_polygons(square, _walk_outline):
+				if not Geometry2D.intersect_polygons(outside, _wall_outer).is_empty():
+					cells[Vector2i(cx, cy)] = TerrainTypes.OBSTACLE
+					break
+	terrain.set_cells(cells)
 
-static func _tile_color(c: int, r: int) -> Color:
-	var v := (_hash01(c, r, 3) - 0.5) * 0.035
-	var tint := (_hash01(c, r, 4) - 0.5) * 0.016
-	return Color(TILE_BASE.r + v - tint, TILE_BASE.g + v, TILE_BASE.b + v + tint)
+## Trim the unused outer cap instead of clipping it to an unrelated octagon.
+## The sheet's square marching-corner layout divides each tile into quadrants.
+func _prepare_thin_wall() -> void:
+	var image := WALL_SHEET.get_image()
+	for mask in range(1, 15):
+		var origin := Vector2i(mask % 4, mask / 4) * 64
+		for y in 64:
+			for x in 64:
+				var distance := INF
+				for k in 4:
+					if mask & (1 << k): continue
+					var q := Vector2(32 if k == 1 or k == 2 else 0, 32 if k >= 2 else 0)
+					var near := Vector2(x, y).clamp(q, q + Vector2(31, 31))
+					distance = minf(distance, Vector2(x, y).distance_to(near))
+				if distance > 22.0:
+					image.set_pixelv(origin + Vector2i(x, y), Color.TRANSPARENT)
+	_thin_wall = ImageTexture.create_from_image(image)
 
-## Ashlar courses: hashed course heights, start offsets and stone widths, so
-## joints never line up into the uniform grid the plaza replaces.
 func _build_tiles() -> void:
-	var y := CENTER.y - HALF.y
-	var right := CENTER.x + HALF.x
-	var m := MORTAR * 0.5
-	var r := 0
-	while y < CENTER.y + HALF.y:
-		var row_h := _pick(HEIGHTS, _hash01(0, r, 5))
-		var x := CENTER.x - HALF.x - _hash01(0, r, 1) * WIDTHS[1]
-		var c := 0
-		while x < right:
-			var w := _pick(WIDTHS, _hash01(c, r, 2))
-			var rect := PackedVector2Array([
-				Vector2(x + m, y + m), Vector2(x + w - m, y + m),
-				Vector2(x + w - m, y + row_h - m), Vector2(x + m, y + row_h - m),
-			])
-			for piece: PackedVector2Array in Geometry2D.intersect_polygons(rect, outline):
-				tiles.append(piece)
-				tile_colors.append(_tile_color(c, r))
-			x += w
-			c += 1
-		y += row_h
-		r += 1
-
-static func _pick(options: Array[float], t: float) -> float:
-	return options[mini(int(t * options.size()), options.size() - 1)]
-
-func _draw_band(inner: PackedVector2Array, outer: PackedVector2Array, ci: Color, co: Color) -> void:
-	var n := inner.size()
-	for i in n:
-		var j := (i + 1) % n
-		draw_polygon(PackedVector2Array([inner[i], inner[j], outer[j], outer[i]]), PackedColorArray([ci, ci, co, co]))
-
-func _draw_path(to: Vector2) -> void:
-	var dir := (to - SPAWN).normalized()
-	var a := SPAWN + dir * EMBLEM_R
-	var b := to - dir * LANDING_R
-	var n := dir.orthogonal() * (PATH_W * 0.5)
-	draw_colored_polygon(PackedVector2Array([a + n, b + n, b - n, a - n]), PATH_COLOR)
-	draw_line(a + n, b + n, INLAY, 2.0, true)
-	draw_line(a - n, b - n, INLAY, 2.0, true)
-
-func _draw_ring(at: Vector2, r: float, color: Color, width: float) -> void:
-	draw_arc(at, r, 0.0, TAU, 72, color, width, true)
+	var cell := float(DualGrid.CELL)
+	var lo := Vector2i(((CENTER - HALF - Vector2.ONE * WALL_WIDTH) / cell).floor())
+	var hi := Vector2i(((CENTER + HALF + Vector2.ONE * WALL_WIDTH) / cell).ceil())
+	for j in range(lo.y, hi.y):
+		for i in range(lo.x, hi.x):
+			var mask := 0
+			var corners := [Vector2i(i, j), Vector2i(i + 1, j),
+				Vector2i(i + 1, j + 1), Vector2i(i, j + 1)]
+			for k in 4:
+				if not covers(Vector2(corners[k]) * cell): mask |= 1 << k
+			var variant := int(DualGrid._hash01(i, j, 709) * 8.0) % 8
+			if mask == 15: continue
+			var tex: Texture2D = _thin_wall
+			var src := Vector2(mask % 4, mask / 4) * cell
+			if mask == 0:
+				tex = FLOOR_VARIANTS
+				src = Vector2(variant * cell, 0)
+			var at := Vector2(i, j) * cell
+			var rect := PackedVector2Array([at, at + Vector2(cell, 0),
+				at + Vector2(cell, cell), at + Vector2(0, cell)])
+			for piece: PackedVector2Array in [rect]:
+				var uv := PackedVector2Array()
+				for p in piece: uv.append((src + p - at) / tex.get_size())
+				_tiles.append({"poly": piece, "uv": uv, "tex": tex})
 
 func _draw() -> void:
-	var clear := Color(SHADOW, 0.0)
-	_draw_band(outline, _octagon(OUTER_FADE), Color(SHADOW, 0.75), clear)
-	draw_colored_polygon(outline, MORTAR_COLOR)
-	for i in tiles.size():
-		draw_colored_polygon(tiles[i], tile_colors[i])
-	_draw_band(_octagon(-INNER_FADE), outline, clear, Color(SHADOW, 0.35))
-
-	for to in LANDINGS:
-		_draw_path(to)
-	for to in LANDINGS:
-		draw_circle(to, LANDING_R, DARK_INLAY)
-		_draw_ring(to, LANDING_R, INLAY, 3.0)
-		_draw_ring(to, LANDING_R - 10.0, MORTAR_COLOR, 2.0)
-
-	draw_circle(SPAWN, EMBLEM_R, DARK_INLAY)
-	_draw_ring(SPAWN, EMBLEM_R, INLAY, 4.0)
-	_draw_ring(SPAWN, EMBLEM_R - 18.0, INLAY, 2.0)
-	for k in 8:
-		var d := Vector2.from_angle(TAU * k / 8.0 + TAU / 16.0)
-		draw_line(SPAWN + d * (EMBLEM_R - 18.0), SPAWN + d * EMBLEM_R, INLAY, 2.0, true)
-
-	draw_polyline(_closed(outline), INLAY, 6.0, true)
-	draw_polyline(_closed(_octagon(-8.0)), MORTAR_COLOR, 2.0, true)
-
-func _closed(pts: PackedVector2Array) -> PackedVector2Array:
-	var out := pts.duplicate()
-	out.append(pts[0])
-	return out
+	# Hide the neutral world grid while the enclosed hub is mounted.
+	draw_rect(Rect2(-8192, -8192, 16384, 16384), Color(0.055, 0.065, 0.085))
+	for tile in _tiles:
+		draw_polygon(tile["poly"], PackedColorArray([Color.WHITE]), tile["uv"], tile["tex"])
