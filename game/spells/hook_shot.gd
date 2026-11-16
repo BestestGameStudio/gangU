@@ -4,8 +4,11 @@ extends Projectile
 signal resolved(count: int)
 var destination := Vector2.ZERO
 var _resolved := false
+const HOOK_ART := preload("res://assets/spells/hook_shot/hook.png")
+const ROPE_ART := preload("res://assets/spells/hook_shot/rope.png")
 
 func prepare_shape() -> void:
+ spell_art_setup()
  var dart := Polygon2D.new(); dart.name = "Dart"; add_child(dart)
  var visual := Polygon2D.new(); visual.name = "Visual"; add_child(visual)
  var shape := CollisionShape2D.new(); shape.name = "CollisionShape2D"
@@ -56,9 +59,19 @@ func finish(count: int) -> void:
  resolved.emit(count)
  queue_free()
 
+func spell_art_setup() -> void:
+ var art := Sprite2D.new(); art.texture=HOOK_ART; art.offset=Vector2(-6,0)
+ art.texture_filter=CanvasItem.TEXTURE_FILTER_NEAREST
+ add_child(art)
+
+func _wire_sprite() -> void:
+ _dart.hide(); _visual.hide()
+
 func _draw() -> void:
  if is_instance_valid(source):
-  draw_line(to_local(source.global_position), Vector2.ZERO, Color(0.7, 0.8, 0.8), 1.0)
+  var end := to_local(source.global_position)
+  draw_set_transform(Vector2.ZERO, end.angle())
+  draw_texture_rect(ROPE_ART, Rect2(0,-2,end.length(),4), true)
 
 func _at_destination() -> void:
  var count := 0
