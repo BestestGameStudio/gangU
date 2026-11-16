@@ -64,6 +64,8 @@ func _physics_process(delta: float) -> void:
   var before:=enemy.global_position
   # No inherited sideways velocity and no overshoot of the current bunch slot.
   var enemy_motion:=to_slot.normalized()*minf(step,to_slot.length())
+  if not enemy.reel_propulsion.is_zero_approx():
+   enemy_motion=enemy.resolve_reel_force(pull_force(enemy),delta,spell.hook_max_reel_speed)*delta
   enemy_motion=HookReel.stop_at_contact(enemy.global_position,enemy_motion,target.global_position,stop_distance)
   enemy.move_and_collide(enemy_motion)
   if enemy.terrain!=null:enemy.global_position=TerrainMotion.clamp_displacement(enemy.terrain,before,enemy.global_position,enemy.can_swim)
@@ -71,6 +73,9 @@ func _physics_process(delta: float) -> void:
   if enemy.global_position.distance_to(target.global_position)>stop_distance+0.01:arrived=false
  if arrived: _arrive()
  queue_redraw()
+
+func pull_force(victim: Enemy) -> Vector2:
+ return victim.global_position.direction_to(target.global_position)*spell.hook_reel_acceleration*spell.displacement_force
 
 func pull_velocity(victim: Enemy, delta: float) -> Vector2:
  for member in enemies:
@@ -87,6 +92,7 @@ func member_arrived(victim: Enemy) -> void:
  HookPullStack.detach(victim,self)
  enemies.erase(victim)
  victim.velocity=Vector2.ZERO
+ victim.reel_force_velocity=Vector2.ZERO
  if spell.hook_arrival_stun>0.0:victim.stun(spell.hook_arrival_stun)
  if enemies.is_empty():queue_free()
 
@@ -95,6 +101,7 @@ func _arrive() -> void:
  for enemy in enemies:
   HookPullStack.detach(enemy,self)
   enemy.velocity=Vector2.ZERO
+  enemy.reel_force_velocity=Vector2.ZERO
   if spell.hook_arrival_stun>0.0:enemy.stun(spell.hook_arrival_stun)
  queue_free()
 

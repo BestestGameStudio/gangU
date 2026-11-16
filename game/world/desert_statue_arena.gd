@@ -160,6 +160,7 @@ func _ready() -> void:
 		var definition := EnemyDefinition.new()
 		definition.max_hp = statue_max_hp
 		definition.speed = 0
+		definition.weight = 4.0
 		statue.definition = definition
 		statue.hp = statue_max_hp
 		statue.terrain = get_parent().get_node_or_null("Terrain") as TerrainMap
@@ -777,6 +778,14 @@ func _enter_phase_two() -> void:
 ## The sand general is arena-owned (like phase-one possession), so its HP
 ## remains the encounter HP and all attacks use the normal Player damage path.
 func _phase_two_step(delta: float) -> void:
+	var before := _phase_two_boss_position
+	_plan_phase_two_step(delta)
+	if is_instance_valid(possessed):
+		# Submit only this tick's planned displacement, not a teleport to a path.
+		var step := _phase_two_boss_position-before
+		possessed.submit_external_motion(possessed.global_position+step,delta)
+
+func _plan_phase_two_step(delta: float) -> void:
 	_phase_two_impact_time = maxf(_phase_two_impact_time-delta, 0.0)
 	if _phase_two_shield_time > 0.0:
 		_phase_two_shield_time -= delta
@@ -793,8 +802,6 @@ func _phase_two_step(delta: float) -> void:
 	if _phase_two_bombardment != null:
 		_phase_two_bombardment.advance(delta)
 		_phase_two_boss_position = _constrain_boss_position(_phase_two_boss_position)
-	if is_instance_valid(possessed):
-		possessed.position = _phase_two_boss_position
 	_phase_two_attack_time += delta*phase_two_speed_multiplier
 	var move := _phase_two_attack_index
 	var windup: float = MOVE_WINDUP[move]
@@ -824,8 +831,9 @@ func _phase_two_step(delta: float) -> void:
 		else:
 			general_height = height*(1.0-pow(clampf((_phase_two_attack_time-windup-0.18)/0.22,0.0,1.0),2.0))
 	if is_instance_valid(possessed):
-		possessed.position = _phase_two_boss_position
 		possessed.collision_layer = 0 if general_height > 120.0 else PhysicsLayers.ENEMY
+		if general_height > 0.0:
+			_release_airborne_anchors(possessed)
 	if _phase_two_attack_time < windup:
 		return
 	var attack_time: float = _phase_two_attack_time-windup
@@ -838,8 +846,6 @@ func _phase_two_step(delta: float) -> void:
 		_phase_two_bash_direction = _phase_two_direction
 		_phase_two_bash_hit = false
 	_phase_two_execute(move, attack_time, delta)
-	if is_instance_valid(possessed):
-		possessed.position = _phase_two_boss_position
 	if attack_time >= release:
 		_phase_two_attack_time = -phase_two_attack_gap
 		_phase_two_attack_done = false
@@ -1274,3 +1280,12 @@ func _capsule(start: Vector2, end: Vector2, radius: float, fill: Color, ink: Col
 	draw_colored_polygon(points,fill)
 	points.append(points[0])
 	draw_polyline(points,ink,2.0,true)
+
+## Boss jumping, not player jumping, releases only its attached Rock pairs.
+func _release_airborne_anchors(victim: Enemy) -> void:
+	for pair in get_tree().get_nodes_in_group("hook_anchor_pairs"):
+		if pair.caught_enemy == victim:
+			if is_instance_valid(pair.active_reel):
+				HookPullStack.detach(victim,pair.active_reel)
+				pair.active_reel.queue_free()
+			pair.queue_free()

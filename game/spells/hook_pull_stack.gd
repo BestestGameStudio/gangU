@@ -60,11 +60,15 @@ func _physics_process(delta: float) -> void:
   queue_free(); return
  var vectors: Array[Vector2] = []
  var cap := 0.0
+ var force := Vector2.ZERO
  for reel in reels:
   # Group freeze pauses its contribution, not an unrelated reel's clock.
   vectors.append(reel.pull_velocity(enemy, delta))
+  force += reel.pull_force(enemy)
   cap = maxf(cap, reel.spell.hook_max_reel_speed)
  var motion := combined(vectors, cap) * delta
+ if not enemy.reel_propulsion.is_zero_approx():
+  motion = enemy.resolve_reel_force(force,delta,cap)*delta
  for reel in reels:
   if is_instance_valid(reel.target):
    var radius := HookReel.PLAYER_STOP_DISTANCE if reel.target is Player else HookReel.ANCHOR_STOP_DISTANCE

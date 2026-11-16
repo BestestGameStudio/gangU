@@ -312,6 +312,27 @@ func chase_speed() -> float:
 var freeze := FreezeHold.new()
 ## An external displacement owns locomotion, never damage or lifecycle.
 var displacement_owner: Node = null
+## General self-propulsion plus external reel-force integration.
+var reel_propulsion := Vector2.ZERO
+var reel_force_velocity := Vector2.ZERO
+var _sampling_reel_propulsion := false
+
+static func force_step(propulsion: Vector2, pull_velocity: Vector2, force: Vector2, mass: float, delta: float, cap: float) -> Vector2:
+	return (propulsion + (pull_velocity + force / maxf(mass,0.1) * delta).limit_length(cap)).limit_length(cap)
+
+func resolve_reel_force(force: Vector2, delta: float, cap: float) -> Vector2:
+	var combined := force_step(reel_propulsion,reel_force_velocity,force,weight,delta,cap)
+	reel_force_velocity = combined-reel_propulsion
+	return combined
+
+func submit_external_motion(destination: Vector2, delta: float) -> void:
+	if is_instance_valid(displacement_owner):
+		reel_propulsion = (destination-global_position)/maxf(delta,0.000001)
+	else:
+		reel_propulsion = Vector2.ZERO
+		reel_force_velocity = Vector2.ZERO
+		global_position = constrain_movement(destination)
+
 var stun_left := 0.0
 var hook_taunt_target: Node2D = null
 var hook_taunt_left := 0.0
@@ -337,7 +358,17 @@ func _physics_process(delta: float) -> void:
 			bubble.claim(self)
 	if freeze.is_frozen(): return
 	stun_left = maxf(stun_left - delta, 0.0)
-	if stun_left > 0.0 or is_instance_valid(displacement_owner): return
+	if stun_left > 0.0: return
+	if is_instance_valid(displacement_owner):
+		# Behaviors still choose propulsion, but reels perform the sole move.
+		if _behavior != null:
+			reel_propulsion = Vector2.ZERO
+			_sampling_reel_propulsion = true
+			_behavior.physics_step(self, _resolve_target(), delta)
+			_sampling_reel_propulsion = false
+		return
+	reel_force_velocity = Vector2.ZERO
+	reel_propulsion = Vector2.ZERO
 	hook_taunt_left = maxf(hook_taunt_left - delta, 0.0)
 	if hook_taunt_left > 0.0 and is_instance_valid(hook_taunt_target):
 		velocity = global_position.direction_to(hook_taunt_target.global_position) * speed
@@ -383,6 +414,9 @@ var _knockback := Vector2.ZERO
 ## back afterwards, so a behavior that sets it once per state (a lunge)
 ## never compounds a terrain speed multiplier frame after frame.
 func terrain_move_and_slide() -> void:
+	if _sampling_reel_propulsion:
+		reel_propulsion = velocity
+		return
 	if terrain == null:
 		move_and_slide()
 		return
