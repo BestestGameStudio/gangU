@@ -150,7 +150,7 @@ func _init() -> void:
 func setup(upgrade_name: String, description: String, use_token: bool, tint: Color = UiStyle.B_ACCENT) -> void:
 	name_label.text = upgrade_name
 	description_label.text = description
-	action_label.text = "Choose - use upgrade token" if use_token else "Choose upgrade"
+	action_label.text = ""
 	(splash as PlaceholderSplash).tint = tint
 	splash.queue_redraw()
 	tooltip_text = "%s\n%s\n%s" % [upgrade_name, description, action_label.text]
@@ -167,7 +167,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	lock_sign.visible = _locked
 	name_label.visible = not _locked
 	description_label.visible = not _locked
-	action_label.visible = not _locked
+	action_label.visible = state == "applied"
 	(splash as PlaceholderSplash).plain = _locked
 	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 32.0
 	splash.queue_redraw()
@@ -180,8 +180,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
 	match state:
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
-		"ready": action_label.text = "Choose upgrade"
-		"token": action_label.text = "Choose - use upgrade token"
+		"ready": action_label.text = ""
+		"token": action_label.text = ""
 		"applied": action_label.text = "Applied"
 		_: action_label.text = "No upgrade available"
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]

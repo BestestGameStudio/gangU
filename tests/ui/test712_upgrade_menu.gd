@@ -52,6 +52,7 @@ func run() -> void:
 	check(panel._upgrade_cards.all(func(card): return card.progress_bar.get_global_rect().position.x - card.global_position.x >= 24 and card.get_global_rect().end.x - card.progress_bar.get_global_rect().end.x >= 24), "progress bars inset at least24 pixels from frame")
 	check(UpgradeCard.LOCK_TEXTURE.get_height() > UpgradeCard.LOCK_TEXTURE.get_width(), "SpriteU lock narrower and taller")
 	check(panel._upgrade_cards.all(func(card): return absf(card.progress_bar.get_global_rect().get_center().y - card.get_global_rect().get_center().y) < 1.0 and card.progress_bar.global_position.y - card.lock_sign.get_global_rect().end.y >= 30), "bar at card midpoint with at least30px gap below lock")
+	check(panel._upgrade_cards.all(func(card): return not card.description_label.text.contains(" px") and not card.description_label.text.contains("px/s")), "upgrade descriptions omit range speed footer")
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
@@ -71,7 +72,7 @@ func run() -> void:
 	check(progress.upgrade_menu(water)[1].state == "locked", "token never enables future step")
 	for i in 5: caster.spell_cast.emit(water)
 	check(progress.upgrade_menu(water)[0].state == "ready", "cast gate takes precedence over token")
-	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0]._frame.material == null, "ready card restores details and tier border")
+	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and not panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0].action_label.text.is_empty() and panel._upgrade_cards[0]._frame.material == null, "ready card restores details and tier border without choose text")
 	check(panel._upgrade_cards[0].progress_label.text == "10 / 10 casts", "ready progress omits source name")
 	panel._upgrade_cards[0].pressed.emit()
 	await tick()

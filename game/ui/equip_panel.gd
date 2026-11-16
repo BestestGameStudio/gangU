@@ -432,8 +432,6 @@ func _refresh() -> void:
 		else:
 			var result := _upgrade_field(upgrade, &"result_spell") as Spell
 			var description := SpellDescription.for_spell(result)
-			if result != null and result.projectile_count > 0:
-				description += "\n%s px | %s px/s" % [int(result.range), int(result.projectile_speed)]
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
 			b.setup(str(_upgrade_field(upgrade, &"display_name")), description, item.state == "token")
