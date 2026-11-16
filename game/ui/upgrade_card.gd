@@ -216,3 +216,16 @@ func _fit_content() -> void:
 	# Frame art is 48x64. Card height never follows the description length;
 	# long unlocked details scroll inside the frame instead of distorting it.
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
+
+## Bound long upgrade hover text rather than allowing Godot's default
+## unwrapped tooltip to spill across the other cards and off the panel.
+func _make_custom_tooltip(for_text: String) -> Object:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiStyle.panel())
+	var label := Label.new()
+	label.custom_minimum_size.x = 288
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 14)
+	label.text = for_text
+	panel.add_child(label)
+	return panel
