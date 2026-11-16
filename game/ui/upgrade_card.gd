@@ -169,11 +169,11 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	description_label.visible = not _locked
 	action_label.visible = state == "applied"
 	(splash as PlaceholderSplash).plain = _locked
-	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 32.0
+	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 96.0
 	splash.queue_redraw()
 	_refresh_frame()
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
-	progress_bar.visible = state in ["locked", "ready", "token"]
+	progress_bar.visible = _locked
 	progress_label.visible = progress_bar.visible
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
