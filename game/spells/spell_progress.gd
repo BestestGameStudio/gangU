@@ -20,6 +20,9 @@ signal cast_progress_changed(spell: Spell)
 
 var _cast_counts: Dictionary = {} # Spell -> int, read-only XP observation
 var _tiers: Dictionary = {} # Spell -> int tier, written ONLY on successful apply (#36)
+var _quest_counts: Dictionary = {} # upgrade id -> int, progression carry
+var _quest_seen: Dictionary = {} # transient shot/enemy dedup, bounded by goal
+var _quest_volleys: Dictionary = {} # transient enemy -> recent distinct shots
 var _caster: SpellCaster
 
 func _ready() -> void:
@@ -27,9 +30,13 @@ func _ready() -> void:
 	_caster = get_node_or_null(caster_path) as SpellCaster if not caster_path.is_empty() else null
 	if _caster != null:
 		_caster.spell_cast.connect(_on_spell_cast)
+		OnHit.bus().hit_landed.connect(_on_quest_hit)
 
 func _on_spell_cast(spell: Spell) -> void:
 	_cast_counts[spell] = int(_cast_counts.get(spell, 0)) + 1
+	var row := next_upgrade(spell)
+	if row != null and row.quest != null and row.quest.kind == SpellUpgradeQuest.Kind.CASTS and _caster.get_unlocked().has(spell):
+		_advance_quest(row)
 	cast_progress_changed.emit(spell)
 
 ## Read-only XP observation for one spell (casts this run).
@@ -43,12 +50,15 @@ func cast_count(spell: Spell) -> int:
 func capture_run_state() -> Dictionary:
 	return {
 		"cast_counts": _cast_counts.duplicate(),
+		"quest_counts": _quest_counts.duplicate(),
 		"tiers": _tiers.duplicate(),
 		"tokens": _upgrade_tokens,
 	}
 
 func restore_run_state(state: Dictionary) -> void:
 	_cast_counts = state.get("cast_counts", {})
+	_quest_counts = state.get("quest_counts", {}).duplicate()
+	_quest_seen.clear(); _quest_volleys.clear()
 	_tiers = state.get("tiers", {})
 	_upgrade_tokens = int(state.get("tokens", 0))
 	tokens_changed.emit(_upgrade_tokens)
@@ -112,8 +122,9 @@ func upgrade_menu(spell: Spell) -> Array[Dictionary]:
 			if row.tier != tier:
 				continue
 			item.upgrade = row
-			item.casts = cast_count(row.source_spell)
-			item.threshold = row.xp_threshold
+			item.casts = qualification_count(row)
+			item.threshold = qualification_goal(row)
+			item["objective"] = row.quest.objective if row.quest != null else ""
 			if i < current_index:
 				item.state = "applied"
 			elif i == current_index and can_upgrade(spell):
@@ -140,7 +151,7 @@ func can_upgrade(spell: Spell) -> bool:
 	if spell not in _caster.get_unlocked():
 		return false
 	var u := next_upgrade(spell)
-	return u != null and u.result_spell != null and int(_cast_counts.get(spell, 0)) >= u.xp_threshold
+	return u != null and u.result_spell != null and qualification_count(u) >= qualification_goal(u)
 
 ## Refusal-bool. Currently ALWAYS refuses: the replace_spell caster seam is
 ## Mitra's post-#63 follow-up and has not landed. Once it lands this
@@ -198,7 +209,7 @@ func add_upgrade_token(n: int = 1) -> void:
 ## caster has the spell, the upgrade has content, and the cast threshold
 ## is not met.
 func upgrade_needs_token(spell: Spell, u: SpellUpgrade) -> bool:
-	return u != null and int(_cast_counts.get(spell, 0)) < u.xp_threshold
+	return u != null and qualification_count(u) < qualification_goal(u)
 
 ## A token could advance this spell one tier right now.
 func can_token_upgrade(spell: Spell) -> bool:
@@ -225,3 +236,47 @@ func apply_upgrade_with_token(spell: Spell, upgrade_id: StringName) -> bool:
 	tokens_changed.emit(_upgrade_tokens)
 	print("[315] upgrade token spent on ", spell.spell_name, " -> ", upgrade_id, " (", _upgrade_tokens, " left)")
 	return true
+
+func qualification_count(row: SpellUpgrade) -> int:
+	return int(_quest_counts.get(row.id, 0)) if row.quest != null else cast_count(row.source_spell)
+
+func qualification_goal(row: SpellUpgrade) -> int:
+	return row.quest.goal if row.quest != null else row.xp_threshold
+
+func _advance_quest(row: SpellUpgrade) -> void:
+	_quest_counts[row.id] = mini(qualification_count(row) + 1, row.quest.goal)
+	cast_progress_changed.emit(row.source_spell)
+
+func _on_quest_hit(event: HitEvent) -> void:
+	if _caster == null or event.attacker != _caster.get_parent() or not event.target is Enemy or event.hp_lost <= 0:
+		return
+	if event.delivery != OnHit.DELIVERY_PROJECTILE or event.projectile_id == 0:
+		return
+	var row := next_upgrade(event.spell)
+	if row == null or row.quest == null or not _caster.get_unlocked().has(event.spell) or qualification_count(row) >= row.quest.goal:
+		return
+	var quest := row.quest
+	if quest.kind == SpellUpgradeQuest.Kind.CASTS:
+		return
+	var key := "%s:%d:%d" % [row.id, event.projectile_id, event.target.get_instance_id()]
+	if _quest_seen.has(key):
+		return
+	if quest.kind == SpellUpgradeQuest.Kind.REDIRECTED_HITS:
+		if not event.redirected: return
+		_quest_seen[key] = true
+		_advance_quest(row)
+	elif quest.kind == SpellUpgradeQuest.Kind.VOLLEY:
+		var now := Time.get_ticks_msec()
+		var window_ms := int(quest.window_seconds * 1000.0)
+		# Expire old encounters as well as old shots; no per-enemy growth over a run.
+		for target_id in _quest_volleys.keys():
+			var shots: Dictionary = _quest_volleys[target_id]
+			for shot_id in shots.keys():
+				if now - int(shots[shot_id]) > window_ms: shots.erase(shot_id)
+			if shots.is_empty(): _quest_volleys.erase(target_id)
+		var target_id := "%s:%d" % [row.id, event.target.get_instance_id()]
+		var shots: Dictionary = _quest_volleys.get(target_id, {})
+		shots[event.projectile_id] = now
+		_quest_volleys[target_id] = shots
+		if shots.size() >= quest.projectiles:
+			_advance_quest(row)

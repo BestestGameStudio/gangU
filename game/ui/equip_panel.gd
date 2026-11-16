@@ -474,7 +474,7 @@ func _update_upgrade_card_states() -> void:
 		var item: Dictionary = items[i]
 		var row: Variant = item.upgrade
 		var source := _upgrade_field(row, &"source_spell") as Spell
-		_upgrade_cards[i].set_unlock_state(item.state, item.casts, item.threshold, item.prerequisite, source.spell_name if source != null else "")
+		_upgrade_cards[i].set_unlock_state(item.state, item.casts, item.threshold, item.prerequisite, source.spell_name if source != null else "", item.get("objective", ""))
 
 func _on_upgrade_pressed(upgrade_id: Variant) -> void:
 	if _upgrader == null or _selected == null:

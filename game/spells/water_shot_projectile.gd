@@ -88,3 +88,6 @@ func _can_hit(body: Node2D) -> bool:
 	if hovering and spell.water_shot_contact_interval > 0.0:
 		return not freeze.is_frozen() and (not _hit_times.has(body) or _life_t - _hit_times[body] >= spell.water_shot_contact_interval)
 	return super._can_hit(body)
+
+func was_redirected() -> bool:
+	return released or super.was_redirected()

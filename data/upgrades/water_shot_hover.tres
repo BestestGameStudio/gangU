@@ -1,7 +1,13 @@
-[gd_resource type="Resource" script_class="SpellUpgrade" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="SpellUpgrade" load_steps=6 format=3]
 [ext_resource type="Script" path="res://game/spells/spell_upgrade.gd" id="1"]
 [ext_resource type="Spell" path="res://data/spells/water_shot.tres" id="2"]
 [ext_resource type="Spell" path="res://data/spells/water_shot_hover.tres" id="3"]
+[ext_resource type="Script" path="res://game/spells/spell_upgrade_quest.gd" id="4"]
+[sub_resource type="Resource" id="quest"]
+script = ExtResource("4")
+kind = 1
+objective = "Land 5 redirected projectile hits. Same enemy allowed."
+goal = 5
 [resource]
 script = ExtResource("1")
 id = &"water_shot_hover"
@@ -10,3 +16,5 @@ source_spell = ExtResource("2")
 result_spell = ExtResource("3")
 xp_threshold = 10
 tier = 1
+
+quest = SubResource("quest")
