@@ -535,9 +535,19 @@ func _compute_lattice_type(p: Vector2) -> int:
 			_desert_noise = FastNoiseLite.new()
 			_desert_noise.seed = 698
 			_desert_noise.frequency = 1.0 / 210.0
-		if d < r * 0.78 * wob:
-			# Sandstone slabs and sand blown across them.
-			return DualGrid.T.SANDSTONE if _desert_noise.get_noise_2dv(p) > -0.12 else DualGrid.T.SAND
+		# Keep every fight tile solid stone, including the dual-grid's 64px
+		# blend footprint beyond the player barrier. Sand drifts only cross
+		# the outer collar, never the combat floor or its telegraphs.
+		if d < desert.barrier_radius + 96.0:
+			return DualGrid.T.SANDSTONE
+		if d < r * 1.01 * wob:
+			var drift := _desert_noise.get_noise_2dv(p)
+			if drift > -0.08 and d < r * (0.95 + drift * 0.18) * wob:
+				return DualGrid.T.SANDSTONE
+		# Scattered paving on the west approach becomes an unbroken floor.
+		if to.x < 0.0 and to.x > -r * 1.15 and absf(to.y) < 80.0:
+			if DualGrid._hash01(int(p.x / 64.0), int(p.y / 64.0), 711) > 0.38:
+				return DualGrid.T.SANDSTONE
 		if d < r * 1.08 * wob:
 			return DualGrid.T.SAND
 		desert_near = d < r * 1.08 * wob + 220.0

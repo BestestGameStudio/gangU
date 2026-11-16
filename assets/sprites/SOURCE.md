@@ -551,3 +551,23 @@ Projectile: 16 frames per facing, source windup 740ms, release 80ms, recovery 96
 `terrain/dualgrid_brickwall_on_stonebrick.png` and `terrain/dualgrid_variants_stonebrick_hub.png` were generated for gangU by Instinct, then edited to darken and mute the original brick design and align the variant borders. No third-party assets. The 256x256 wall sheet uses 16 row-major 64px dual-grid masks (TL=1, TR=2, BR=4, BL=8), with backgrounds from floor/cap variant 0. The 512x64 floor strip holds eight variants with identical outer rings. Runtime uses deterministic hash placement and trims excess outer cap to a 22px band around the square marching-corner floor boundary; no full cap tiles remain. Nearest texture filtering, lossless import, no mipmaps.
 
 `shop_vendor.png` is a darker, muted recolor of the existing shop sheet for this hub. Its 672x448 layout, six 224x224 frames, animation, scene scale and anchor are unchanged.
+
+## Desert sanctum lights
+
+Original pixel art drawn for this project, 2026-11-16. No pixels extracted
+from reference images. `desert_brazier.png`: four 64x80 frames, 7 fps looping
+flame over a stationary carved stone bowl and plinth. `desert_lantern_pillar.png`:
+one 64x128 carved sandstone pillar with a bronze lantern. Both use 2px art
+pixels and nearest filtering. Runtime anchors sit at the base of each prop;
+lighting is shared radial gradients, not baked into the PNGs.
+
+Visual references only (not licensed or shipped as game assets):
+- Tanya Ivanova, Lost Oasis Courtyard, day/night: sand drifts, stone center,
+  low fire bowls and contained amber light against cool surroundings.
+  https://tataiv.artstation.com/projects/Nql4aJ
+- Bhaven Jani, Petra at night: separate warm pools on sandy sandstone.
+  https://www.nationalgeographic.com/photo-of-the-day/photo/candles-petra-jordan
+- Max_M42, Desert Ruins: broken sand-to-paving edge.
+  https://max-m42.itch.io/desert-ruins-16x16-pixel-art-asset
+- princess-phoenix, Desert interior tileset: warm golden stone and edge lights.
+  https://www.deviantart.com/princess-phoenix/art/Desert-interior-tileset-656502636
