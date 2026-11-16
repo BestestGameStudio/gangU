@@ -40,6 +40,9 @@ var _sized := false
 
 var hp := 2400
 var _won := false
+## #694: true from the win until the delayed reward drops (or is granted
+## directly because the arena left the tree first).
+var _reward_pending := false
 var state: State = State.DORMANT
 var statues: Array[DesertStatue] = []
 var _ring_points: Array[Vector2] = []
@@ -327,6 +330,12 @@ func _release_enemy(enemy: Enemy) -> void:
 	_enemy_boundaries.erase(enemy)
 
 func _exit_tree() -> void:
+	# #694: the player left (area swap) before the death animation ended. The
+	# drop nodes are area-owned and would be freed with the area, so grant the
+	# reward straight to the run instead of losing it.
+	if _reward_pending:
+		_reward_pending = false
+		_grant_reward_directly()
 	for enemy in _enemy_boundaries.keys():
 		_release_enemy(enemy)
 	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
@@ -413,7 +422,12 @@ func _win() -> void:
 	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
 		player.movement_constraint = Callable()
 	_add_corpse_footprint()
-	_drop_reward.call_deferred()
+	# #694: the coins and token pop out when the death animation finishes, not
+	# on the kill frame. A scene-tree timer runs on game time, so it follows
+	# the boss-finisher slow-mo; it is bound to this arena, so leaving the
+	# area frees it without a stray drop.
+	_reward_pending = true
+	get_tree().create_timer(DesertStatue.death_animation_seconds(), false).timeout.connect(_drop_reward)
 	queue_redraw()
 
 ## #685: the fallen general keeps a solid footprint on the WORLD layer so
@@ -437,7 +451,29 @@ func _add_corpse_footprint() -> void:
 	footprint.position = possessed.position if is_instance_valid(possessed) else Vector2.ZERO
 	add_child(footprint)
 
+## Same coins and token roll as _drop_reward, but credited without drop
+## nodes: used only when the arena is left mid-death (#694).
+func _grant_reward_directly() -> void:
+	var wallet := Run.wallet()
+	if wallet != null:
+		wallet.add(victory_coins)
+	var table: RewardTable = preload("res://data/rewards/boss_token_table.tres")
+	var pool := Run.reward_pool()
+	var granted: Array = pool.granted() if pool != null else []
+	var entry := table.roll(granted)
+	if entry == null:
+		return
+	if pool != null:
+		pool.remove_on_grant(entry)
+	if entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
+		var progress := get_tree().get_first_node_in_group("spell_progress") as SpellProgress
+		if progress != null:
+			progress.add_upgrade_token(1)
+
 func _drop_reward() -> void:
+	if not _reward_pending:
+		return
+	_reward_pending = false
 	var origin: Vector2 = possessed.global_position if is_instance_valid(possessed) else global_position
 	var drop: RewardDrop = preload("res://game/economy/reward_drop.tscn").instantiate()
 	var coins := RewardEntry.new()

@@ -44,7 +44,12 @@ func _run() -> void:
 	arena.apply_damage(arena.hp)
 	_check(arena.hp == 0, "boss HP reaches 0")
 	await process_frame
-	await process_frame # _drop_reward is call_deferred from _win()
+	await process_frame
+	# #694: nothing drops while the death animation plays...
+	var early := _count_drops(region)
+	_check(early.coins == 0 and early.tokens == 0, "no drops during the death animation")
+	# ...and the reward pops out right after it finishes.
+	await create_timer(DesertStatue.death_animation_seconds() + 0.1, false).timeout
 
 	var counts := _count_drops(region)
 	_check(counts.coins == 1, "victory coins still drop exactly once")
