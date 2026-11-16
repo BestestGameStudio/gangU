@@ -21,6 +21,7 @@ var absorbed := false
 var flash := 0.0
 var _sprite: AnimatedSprite2D
 var _general_facing := "front"
+var _death_time := -1.0
 var _general_mirror := false
 var _general_last_position := Vector2.ZERO
 var _general_locomotion_time := 0.0
@@ -202,9 +203,13 @@ func _update_sprite(delta: float) -> void:
 		elif attack == 1 and movement.length_squared() > 0.001:
 			_general_direction(movement)
 	if general_arena.hp <= 0:
-		_sample_general(StringName("idle_"+_general_facing), 0.0)
-		_sprite.modulate = Color(0.6, 0.5, 0.7, 0.55)
+		# The death art carries the dim: play it once and hold the last frame.
+		if _death_time < 0.0:
+			_death_time = 0.0
+		_sample_general(StringName("death_"+_general_facing), _death_time)
+		_death_time += delta
 		return
+	_death_time = -1.0
 	if clock < 0.0 or attack >= GENERAL_MOVES.size():
 		_general_locomotion_time += delta
 		var move := "idle"

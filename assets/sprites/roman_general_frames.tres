@@ -1,4 +1,4 @@
-[gd_resource type="SpriteFrames" load_steps=410 format=3]
+[gd_resource type="SpriteFrames" load_steps=449 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/roman_general_v4.png" id="1"]
 
@@ -1634,6 +1634,162 @@ region = Rect2(576, 1856, 64, 64)
 atlas = ExtResource("1")
 region = Rect2(640, 1856, 64, 64)
 
+[sub_resource type="AtlasTexture" id="death_front_0"]
+atlas = ExtResource("1")
+region = Rect2(0, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_1"]
+atlas = ExtResource("1")
+region = Rect2(64, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_2"]
+atlas = ExtResource("1")
+region = Rect2(128, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_3"]
+atlas = ExtResource("1")
+region = Rect2(192, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_4"]
+atlas = ExtResource("1")
+region = Rect2(256, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_5"]
+atlas = ExtResource("1")
+region = Rect2(320, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_6"]
+atlas = ExtResource("1")
+region = Rect2(384, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_7"]
+atlas = ExtResource("1")
+region = Rect2(448, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_8"]
+atlas = ExtResource("1")
+region = Rect2(512, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_9"]
+atlas = ExtResource("1")
+region = Rect2(576, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_10"]
+atlas = ExtResource("1")
+region = Rect2(640, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_11"]
+atlas = ExtResource("1")
+region = Rect2(704, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_front_12"]
+atlas = ExtResource("1")
+region = Rect2(768, 1920, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_0"]
+atlas = ExtResource("1")
+region = Rect2(0, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_1"]
+atlas = ExtResource("1")
+region = Rect2(64, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_2"]
+atlas = ExtResource("1")
+region = Rect2(128, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_3"]
+atlas = ExtResource("1")
+region = Rect2(192, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_4"]
+atlas = ExtResource("1")
+region = Rect2(256, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_5"]
+atlas = ExtResource("1")
+region = Rect2(320, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_6"]
+atlas = ExtResource("1")
+region = Rect2(384, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_7"]
+atlas = ExtResource("1")
+region = Rect2(448, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_8"]
+atlas = ExtResource("1")
+region = Rect2(512, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_9"]
+atlas = ExtResource("1")
+region = Rect2(576, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_10"]
+atlas = ExtResource("1")
+region = Rect2(640, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_11"]
+atlas = ExtResource("1")
+region = Rect2(704, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_back_12"]
+atlas = ExtResource("1")
+region = Rect2(768, 1984, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_0"]
+atlas = ExtResource("1")
+region = Rect2(0, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_1"]
+atlas = ExtResource("1")
+region = Rect2(64, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_2"]
+atlas = ExtResource("1")
+region = Rect2(128, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_3"]
+atlas = ExtResource("1")
+region = Rect2(192, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_4"]
+atlas = ExtResource("1")
+region = Rect2(256, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_5"]
+atlas = ExtResource("1")
+region = Rect2(320, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_6"]
+atlas = ExtResource("1")
+region = Rect2(384, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_7"]
+atlas = ExtResource("1")
+region = Rect2(448, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_8"]
+atlas = ExtResource("1")
+region = Rect2(512, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_9"]
+atlas = ExtResource("1")
+region = Rect2(576, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_10"]
+atlas = ExtResource("1")
+region = Rect2(640, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_11"]
+atlas = ExtResource("1")
+region = Rect2(704, 2048, 64, 64)
+
+[sub_resource type="AtlasTexture" id="death_right_12"]
+atlas = ExtResource("1")
+region = Rect2(768, 2048, 64, 64)
+
 [resource]
 animations = [{"frames": [{"duration": 0.320, "texture": SubResource("idle_front_0")},
 {"duration": 0.280, "texture": SubResource("idle_front_1")},
@@ -2042,4 +2198,4 @@ animations = [{"frames": [{"duration": 0.320, "texture": SubResource("idle_front
 {"duration": 0.120, "texture": SubResource("shield_plant_right_7")},
 {"duration": 0.120, "texture": SubResource("shield_plant_right_8")},
 {"duration": 0.120, "texture": SubResource("shield_plant_right_9")},
-{"duration": 0.120, "texture": SubResource("shield_plant_right_10")}], "loop": false, "name": &"shield_plant_right", "speed": 1.0}]
+{"duration": 0.120, "texture": SubResource("shield_plant_right_10")}], "loop": false, "name": &"shield_plant_right", "speed": 1.0}, {"frames": [{"duration": 0.070, "texture": SubResource("death_front_0")}, {"duration": 0.120, "texture": SubResource("death_front_1")}, {"duration": 0.110, "texture": SubResource("death_front_2")}, {"duration": 0.110, "texture": SubResource("death_front_3")}, {"duration": 0.150, "texture": SubResource("death_front_4")}, {"duration": 0.130, "texture": SubResource("death_front_5")}, {"duration": 0.100, "texture": SubResource("death_front_6")}, {"duration": 0.110, "texture": SubResource("death_front_7")}, {"duration": 0.090, "texture": SubResource("death_front_8")}, {"duration": 0.130, "texture": SubResource("death_front_9")}, {"duration": 0.140, "texture": SubResource("death_front_10")}, {"duration": 0.150, "texture": SubResource("death_front_11")}, {"duration": 1.400, "texture": SubResource("death_front_12")}], "loop": false, "name": &"death_front", "speed": 1.0}, {"frames": [{"duration": 0.070, "texture": SubResource("death_back_0")}, {"duration": 0.120, "texture": SubResource("death_back_1")}, {"duration": 0.110, "texture": SubResource("death_back_2")}, {"duration": 0.110, "texture": SubResource("death_back_3")}, {"duration": 0.150, "texture": SubResource("death_back_4")}, {"duration": 0.130, "texture": SubResource("death_back_5")}, {"duration": 0.100, "texture": SubResource("death_back_6")}, {"duration": 0.110, "texture": SubResource("death_back_7")}, {"duration": 0.090, "texture": SubResource("death_back_8")}, {"duration": 0.130, "texture": SubResource("death_back_9")}, {"duration": 0.140, "texture": SubResource("death_back_10")}, {"duration": 0.150, "texture": SubResource("death_back_11")}, {"duration": 1.400, "texture": SubResource("death_back_12")}], "loop": false, "name": &"death_back", "speed": 1.0}, {"frames": [{"duration": 0.070, "texture": SubResource("death_right_0")}, {"duration": 0.120, "texture": SubResource("death_right_1")}, {"duration": 0.110, "texture": SubResource("death_right_2")}, {"duration": 0.110, "texture": SubResource("death_right_3")}, {"duration": 0.150, "texture": SubResource("death_right_4")}, {"duration": 0.130, "texture": SubResource("death_right_5")}, {"duration": 0.100, "texture": SubResource("death_right_6")}, {"duration": 0.110, "texture": SubResource("death_right_7")}, {"duration": 0.090, "texture": SubResource("death_right_8")}, {"duration": 0.130, "texture": SubResource("death_right_9")}, {"duration": 0.140, "texture": SubResource("death_right_10")}, {"duration": 0.150, "texture": SubResource("death_right_11")}, {"duration": 1.400, "texture": SubResource("death_right_12")}], "loop": false, "name": &"death_right", "speed": 1.0}]
