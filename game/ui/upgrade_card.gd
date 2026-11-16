@@ -37,8 +37,9 @@ class PlaceholderSplash extends Control:
 		if plain: return
 		var r := Rect2(Vector2.ZERO, size)
 		draw_style_box(UiStyle.row(UiStyle.B_DIM, 0), r)
-		var c := size * 0.5
-		var points := PackedVector2Array([c + Vector2(0, -19), c + Vector2(16, 0), c + Vector2(0, 19), c + Vector2(-16, 0)])
+		var c := Vector2(size.x * 0.5, size.y * 0.3)
+		var radius := minf(12.0, size.y * 0.2)
+		var points := PackedVector2Array([c + Vector2(0, -radius), c + Vector2(radius * 0.8, 0), c + Vector2(0, radius), c + Vector2(-radius * 0.8, 0)])
 		draw_colored_polygon(points, Color(tint, 0.24))
 		draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), tint, 2.0, true)
 
@@ -57,6 +58,7 @@ func _init() -> void:
 	var scroll := ScrollContainer.new()
 	scroll.name = "CardContentScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -70,11 +72,11 @@ func _init() -> void:
 	placeholder_label.name = "PlaceholderLabel"
 	placeholder_label.text = "PLACEHOLDER ART"
 	placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	placeholder_label.add_theme_font_size_override("font_size", 10)
+	placeholder_label.add_theme_font_size_override("font_size", 8)
 	placeholder_label.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	splash.add_child(placeholder_label)
 	placeholder_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	placeholder_label.offset_top = -18
+	placeholder_label.offset_top = -12
 	name_label = Label.new()
 	name_label.name = "UpgradeName"
 	name_label.add_theme_font_size_override("font_size", 17)
@@ -167,13 +169,13 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	lock_sign.visible = _locked
 	name_label.visible = not _locked
 	description_label.visible = not _locked
-	action_label.visible = state == "applied"
+	action_label.visible = false
 	(splash as PlaceholderSplash).plain = _locked
-	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 32.0
+	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 48.0
 	splash.queue_redraw()
 	_refresh_frame()
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
-	progress_bar.visible = state in ["locked", "ready", "token"]
+	progress_bar.visible = _locked
 	progress_label.visible = progress_bar.visible
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
@@ -182,7 +184,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = ""
 		"token": action_label.text = ""
-		"applied": action_label.text = "Applied"
+		"applied": action_label.text = ""
 		_: action_label.text = "No upgrade available"
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
 	if progress_label.visible:
@@ -228,6 +230,22 @@ func _fit_content() -> void:
 	var width := maxf(size.x - 40.0, 0.0)
 	if not is_equal_approx(_content.custom_minimum_size.x, width):
 		_content.custom_minimum_size.x = width
+	if not _locked and not _unavailable:
+		# Prefer a compact 48px illustration and 13px copy. Fit the complete
+		# description inside the fixed frame, never behind a scrollbar.
+		var font := description_label.get_theme_font("font")
+		var name_font := name_label.get_theme_font("font")
+		var title_height := name_font.get_multiline_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 17).y
+		var status_height := action_label.get_minimum_size().y + 5.0 if action_label.visible else 0.0
+		var available := CARD_HEIGHT - 24.0 - title_height - status_height - 10.0
+		var art_height := 48.0
+		var font_size := 13
+		while font_size > 8 and font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, font_size).y * 1.35 + 8.0 + art_height > available:
+			font_size -= 1
+		if font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, font_size).y * 1.35 + 8.0 + art_height > available:
+			art_height = 24.0
+		splash.custom_minimum_size.y = art_height
+		description_label.add_theme_font_size_override("font_size", font_size)
 	# Frame art is 48x64. Card height never follows the description length;
 	# long unlocked details scroll inside the frame instead of distorting it.
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)

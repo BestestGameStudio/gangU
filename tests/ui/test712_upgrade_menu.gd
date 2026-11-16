@@ -70,10 +70,11 @@ func run() -> void:
 	await tick()
 	check(progress.upgrade_menu(water)[0].state == "token", "one token enables next locked step")
 	check(progress.upgrade_menu(water)[1].state == "locked", "token never enables future step")
+	check(not panel._upgrade_cards[0].progress_bar.visible and not panel._upgrade_cards[0].progress_label.visible and panel._upgrade_cards[0].splash.custom_minimum_size.y <= 48, "token-eligible card replaces progress with art")
 	for i in 5: caster.spell_cast.emit(water)
 	check(progress.upgrade_menu(water)[0].state == "ready", "cast gate takes precedence over token")
 	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and not panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0].action_label.text.is_empty() and panel._upgrade_cards[0]._frame.material == null, "ready card restores details and tier border without choose text")
-	check(panel._upgrade_cards[0].progress_label.text == "10 / 10 casts", "ready progress omits source name")
+	check(not panel._upgrade_cards[0].progress_bar.visible and not panel._upgrade_cards[0].progress_label.visible and panel._upgrade_cards[0].splash.custom_minimum_size.y <= 48, "ready card replaces progress with larger art")
 	panel._upgrade_cards[0].pressed.emit()
 	await tick()
 	check(caster.get_slots()[2] == chain[0].result_spell, "click replaces only the next spell")
@@ -81,7 +82,7 @@ func run() -> void:
 	check(panel._selected == chain[0].result_spell, "selection follows replacement")
 	menu = progress.upgrade_menu(chain[0].result_spell)
 	check(menu[0].state == "applied" and menu[1].state == "ready" and menu[2].state == "locked", "applied/current/future states after evolution")
-	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].action_label.text == "Applied", "applied card keeps name details and status")
+	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and not panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0].action_label.text.is_empty(), "applied card keeps details without Applied label")
 	# Fresh state for token-only advancement, then a later tier's own XP.
 	progress._cast_counts.erase(chain[1].source_spell)
 	panel._refresh()
@@ -97,6 +98,7 @@ func run() -> void:
 	await tick()
 	check(progress.upgrade_menu(panel._selected).all(func(item): return item.state == "applied"), "complete chain remains visible as applied")
 	check(panel._upgrade_cards.all(func(card): return card.disabled and not card.lock_sign.visible), "applied cards cannot be chosen again")
+	check(panel._upgrade_cards.all(func(card): return not card.progress_bar.visible and not card.progress_label.visible and card.splash.custom_minimum_size.y <= 48), "applied tiers show art without progress")
 	var mana: Spell = load("res://data/spells/mana_shot.tres")
 	menu = progress.upgrade_menu(mana)
 	check(menu[1].state == "unavailable" and menu[2].state == "unavailable", "short chains do not invent upgrade content")
@@ -129,6 +131,20 @@ func run() -> void:
 	fake.upgrades = [ab, ba]
 	check(fake.upgrade_chain(a).size() == 2, "cycle guard terminates malformed chain")
 	fake.free()
+	# All authored upgrade descriptions fit without scrolling in the fixed card.
+	var fit_card := UpgradeCard.new()
+	root.add_child(fit_card)
+	fit_card.size = Vector2(UpgradeCard.CARD_WIDTH, UpgradeCard.CARD_HEIGHT)
+	for path in DirAccess.get_files_at("res://data/upgrades"):
+		if not path.ends_with(".tres"): continue
+		var upgrade: SpellUpgrade = load("res://data/upgrades/" + path)
+		for state in ["ready", "applied"]:
+			fit_card.setup(upgrade.display_name, SpellDescription.for_spell(upgrade.result_spell), false)
+			fit_card.set_unlock_state(state, 10, 10)
+			await tick()
+			await tick()
+			check(fit_card.description_label.get_global_rect().end.y <= fit_card.get_global_rect().end.y - 11 and fit_card.find_child("CardContentScroll", true, false).get_v_scroll_bar().max_value <= fit_card.find_child("CardContentScroll", true, false).get_v_scroll_bar().page, "full description fits without scroll: " + path + " " + state)
+	fit_card.queue_free()
 	main.queue_free()
 	await tick()
 	print("[712] ", checks, " checks, ", failures, " failures")
