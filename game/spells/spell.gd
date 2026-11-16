@@ -242,3 +242,8 @@ func trigger_payload(trigger: TriggerMode, alternate: bool = false) -> Spell:
 @export var hook_magnet_radius: float = 0.0
 
 @export var hook_arrival_stun: float = 0.0
+
+@export var hook_anchor_mode: bool = false
+@export var hook_pair_cap: int = 3
+@export var hook_taunt_radius: float = 180.0
+@export var hook_taunt_interval: float = 5.0
