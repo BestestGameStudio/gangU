@@ -181,6 +181,22 @@ func run() -> void:
 		for frame in 8: await process_frame
 		for index in panel._upgrade_cards.size():
 			check(panel._upgrade_cards[index].size == Vector2(174, 232) and panel._upgrade_cards[index].global_position == anchors[index], "fixed card bounds across " + state)
+	# #765: supplied art remains absent until Applied, not merely hidden
+	# behind content; real mounted Water Shot chain maps all three pieces.
+	panel._selected = load("res://data/spells/water_shot_tide.tres")
+	panel._refresh()
+	for frame in 8: await process_frame
+	for index in panel._upgrade_cards.size():
+		var card: UpgradeCard = panel._upgrade_cards[index]
+		var expected: Texture2D = EquipPanel.WATER_CARD_ART.values()[index]
+		check(card._art.visible and card._art.texture == expected and card._art.texture.get_size() == Vector2(48, 64), "applied water panorama piece " + str(index))
+		check(card._art.size == card.size and card._art.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST and is_equal_approx(card._art.modulate.r, 0.35), "identical full-card art region and darkening")
+		check(card.description_label.get_theme_constant("outline_size") == 2 and card.name_label.get_theme_constant("outline_size") == 3, "outlined card text")
+		for state in ["locked", "ready", "token", "unavailable"]:
+			card.set_unlock_state(state, 5, 10)
+			check(not card._art.visible and card._art.texture == null, "unapplied art absent in " + state)
+		card.set_unlock_state("applied", 10, 10)
+		check(card._art.visible and card._art.texture == expected, "Applied alone reveals piece")
 	main.queue_free()
 	await tick()
 	print("[712] ", checks, " checks, ", failures, " failures")

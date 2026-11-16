@@ -28,6 +28,9 @@ const TIER_FRAMES: Array[Texture2D] = [
 	preload("res://assets/sprites/ui/card-frame-red.png"),
 	preload("res://assets/sprites/ui/card-frame-purple.png"),
 ]
+var _art: TextureRect
+var _applied_art: Texture2D
+var _applied := false
 var _frame: TextureRect
 var _border_tier := 0
 var _locked := false
@@ -42,6 +45,17 @@ func _init() -> void:
 	clip_text = true
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	UiStyle.style_button(self, UiStyle.B_ACCENT, 10)
+	# #765: identical full-card art bounds, below text and ornate frame.
+	_art = TextureRect.new()
+	_art.name = "AppliedSplash"
+	_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_art.modulate = Color(0.35, 0.35, 0.35, 1.0)
+	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art.visible = false
+	add_child(_art)
 	var margin := MarginContainer.new()
 	margin.name = "CardMargin"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -133,6 +147,9 @@ func _init() -> void:
 	# PASS lets clicks continue to this upgrade Button.
 	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	scroll.get_v_scroll_bar().mouse_filter = Control.MOUSE_FILTER_STOP
+	for label: Label in [name_label, description_label, action_label, progress_label]:
+		label.add_theme_color_override("font_outline_color", Color.BLACK)
+		label.add_theme_constant_override("outline_size", 3 if label == name_label else 2)
 	_frame = TextureRect.new()
 	_frame.name = "TierFrame"
 	_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -155,6 +172,8 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "", objective: String = "", quest_hidden: bool = false) -> void:
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
+	_applied = state == "applied"
+	_refresh_applied_art()
 	_locked = state == "locked"
 	_concealed = state in ["locked", "ready", "token"]
 	(lock_sign as TextureRect).texture = OPEN_LOCK_TEXTURE if state in ["ready", "token"] else LOCK_TEXTURE
@@ -191,6 +210,18 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	if _unavailable or quest_hidden:
 		tooltip_text = ""
 	call_deferred("_fit_content")
+
+
+## Supplying a texture never reveals it. Only the Applied state may show art.
+func set_applied_art(texture: Texture2D) -> void:
+	_applied_art = texture
+	_refresh_applied_art()
+
+func _refresh_applied_art() -> void:
+	var reveal := _applied and _applied_art != null
+	_art.texture = _applied_art if reveal else null
+	_art.visible = reveal
+
 
 ## #451: restyle the card border (Daniel: the color of the tier the card
 ## upgrades into, from UiStyle.RANK_COLORS). Default stays B_ACCENT.

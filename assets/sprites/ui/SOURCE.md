@@ -43,3 +43,12 @@ Water Shot spin:8 original24x24 SpriteU frames,16px circular silhouette, cyan ri
 white flecks and dark blue interior blobs. Runtime atlas strip assembled losslessly
 from SpriteU frame exports; SpriteFrames loops at16fps in flight and hover.
 User-supplied visual reference informed the look only; no reference pixels or signature included.
+
+## Water Shot applied-card panorama (#765)
+
+Original SpriteU exports: water-card-hover.png, water-card-reservoir.png,
+water-card-tide.png. Each48x64, contiguous thirds of a144x64 master.
+Source/provenance: tools/sprites/specs/water-card-panorama.spriteu.json.
+Owner selected the concept Nov16. Runtime reveals each only on Applied,
+at identical174x232 bounds with nearest filtering and65% darkening plus
+black text outlines. Symbolic art, not a projectile-count specification.
