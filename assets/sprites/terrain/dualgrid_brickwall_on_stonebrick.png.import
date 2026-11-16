@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ghejajdk4mta"
-path="res://.godot/imported/dualgrid_flagstonewall.png-04ea43bf4b3c72403efdc8f9d29a99bd.ctex"
+uid="uid://bnyquxek3xjw4"
+path="res://.godot/imported/dualgrid_brickwall_on_stonebrick.png-b498f2d027f55d60a24ed7c869ca838c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/terrain/dualgrid_flagstonewall.png"
-dest_files=["res://.godot/imported/dualgrid_flagstonewall.png-04ea43bf4b3c72403efdc8f9d29a99bd.ctex"]
+source_file="res://assets/sprites/terrain/dualgrid_brickwall_on_stonebrick.png"
+dest_files=["res://.godot/imported/dualgrid_brickwall_on_stonebrick.png-b498f2d027f55d60a24ed7c869ca838c.ctex"]
 
 [params]
 

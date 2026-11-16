@@ -1,6 +1,6 @@
 extends Node2D
 class_name HubFloor
-## Shared 64px dual-grid layout, with hub-specific soft flagstone and thin wall art.
+## Shared 64px dual-grid layout, with hub-specific dark stone bricks and thin wall art.
 ## Wall lives on lattice points. Each tile reads TL=1 TR=2 BR=4 BL=8.
 
 const CENTER := Vector2(576, 410)
@@ -10,8 +10,8 @@ const WALL_WIDTH := 32.0
 ## Tile transitions extend up to half a cell inside the nominal outline.
 ## Keep movement cells wholly within that inner floor, clear of the wall art.
 const WALL_CLEARANCE := 48.0
-const WALL_SHEET = preload("res://assets/sprites/terrain/dualgrid_flagstonewall.png")
-const FLOOR_VARIANTS = preload("res://assets/sprites/terrain/dualgrid_variants_flagstone_hub.png")
+const WALL_SHEET = preload("res://assets/sprites/terrain/dualgrid_brickwall_on_stonebrick.png")
+const FLOOR_VARIANTS = preload("res://assets/sprites/terrain/dualgrid_variants_stonebrick_hub.png")
 
 var outline: PackedVector2Array
 var _wall_outer: PackedVector2Array

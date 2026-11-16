@@ -547,5 +547,7 @@ Projectile: 16 frames per facing, source windup 740ms, release 80ms, recovery 96
 
 `roman_general_spear.png` is the same rig's sandstone/purple spear template, rotated right into a 39x9 transparent PNG, drawn at 1.6x by the shared Projectile. No third-party art. Generated frames pass the existing SpriteU checker: continuous neck, one connected component, no edge clipping. No new test or verification drivers are committed.
 
-## Hub flagstone and thin connected walls (#708)
-`terrain/dualgrid_flagstonewall.png` and `terrain/dualgrid_variants_flagstone_hub.png` were procedurally generated for gangU by Instinct. No third-party assets. The 256x256 wall sheet uses 16 row-major 64px dual-grid masks (TL=1, TR=2, BR=4, BL=8), wall foreground over a matching soft floor field. The 512x64 strip holds eight floor variants with matching borders. Runtime trims excess outer cap to a 22px band around the square marching-corner floor boundary; no full cap tiles remain. Nearest texture filtering, lossless import, no mipmaps.
+## Hub stone bricks, thin connected walls and quiet shop (#708)
+`terrain/dualgrid_brickwall_on_stonebrick.png` and `terrain/dualgrid_variants_stonebrick_hub.png` were generated for gangU by Instinct, then edited to darken and mute the original brick design and align the variant borders. No third-party assets. The 256x256 wall sheet uses 16 row-major 64px dual-grid masks (TL=1, TR=2, BR=4, BL=8), with backgrounds from floor/cap variant 0. The 512x64 floor strip holds eight variants with identical outer rings. Runtime uses deterministic hash placement and trims excess outer cap to a 22px band around the square marching-corner floor boundary; no full cap tiles remain. Nearest texture filtering, lossless import, no mipmaps.
+
+`shop_vendor.png` is a darker, muted recolor of the existing shop sheet for this hub. Its 672x448 layout, six 224x224 frames, animation, scene scale and anchor are unchanged.
