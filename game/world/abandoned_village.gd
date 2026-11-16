@@ -12,7 +12,26 @@ const AMBUSH_COUNT := 30
 const CLEAR_COINS := 100
 ## #546: ambushers appear just outside the outer tree ring (trees reach ~506).
 const SPAWN_RADIUS := 540.0
-const HOUSE_HALF := Vector2(58, 54)
+## Doors are bottom-centre of each house sprite, facing south.
+const DOOR_OFFSET := Vector2(0.0, 62.0 - 0.0)
+const PATH_HALF_WIDTH := 30.0
+
+## Stone path segments (village-local) from the central walk to every door.
+static func path_segments() -> Array[PackedVector2Array]:
+	var segs: Array[PackedVector2Array] = []
+	segs.append(PackedVector2Array([Vector2(-250, 0), Vector2(250, 0)]))
+	for column: int in [-1, 0, 1]:
+		var cx := column * 170.0
+		# North houses: straight down from the door to the walk.
+		var nd := Vector2(cx, -170.0 + HOUSE_FOOT_DY + 14.0)
+		segs.append(PackedVector2Array([nd, Vector2(cx, 0)]))
+		# South houses: down the gap beside the house, then across to the door.
+		var sd := Vector2(cx, 170.0 + HOUSE_FOOT_DY + 14.0)
+		var gap := cx + 85.0
+		segs.append(PackedVector2Array([Vector2(gap, 0), Vector2(gap, sd.y), sd]))
+	return segs
+
+const HOUSE_HALF := Vector2(44, 30)
 # #574: the footprint fits the visible well art, not its 96x96 draw rect.
 # The art's opaque pixels span ~64.5x72 px (0.75 scale from the 128px atlas
 # tile), centered ~4.5 px below the draw-rect center. Sizes are tuned for the
@@ -21,7 +40,21 @@ const HOUSE_HALF := Vector2(58, 54)
 # still covers the art (was x [-64, 64] - double the art's width).
 const WELL_HALF := Vector2(32, 30)
 const WELL_OFFSET := Vector2(0, 4.5)
-const PROPS: Texture2D = preload("res://assets/sprites/village_props.png")
+const HOUSES: Array[Texture2D] = [
+	preload("res://assets/sprites/village/village_house_a.png"),
+	preload("res://assets/sprites/village/village_house_b.png"),
+	preload("res://assets/sprites/village/village_house_c.png"),
+]
+const WELL_TEX: Texture2D = preload("res://assets/sprites/village/village_well.png")
+const TOWER_TEX: Texture2D = preload("res://assets/sprites/village/village_bell_tower.png")
+## Ground-contact points (village-local). Houses keep their old 170px grid.
+const WELL_FOOT := Vector2(0, 36)
+const TOWER_FOOT := Vector2(285, 24)
+const TOWER_HALF := Vector2(20, 14)
+const HOUSE_FOOT_DY := 50.0
+
+static func house_foot(column: int, side: int) -> Vector2:
+	return Vector2(column * 170.0, side * 170.0 + HOUSE_FOOT_DY)
 const ENEMY := preload("res://game/enemies/enemy.tscn")
 const LOOT := preload("res://data/rewards/demo_table.tres")
 
@@ -108,9 +141,10 @@ func footprints() -> Array[Rect2]:
 	var rects: Array[Rect2] = []
 	for side: int in [-1, 1]:
 		for column: int in [-1, 0, 1]:
-			var at := position + Vector2(column * 170, side * 170)
+			var at := position + house_foot(column, side) - Vector2(0, 28)
 			rects.append(Rect2(at - HOUSE_HALF, HOUSE_HALF * 2.0))
 	rects.append(Rect2(position + WELL_OFFSET - WELL_HALF, WELL_HALF * 2.0))
+	rects.append(Rect2(position + TOWER_FOOT - Vector2(0, TOWER_HALF.y) - TOWER_HALF, TOWER_HALF * 2.0))
 	return rects
 
 func plant_footprints(map: TerrainMap, cells: Dictionary, blockers: Array[Vector3]) -> void:
@@ -194,14 +228,15 @@ func _drop_reward() -> void:
 	drop.global_position = global_position
 
 func _draw() -> void:
-	# Static atlas: three collapsed-house variants and one dry well.
+	# Vine-covered sprites, bottom-centre anchored on the ground contact point.
 	# Houses and the well are solid (#546); see plant_footprints().
-	# The east-west road is part of the overworld dual-grid (dirt), see
-	# OverworldGround._compute_lattice_type.
 	for side: int in [-1, 1]:
 		for column: int in [-1, 0, 1]:
-			var at := Vector2(column * 170, side * 170)
 			var variant := posmod(column + 1 + (1 if side > 0 else 0), 3)
-			draw_texture_rect_region(PROPS, Rect2(at - Vector2(64, 64), Vector2(128, 128)),
-				Rect2(variant * 128, 0, 128, 128))
-	draw_texture_rect_region(PROPS, Rect2(-48, -48, 96, 96), Rect2(384, 0, 128, 128))
+			_draw_prop(HOUSES[variant], house_foot(column, side))
+	_draw_prop(WELL_TEX, WELL_FOOT, 1.5)
+	_draw_prop(TOWER_TEX, TOWER_FOOT)
+
+func _draw_prop(tex: Texture2D, foot: Vector2, k: float = 1.0) -> void:
+	var size := tex.get_size() * k
+	draw_texture_rect(tex, Rect2(foot - Vector2(size.x * 0.5, size.y), size), false)

@@ -539,14 +539,19 @@ func _compute_lattice_type(p: Vector2) -> int:
 	# Arrival clearing and the pad under every gate.
 	if p.distance_to(spawn) <= ARRIVAL_STONE_R:
 		return DualGrid.T.STONE
-	# Abandoned village road: a wobbly dirt band running east-west through it.
+	# Abandoned village: worn stone paths from a central walk to every door.
 	var vil := get_parent().get_node_or_null("AbandonedVillage") if get_parent() != null else null
 	if vil != null:
 		var q: Vector2 = p - (vil as Node2D).position
-		var wob_y := 14.0 * sin(q.x / 90.0) + 8.0 * sin(q.x / 37.0 + 1.0)
-		var half_w := 44.0 + 8.0 * sin(q.x / 61.0 + 2.0)
-		if absf(q.x) < 600.0 and absf(q.y - wob_y) < half_w:
-			return DualGrid.T.DIRT
+		if absf(q.x) < 420.0 and absf(q.y) < 300.0:
+			var near := 1e9
+			for seg in AbandonedVillage.path_segments():
+				for k in range(seg.size() - 1):
+					var c := Geometry2D.get_closest_point_to_segment(q, seg[k], seg[k + 1])
+					near = minf(near, q.distance_to(c))
+			var half_w := AbandonedVillage.PATH_HALF_WIDTH + 12.0 * sin(q.x / 53.0 + q.y / 71.0) * sin(q.y / 29.0 + q.x / 41.0)
+			if near < half_w:
+				return DualGrid.T.STONE
 	if not desert_near:
 		for l in landmarks:
 			if p.distance_to(l) <= GATE_PAD_R:
