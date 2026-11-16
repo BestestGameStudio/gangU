@@ -17,10 +17,13 @@ class_name FollowCamera
 
 @onready var target: Node2D = get_node_or_null(target_path)
 
-## #678: the zoom the camera returns to after a boss-stop punch; captured at
-## ready so a punch always lands back on neutral, whatever the scene sets.
+## #678: the zoom the camera returns to after a boss stop; captured at ready
+## so a boss beat always lands back on neutral, whatever the scene sets.
 var _base_zoom := Vector2.ONE
-var _punch_tween: Tween = null
+## #687: seconds of boss-focus beat left (zoom-in + hold). While > 0 the
+## follow lerp holds off so the camera sits on the fallen boss.
+var _focus_left := 0.0
+var _focus_tween: Tween = null
 
 func _ready() -> void:
 	make_current()
@@ -28,20 +31,32 @@ func _ready() -> void:
 	if target:
 		global_position = target.global_position
 
-## #678: boss-stop zoom punch. Zooms to _base_zoom * amount with a fast
-## attack, then eases back to neutral as play resumes. Composes with the
-## follow offset (position lerp is untouched); a new punch restarts cleanly.
-func zoom_punch(amount: float, in_time: float, out_time: float) -> void:
-	if _punch_tween != null and _punch_tween.is_running():
-		_punch_tween.kill()
-	zoom = _base_zoom
+## #687: boss-kill cinematic (Mitra: "zoom in on the boss and stay on it for
+## a good second or two before returning... play the death animation and
+## zoom out after that"). Drives onto `point` while zooming hard to
+## _base_zoom * amount with a fast ease-out attack, holds the frame there
+## for hold_time seconds - the death animation plays zoomed - then eases the
+## zoom back to neutral over out_time while the normal follow carries the
+## camera back to the player. Always lands back on neutral zoom; a new focus
+## restarts cleanly.
+func boss_focus(point: Vector2, amount: float, in_time: float, hold_time: float, out_time: float) -> void:
+	if _focus_tween != null and _focus_tween.is_running():
+		_focus_tween.kill()
 	if amount <= 0.0:
 		return
-	_punch_tween = create_tween()
-	_punch_tween.tween_property(self, ^"zoom", _base_zoom * amount, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_punch_tween.tween_property(self, ^"zoom", _base_zoom, out_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_focus_left = in_time + hold_time
+	_focus_tween = create_tween()
+	_focus_tween.set_parallel(true)
+	_focus_tween.tween_property(self, ^"zoom", _base_zoom * amount, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_focus_tween.tween_property(self, ^"global_position", point, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_focus_tween.set_parallel(false)
+	_focus_tween.tween_interval(hold_time)
+	_focus_tween.tween_property(self, ^"zoom", _base_zoom, out_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 
 func _physics_process(delta: float) -> void:
+	if _focus_left > 0.0:
+		_focus_left = maxf(_focus_left - delta, 0.0)
+		return
 	if target:
 		# Frame-rate independent exponential smoothing toward the target.
 		var weight := 1.0 - exp(-follow_speed * delta)

@@ -62,9 +62,10 @@ func _ready() -> void:
 	var caster: SpellCaster = $Player/SpellCaster
 	for i in mini(caster.starting_spells.size(), SpellCaster.SLOT_COUNT):
 		caster.assign_slot(i, caster.starting_spells[i])
-	## #678: hit stop - one service node subscribed to the OnHit bus. It
+	## #678/#687: hit stop - one service node subscribed to the OnHit bus. It
 	## freezes movers briefly on every landed spell impact against an enemy
-	## and stages the boss stop (flash + camera zoom punch) on a boss kill.
+	## and stages the boss stop (a longer freeze + the camera focus beat) on
+	## a boss kill.
 	var hit_stop := HitStop.new()
 	hit_stop.name = "HitStop"
 	hit_stop.camera = $FollowCamera
