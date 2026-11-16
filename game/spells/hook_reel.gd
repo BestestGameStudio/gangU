@@ -16,6 +16,7 @@ static func begin(parent: Node, victim: Enemy, destination: Node2D, definition: 
  var reel := HookReel.new()
  reel.enemy = victim; reel.target = destination; reel.spell = definition
  victim.displacement_owner = reel
+ victim.hook_taunt_target = null; victim.hook_taunt_left = 0.0
  parent.add_child(reel)
  return reel
 

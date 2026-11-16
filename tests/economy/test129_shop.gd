@@ -104,7 +104,7 @@ func _run_legs() -> void:
 	## attacks) and mustache_rock (#443 cover-throw rock, preloaded only
 	## by enemy_behavior_cover) - Daniel 2026-11-09: "Do not keep enemy
 	## spells".
-	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres", "mustache_rock.tres"]
+	const ENEMY_ONLY := ["head_bolt.tres", "warlord_orb.tres", "mustache_rock.tres", "hook_shot_anchor.tres"]
 	## #496: upgraded variants (any SpellUpgrade result_spell, derived from
 	## the upgrade data) are never sold - only base spells.
 	var demo: ShopCatalog = preload("res://data/shop/demo_catalog.tres")

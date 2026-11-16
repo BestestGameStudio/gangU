@@ -654,13 +654,10 @@ func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 	# range). Its cooldown is the Rhythm combo's reduced one when it applies.
 	match spell.cast_mode():
 		Spell.CastMode.HOOK:
-			var hook := HookShot.new()
-			hook.prepare_shape()
-			hook.setup(spell, dir, get_parent())
-			hook.destination = global_position + (aim_point() - global_position).limit_length(spell.range)
-			hook.resolved.connect(func(count: int): hook_resolved.emit(credit, count))
-			get_tree().current_scene.add_child(hook)
-			hook.global_position = cast_pos
+			if spell.hook_anchor_mode:
+				HookAnchorPair.place(get_tree().current_scene, get_parent(), spell, cast_pos, aim_point())
+			else:
+				_spawn_hook(spell, dir, cast_pos, credit)
 		Spell.CastMode.HAMMER:
 			cooldown_base = _cast_hammer(spell)
 		Spell.CastMode.SHIELD:
@@ -772,3 +769,12 @@ func _place_terrain_block(spell: Spell) -> Variant:
 	if cell != null:
 		terrain_block_placed.emit(spell, cell)
 	return cell
+
+func _spawn_hook(spell: Spell, dir: Vector2, cast_pos: Vector2, credit: Spell) -> void:
+	var hook := HookShot.new()
+	hook.prepare_shape()
+	hook.setup(spell, dir, get_parent())
+	hook.destination = global_position + (aim_point() - global_position).limit_length(spell.range)
+	hook.resolved.connect(func(count: int): hook_resolved.emit(credit, count))
+	get_tree().current_scene.add_child(hook)
+	hook.global_position = cast_pos
