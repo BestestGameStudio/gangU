@@ -59,6 +59,7 @@ var _stats_box: StatGrid
 var _player: Player = null
 var _slot_buttons: Array[Button] = []
 var _slot_icons: Array[SpellIcon] = []
+var _upgrade_cards: Array[UpgradeCard] = []
 var _upgrade_scroll: ScrollContainer
 var _plate: PanelContainer
 var _detail_box: VBoxContainer
@@ -80,13 +81,9 @@ const DRAG_THRESHOLD := 10.0
 ## viewport); the upgrade scroll fills whatever height is left, so content
 ## changes never resize the panel.
 const UPGRADE_CARD_GAP := 12
-# Sized for up to 2 #441-slim cards + gap + scrollbar (#700, Daniel
-# 2026-11-15); #703's fixed linear chains show ONE card, the width stays so
-# the plate never resizes (#416): 2 x 176 + 12 + 8, rounded up; the
-# 3-column stat grid (348) fits under it. The
-## #416 no-resize rule covers WIDTH too: the column floor keeps the plate
-# one fixed size.
-const DETAIL_WIDTH := 384.0
+# #712: all three 176px tier cards visible together at the default viewport.
+# Fixed width still prevents resizing when selecting/deselecting a spell.
+const DETAIL_WIDTH := 568.0
 ## #441 (Daniel, 2026-11-09): the plate hugs its content instead of the old
 ## 620px fixed height ("a lot of empty vertical space below the spell
 ## slots"). Measured composition on the pinned harness: title 36 + sep 10 +
@@ -204,6 +201,10 @@ func _ready() -> void:
 	_player = player
 	if upgrader_path != NodePath(""):
 		_upgrader = get_node_or_null(upgrader_path)
+		if _upgrader != null and _upgrader.has_signal(&"cast_progress_changed"):
+			_upgrader.connect(&"cast_progress_changed", func(_s: Variant) -> void:
+				if visible:
+					_update_upgrade_card_states())
 		if _upgrader != null and _upgrader.has_signal(&"upgrades_changed"):
 			_upgrader.connect(&"upgrades_changed", func(_s: Variant) -> void: _refresh())
 	_caster = player.get_node_or_null("SpellCaster") as SpellCaster
@@ -419,65 +420,97 @@ func _refresh() -> void:
 		_slot_icons[i].show_spell(occupant)
 		_slot_icons[i].set_upgrade_available(_can_upgrade(occupant))
 		_slot_icons[i].set_rank_tier(_rank_tier(occupant))
-	# Upgrade section: only when a provider is wired AND a spell is selected.
+	# Upgrade section stays visible before qualification: locks and progress
+	# explain what to do next. Full chain includes already-applied tiers.
+	_upgrade_cards.clear()
 	for c in _upgrade_box.get_children():
 		c.queue_free()
-	if _can_upgrade(_selected):
-		var uheader := Label.new()
-		uheader.text = "Upgrades"
-		var tokens: int = _upgrader.call(&"upgrade_tokens") if _upgrader.has_method(&"upgrade_tokens") else 0
-		if tokens > 0:
-			uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
-		uheader.add_theme_font_size_override("font_size", 22)
-		_upgrade_box.add_child(uheader)
-		var scroll := ScrollContainer.new()
-		scroll.name = "UpgradeScroll"
-		_upgrade_scroll = scroll
-		# Fills the height left under the stats; tall cards scroll inside it.
-		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_upgrade_box.add_child(scroll)
-		var cards := HBoxContainer.new()
-		cards.name = "UpgradeCards"
-		cards.add_theme_constant_override("separation", UPGRADE_CARD_GAP)
-		scroll.add_child(cards)
-		var token_ready := _can_token_upgrade(_selected)
-		# #703: one fixed linear chain per spell - at most ONE next upgrade.
-		var next: Variant = _upgrader.call(&"next_upgrade", _selected)
-		var candidates: Array = [next] if next != null else []
-		for upgrade: Variant in candidates:
-			var needs_token := _upgrade_needs_token(_selected, upgrade)
-			# An upgrade offered by neither route (threshold unmet, no token)
-			# is not shown; with no token API this is the unchanged listing.
-			if needs_token and not token_ready:
-				continue
-			var b := UpgradeCard.new()
+	if _selected == null or _upgrader == null:
+		return
+	var items := _upgrade_menu_items()
+	if items.is_empty():
+		return
+	var uheader := Label.new()
+	uheader.text = "Upgrades"
+	var tokens: int = _upgrader.call(&"upgrade_tokens") if _upgrader.has_method(&"upgrade_tokens") else 0
+	if tokens > 0:
+		uheader.text = "Upgrades (Upgrade Tokens: %d)" % tokens
+	uheader.add_theme_font_size_override("font_size", 22)
+	_upgrade_box.add_child(uheader)
+	var scroll := ScrollContainer.new()
+	scroll.name = "UpgradeScroll"
+	_upgrade_scroll = scroll
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_upgrade_box.add_child(scroll)
+	var cards := HBoxContainer.new()
+	cards.name = "UpgradeCards"
+	cards.add_theme_constant_override("separation", UPGRADE_CARD_GAP)
+	scroll.add_child(cards)
+	for item: Dictionary in items:
+		var upgrade: Variant = item.upgrade
+		var b := UpgradeCard.new()
+		if upgrade == null:
+			var tier_names := ["Specialization", "Mastery", "Signature"]
+			b.setup(tier_names[item.tier - 1], "This spell's chain has no upgrade at this tier.", false)
+		else:
 			var result := _upgrade_field(upgrade, &"result_spell") as Spell
 			var description := SpellDescription.for_spell(result)
 			if result != null and result.projectile_count > 0:
-				# #441: short form so the line does not wrap on the slimmer cards (Daniel: "shorten").
 				description += "\n%s px | %s px/s" % [int(result.range), int(result.projectile_speed)]
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
-			b.setup(str(_upgrade_field(upgrade, &"display_name")) + _tier_suffix(upgrade), description, needs_token)
-			# #451/#702: ornate frame in the colorway of the tier this upgrade advances into.
-			b.set_border_tier(_upgrade_tier(upgrade))
+			b.setup(str(_upgrade_field(upgrade, &"display_name")) + _tier_suffix(upgrade), description, item.state == "token")
 			var pid: Variant = _upgrade_field(upgrade, &"id")
-			if needs_token:
-				b.pressed.connect(func() -> void: _on_token_upgrade_pressed(pid))
-			else:
-				b.pressed.connect(func() -> void: _on_upgrade_pressed(pid))
-			cards.add_child(b)
+			# Resolve the route again when pressed: live cast progress may have
+			# qualified this card since it was constructed, avoiding wasted tokens.
+			b.pressed.connect(func() -> void:
+				if b.disabled:
+					return
+				if _upgrade_needs_token(_selected, upgrade):
+					_on_token_upgrade_pressed(pid)
+				else:
+					_on_upgrade_pressed(pid))
+		b.set_border_tier(item.tier)
+		cards.add_child(b)
+		_upgrade_cards.append(b)
+	_update_upgrade_card_states()
+
+## Legacy injected providers keep their old one-next-upgrade contract.
+func _upgrade_menu_items() -> Array:
+	if _upgrader == null or _selected == null:
+		return []
+	if _upgrader.has_method(&"upgrade_menu"):
+		return _upgrader.call(&"upgrade_menu", _selected)
+	if not _upgrader.has_method(&"next_upgrade"):
+		return []
+	var row: Variant = _upgrader.call(&"next_upgrade", _selected)
+	if row == null:
+		return []
+	var state := "locked"
+	if _can_upgrade(_selected):
+		state = "token" if _upgrade_needs_token(_selected, row) else "ready"
+	return [{"upgrade": row, "tier": _upgrade_tier(row), "state": state, "casts": 0, "threshold": 0, "prerequisite": ""}]
+
+func _update_upgrade_card_states() -> void:
+	var items := _upgrade_menu_items()
+	if items.size() != _upgrade_cards.size():
+		return
+	for i in items.size():
+		var item: Dictionary = items[i]
+		var row: Variant = item.upgrade
+		var source := _upgrade_field(row, &"source_spell") as Spell
+		_upgrade_cards[i].set_unlock_state(item.state, item.casts, item.threshold, item.prerequisite, source.spell_name if source != null else "")
 
 func _on_upgrade_pressed(upgrade_id: Variant) -> void:
 	if _upgrader == null or _selected == null:
 		return
 	var sel := _selected
+	var selected_slot := _caster.get_slots().find(sel) if _caster != null else -1
 	if not _upgrader.call(&"apply_upgrade", sel, upgrade_id):
 		push_warning("EquipPanel: apply_upgrade refused; refreshing.")
 	elif _caster != null and not _caster.get_unlocked().has(sel):
-		# Successful replace consumed the selected spell; drop the stale
-		# selection so no later slot click can act on a removed resource.
-		_selected = null
+		# Follow the replacement in the same slot, never retain the consumed resource.
+		_selected = _caster.get_slots()[selected_slot] if selected_slot >= 0 else null
 	_refresh()
 
 ## #315: same flow as _on_upgrade_pressed, spending one boss upgrade token.
@@ -485,10 +518,11 @@ func _on_token_upgrade_pressed(upgrade_id: Variant) -> void:
 	if _upgrader == null or _selected == null or not _upgrader.has_method(&"apply_upgrade_with_token"):
 		return
 	var sel := _selected
+	var selected_slot := _caster.get_slots().find(sel) if _caster != null else -1
 	if not _upgrader.call(&"apply_upgrade_with_token", sel, upgrade_id):
 		push_warning("EquipPanel: token upgrade refused; refreshing.")
 	elif _caster != null and not _caster.get_unlocked().has(sel):
-		_selected = null
+		_selected = _caster.get_slots()[selected_slot] if selected_slot >= 0 else null
 	_refresh()
 
 ## #441 Tab interaction: click SELECTS a slot's spell (stats + upgrades),

@@ -6,6 +6,9 @@ const CARD_WIDTH := 176.0
 var name_label: Label
 var description_label: Label
 var action_label: Label
+var progress_bar: ProgressBar
+var progress_label: Label
+var lock_sign: Control
 var splash: Control
 var _content: VBoxContainer
 var border_color: Color = UiStyle.B_ACCENT
@@ -31,6 +34,14 @@ class PlaceholderSplash extends Control:
 		draw_colored_polygon(points, Color(tint, 0.24))
 		draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), tint, 2.0, true)
 
+## Vector padlock: no font-dependent emoji or missing-glyph square.
+class LockSign extends Control:
+	func _draw() -> void:
+		var c := size * 0.5
+		draw_style_box(UiStyle.row(Color(0.65, 0.67, 0.72), 4), Rect2(c + Vector2(-11, -2), Vector2(22, 18)))
+		draw_arc(c + Vector2(0, -2), 8, PI, TAU, 16, Color(0.8, 0.82, 0.86), 3, true)
+		draw_circle(c + Vector2(0, 5), 2, Color(0.85, 0.87, 0.9))
+
 func _init() -> void:
 	custom_minimum_size = Vector2(CARD_WIDTH, 200)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -50,6 +61,7 @@ func _init() -> void:
 	splash.custom_minimum_size = Vector2(0, 55)
 	_content.add_child(splash)
 	var placeholder_label := Label.new()
+	placeholder_label.name = "PlaceholderLabel"
 	placeholder_label.text = "PLACEHOLDER ART"
 	placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placeholder_label.add_theme_font_size_override("font_size", 10)
@@ -74,6 +86,23 @@ func _init() -> void:
 	action_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
 	action_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_content.add_child(action_label)
+	progress_bar = ProgressBar.new()
+	progress_bar.name = "UnlockProgress"
+	progress_bar.custom_minimum_size.y = 10
+	progress_bar.show_percentage = false
+	progress_bar.visible = false
+	_content.add_child(progress_bar)
+	progress_label = Label.new()
+	progress_label.name = "UnlockProgressText"
+	progress_label.add_theme_font_size_override("font_size", 12)
+	progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	progress_label.visible = false
+	_content.add_child(progress_label)
+	lock_sign = LockSign.new()
+	lock_sign.name = "LockSign"
+	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lock_sign.visible = false
+	splash.add_child(lock_sign)
 	for child: Control in find_children("*", "Control", true, false):
 		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -96,6 +125,31 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 	(splash as PlaceholderSplash).tint = tint
 	splash.queue_redraw()
 	tooltip_text = "%s\n%s\n%s" % [upgrade_name, description, action_label.text]
+	call_deferred("_fit_content")
+
+## #712: state is supplied by the progression provider, never inferred from
+## button tint. Disabled states still expose their description and progress.
+func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "") -> void:
+	disabled = state not in ["ready", "token"]
+	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
+	lock_sign.visible = state == "locked"
+	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
+	progress_bar.visible = state in ["locked", "ready", "token"]
+	progress_label.visible = progress_bar.visible
+	progress_bar.max_value = maxi(threshold, 1)
+	progress_bar.value = mini(casts, maxi(threshold, 0))
+	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
+	if not source_name.is_empty():
+		progress_label.text += " - " + source_name
+	match state:
+		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - first unlock " + prerequisite
+		"ready": action_label.text = "Choose upgrade"
+		"token": action_label.text = "Choose - use upgrade token"
+		"applied": action_label.text = "Applied"
+		_: action_label.text = "No upgrade available"
+	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
+	if progress_label.visible:
+		tooltip_text += "\n" + progress_label.text
 	call_deferred("_fit_content")
 
 ## #451: restyle the card border (Daniel: the color of the tier the card
@@ -124,7 +178,7 @@ func _fit_content() -> void:
 	# Text wrapping can change minimum height without resizing the Button.
 	# Propagate it to the HBox so ScrollContainer has real scrollable content.
 	var text_height := 0.0
-	for label: Label in [name_label, description_label, action_label]:
+	for label: Label in [name_label, description_label, action_label, progress_label]:
 		var font := label.get_theme_font("font")
 		text_height += font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, width, label.get_theme_font_size("font_size")).y
 	var height := maxf(200.0, maxf(text_height + 55.0 + 15.0, _content.get_combined_minimum_size().y) + 24.0)

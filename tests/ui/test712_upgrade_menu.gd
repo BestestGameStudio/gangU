@@ -1,0 +1,89 @@
+extends SceneTree
+## #712: full-chain menu states through the real mounted provider and UI.
+var failures := 0
+var checks := 0
+func check(ok: bool, label: String) -> void:
+	checks += 1
+	if not ok: failures += 1
+	print("[712] ", label, " -> ", "PASS" if ok else "FAIL")
+func _initialize() -> void:
+	run.call_deferred()
+func tick() -> void:
+	await process_frame
+	await process_frame
+func run() -> void:
+	var main: Node = load("res://game/core/main.tscn").instantiate()
+	root.add_child(main)
+	current_scene = main
+	await tick()
+	var caster: SpellCaster = main.get_node("Player/SpellCaster")
+	var progress: SpellProgress = main.get_node("SpellProgress")
+	var panel: EquipPanel = main.get_node("EquipPanel")
+	var water: Spell = load("res://data/spells/water_ball.tres")
+	caster.unlock_spell(water)
+	caster.assign_slot(2, water)
+	panel.show_panel()
+	panel._on_slot_pressed(2)
+	await tick()
+	var chain := progress.upgrade_chain(water)
+	check(chain.size() == 3, "three-link water chain")
+	check(progress.upgrade_chain(chain[1].result_spell) == chain, "chain from evolved spell includes predecessors")
+	var menu := progress.upgrade_menu(water)
+	check(menu.size() == 3 and menu.all(func(item): return item.state == "locked"), "all three shown before XP gate")
+	check(panel._upgrade_cards.size() == 3, "three mounted cards")
+	check(panel._upgrade_cards.all(func(card): return card.disabled and card.lock_sign.visible and card.progress_bar.visible), "locked cards disabled with lock and bar")
+	var original_card := panel._upgrade_cards[0]
+	for i in 5: caster.spell_cast.emit(water)
+	check(panel._upgrade_cards[0] == original_card and original_card.progress_bar.value == 5, "live progress updates existing card without losing focus")
+	check(original_card.progress_label.text.begins_with("5 / 10"), "progress counts source casts")
+	# Future source XP never skips the prerequisite.
+	for i in 50: caster.spell_cast.emit(chain[1].source_spell)
+	check(progress.upgrade_menu(water)[1].state == "locked" and panel._upgrade_cards[1].disabled, "future XP does not bypass sequential gate")
+	progress.add_upgrade_token()
+	await tick()
+	check(progress.upgrade_menu(water)[0].state == "token", "one token enables next locked step")
+	check(progress.upgrade_menu(water)[1].state == "locked", "token never enables future step")
+	for i in 5: caster.spell_cast.emit(water)
+	check(progress.upgrade_menu(water)[0].state == "ready", "cast gate takes precedence over token")
+	panel._upgrade_cards[0].pressed.emit()
+	await tick()
+	check(caster.get_slots()[2] == chain[0].result_spell, "click replaces only the next spell")
+	check(progress.upgrade_tokens() == 1, "qualified cast route does not waste token")
+	check(panel._selected == chain[0].result_spell, "selection follows replacement")
+	menu = progress.upgrade_menu(chain[0].result_spell)
+	check(menu[0].state == "applied" and menu[1].state == "ready" and menu[2].state == "locked", "applied/current/future states after evolution")
+	# Fresh state for token-only advancement, then a later tier's own XP.
+	progress._cast_counts.erase(chain[1].source_spell)
+	panel._refresh()
+	await tick()
+	check(progress.upgrade_menu(panel._selected)[1].state == "token", "current tier uses its own source counter")
+	panel._upgrade_cards[1].pressed.emit()
+	await tick()
+	check(progress.upgrade_tokens() == 0 and caster.get_slots()[2] == chain[1].result_spell, "token click advances one step and consumes one token")
+	menu = progress.upgrade_menu(panel._selected)
+	check(menu[2].casts == 0 and menu[2].state == "locked", "new evolved source begins with its own zero count")
+	for i in chain[2].xp_threshold: caster.spell_cast.emit(chain[2].source_spell)
+	panel._upgrade_cards[2].pressed.emit()
+	await tick()
+	check(progress.upgrade_menu(panel._selected).all(func(item): return item.state == "applied"), "complete chain remains visible as applied")
+	check(panel._upgrade_cards.all(func(card): return card.disabled and not card.lock_sign.visible), "applied cards cannot be chosen again")
+	var mana: Spell = load("res://data/spells/mana_shot.tres")
+	menu = progress.upgrade_menu(mana)
+	check(menu[1].state == "unavailable" and menu[2].state == "unavailable", "short chains do not invent upgrade content")
+	var none := Spell.new()
+	check(progress.upgrade_menu(none).all(func(item): return item.state == "unavailable"), "no-chain spell has honest unavailable slots")
+	# Cyclic malformed data must terminate introspection.
+	var fake := SpellProgress.new()
+	var a := Spell.new()
+	var b := Spell.new()
+	var ab := SpellUpgrade.new()
+	ab.source_spell = a; ab.result_spell = b
+	var ba := SpellUpgrade.new()
+	ba.source_spell = b; ba.result_spell = a
+	fake.upgrades = [ab, ba]
+	check(fake.upgrade_chain(a).size() == 2, "cycle guard terminates malformed chain")
+	fake.free()
+	main.queue_free()
+	await tick()
+	print("[712] ", checks, " checks, ", failures, " failures")
+	quit(1 if failures else 0)
