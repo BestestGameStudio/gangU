@@ -57,6 +57,16 @@ func apply_stun(duration: float) -> void:
 func is_stunned() -> bool:
 	return _stun_left > 0.0
 
+## #678: hit stop. The same FreezeHold seam the other movers use (#305):
+## while held, the physics step below skips movement, dash/launch and every
+## clock it ticks (stats, shield decay, stun), so the stop is exactly its
+## duration and cooldowns hold through it. Input is not dropped - it is
+## read again on the first live frame after the stop.
+var freeze := FreezeHold.new()
+
+func set_frozen(frozen: bool) -> void:
+	freeze.apply(frozen, sprite)
+
 ## #450: dash range nerfed 40% (135 px -> 81 px) by shortening the duration
 ## only; speed and cooldown are unchanged. 900 x 0.09 = 81 px is the flat base
 ## dash distance that any future range scaling applies on top of.
@@ -328,6 +338,8 @@ func _sync_bridge(bridge: DamageModifier, amount: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if freeze.is_frozen():
+		return
 	stats.tick(delta)
 	tick_shield_decay(delta)
 	if hp <= 0:

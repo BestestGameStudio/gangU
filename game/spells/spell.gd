@@ -19,6 +19,10 @@ class_name Spell
 @export var icon_upgraded: bool = false
 @export var cooldown: float = 0.5 ## Seconds before this spell can be recast.
 @export var damage: float = 10.0
+## (#678) Hit stop feel: multiplies the freeze duration of every landed
+## hit this spell produces (1.0 = the base stop; heavier spells go higher).
+## Timing only - damage, radius and speed are untouched.
+@export var hit_stop: float = 1.0
 @export var radius: float = 4.0 ## Projectile hit radius in pixels.
 @export var tags: Array[StringName] = [] ## Delivery + effect classification (#66). Metadata only, from the SpellTags vocabulary; never behavior parameters.
 @export var range: float = 600.0 ## Max projectile travel distance in pixels.
