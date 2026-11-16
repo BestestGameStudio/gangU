@@ -127,6 +127,7 @@ func _update_slot_icons() -> void:
 		var icon := _slot_icons[i]
 		var spell: Spell = slots[i] if i < slots.size() else null
 		icon.show_spell(spell)
+		icon.tooltip_text = "%s: %s" % [SpellCaster.slot_key_label(i), spell.spell_name if spell != null else "Empty"]
 		var remaining := 0.0
 		# #268: divide by the started cooldown length (after cooldown reduction).
 		var total := _caster.cooldown_duration(spell)
