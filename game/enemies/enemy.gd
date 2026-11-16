@@ -310,6 +310,8 @@ func chase_speed() -> float:
 ## accumulates ALL behavior clocks from delta) never runs, and the sprite
 ## pauses - a frozen enemy must LOOK frozen.
 var freeze := FreezeHold.new()
+## An external displacement owns locomotion, never damage or lifecycle.
+var displacement_owner: Node = null
 var _spawn_claim_pending := true
 
 func set_frozen(frozen: bool) -> void:
@@ -326,7 +328,7 @@ func _physics_process(delta: float) -> void:
 		_spawn_claim_pending = false
 		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
-	if freeze.is_frozen():
+	if freeze.is_frozen() or is_instance_valid(displacement_owner):
 		return
 	_rally_left = maxf(_rally_left - delta, 0.0)
 	# #331: a strong knockback owns the body until it decays below
