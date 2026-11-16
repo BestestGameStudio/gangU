@@ -89,7 +89,11 @@ patch_margin_right = 12
 patch_margin_top = 4
 patch_margin_bottom = 4
 
-[node name="SpellGrid" type="GridContainer" parent="Root"]
+[node name="HotbarInset" type="MarginContainer" parent="Root"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+
+[node name="SpellGrid" type="GridContainer" parent="Root/HotbarInset"]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_constants/h_separation = 16
