@@ -170,6 +170,7 @@ func _ready() -> void:
 	audio = DesertStatueAudio.new()
 	add_child(audio)
 	_make_ui()
+	_ensure_backdrop()
 	get_tree().node_added.connect(_watch_enemy_spawn)
 
 func _make_ui() -> void:
@@ -1057,18 +1058,79 @@ func _circle(radius: float, color: Color, width: float = -1.0) -> void:
 	else:
 		draw_arc(Vector2.ZERO,radius,0,TAU,128,color,width,true)
 
+## Static sand backdrop (#698): ~660 draw commands that never change. It used
+## to be re-issued by the arena's _draw every physics frame (about 700 draw
+## calls and 14k primitives per frame, the bulk of the fight's render cost).
+## It is now painted ONCE into a transparent SubViewport texture and shown as
+## one sprite behind the arena's own dynamic draw.
+class Backdrop extends Node2D:
+	const MAX_TEXTURE := 2048
+	var arena_radius := 0.0
+	var statue_radius := 0.0
+	var ring_points: Array[Vector2] = []
+	var texture_scale := 1.0
+	var _viewport: SubViewport = null
+
+	func _init() -> void:
+		show_behind_parent = true
+
+	func build() -> void:
+		var half := arena_radius + 102.0
+		var side := mini(int(ceil(half * 2.0 * texture_scale)), MAX_TEXTURE)
+		var scale_used := float(side) / (half * 2.0)
+		_viewport = SubViewport.new()
+		_viewport.size = Vector2i(side, side)
+		_viewport.transparent_bg = true
+		_viewport.disable_3d = true
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		var painter := Painter.new()
+		painter.owner_backdrop = self
+		painter.position = Vector2(half, half) * scale_used
+		painter.scale = Vector2(scale_used, scale_used)
+		_viewport.add_child(painter)
+		add_child(_viewport)
+		var sprite := Sprite2D.new()
+		sprite.texture = _viewport.get_texture()
+		sprite.scale = Vector2.ONE / scale_used
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		add_child(sprite)
+
+	class Painter extends Node2D:
+		var owner_backdrop: Backdrop
+		func _circle(radius: float, color: Color, width: float = -1.0) -> void:
+			if width < 0:
+				draw_circle(Vector2.ZERO,radius,color)
+			else:
+				draw_arc(Vector2.ZERO,radius,0,TAU,128,color,width,true)
+		func _draw() -> void:
+			var arena_radius := owner_backdrop.arena_radius
+			for i in 9:
+				_circle(arena_radius+100-i*10,Color("bda076").lerp(Color("d8bd86"),float(i)/8))
+			_circle(arena_radius-12,Color("b39a70"))
+			for i in 650:
+				var a := float(i)*2.399963
+				var at := Vector2.from_angle(a)*sqrt(float(i)/650)*(arena_radius-15)
+				draw_arc(at,8+i%12,0.2,1.6,8,Color(0.52,0.38,0.22,0.15),1)
+			_circle(owner_backdrop.statue_radius,Color(0.59,0.39,0.2,0.35),2)
+			for point in owner_backdrop.ring_points:
+				draw_circle(point,48,Color(0.65,0.48,0.27,0.25))
+
+var _backdrop: Backdrop = null
+
+func _ensure_backdrop() -> void:
+	if _backdrop != null:
+		return
+	_backdrop = Backdrop.new()
+	_backdrop.arena_radius = arena_radius
+	_backdrop.statue_radius = statue_radius
+	_backdrop.ring_points = _ring_points.duplicate()
+	var camera := get_viewport().get_camera_2d()
+	_backdrop.texture_scale = clampf(camera.zoom.x if camera != null else 1.0, 1.0, 2.0)
+	add_child(_backdrop)
+	move_child(_backdrop, 0)
+	_backdrop.build()
+
 func _draw() -> void:
-	for i in 9:
-		_circle(arena_radius+100-i*10,Color("bda076").lerp(Color("d8bd86"),float(i)/8))
-	_circle(arena_radius-12,Color("b39a70"))
-	for i in 650:
-		var a := float(i)*2.399963
-		var at := Vector2.from_angle(a)*sqrt(float(i)/650)*(arena_radius-15)
-		draw_arc(at,8+i%12,0.2,1.6,8,Color(0.52,0.38,0.22,0.15),1)
-	_circle(statue_radius,Color(0.59,0.39,0.2,0.35),2)
-	for i in 12:
-		var at := _ring_points[i]
-		draw_circle(at,48,Color(0.65,0.48,0.27,0.25))
 	_draw_volley()
 	if state == State.PREPARING and _transfer_target != null:
 		var from := possessed.position+Vector2(0,-20)
