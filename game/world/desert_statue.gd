@@ -154,7 +154,9 @@ func _draw() -> void:
 	draw_ellipse_shadow()
 	if broken:
 		return # The supplied death animation supplies the rubble.
-	if hp < max_hp and (not _phase_two() or (arena as DesertStatueArena).general_height <= 120.0):
+	# #684: no world-space bar over the kneeling general once the fight is won.
+	var arena_won := arena is DesertStatueArena and (arena as DesertStatueArena)._won
+	if hp < max_hp and not arena_won and (not _phase_two() or (arena as DesertStatueArena).general_height <= 120.0):
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
 
