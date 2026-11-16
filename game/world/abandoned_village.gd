@@ -49,7 +49,9 @@ const HOUSE_HALF := Vector2(44, 30)
 # y [-56, 40] relative to the village center, the tightest cell span that
 # still covers the art (was x [-64, 64] - double the art's width).
 const WELL_HALF := Vector2(32, 30)
-const WELL_OFFSET := Vector2(0, 4.5)
+# 6.5 (was 4.5): keeps the footprint top below the north-centre door cell row
+# so the door at the lane is reachable on the 32px grid.
+const WELL_OFFSET := Vector2(0, 6.5)
 const HOUSES: Array[Texture2D] = [
 	preload("res://assets/sprites/village/village_house_a.png"),
 	preload("res://assets/sprites/village/village_house_b.png"),
