@@ -37,26 +37,37 @@ func _physics_process(delta: float) -> void:
  var offset:=target.global_position-global_position
  if offset.length()>0.1:_axis=offset.normalized()
  var speed:=HookReel.speed_for(spell,heaviest_weight())
- reel_velocity=reel_velocity.move_toward(offset.normalized()*speed,spell.hook_reel_acceleration*delta).limit_length(speed)
+ var next_speed:=move_toward(reel_velocity.length(),speed,spell.hook_reel_acceleration*delta)
+ reel_velocity=offset.normalized()*next_speed
  var motion:=reel_velocity*delta
  if motion.length()>offset.length():motion=offset
  global_position+=motion
  var arrived:=true
+ var stop_distance:=HookReel.PLAYER_STOP_DISTANCE if target is Player else HookReel.ANCHOR_STOP_DISTANCE
  var spacing:=minf(12.0,24.0/maxf(enemies.size()-1,1))
  for i in enemies.size():
   var enemy:=enemies[i]
   var slot:=global_position+_axis*(i-(enemies.size()-1)*0.5)*spacing
-  var wanted:=reel_velocity+(slot-enemy.global_position)*8.0
+  if enemy.global_position.distance_to(target.global_position)<=stop_distance+0.01:
+   enemy.velocity=Vector2.ZERO
+   continue
+  var to_slot:=slot-enemy.global_position
+  var step:=minf((next_speed+to_slot.length()*8.0)*delta,spell.hook_max_reel_speed*delta)
   var before:=enemy.global_position
-  enemy.move_and_collide(wanted.limit_length(spell.hook_max_reel_speed)*delta)
+  # No inherited sideways velocity and no overshoot of the current bunch slot.
+  var enemy_motion:=to_slot.normalized()*minf(step,to_slot.length())
+  enemy_motion=HookReel.stop_at_contact(enemy.global_position,enemy_motion,target.global_position,stop_distance)
+  enemy.move_and_collide(enemy_motion)
   if enemy.terrain!=null:enemy.global_position=TerrainMotion.clamp_displacement(enemy.terrain,before,enemy.global_position,enemy.can_swim)
   enemy.global_position=enemy.constrain_movement(enemy.global_position)
-  if enemy.global_position.distance_to(target.global_position)>18.0:arrived=false
+  if enemy.global_position.distance_to(target.global_position)>stop_distance+0.01:arrived=false
  if arrived: _arrive()
  queue_redraw()
 
 func _arrive() -> void:
+ reel_velocity=Vector2.ZERO
  for enemy in enemies:
+  enemy.velocity=Vector2.ZERO
   if spell.hook_arrival_stun>0.0:enemy.stun(spell.hook_arrival_stun)
  queue_free()
 

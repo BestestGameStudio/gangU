@@ -7,9 +7,23 @@ var spell: Spell
 var reel_velocity := Vector2.ZERO
 var age := 0.0
 var arrived := false
+const PLAYER_STOP_DISTANCE := 32.0
+const ANCHOR_STOP_DISTANCE := 18.0
 
 static func speed_for(s: Spell, weight: float) -> float:
  return minf(maxf(s.hook_max_reel_speed, 0.0), maxf(s.hook_reel_speed * s.displacement_force, 0.0) / maxf(weight, 0.1))
+
+static func stop_at_contact(from: Vector2, motion: Vector2, destination: Vector2, radius: float) -> Vector2:
+ var offset := from - destination
+ if offset.length_squared() <= radius * radius: return Vector2.ZERO
+ var a := motion.length_squared()
+ if a <= 0.000001: return motion
+ var b := 2.0 * offset.dot(motion)
+ var c := offset.length_squared() - radius * radius
+ var discriminant := b * b - 4.0 * a * c
+ if discriminant < 0.0: return motion
+ var hit := (-b - sqrt(discriminant)) / (2.0 * a)
+ return motion * hit if hit >= 0.0 and hit <= 1.0 else motion
 
 static func begin(parent: Node, victim: Enemy, destination: Node2D, definition: Spell) -> HookReel:
  if not is_instance_valid(victim) or victim.hp <= 0 or is_instance_valid(victim.displacement_owner): return null
@@ -27,21 +41,29 @@ func _physics_process(delta: float) -> void:
  age += delta
  if age >= spell.hook_timeout: queue_free(); return
  var offset := target.global_position - enemy.global_position
- if offset.length() <= 18.0:
-  arrived = true
-  if spell.hook_arrival_stun > 0.0: enemy.stun(spell.hook_arrival_stun)
-  queue_free(); return
+ var stop_distance := PLAYER_STOP_DISTANCE if target is Player else ANCHOR_STOP_DISTANCE
+ if offset.length() <= stop_distance:
+  _arrive(); return
  var speed := speed_for(spell, enemy.weight)
- # Acceleration limits preserve lateral velocity as a moving player changes aim.
- reel_velocity = reel_velocity.move_toward(offset.normalized() * speed, spell.hook_reel_acceleration * delta).limit_length(speed)
- var motion := reel_velocity * delta
- if motion.length() > offset.length(): motion = motion.normalized() * offset.length()
+ # Accelerate inward only. A moving player must not leave tangential momentum.
+ var next_speed := move_toward(reel_velocity.length(), speed, spell.hook_reel_acceleration * delta)
+ reel_velocity = offset.normalized() * next_speed
+ var motion := offset.normalized() * minf(next_speed * delta, maxf(offset.length() - stop_distance, 0.0))
  var before := enemy.global_position
  enemy.move_and_collide(motion)
  if enemy.terrain != null:
   enemy.global_position = TerrainMotion.clamp_displacement(enemy.terrain, before, enemy.global_position, enemy.can_swim)
  enemy.global_position = enemy.constrain_movement(enemy.global_position)
+ if enemy.global_position.distance_to(target.global_position) <= stop_distance + 0.01:
+  _arrive(); return
  queue_redraw()
+
+func _arrive() -> void:
+ arrived = true
+ reel_velocity = Vector2.ZERO
+ enemy.velocity = Vector2.ZERO
+ if spell.hook_arrival_stun > 0.0: enemy.stun(spell.hook_arrival_stun)
+ queue_free()
 
 func _draw() -> void:
  if is_instance_valid(enemy) and is_instance_valid(target):
