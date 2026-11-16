@@ -105,6 +105,7 @@ func _init() -> void:
 	_content.add_child(progress_bar)
 	progress_label = Label.new()
 	progress_label.name = "UnlockProgressText"
+	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	progress_label.add_theme_font_size_override("font_size", 12)
 	progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	progress_label.visible = false
@@ -167,8 +168,6 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
 	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
-	if not _locked and not source_name.is_empty():
-		progress_label.text += " - " + source_name
 	match state:
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = "Choose upgrade"

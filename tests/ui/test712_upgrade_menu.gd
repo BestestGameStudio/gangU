@@ -42,6 +42,8 @@ func run() -> void:
 	check(panel._upgrade_cards.all(func(card): return viewport_rect.encloses(card.get_global_rect())), "entire aspect-correct cards fit upgrade viewport")
 	check(panel._stats_box._grid.columns == 4, "four spell stats in one row")
 	check(panel._upgrade_cards.all(func(card): return card.find_child("CardContentScroll", true, false).mouse_filter == Control.MOUSE_FILTER_PASS), "card scroll accepts wheel and passes clicks to button")
+	check(panel._upgrade_cards.all(func(card): return card.progress_label.horizontal_alignment == HORIZONTAL_ALIGNMENT_CENTER), "progress text centered")
+	check(panel._upgrade_cards.all(func(card): return not card.name_label.text.contains("[S]") and not card.name_label.text.contains("[M]") and not card.name_label.text.contains("[G]")), "upgrade names omit tier suffixes")
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
@@ -62,6 +64,7 @@ func run() -> void:
 	for i in 5: caster.spell_cast.emit(water)
 	check(progress.upgrade_menu(water)[0].state == "ready", "cast gate takes precedence over token")
 	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0]._frame.material == null, "ready card restores details and tier border")
+	check(panel._upgrade_cards[0].progress_label.text == "10 / 10 casts", "ready progress omits source name")
 	panel._upgrade_cards[0].pressed.emit()
 	await tick()
 	check(caster.get_slots()[2] == chain[0].result_spell, "click replaces only the next spell")
