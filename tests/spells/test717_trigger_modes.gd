@@ -135,7 +135,7 @@ func run() -> void:
 	caster._cast_spell(ws)
 	var base_shot: Projectile = caster.live_shots(ws)[0]
 	base_shot.set_physics_process(false)
-	caster.aim_override = base_shot.global_position + Vector2(0, 100)
+	caster.aim_override = base_shot.global_position + Vector2(0, 200)
 	before = credits.size()
 	check(caster._redirect_gate(ws, true) and base_shot._redirect_curve_left > 0.0 and credits.size() == before, "Water Shot base redirects once without extra cast credit")
 	base_shot._physics_process(0.025)
@@ -219,7 +219,7 @@ func run() -> void:
 	hp.set_frozen(false)
 	await create_timer(0.09).timeout
 	check(hover_art.is_playing() and hover_art.frame != previous_frame, "unfrozen Water Shot animation resumes")
-	caster.aim_override = hp.global_position + Vector2(0, 100)
+	caster.aim_override = hp.global_position + Vector2(0, 200)
 	before = credits.size()
 	var alt_router := SpellTriggerRouter.new()
 	caster._consume_trigger_commands(alt_router.sample(&"water_test", hover, true, true, 0.01), &"water_test", true)
@@ -241,7 +241,7 @@ func run() -> void:
 	tide._physics_process(1.0); check(tide.hovering, "Signature released shot returns to hover at target")
 	tide._physics_process(100); check(not tide.is_queued_for_deletion(), "Signature hover has no expiry")
 	caster._water_redirect_cooldown = 0
-	caster.aim_override = tide.global_position + Vector2(100, 0)
+	caster.aim_override = tide.global_position + Vector2(200, 0)
 	check(caster.release_water_shots(sig) == 1 and tide._redirect_curve_left > 0.0, "Signature can redirect again after cooldown")
 	for offset in [Vector2(-200, 0), Vector2(200, 0), Vector2(0, -200), Vector2(0, 200), Vector2(-20, 0)]:
 		tide.hovering = true; tide.released = true; tide.direction = Vector2.RIGHT
