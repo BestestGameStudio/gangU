@@ -414,13 +414,30 @@ func _win() -> void:
 	queue_redraw()
 
 func _drop_reward() -> void:
+	var origin: Vector2 = possessed.global_position if is_instance_valid(possessed) else global_position
 	var drop: RewardDrop = preload("res://game/economy/reward_drop.tscn").instantiate()
 	var coins := RewardEntry.new()
 	coins.kind = RewardEntry.Kind.CURRENCY
 	coins.currency_amount = victory_coins
 	drop.setup(coins)
 	get_parent().add_child(drop)
-	drop.global_position = possessed.global_position if is_instance_valid(possessed) else global_position
+	drop.global_position = origin
+	# #686: this custom path skipped the boss token table, so the general
+	# dropped coins only. Roll the shared boss_token_table like any boss
+	# (Enemy._spawn_reward_drop); the pool keeps tokens re-eligible per kill.
+	# _win() guards on _won and post-defeat hits return early in
+	# damage_statue, so this fires exactly once per defeat.
+	var table: RewardTable = preload("res://data/rewards/boss_token_table.tres")
+	var pool := Run.reward_pool()
+	var granted: Array = pool.granted() if pool != null else []
+	var entry := table.roll(granted)
+	if entry == null:
+		return
+	var token_drop: RewardDrop = preload("res://game/economy/reward_drop.tscn").instantiate()
+	token_drop.setup(entry)
+	get_parent().add_child(token_drop)
+	# Offset like Enemy.BOSS_RELIC_OFFSET so the two pickups do not overlap.
+	token_drop.global_position = origin + Vector2(96, 0)
 
 func heal(amount: int) -> void:
 	var before := hp
