@@ -135,6 +135,11 @@ var _invulnerable := false
 ## the last facing is retained while idle. Down is the at-rest facing.
 var facing: StringName = &"down"
 
+## One-shot animation lock (dash/cast): while >0, _update_sprite leaves the
+## playing one-shot anim alone instead of forcing idle/walk. Set by
+## _play_one_shot; counted down in _physics_process.
+var _anim_lock_left := 0.0
+
 @onready var aim_indicator: Node2D = $AimIndicator
 @onready var body: Polygon2D = $Body
 @onready var nose_edge: Polygon2D = $NoseEdge
@@ -195,6 +200,7 @@ func apply_damage(amount: int) -> void:
 	OnHit.record(self, before, hp) # #390: outcome captured before died()/revive
 	# Capture nonlethal outcome BEFORE health_changed/revive callbacks.
 	if hp > 0 and hp < before:
+		_play_one_shot(StringName("hurt_" + String(facing)))
 		if _hurt_audio == null:
 			_hurt_audio = PlayerHurtAudio.new()
 			_hurt_audio.name = "HurtCue"
@@ -204,6 +210,8 @@ func apply_damage(amount: int) -> void:
 		_hurt_audio.silence()
 	health_changed.emit(hp, max_hp)
 	if hp == 0:
+		# Death owns the sprite from here on (see _update_sprite's hp gate).
+		_play_one_shot(StringName("death_" + String(facing)))
 		died.emit()
 
 
@@ -397,6 +405,8 @@ func _physics_process(delta: float) -> void:
 				facing = &"right" if input_dir.x > 0.0 else &"left"
 			else:
 				facing = &"down" if input_dir.y > 0.0 else &"up"
+		if _anim_lock_left > 0.0:
+			_anim_lock_left = maxf(_anim_lock_left - delta, 0.0)
 		_update_sprite(input_dir != Vector2.ZERO or is_dashing() or is_launching())
 
 func constrain_movement(destination: Vector2) -> Vector2:
@@ -425,9 +435,19 @@ func is_concealed() -> bool:
 ## then run their normal logic (Enemy.sees treats a revealed player as seen).
 var _grass_revealed := false
 
-func _on_spell_cast_reveal(_spell: Spell) -> void:
+func _on_spell_cast_reveal(spell: Spell) -> void:
 	if is_concealed():
 		_grass_revealed = true
+	# Cast anim from the spell's cast mode: thrown/aimed magic reads as a
+	# one-hand bolt, melee swings as two-hand, everything else as a raise.
+	if sprite != null:
+		var kind := "cast_raise"
+		match spell.cast_mode():
+			Spell.CastMode.PROJECTILE, Spell.CastMode.SPLASH:
+				kind = "cast_bolt"
+			Spell.CastMode.HAMMER:
+				kind = "cast_twohand"
+		_play_one_shot(StringName(kind + "_" + String(facing)))
 
 ## True while the player is in tall grass AND has attacked since entering it.
 ## Leaving the grass clears the reveal (checked here too, so a reader never
@@ -467,6 +487,12 @@ func try_dash(input_dir: Vector2 = Vector2.ZERO) -> bool:
 		_dash_recharge_left = dash_cooldown
 	if sprite != null:
 		sprite.modulate = Color(0.75, 0.9, 1.6)
+		# Face the dash itself, not the last walk direction.
+		if absf(_dash_dir.x) > absf(_dash_dir.y):
+			facing = &"right" if _dash_dir.x > 0.0 else &"left"
+		elif _dash_dir.y != 0.0:
+			facing = &"down" if _dash_dir.y > 0.0 else &"up"
+		_play_one_shot(StringName("dash_" + String(facing)))
 	dash_started.emit(_dash_dir)
 	return true
 
@@ -560,8 +586,30 @@ func _spawn_dash_ghost() -> void:
 
 
 ## #137: drive idle_<dir>/walk_<dir> from the retained facing + movement.
+## A one-shot (dash/cast) anim owns the sprite while its lock lasts.
 func _update_sprite(walking: bool) -> void:
+	if hp <= 0:
+		# dead: the death anim's held fallen frame stays up
+		return
+	if _anim_lock_left > 0.0 and sprite.is_playing():
+		return
 	var prefix := "walk_" if walking else "idle_"
 	var anim := StringName(prefix + String(facing))
 	if sprite.animation != anim or not sprite.is_playing():
 		sprite.play(anim)
+
+
+## Play a one-shot anim (dash_<dir>/cast_*_<dir>) and lock the sprite for the
+## anim's full length so _update_sprite does not stomp it. No-op on bare
+## player.tscn instances (no sprite) or when the SpriteFrames lack the anim.
+func _play_one_shot(anim: StringName) -> void:
+	if sprite == null or sprite.sprite_frames == null:
+		return
+	if not sprite.sprite_frames.has_animation(anim):
+		return
+	sprite.play(anim)
+	var frames := sprite.sprite_frames
+	var seconds := 0.0
+	for i in frames.get_frame_count(anim):
+		seconds += frames.get_frame_duration(anim, i) / frames.get_animation_speed(anim)
+	_anim_lock_left = seconds

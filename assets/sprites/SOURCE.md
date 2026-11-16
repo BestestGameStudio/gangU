@@ -1,19 +1,33 @@
-# main_character.png - original chunky wizard sprite sheet
+# main_character.png - player wizard sprite sheet
 
-Original hand-authored pixel art for gangU (#136). No copied game assets, no
-traced art, no stock files shipped.
+Hand-composed original pixel art (SpriteU: sprites/player-wizard.json), no
+copied game assets, no traced art, no stock files shipped.
+
+2026-11-15: the #136 chunky wizard (with staff) was replaced by Mitra's new
+interpretation of his own reference: blue pointed hat, long white beard,
+purple robe, NO staff/wand - magic from bare hands. 32x48 cells, sheet
+192x1536 (6 cols x 32 rows): one row per animation - idle, walk, dash,
+cast-bolt, cast-twohand, cast-raise, hurt, death, each in
+down/up/left/right. Reproduce: `python3 -I tools/sprites/build_main_character.py`
+regenerates this PNG and the WizardSprite block in game/core/main.tscn from
+the SpriteU JSON (source of truth; see characters/player-wizard.md there).
+
+2026-11-15 v3: Sakurai key-pose pass - fewer exaggerated keys, held wind-up,
+1-frame strike, long follow-through; extreme single-pose hurt; 3-key death with
+a 1500 ms held fallen frame; palette-true rim light in the rig (see SpriteU
+characters/player-wizard.md).
 
 ## Design
-- Chunky wizard: oversized pointed hat with gold band, white beard, bell robe,
-  stubby boots, wood staff with cyan orb. Among-Us-LIKE chunky proportions as
-  style direction only (round little body, stubby legs) - original art, no
-  Innersloth assets used or referenced as files.
-- Flat palette, no gradients/glow, fitted to the existing player blue
-  (73,142,232) with gate/HUD accents (gold band, spell-cyan orb).
-- Frame: 32x48 px. Sheet: uniform 5x4 grid (160x192 px), rows = directions
-  [down, left, right, up], col 0 = idle, cols 1-4 = walk cycle
-  (contact, passing, contact, passing). Player footprint ~44px tall against
-  the 64px grid.
+- Mitra's wizard: oversized blue pointed hat with gold band, long white beard,
+  purple bell robe, sandals, NO staff/wand - magic comes from the bare hands.
+  Original art, no copied or referenced asset files.
+- Flat palette (22 tones), shading via lit/shade/deep tones per part plus a
+  palette-true rim light on silhouette edges; no gradients, no drawn glow or
+  spell orbs (the game draws FX).
+- Frame: 32x48 px. Sheet: 6 cols x 32 rows (192x1536), one row per animation
+  (idle, walk, dash, cast-bolt, cast-twohand, cast-raise, hurt, death x
+  down/up/left/right). Anim timing: held key poses with fast transitions
+  (Sakurai key-pose pass, 2026-11-15).
 
 ## References (layout/timing only, not shipped art)
 - "Space Guy - 8 Directional animated character 16x16"
@@ -215,8 +229,7 @@ cut by `tools/sprites/extract_frames.py` with
   (672x448), one stall per cell; the scene draws it at 0.5 scale (~112 px).
 - Frames are the board's six idle variants (potion sparkle / lighting
   positions). SpriteFrames (data/sprites/shop_vendor_frames.tres):
-  idle, 6 frames, 4 fps loop.
-# spell_icons.png - player spell HUD icons (#207)
+  idle, 6 frames, 4 fps loop.# spell_icons.png - player spell HUD icons (#207)
 
 Art from issue #207 ("Spell ICON Sprites"): the 1448x1086 sheet attached to
 the issue by Mitravasu (project human). The sheet is a regular 3x7 grid of
