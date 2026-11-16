@@ -340,6 +340,10 @@ func _route_trigger_input(spell: Spell, action: StringName, alternate: bool, del
 	_consume_trigger_commands(_trigger_router.sample(action, spell,
 		Input.is_action_pressed(action), alternate, delta), action,
 		Input.is_action_just_pressed(action))
+	# A held charge may have begun during cooldown. Retry without casting
+	# early once the source becomes ready (legacy vortex behavior).
+	if _trigger_router.is_charge_pending(action):
+		begin_charge(spell, action)
 
 func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, just_pressed: bool) -> void:
 	for event: Dictionary in commands:
@@ -347,7 +351,7 @@ func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, 
 		match event.command:
 			SpellTriggerRouter.Command.CAST:
 				var payload := source.trigger_payload(event.mode, event.alternate)
-				if _redirect_gate(payload, just_pressed): continue
+				if _redirect_gate(payload, event.get("fresh", just_pressed)): continue
 				if cooldown_remaining(source) <= 0.0:
 					_cast_spell(payload, source)
 			SpellTriggerRouter.Command.BEGIN_CHARGE:
@@ -505,8 +509,8 @@ func _tick_hammer(delta: float) -> void:
 	var cooling := hammer != null and cooldown_remaining(hammer) > 0.0
 	hammer_state.tick(delta, cooling, limit)
 
-## Crush Signature: open the vortex for `spell` (key pressed). Refused while
-## on cooldown, already charging, or for spells without a vortex.
+## Shared charge lifecycle. Vortex Hammer adds its existing visual effect;
+## other charging declarations need no spell-specific input handler.
 func begin_charge(spell: Spell, action: StringName = &"") -> bool:
 	if spell == null or not spell.supports_trigger(Spell.TriggerMode.CHARGING) or is_charging(spell):
 		return false
@@ -529,11 +533,11 @@ func _owner_alive() -> bool:
 	var hp: Variant = owner_node.get(&"hp")
 	return hp == null or int(hp) > 0
 
-## Drops vortexes whose spell left every cast key (unequipped, upgraded) or
+## Drops charges whose spell left every cast key (unequipped, upgraded) or
 ## whose caster died, so none is left pulling with no key to release it.
 func _prune_charges() -> void:
 	for s: Spell in _charges.keys():
-		if not is_charging(s) or not _owner_alive() or not (_slots.has(s) or equipped_spell == s):
+		if (_vortexes.has(s) and not is_instance_valid(_vortexes[s])) or not _owner_alive() or not (_slots.has(s) or equipped_spell == s):
 			cancel_charge(s)
 
 func is_charging(spell: Spell) -> bool:
@@ -542,7 +546,7 @@ func is_charging(spell: Spell) -> bool:
 func active_vortex(spell: Spell) -> HammerVortex:
 	return _vortexes.get(spell) if is_charging(spell) else null
 
-## Crush Signature: key released - close the vortex and swing. Returns
+## Shared key release: close any effect and cast the declared payload. Returns
 ## false when nothing was charging.
 func release_charge(spell: Spell, payload: Spell = null) -> bool:
 	if not is_charging(spell):
@@ -553,7 +557,7 @@ func release_charge(spell: Spell, payload: Spell = null) -> bool:
 	_cast_spell(payload if payload != null else spell, spell)
 	return true
 
-## Closes the vortex without swinging.
+## Cancels a charge without casting (and frees an optional vortex).
 func cancel_charge(spell: Spell) -> void:
 	var v: Variant = _vortexes.get(spell)
 	if v != null and is_instance_valid(v):
