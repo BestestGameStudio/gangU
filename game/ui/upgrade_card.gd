@@ -86,6 +86,7 @@ func _init() -> void:
 	description_label.name = "Description"
 	description_label.add_theme_font_size_override("font_size", 16)
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description_label.add_theme_constant_override("line_spacing", -2)
 	description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(description_label)
 	action_label = Label.new()

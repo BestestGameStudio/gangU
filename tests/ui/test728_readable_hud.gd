@@ -12,6 +12,7 @@ func run():
  checks.append(h._spirit_label.get_theme_color("font_color")==Color("10232c"))
  s.tick_channel(0.1,true);h._refresh_spirit()
  checks.append(h._spirit_label.text=="HEALING...")
+ checks.append(h._spirit_label.get_theme_color("font_color")==Color.WHITE and h._spirit_label.get_theme_constant("outline_size")==1)
  for label:Label in [h._hp_label,h._spirit_label]:
   var text_size:=label.get_theme_font("font").get_string_size(label.text,HORIZONTAL_ALIGNMENT_LEFT,-1,label.get_theme_font_size("font_size"))
   checks.append(text_size.x<=label.size.x-16 and text_size.y<=label.size.y-4)
