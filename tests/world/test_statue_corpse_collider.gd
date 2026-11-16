@@ -91,8 +91,11 @@ func _run() -> void:
 		_check(drop_shape != null and fr < drop_shape.radius, "footprint radius leaves the pickup trigger reachable")
 		player.global_position = coin.global_position + Vector2.RIGHT * (fr + pr)
 		player.force_update_transform()
-		await physics_frame
-		await physics_frame
+		# Area/body sync lags a couple of physics steps; give it a few frames.
+		for i in 10:
+			await physics_frame
+			if not is_instance_valid(coin):
+				break
 		_check(not is_instance_valid(coin), "player pressed against the footprint collects the coin")
 		if is_instance_valid(arena.possessed):
 			_check(player.global_position.distance_to(arena.possessed.global_position) >= fr + pr - 0.6, "collection happened without penetrating the footprint")
