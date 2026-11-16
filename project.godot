@@ -26,6 +26,11 @@ gdscript/warnings/unsafe_method_access=1
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[gui]
+
+theme/custom="res://game/ui/default_theme.tres"
+theme/custom_font="res://assets/fonts/m5x7/m5x7.ttf"
+
 [input]
 
 switch_spell={
