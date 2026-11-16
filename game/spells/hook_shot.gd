@@ -61,10 +61,11 @@ func _draw() -> void:
   draw_line(to_local(source.global_position), Vector2.ZERO, Color(0.7, 0.8, 0.8), 1.0)
 
 func _at_destination() -> void:
- var count := 0
+ var candidates: Array[Enemy] = []
  if spell.hook_magnet_radius > 0.0:
   for node in get_tree().get_nodes_in_group("enemies"):
    var enemy := node as Enemy
    if enemy == null or enemy.hp <= 0 or enemy.global_position.distance_to(destination) > spell.hook_magnet_radius: continue
-   if HookReel.begin(get_parent(), enemy, source, spell) != null: count += 1
- finish(count)
+   candidates.append(enemy)
+ var group := HookGroupReel.begin(get_parent(), candidates, source, spell)
+ finish(group.enemies.size() if group != null else 0)
