@@ -49,6 +49,8 @@ func run() -> void:
 	var tip: Control = panel._upgrade_cards[0]._make_custom_tooltip("Long upgrade description for hover wrapping")
 	check(tip.get_child(0).autowrap_mode == TextServer.AUTOWRAP_WORD_SMART and tip.get_child(0).custom_minimum_size.x == 288, "upgrade hover text has bounded wrap width")
 	tip.free()
+	check(panel._upgrade_cards.all(func(card): return card.progress_bar.get_global_rect().position.x - card.global_position.x >= 24 and card.get_global_rect().end.x - card.progress_bar.get_global_rect().end.x >= 24), "progress bars inset at least24 pixels from frame")
+	check(UpgradeCard.LOCK_TEXTURE.get_height() > UpgradeCard.LOCK_TEXTURE.get_width(), "SpriteU lock narrower and taller")
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
