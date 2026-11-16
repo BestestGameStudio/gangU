@@ -4,7 +4,7 @@ class_name SpellCaster
 ## projectiles toward the cursor. Consumes the shared `cast` input action.
 ## Supports many spells and later switching (#10) via add_spell/next_spell.
 ##
-## #10 slots extension (Contract B, ADDITIVE): an UNLOCKED inventory plus six
+## #10 slots extension (Contract B, ADDITIVE): an UNLOCKED inventory plus five
 ## nullable equip SLOTS with direct per-slot casting (human-settled: 6 slots,
 ## one key per slot, direct per-slot cast, run-scoped reset, equip panel, one
 ## spell one slot; slot keys were digits 1-6, re-settled to LMB/RMB/Q/E/R/F by
@@ -46,9 +46,9 @@ var _cooldowns: Dictionary = {} ## Spell -> remaining seconds
 var _cooldown_totals: Dictionary = {} ## #268: Spell -> last started cooldown length
 
 ## #10 slots: unlock inventory (grants land here only, never auto-equip) and
-## the six nullable equip slots. Read via get_unlocked()/get_slots() (copies).
+## the five nullable equip slots. Read via get_unlocked()/get_slots() (copies).
 var unlocked: Array[Spell] = []
-var _slots: Array[Spell] = [null, null, null, null, null, null]
+var _slots: Array[Spell] = [null, null, null, null, null]
 
 ## #370 Stone Hammer run state (Crush crit bonus, Rhythm combo). One per
 ## caster so it survives upgrades; the run reload resets it with the scene.
@@ -60,7 +60,7 @@ var _vortex_actions: Dictionary = {}
 var _charges: Dictionary = {} # Source spell -> true, includes non-vortex charges.
 var _trigger_router := SpellTriggerRouter.new()
 
-const SLOT_COUNT := 6
+const SLOT_COUNT := 5
 
 var equipped_spell: Spell:
 	get:
@@ -73,11 +73,11 @@ func _ready() -> void:
 		add_spell(s)
 	_register_slot_actions()
 
-## #319 (Daniel, 2026-11-08): slot cast keys are LMB, RMB, Q, E, R, F for
-## slots 1-6 (was digits 1-6). Slots 1-2 bind mouse buttons, 3-6 physical
+## #319 (Daniel, 2026-11-08): slot cast keys are LMB, RMB, Q, E, R for
+## slots 1-5 (was digits 1-6). Slots 1-2 bind mouse buttons, 3-5 physical
 ## letter keys. SLOT_KEY_LABELS is the single source for UI display.
-const SLOT_KEY_LABELS: Array[String] = ["LMB", "RMB", "Q", "E", "R", "F"]
-const SLOT_KEYCODES: Array[int] = [0, 0, KEY_Q, KEY_E, KEY_R, KEY_F]
+const SLOT_KEY_LABELS: Array[String] = ["LMB", "RMB", "Q", "E", "R"]
+const SLOT_KEYCODES: Array[int] = [0, 0, KEY_Q, KEY_E, KEY_R]
 
 ## #10 slots: runtime action+binding registration. Idempotent across scene
 ## reloads (InputMap is global): existing actions are left untouched, so
@@ -140,7 +140,7 @@ func has_logical_spell(spell: Spell) -> bool:
 ## #10 slots: grant to the unlock inventory. Duplicate-grant policy is an OPEN
 ## human choice - #383 now refuses a second copy of a held logical spell.
 ## #262: every newly granted spell also auto-binds to the FIRST EMPTY slot in
-## 1-6 order. Existing bindings are never replaced: when all six slots are
+## 1-5 order. Existing bindings are never replaced: when all five slots are
 ## occupied the grant stays unlock-only for manual equip in the Tab panel.
 ## One funnel covers every grant path - walk-over pickups (add_spell), enemy
 ## reward-drop spells, and shop purchases.
@@ -154,7 +154,7 @@ func unlock_spell(spell: Spell) -> bool:
 	bind_first_free(spell)
 	return true
 
-## #262: bind `spell` to the first empty slot in 1-6 order. Returns the slot
+## #262: bind `spell` to the first empty slot in 1-5 order. Returns the slot
 ## index the spell ends in (its existing binding when already slotted), or
 ## -1 when every slot is occupied: the grant then stays unlock-only and no
 ## existing player assignment is touched.
