@@ -29,7 +29,7 @@ func _chevron_shown(hud: Node, caster: Node, spell: Spell) -> bool:
 	var index: int = caster.get_slots().find(spell)
 	if index == -1:
 		return false
-	return hud.get_node("Root/SpellGrid").get_child(index).get_node("UpgradeChevron").visible
+	return hud.get_node("Root/HotbarInset/SpellGrid").get_child(index).get_node("UpgradeChevron").visible
 
 func _press_tab() -> void:
 	_press_key(KEY_TAB)

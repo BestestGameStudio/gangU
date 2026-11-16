@@ -63,7 +63,7 @@ var _progress_elapsed := 0.0
 @onready var _shield_bar: ProgressBar = $Root/ShieldBar
 @onready var _shield_label: Label = $Root/ShieldBar/ShieldLabel
 @onready var _spirit_bar: ProgressBar = $Root/HPBar/SpiritBar
-@onready var _spell_grid: GridContainer = $Root/SpellGrid
+@onready var _spell_grid: GridContainer = $Root/HotbarInset/SpellGrid
 
 func _ready() -> void:
 	_area_loader = get_parent().get_node_or_null("AreaLoader") as AreaLoader
