@@ -11,6 +11,7 @@ extends Node
 ## signal - no XP spending or qualification policy is invented here.
 
 signal upgrades_changed(spell: Spell)
+signal cast_progress_changed(spell: Spell)
 
 ## Explicit caster wiring (no-group convention from #34).
 @export var caster_path: NodePath
@@ -29,6 +30,7 @@ func _ready() -> void:
 
 func _on_spell_cast(spell: Spell) -> void:
 	_cast_counts[spell] = int(_cast_counts.get(spell, 0)) + 1
+	cast_progress_changed.emit(spell)
 
 ## Read-only XP observation for one spell (casts this run).
 func cast_count(spell: Spell) -> int:
@@ -62,6 +64,69 @@ func next_upgrade(spell: Spell) -> SpellUpgrade:
 		if u != null and u.source_spell == spell:
 			return u
 	return null
+
+## #712: read-only full-chain view, including predecessors of an evolved
+## spell. Resource identity is the same identity used by next_upgrade/cast XP.
+## Guard malformed cycles so menu introspection can never loop forever.
+func upgrade_chain(spell: Spell) -> Array[SpellUpgrade]:
+	var rows: Array[SpellUpgrade] = []
+	if spell == null:
+		return rows
+	var root_spell := spell
+	var visited := {}
+	while not visited.has(root_spell):
+		visited[root_spell] = true
+		var predecessor: SpellUpgrade = null
+		for row in upgrades:
+			if row != null and row.result_spell == root_spell:
+				predecessor = row
+				break
+		if predecessor == null:
+			break
+		root_spell = predecessor.source_spell
+	visited.clear()
+	while root_spell != null and not visited.has(root_spell):
+		visited[root_spell] = true
+		var row := next_upgrade(root_spell)
+		if row == null:
+			break
+		rows.append(row)
+		root_spell = row.result_spell
+	return rows
+
+## Three display slots, not three invented upgrades. Missing catalog tiers
+## remain unavailable. Progress is casts of THAT row's source / threshold;
+## a token can bypass only the current next step, as in can_token_upgrade.
+func upgrade_menu(spell: Spell) -> Array[Dictionary]:
+	var chain := upgrade_chain(spell)
+	var current_index := chain.size()
+	for i in chain.size():
+		if chain[i].source_spell == spell:
+			current_index = i
+			break
+	var slots: Array[Dictionary] = []
+	for tier in range(1, 4):
+		var item := {"tier": tier, "upgrade": null, "state": "unavailable", "casts": 0, "threshold": 0, "prerequisite": ""}
+		for i in chain.size():
+			var row := chain[i]
+			if row.tier != tier:
+				continue
+			item.upgrade = row
+			item.casts = cast_count(row.source_spell)
+			item.threshold = row.xp_threshold
+			if i < current_index:
+				item.state = "applied"
+			elif i == current_index and can_upgrade(spell):
+				item.state = "ready"
+			elif i == current_index and can_token_upgrade(spell):
+				item.state = "token"
+			else:
+				item.state = "locked"
+				if i > current_index:
+					item.prerequisite = row.source_spell.spell_name
+			break
+		slots.append(item)
+	return slots
 
 ## Tier of a held spell (#36): 1/2/3 = Specialization/Mastery/Signature,
 ## 0 = Base or never-upgraded. Written only by a successful apply_upgrade;
