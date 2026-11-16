@@ -570,7 +570,7 @@ func _compute_lattice_type(p: Vector2) -> int:
 	return DualGrid.T.GRASS
 
 ## Set false (and drop _dirt_nodes) once the cobble sheet has a baked dirt rim.
-const VILLAGE_DIRT_RING := true
+const VILLAGE_DIRT_RING := false
 var _cobble_nodes: Dictionary = {}
 var _dirt_nodes: Dictionary = {}
 var _lane_nodes: Dictionary = {}
