@@ -234,8 +234,8 @@ func trigger_payload(trigger: TriggerMode, alternate: bool = false) -> Spell:
 
 ## Hook Shot: relative displacement force / enemy weight sets capped reel speed.
 @export var displacement_force: float = 1.0
-@export var hook_reel_speed: float = 600.0
-@export var hook_max_reel_speed: float = 1200.0
+@export var hook_reel_speed: float = 1500.0
+@export var hook_max_reel_speed: float = 2400.0
 @export var hook_reel_acceleration: float = 2400.0
 @export var hook_timeout: float = 8.0
 
