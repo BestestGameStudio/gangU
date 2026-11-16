@@ -18,6 +18,19 @@ func run():
  var result:Array[int]=[];shot.resolved.connect(func(n):result.append(n));shot._at_destination()
  check(result==[3],"three enemies hooked together inside72px")
  for i in 4:check(is_instance_valid(enemies[i].displacement_owner)==(i<3),"radius exclusion"+str(i))
+ var group:=enemies[0].displacement_owner as HookGroupReel
+ check(group!=null and enemies[1].displacement_owner==group and enemies[2].displacement_owner==group,"one group controller and rope")
+ enemies[2].weight=5.0
+ check(group.heaviest_weight()==5.0,"heaviest enemy governs group speed")
+ group.set_physics_process(false)
+ var start:=group.global_position
+ group._physics_process(0.1)
+ check(group.global_position!=start,"shared center advances")
+ for e in enemies:
+  if e.displacement_owner==group:e.global_position=player.global_position
+ group.global_position=player.global_position;group.reel_velocity=Vector2.ZERO
+ group._physics_process(0.001)
+ check(group.is_queued_for_deletion(),"group arrival completes without optional tier fields")
  var row:=load("res://data/upgrades/hook_shot_magnet.tres") as SpellUpgrade
  check(row.quest.kind==SpellUpgradeQuest.Kind.HOOK_STREAK and row.quest.goal==3,"base quest unlocks specialization")
  area.queue_free();await process_frame;quit(1 if failures else 0)
