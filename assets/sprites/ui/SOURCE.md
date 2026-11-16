@@ -38,3 +38,8 @@ original24x24 (trail8x4) SpriteU-format JSON in tools/sprites/specs/water_shot_*
 Validated using SpriteU check_sprite.py; exported at1x by render_preview.py
 from read-only revision7fd4617ebb9a084450fef7e428bee61357b26227.
 PNGs in assets/sprites/spells/; no SpriteU source modifications.
+
+Water Shot spin:8 original24x24 SpriteU frames,16px circular silhouette, cyan rim,
+white flecks and dark blue interior blobs. Runtime atlas strip assembled losslessly
+from SpriteU frame exports; SpriteFrames loops at16fps in flight and hover.
+User-supplied visual reference informed the look only; no reference pixels or signature included.

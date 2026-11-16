@@ -88,7 +88,7 @@ class_name Spell
 @export var water_shot_hover_spread_radius: float = 14.0
 @export var water_shot_hover_spread_speed: float = 12.0
 @export var projectile_art: Texture2D = null
-@export var projectile_spin_speed: float = 0.0
+@export var projectile_frames: SpriteFrames = null
 @export var redirect_curve_duration: float = 0.0
 @export var projectile_trail_art: Texture2D = null
 

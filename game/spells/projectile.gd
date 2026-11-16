@@ -321,6 +321,14 @@ static func sprite_anim_for(s: Spell) -> StringName:
 ## animation instead. The root already faces the flight direction and the art
 ## is authored pointing +X, so no extra rotation is needed.
 func _wire_sprite() -> void:
+	if spell.projectile_frames != null:
+		var art := AnimatedSprite2D.new()
+		art.name = "WaterShotArt"
+		art.sprite_frames = spell.projectile_frames
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		add_child(art); art.play(&"spin")
+		_dart.hide(); _visual.hide()
+		return
 	if spell.projectile_art != null:
 		var art := Sprite2D.new()
 		art.name = "WaterShotArt"
@@ -415,9 +423,6 @@ func _physics_process(delta: float) -> void:
 
 ## #263: sprite/halo pulse and trail follow (visual only).
 func _update_feel() -> void:
-	if spell.projectile_art != null:
-		var art := get_node_or_null("WaterShotArt") as Sprite2D
-		if art != null: art.rotation = _life_t * spell.projectile_spin_speed
 	if _sprite != null and spell.glow:
 		_sprite.scale = _sprite_base * (1.0 + SPRITE_PULSE_AMP * sin(_vis_t * PULSE_RATE))
 	if _glow != null:

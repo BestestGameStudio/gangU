@@ -1,13 +1,14 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="Spell" load_steps=6 format=3]
 [ext_resource type="Script" path="res://game/spells/spell.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/sprites/spells/water-shot-icon.png" id="2"]
 [ext_resource type="Texture2D" path="res://assets/sprites/spells/water-shot-projectile.png" id="3"]
 [ext_resource type="Texture2D" path="res://assets/sprites/spells/water-shot-trail.png" id="4"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/water_shot_frames.tres" id="5"]
 [resource]
 script = ExtResource("1")
 icon = ExtResource("2")
 projectile_art = ExtResource("3")
-projectile_spin_speed = 12.566371
+projectile_frames = ExtResource("5")
 projectile_trail_art = ExtResource("4")
 redirect_curve_duration = 0.15
 trail_length = 18

@@ -142,7 +142,7 @@ func run() -> void:
 	check(base_shot.direction.x > 0 and base_shot.direction.y > 0 and base_shot.direction.y < 0.99, "redirect begins a curve rather than instant snap")
 	base_shot._physics_process(0.15)
 	check(base_shot._redirect_curve_left == 0.0 and base_shot.direction.y > 0.9, "redirect finishes short0.15s bend")
-	check(absf(base_shot.get_node("WaterShotArt").rotation) > 0.1, "Water Shot ball spins during flight")
+	check(base_shot.get_node("WaterShotArt") is AnimatedSprite2D and base_shot.get_node("WaterShotArt").is_playing() and base_shot.get_node("WaterShotArt").sprite_frames.get_frame_count(&"spin") == 8, "Water Shot ball spins during flight")
 	check(not base_shot.can_redirect() and not caster._redirect_gate(ws, true), "base exhausted redirect permits next normal cast")
 	var hover: Spell = load("res://data/spells/water_shot_hover.tres")
 	var made: Array[WaterShotProjectile] = []
@@ -154,6 +154,10 @@ func run() -> void:
 	check(made[0].is_queued_for_deletion() and caster.live_shots(hover).size() == 3, "hover cap3 evicts oldest hovering shot")
 	var hp := made[-1]
 	check(hp.hovering, "shot reaches captured initial aim and hovers")
+	var hover_art := hp.get_node("WaterShotArt") as AnimatedSprite2D
+	var previous_frame := hover_art.frame
+	await create_timer(0.08).timeout
+	check(hover_art.is_playing() and hover_art.frame != previous_frame, "Water Shot loop advances frames while hovering")
 	caster.aim_override = hp.global_position + Vector2(0, 100)
 	before = credits.size()
 	var alt_router := SpellTriggerRouter.new()
