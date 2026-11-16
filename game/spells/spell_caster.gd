@@ -350,6 +350,7 @@ func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, 
 		var source: Spell = event.spell
 		match event.command:
 			SpellTriggerRouter.Command.CAST:
+				if is_charging(source): continue # A held action owns this source until release/cancel.
 				var payload := source.trigger_payload(event.mode, event.alternate)
 				if _redirect_gate(payload, event.get("fresh", just_pressed)): continue
 				if cooldown_remaining(source) <= 0.0:
@@ -429,7 +430,7 @@ func active_shield() -> WaterShield:
 
 ## Spawns (or refreshes) the shield, or - Big Ball with a shield up - fires
 ## its Water Ball and shrinks the ball. Returns the cooldown this cast costs.
-func _cast_shield(spell: Spell, dir: Vector2) -> float:
+func _cast_shield(spell: Spell, dir: Vector2, cast_owner: Spell) -> float:
 	var current := active_shield()
 	if current != null and spell.shield_shot != null:
 		_spawn_fanout(spell.shield_shot, dir)
@@ -444,12 +445,12 @@ func _cast_shield(spell: Spell, dir: Vector2) -> float:
 	var shield := WaterShield.spawn(owner_node, spell)
 	if spell.shield_shot != null:
 		# Big Ball: shoot right away; the real cooldown starts when it ends.
-		shield.ended.connect(_on_big_ball_ended.bind(spell), CONNECT_ONE_SHOT)
+		shield.ended.connect(_on_big_ball_ended.bind(cast_owner, spell.cooldown), CONNECT_ONE_SHOT)
 		return spell.shield_shot.cooldown
 	return spell.cooldown
 
-func _on_big_ball_ended(_popped: bool, spell: Spell) -> void:
-	_start_cooldown(spell, spell.cooldown)
+func _on_big_ball_ended(_popped: bool, cast_owner: Spell, cooldown_base: float) -> void:
+	_start_cooldown(cast_owner, cooldown_base)
 
 func _start_cooldown(spell: Spell, base: float) -> void:
 	var duration := _effective_cooldown(base)
@@ -554,6 +555,8 @@ func release_charge(spell: Spell, payload: Spell = null) -> bool:
 		_vortex_actions.erase(spell)
 		return false
 	cancel_charge(spell)
+	if cooldown_remaining(spell) > 0.0:
+		return false
 	_cast_spell(payload if payload != null else spell, spell)
 	return true
 
@@ -588,6 +591,7 @@ func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 	# #305: the Signature bubble anchors at the CAST POINT, captured before
 	# any launch can move the player (Daniel: the bubble stays "where you
 	# cast"). For a launch spell this is the pre-launch position.
+	var credit := cast_owner if cast_owner != null else spell
 	var cast_pos := global_position
 	var dir := global_position.direction_to(aim_point())
 	if dir.length_squared() == 0.0:
@@ -629,7 +633,7 @@ func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 		Spell.CastMode.HAMMER:
 			cooldown_base = _cast_hammer(spell)
 		Spell.CastMode.SHIELD:
-			cooldown_base = _cast_shield(spell, dir)
+			cooldown_base = _cast_shield(spell, dir, credit)
 		Spell.CastMode.RAIN:
 			WaterRain.spawn(get_tree().current_scene, spell, get_parent(), _lob_target(spell))
 		Spell.CastMode.SPLASH:
@@ -646,7 +650,6 @@ func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 					_run_burst(spell, spell.burst_count - 1)
 	# #268: the owning Player's cooldown reduction shortens the cooldown this
 	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
-	var credit := cast_owner if cast_owner != null else spell
 	_start_cooldown(credit, cooldown_base)
 	spell_cast.emit(credit)
 	FireballAudio.cast(self, spell) # #584: one cue per committed cast, not per shot.

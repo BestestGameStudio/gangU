@@ -93,6 +93,36 @@ func run() -> void:
 		caster._route_trigger_input(other, action, false, 0.01)
 		caster._cooldowns.clear()
 	check(credits.size() == 10, "equipped and all six slot actions use shared routing")
+	# Cross-action ownership: a held generic charge reserves its source.
+	credits.clear(); caster._cooldowns.clear(); caster._trigger_router = SpellTriggerRouter.new()
+	Input.action_press(&"cast")
+	caster._route_trigger_input(s, &"cast", false, 0.25)
+	Input.action_press(&"spell_slot_3")
+	caster._route_trigger_input(s, &"spell_slot_3", true, 0.01)
+	check(caster.is_charging(s) and credits.is_empty(), "generic charge blocks alternate cast through another action")
+	Input.action_release(&"spell_slot_3");caster._route_trigger_input(s, &"spell_slot_3", true, 0.01)
+	Input.action_release(&"cast");caster._route_trigger_input(s, &"cast", false, 0.01)
+	check(credits.size() == 1 and caster.cooldown_remaining(s) == charged.cooldown, "charge release commits source only once across keys")
+	caster._cooldowns.clear();caster.begin_charge(s)
+	caster._start_cooldown(s, 9.0)
+	var before := credits.size()
+	check(not caster.release_charge(s, charged) and not caster.is_charging(s) and credits.size() == before and caster.cooldown_remaining(s) == 9.0, "charge release cancels rather than firing through active source cooldown")
+	# Deferred Big Ball end must charge the equipped source, not the payload.
+	caster._cooldowns.clear()
+	var big_ball := Spell.new()
+	big_ball.mode = Spell.CastMode.SHIELD
+	big_ball.cooldown = 8.0
+	big_ball.shield_duration = 10.0
+	big_ball.shield_radius = 80.0
+	big_ball.shield_shot = load("res://data/spells/water_ball.tres")
+	s.alternate_spell = big_ball
+	Input.action_press(&"spell_slot_3");caster._route_trigger_input(s, &"spell_slot_3", true, 0.01)
+	Input.action_release(&"spell_slot_3");caster._route_trigger_input(s, &"spell_slot_3", true, 0.01)
+	var shield := caster.active_shield()
+	check(shield != null and caster.cooldown_remaining(s) == big_ball.shield_shot.cooldown, "Big Ball alternate initially uses source shot cooldown")
+	if shield != null:
+		shield.ended.emit(false)
+	check(caster.cooldown_remaining(s) == big_ball.cooldown and caster.cooldown_remaining(big_ball) == 0 and caster.cooldown_duration(s) == big_ball.cooldown, "deferred Big Ball full cooldown and HUD stay on source")
 	main.queue_free();await process_frame
 	print("[717] ",checks," checks, ",failed," failures")
 	quit(1 if failed else 0)

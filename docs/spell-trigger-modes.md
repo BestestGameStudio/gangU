@@ -41,3 +41,8 @@ its old pending input. A charge held through cooldown starts once ready.
 Direct `cast()` / `cast_slot()` are unchanged programmatic casts, not key
 simulation. Fixtures can call the router/consumer to test input semantics.
 No existing spell gains alternate payloads or tap/charge behavior implicitly.
+
+A charge reserves its source across the generic and slot keys. Other routed
+casts from that source wait until it releases or cancels. Release rechecks the
+source cooldown and cancels without firing if it became active. Deferred
+effect cooldowns (Big Ball ending) also remain keyed to the equipped source.
