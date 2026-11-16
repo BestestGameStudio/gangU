@@ -176,5 +176,10 @@ func run() -> void:
 	await create_timer(0.2).timeout
 	var next_owned := current_scene.get_node("OwnedRelics") as OwnedRelics
 	check(next_owned.count() == pre_death_count and next_owned.has_id(r.id) and next_owned.has_id(fresh.id), "new-run reload KEEPS owned relics across death (#655)")
+	# #705: rarity property (Common/Rare/Mythical/Legendary), default COMMON.
+	check(Relic.Rarity.size() == 4 and Relic.Rarity.COMMON == 0 and Relic.Rarity.RARE == 1 and Relic.Rarity.MYTHICAL == 2 and Relic.Rarity.LEGENDARY == 3, "rarity enum order common/rare/mythical/legendary")
+	check(Relic.new().rarity == Relic.Rarity.COMMON, "relic rarity defaults to COMMON")
+	var twin := load("res://data/relics/twin_dash.tres") as Relic
+	check(twin != null and twin.rarity == Relic.Rarity.COMMON, "twin_dash relic ships rarity COMMON")
 	print("[131] DONE checks=", checks, " failures=", failures)
 	quit(1 if failures else 0)

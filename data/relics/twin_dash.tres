@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_relic")
+rarity = 0
 id = &"twin_dash"
 display_name = "Twin Dash"
 description = "Grants a second dash charge."
