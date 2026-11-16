@@ -27,6 +27,12 @@ func run():
  var reel:=enemy.displacement_owner as HookReel
  check(reel!=null and reel.target==pair.anchor,"touch reels to fixed anchor")
  check(enemy.hook_taunt_target==null,"hook clears taunt")
+ check(pair.consumed and pair.active_reel==reel,"catch consumes pair")
+ enemy.global_position=Vector2(220,100);pair._physics_process(0.01)
+ check(pair.lure.global_position==enemy.global_position,"caught lure follows reeled enemy")
+ reel.set_physics_process(false);enemy.global_position=pair.anchor.global_position;reel._physics_process(0.001)
+ pair._physics_process(0.001)
+ check(pair.is_queued_for_deletion(),"arrival removes anchor and lure pair")
  var quest:=load("res://data/upgrades/hook_shot_rock.tres") as SpellUpgrade
  check(quest.quest.kind==SpellUpgradeQuest.Kind.CASTS and quest.quest.goal==5,"mastery placeholder five casts")
  area.queue_free();await process_frame;quit(1 if failures else 0)

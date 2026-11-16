@@ -13,6 +13,9 @@ const ROPE := preload("res://assets/spells/hook_shot/rope.png")
 const ANCHOR := preload("res://assets/spells/hook_shot/anchor.png")
 const LURE := preload("res://assets/spells/hook_shot/lure.png")
 const NOTES := preload("res://assets/spells/hook_shot/music_notes.png")
+var caught_enemy: Enemy = null
+var active_reel: HookReel = null
+var consumed := false
 
 static func place(parent: Node, player: Player, s: Spell, anchor_at: Vector2, lure_at: Vector2) -> HookAnchorPair:
  var peers: Array[HookAnchorPair] = []
@@ -31,6 +34,11 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
  if not is_instance_valid(owner_player) or owner_player.hp<=0 or not owner_player.is_inside_tree():queue_free();return
+ if consumed:
+  if not is_instance_valid(active_reel) or active_reel.is_queued_for_deletion() or not is_instance_valid(caught_enemy):
+   queue_free();return
+  lure.global_position=caught_enemy.global_position
+  queue_redraw();return
  taunt_left-=delta
  if taunt_left<=0.0:
   taunt_left=spell.hook_taunt_interval
@@ -41,7 +49,11 @@ func _physics_process(delta: float) -> void:
  for node in get_tree().get_nodes_in_group("enemies"):
   var enemy:=node as Enemy
   if enemy!=null and enemy.hp>0 and enemy.global_position.distance_to(lure.global_position)<=16.0:
-   HookReel.begin(get_parent(),enemy,anchor,spell)
+   var reel := HookReel.begin(get_parent(),enemy,anchor,spell)
+   if reel != null:
+    consumed=true;caught_enemy=enemy;active_reel=reel
+    lure.global_position=enemy.global_position
+    break
  # One voice/note emitter for all pairs belonging to one player.
  var first:Node=null
  for node in get_tree().get_nodes_in_group("hook_anchor_pairs"):

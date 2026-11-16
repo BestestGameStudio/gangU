@@ -7,3 +7,5 @@ Lure taunt pulse immediately and every5s, chosen radius180px. Nearby enemies mov
 One Fishy whistle emitter per player while any pair exists, at5s or cue-length intervals, whichever is longer. Visual notes/actual art arrive in PR790; this stage has temporary geometry.
 
 Mastery upgrade quest is the requested placeholder5casts. Test787 covers alternate payload, three-pair oldest replacement, fixed snapshots despite player movement, immediate/five-second taunt, touch-to-anchor reel and quest5casts.
+
+Daniel follow-up: catching one enemy consumes a pair. Its lure follows that enemy during reeling and disappears with the pair when the enemy arrives at the anchor; the anchor then disappears too. Interrupted/dead/owner-lost reels also clean up the consumed pair rather than leaving a dangling anchor. Uncaught pairs still persist until replacement/owner exit.
