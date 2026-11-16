@@ -188,6 +188,20 @@ func run() -> void:
 	check(target.received == before_damage + reservoir.damage and not piercing.is_queued_for_deletion() and piercing.hovering, "Mastery contact deals normal damage and retains hovering shot")
 	piercing._physics_process(4.99); check(not piercing.is_queued_for_deletion(), "Mastery hover survives before5s")
 	piercing._physics_process(0.02); check(piercing.is_queued_for_deletion(), "Mastery hover expires after5s")
+	for shot in caster.live_shots(sig): shot.queue_free()
+	await process_frame
+	caster.aim_override = caster.global_position + Vector2(100, 0)
+	var spread_shots: Array[WaterShotProjectile] = []
+	for i in 3:
+		caster._cast_spell(sig)
+		var shot := caster.live_shots(sig)[-1] as WaterShotProjectile
+		shot.set_physics_process(false); shot._physics_process(1); spread_shots.append(shot)
+	var anchor := spread_shots[0].global_position
+	for shot in spread_shots: shot._physics_process(1)
+	check(spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_speed + 0.1), "hover separation is slow, at most12px per second")
+	for i in 180:
+		for shot in spread_shots: shot._physics_process(1.0 / 60)
+	check(spread_shots[0].global_position.distance_to(spread_shots[1].global_position) > 24 and spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_radius + 0.1), "coincident hover shots spread inside28px radius without overlap")
 	target.queue_free()
 
 	main.queue_free();await process_frame
