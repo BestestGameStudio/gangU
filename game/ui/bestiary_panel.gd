@@ -62,7 +62,7 @@ func _build_skeleton() -> void:
 	margin.add_child(vbox)
 	var title := Label.new()
 	title.text = "BESTIARY"
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", 32)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 	_count_label = Label.new()
@@ -83,7 +83,7 @@ func _build_skeleton() -> void:
 	var hint := Label.new()
 	hint.text = "Walk away to close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 16)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
 
@@ -137,7 +137,7 @@ func _make_row(id: StringName) -> Control:
 	text.add_child(name_label)
 	var detail := Label.new()
 	detail.name = "DetailLabel"
-	detail.add_theme_font_size_override("font_size", 11)
+	detail.add_theme_font_size_override("font_size", 16)
 	detail.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	var count := Bestiary.encounter_count(id)
 	detail.text = ("Encountered %d time%s" % [count, "" if count == 1 else "s"]) if seen else "Not encountered yet"
@@ -146,7 +146,7 @@ func _make_row(id: StringName) -> Control:
 		var tag := Label.new()
 		tag.name = "BossTag"
 		tag.text = "BOSS"
-		tag.add_theme_font_size_override("font_size", 12)
+		tag.add_theme_font_size_override("font_size", 16)
 		tag.add_theme_color_override("font_color", BOSS_COLOR)
 		hbox.add_child(tag)
 	return row

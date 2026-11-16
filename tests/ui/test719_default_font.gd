@@ -10,7 +10,7 @@ func run() -> void:
  root.add_child(label)
  var conditions := [
   font.get_font_name() == "m5x7",
-  theme.default_font == font and theme.default_font_size == 16,
+  theme.default_font == font and theme.default_font_size == 32,
   label.get_theme_font("font") == font,
   ThemeDB.fallback_font == font,
   font.antialiasing == TextServer.FONT_ANTIALIASING_NONE,

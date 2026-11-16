@@ -82,7 +82,7 @@ func _build_skeleton() -> void:
 	margin.add_child(vbox)
 	var title := Label.new()
 	title.text = "SHOP"
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", 32)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 	_balance_label = Label.new()
@@ -98,7 +98,7 @@ func _build_skeleton() -> void:
 	relic_header.name = "RelicHeader"
 	relic_header.text = RELICS_HEADER_TEXT
 	relic_header.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
-	relic_header.add_theme_font_size_override("font_size", 13)
+	relic_header.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(relic_header)
 	_relic_rows = VBoxContainer.new()
 	_relic_rows.name = "RelicRows"
@@ -112,7 +112,7 @@ func _build_skeleton() -> void:
 	var hint := Label.new()
 	hint.text = "Walk away to close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 16)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
 

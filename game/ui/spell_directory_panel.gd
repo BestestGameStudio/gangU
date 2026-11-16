@@ -32,7 +32,7 @@ extends ModalPanel
 
 const ROW_PAD := 6.0
 ## (#318) Upgrade-chain listing under each spell row.
-const CHAIN_FONT_SIZE := 12
+const CHAIN_FONT_SIZE := 16
 const CHAIN_INDENT := 14.0
 const MAX_CHAIN_DEPTH := 4
 ## Display names indexed by SpellUpgrade.tier / SpellProgress.get_tier.
@@ -114,7 +114,7 @@ func _build_skeleton() -> void:
 	margin.add_child(vbox)
 	var title := Label.new()
 	title.text = "SPELL DIRECTORY"
-	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_font_size_override("font_size", 32)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 	_count_label = Label.new()
@@ -141,14 +141,14 @@ func _build_skeleton() -> void:
 	_status = Label.new()
 	_status.name = "StatusLabel"
 	_status.text = ""
-	_status.add_theme_font_size_override("font_size", 12)
+	_status.add_theme_font_size_override("font_size", 16)
 	_status.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_status)
 	var hint := Label.new()
 	hint.text = "Walk away to close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 16)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
 
@@ -310,7 +310,7 @@ func _refresh_slot_bar() -> void:
 		var b := Button.new()
 		b.name = "SlotTarget%d" % i
 		b.text = "%s\n%s" % [SpellCaster.slot_key_label(i), occupant.spell_name if occupant != null else "(empty)"]
-		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_font_size_override("font_size", 16)
 		b.custom_minimum_size = Vector2(76, 40)
 		UiStyle.style_button(b, UiStyle.B_ASSIGNED if occupant != null else UiStyle.B_DIM)
 		var idx := i

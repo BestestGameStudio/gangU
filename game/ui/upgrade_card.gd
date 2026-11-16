@@ -62,7 +62,7 @@ func _init() -> void:
 	margin.add_child(scroll)
 	_content = VBoxContainer.new()
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_content.add_theme_constant_override("separation", 5)
+	_content.add_theme_constant_override("separation", 3)
 	scroll.add_child(_content)
 	splash = PlaceholderSplash.new()
 	splash.name = "PlaceholderSplash"
@@ -72,25 +72,25 @@ func _init() -> void:
 	placeholder_label.name = "PlaceholderLabel"
 	placeholder_label.text = "PLACEHOLDER ART"
 	placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	placeholder_label.add_theme_font_size_override("font_size", 8)
+	placeholder_label.add_theme_font_size_override("font_size", 16)
 	placeholder_label.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
 	splash.add_child(placeholder_label)
 	placeholder_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	placeholder_label.offset_top = -12
 	name_label = Label.new()
 	name_label.name = "UpgradeName"
-	name_label.add_theme_font_size_override("font_size", 17)
+	name_label.add_theme_font_size_override("font_size", 32)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_content.add_child(name_label)
 	description_label = Label.new()
 	description_label.name = "Description"
-	description_label.add_theme_font_size_override("font_size", 13)
+	description_label.add_theme_font_size_override("font_size", 16)
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(description_label)
 	action_label = Label.new()
 	action_label.name = "Action"
-	action_label.add_theme_font_size_override("font_size", 12)
+	action_label.add_theme_font_size_override("font_size", 16)
 	action_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
 	action_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_content.add_child(action_label)
@@ -107,7 +107,7 @@ func _init() -> void:
 	progress_label = Label.new()
 	progress_label.name = "UnlockProgressText"
 	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	progress_label.add_theme_font_size_override("font_size", 12)
+	progress_label.add_theme_font_size_override("font_size", 16)
 	progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	progress_label.visible = false
 	_content.add_child(progress_label)
@@ -164,6 +164,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
 	_locked = state == "locked"
+	_content.add_theme_constant_override("separation", 5 if _locked else 3)
 	_unavailable = state == "unavailable"
 	_content.visible = not _unavailable
 	lock_sign.visible = _locked
@@ -231,23 +232,16 @@ func _fit_content() -> void:
 	if not is_equal_approx(_content.custom_minimum_size.x, width):
 		_content.custom_minimum_size.x = width
 	if not _locked and not _unavailable:
-		# Prefer a compact 48px illustration and 13px copy. Fit the complete
+		# Prefer a compact 48px illustration and native16px copy. Fit the complete
 		# description inside the fixed frame, never behind a scrollbar.
 		var font := description_label.get_theme_font("font")
-		var name_font := name_label.get_theme_font("font")
-		var title_height := name_font.get_multiline_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 17).y
-		var status_height := action_label.get_minimum_size().y + 5.0 if action_label.visible else 0.0
-		var available := CARD_HEIGHT - 24.0 - title_height - status_height - 10.0
-		var art_height := 48.0
-		var font_size := 13
-		while font_size > 8 and font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, font_size).y * 1.35 + 8.0 + art_height > available:
-			font_size -= 1
-		if font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, font_size).y * 1.35 + 8.0 + art_height > available:
-			art_height = 24.0
-		splash.custom_minimum_size.y = art_height
-		description_label.add_theme_font_size_override("font_size", font_size)
+		var title_height := name_label.get_theme_font("font").get_multiline_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 32).y
+		var available := CARD_HEIGHT - 24.0 - title_height - 10.0
+		var text_height := font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 16).y * 1.35 + 8.0
+		splash.custom_minimum_size.y = 16.0 if text_height + 48.0 > available else 48.0
+		description_label.add_theme_font_size_override("font_size", 16)
 	# Frame art is 48x64. Card height never follows the description length;
-	# long unlocked details scroll inside the frame instead of distorting it.
+	# complete unlocked details fit inside the frame without scrolling.
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 
 ## Bound long upgrade hover text rather than allowing Godot's default
@@ -258,7 +252,7 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	var label := Label.new()
 	label.custom_minimum_size.x = 288
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", 16)
 	label.text = for_text
 	panel.add_child(label)
 	return panel

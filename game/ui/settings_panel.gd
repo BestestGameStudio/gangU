@@ -135,7 +135,7 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "SETTINGS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", 32)
 	box.add_child(title)
 
 	var row := HBoxContainer.new()
@@ -173,5 +173,5 @@ func _build_ui() -> void:
 	hint.text = "Esc: open / close"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
-	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_font_size_override("font_size", 16)
 	box.add_child(hint)
