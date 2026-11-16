@@ -242,6 +242,7 @@ func set_trunk_blockers(rects: Array[Rect2]) -> void:
 		var body := StaticBody2D.new()
 		body.z_index = 4 # debug collision overlay above canopy (body has no artwork)
 		body.collision_layer = 1
+		body.add_to_group(&"cover") # trees remain low cover for lobbed shots
 		body.collision_mask = 0
 		body.position = to_local(rect.get_center())
 		var shape := CollisionShape2D.new()

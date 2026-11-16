@@ -26,5 +26,12 @@ func run():
  check(TerrainMotion.resolve(map,from,Vector2.ZERO,Vector2(600,0),0.1,false).x==0,'fast movement cannot skip trunk')
  check(map.trunk_nav_blocked(map.world_to_cell(rect.get_center())),'navigation aware')
  check(not map.tile_type_at(rect.get_center())==TerrainTypes.OBSTACLE,'no full-cell collision replacement')
+ var body:Node2D=map.get_node("TrunkCollision").get_child(0)
+ var rock:=Projectile.new()
+ rock.spell=Spell.new();rock.spell.tags.assign([SpellTags.LOBBED])
+ check(body.is_in_group("cover") and rock._lobs_over(body),"lobbed shots retain low-cover physics exemption")
+ rock._on_body_entered(body)
+ check(not rock.is_queued_for_deletion(),"lobbed overlap does not destroy shot")
+ rock.free()
  area.queue_free();await process_frame
  quit(1 if failures else 0)
