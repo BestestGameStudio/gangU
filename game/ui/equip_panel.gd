@@ -81,6 +81,9 @@ const DRAG_THRESHOLD := 10.0
 ## viewport); the upgrade scroll fills whatever height is left, so content
 ## changes never resize the panel.
 const WATER_CARD_ART := {
+	"res://data/spells/hook_shot_magnet.tres": preload("res://assets/sprites/ui/hook-card-magnet.png"),
+	"res://data/spells/hook_shot_catch.tres": preload("res://assets/sprites/ui/hook-card-catch.png"),
+	"res://data/spells/hook_shot_rock.tres": preload("res://assets/sprites/ui/hook-card-rock.png"),
 	"res://data/spells/water_shot_hover.tres": preload("res://assets/sprites/ui/water-card-hover.png"),
 	"res://data/spells/water_shot_reservoir.tres": preload("res://assets/sprites/ui/water-card-reservoir.png"),
 	"res://data/spells/water_shot_tide.tres": preload("res://assets/sprites/ui/water-card-tide.png"),
