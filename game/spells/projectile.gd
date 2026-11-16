@@ -335,6 +335,8 @@ func _wire_sprite() -> void:
 	if spell.projectile_frames != null:
 		var art := AnimatedSprite2D.new()
 		art.name = "WaterShotArt"
+		_sprite = art
+		_sprite_base = art.scale
 		art.sprite_frames = spell.projectile_frames
 		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		add_child(art); art.play(&"spin")

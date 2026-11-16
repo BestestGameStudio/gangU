@@ -176,6 +176,13 @@ func run() -> void:
 	var previous_frame := hover_art.frame
 	await create_timer(0.08).timeout
 	check(hover_art.is_playing() and hover_art.frame != previous_frame, "Water Shot loop advances frames while hovering")
+	hp.set_frozen(true)
+	previous_frame = hover_art.frame
+	await create_timer(0.09).timeout
+	check(not hover_art.is_playing() and hover_art.frame == previous_frame, "frozen Water Shot animation holds its frame")
+	hp.set_frozen(false)
+	await create_timer(0.09).timeout
+	check(hover_art.is_playing() and hover_art.frame != previous_frame, "unfrozen Water Shot animation resumes")
 	caster.aim_override = hp.global_position + Vector2(0, 100)
 	before = credits.size()
 	var alt_router := SpellTriggerRouter.new()
