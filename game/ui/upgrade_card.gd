@@ -169,7 +169,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	lock_sign.visible = _locked
 	name_label.visible = not _locked
 	description_label.visible = not _locked
-	action_label.visible = state == "applied"
+	action_label.visible = false
 	(splash as PlaceholderSplash).plain = _locked
 	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 48.0
 	splash.queue_redraw()
@@ -184,7 +184,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = ""
 		"token": action_label.text = ""
-		"applied": action_label.text = "Applied"
+		"applied": action_label.text = ""
 		_: action_label.text = "No upgrade available"
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
 	if progress_label.visible:

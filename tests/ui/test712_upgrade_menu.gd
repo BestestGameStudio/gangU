@@ -82,7 +82,7 @@ func run() -> void:
 	check(panel._selected == chain[0].result_spell, "selection follows replacement")
 	menu = progress.upgrade_menu(chain[0].result_spell)
 	check(menu[0].state == "applied" and menu[1].state == "ready" and menu[2].state == "locked", "applied/current/future states after evolution")
-	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and panel._upgrade_cards[0].action_label.text == "Applied", "applied card keeps name details and status")
+	check(panel._upgrade_cards[0].name_label.visible and panel._upgrade_cards[0].description_label.visible and not panel._upgrade_cards[0].action_label.visible and panel._upgrade_cards[0].action_label.text.is_empty(), "applied card keeps details without Applied label")
 	# Fresh state for token-only advancement, then a later tier's own XP.
 	progress._cast_counts.erase(chain[1].source_spell)
 	panel._refresh()
