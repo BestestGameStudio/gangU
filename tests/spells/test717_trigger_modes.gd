@@ -162,6 +162,21 @@ func run() -> void:
 			forward = forward and probe.direction.dot(offset.normalized()) > 0.96
 		check(forward, "redirect stays in narrow forward cone without looping: " + str(offset))
 		probe.queue_free()
+	# Distinct starts must converge on the cursor, not parallel displaced rays.
+	for offset_y in [-60.0, 0.0, 60.0]:
+		caster._cast_spell(ws)
+		var converging: Projectile = caster.live_shots(ws)[-1]
+		converging.set_physics_process(false)
+		converging.global_position = caster.global_position + Vector2(0, offset_y)
+		converging.direction = Vector2.RIGHT
+		var goal := caster.global_position + Vector2(180, 0)
+		converging.redirect(goal)
+		var nearest := 1000.0
+		for frame in 450:
+			converging._physics_process(0.001)
+			nearest = minf(nearest, converging.global_position.distance_to(goal))
+		check(nearest < 0.5, "redirect converges within collision core from offset " + str(offset_y))
+		converging.queue_free()
 	# Fresh alternate redirects travelling shots, not casts; all eligible shots.
 	var credit_before := credits.size()
 	caster._cast_spell(ws); caster._cast_spell(ws)
