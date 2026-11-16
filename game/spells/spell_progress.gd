@@ -30,6 +30,7 @@ func _ready() -> void:
 	_caster = get_node_or_null(caster_path) as SpellCaster if not caster_path.is_empty() else null
 	if _caster != null:
 		_caster.spell_cast.connect(_on_spell_cast)
+		_caster.hook_resolved.connect(_on_hook_resolved)
 		OnHit.bus().hit_landed.connect(_on_quest_hit)
 
 func _on_spell_cast(spell: Spell) -> void:
@@ -283,3 +284,16 @@ func _on_quest_hit(event: HitEvent) -> void:
 		_quest_volleys[target_id] = shots
 		if shots.size() >= quest.projectiles:
 			_advance_quest(row)
+
+## Non-damaging hook events deliberately do not travel through OnHit.
+func _on_hook_resolved(spell: Spell, count: int) -> void:
+	if _caster == null or not _caster.get_unlocked().has(spell): return
+	var row := next_upgrade(spell)
+	if row == null or row.quest == null: return
+	if row.quest.kind == SpellUpgradeQuest.Kind.HOOK_STREAK:
+		if qualification_count(row) >= row.quest.goal: return
+		_quest_counts[row.id] = mini(qualification_count(row) + 1, row.quest.goal) if count > 0 else 0
+		cast_progress_changed.emit(spell)
+	elif row.quest.kind == SpellUpgradeQuest.Kind.HOOK_GROUP and count >= row.quest.projectiles:
+		_quest_counts[row.id] = row.quest.goal
+		cast_progress_changed.emit(spell)

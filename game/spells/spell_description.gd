@@ -8,6 +8,8 @@ extends RefCounted
 static func for_spell(s: Spell) -> String:
 	if s == null:
 		return ""
+	if s.cast_mode() == Spell.CastMode.HOOK:
+		return "Hooks the first enemy toward your moving position. Weight and displacement force set the capped reel speed. Deals no damage."
 	var parts: PackedStringArray = []
 	if s.water_shot_hover_cap > 0:
 		var duration := "indefinitely" if s.water_shot_hover_duration < 0 else "for %ds" % int(s.water_shot_hover_duration)
