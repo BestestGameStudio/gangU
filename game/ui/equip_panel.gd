@@ -85,6 +85,12 @@ const WATER_CARD_ART := {
 	"res://data/spells/water_shot_reservoir.tres": preload("res://assets/sprites/ui/water-card-reservoir.png"),
 	"res://data/spells/water_shot_tide.tres": preload("res://assets/sprites/ui/water-card-tide.png"),
 }
+const HOOK_CARD_ART := {
+	"res://data/spells/hook_shot_magnet.tres": preload("res://assets/sprites/ui/hook-card-magnet.png"),
+	"res://data/spells/hook_shot_catch.tres": preload("res://assets/sprites/ui/hook-card-catch.png"),
+	"res://data/spells/hook_shot_rock.tres": preload("res://assets/sprites/ui/hook-card-rock.png"),
+}
+
 const UPGRADE_CARD_GAP := 12
 # #763: three174px tier cards and two12px gaps fit the detail column.
 # Fixed width still prevents resizing when selecting/deselecting a spell.
@@ -449,7 +455,7 @@ func _refresh() -> void:
 			b.setup("", "", false)
 		else:
 			var result := _upgrade_field(upgrade, &"result_spell") as Spell
-			b.set_applied_art(WATER_CARD_ART.get(result.resource_path) if result != null else null)
+			b.set_applied_art(WATER_CARD_ART.get(result.resource_path, HOOK_CARD_ART.get(result.resource_path)) if result != null else null)
 			var description := SpellDescription.for_spell(result)
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
