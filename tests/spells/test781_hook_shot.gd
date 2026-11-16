@@ -39,8 +39,12 @@ func run() -> void:
  reel._physics_process(0.05)
  check(reel.reel_velocity.y > 0 and reel.reel_velocity.x < 0, "moving player retargets with lateral velocity")
  check(reel.reel_velocity.length() <= HookReel.speed_for(s, near.weight), "inertia stays speed capped")
- check(HookReel.begin(area, near, player, s) == null, "no second owner on hooked enemy")
- reel.queue_free(); await process_frame
+ var second := HookReel.begin(area, near, player, s)
+ second.set_physics_process(false)
+ check(second != null and near.displacement_owner is HookPullStack, "second hook stacks without stealing")
+ reel.queue_free(); second.queue_free(); await process_frame
+ if is_instance_valid(near.displacement_owner): near.displacement_owner._physics_process(0.016)
+ await process_frame
  check(not is_instance_valid(near.displacement_owner), "cleanup releases enemy")
  var progress := SpellProgress.new(); var caster := player.get_node("SpellCaster") as SpellCaster
  progress._caster = caster; caster.unlock_spell(s)
