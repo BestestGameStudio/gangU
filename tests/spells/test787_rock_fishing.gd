@@ -33,6 +33,22 @@ func run():
  reel.set_physics_process(false);enemy.global_position=pair.anchor.global_position;reel._physics_process(0.001)
  pair._physics_process(0.001)
  check(pair.is_queued_for_deletion(),"arrival removes anchor and lure pair")
+ # The oldest consumed pair remains the elected emitter while another lure waits.
+ var oldest:=pairs[1]
+ var waiting:=pairs[2]
+ var caught:=load("res://game/enemies/enemy.tscn").instantiate() as Enemy
+ area.add_child(caught);caught.set_physics_process(false);caught.global_position=oldest.lure.global_position
+ oldest._physics_process(0.01)
+ check(oldest.consumed and not waiting.consumed,"oldest pair caught while second lure waits")
+ oldest.active_reel.set_physics_process(false)
+ oldest.whistle_left=0.5;oldest.note_age=0.0
+ oldest._physics_process(0.25)
+ check(is_equal_approx(oldest.whistle_left,0.25) and is_equal_approx(oldest.note_age,0.25),"consumed elected emitter keeps whistle and note clocks moving while reel is held")
+ oldest._physics_process(0.30)
+ check(oldest.whistle_left>=5.0 and is_equal_approx(oldest.note_age,0.55),"consumed emitter repeats whistle on cadence")
+ var other_age:=waiting.note_age
+ waiting._physics_process(0.1)
+ check(waiting.note_age==other_age,"waiting pair does not duplicate owner emitter")
  var quest:=load("res://data/upgrades/hook_shot_rock.tres") as SpellUpgrade
  check(quest.quest.kind==SpellUpgradeQuest.Kind.CASTS and quest.quest.goal==5,"mastery placeholder five casts")
  area.queue_free();await process_frame;quit(1 if failures else 0)
