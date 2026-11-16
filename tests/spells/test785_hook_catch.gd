@@ -18,6 +18,10 @@ func run():
  var position:=enemy.global_position;enemy._physics_process(0.5)
  check(enemy.stun_left==1.0 and enemy.global_position==position,"stun suspends locomotion and advances")
  enemy._physics_process(1.01);check(enemy.stun_left==0,"stun expires")
+ enemy.stun_left=0.0
+ var group:=HookGroupReel.begin(area,[enemy],player,s)
+ group.set_physics_process(false);group._physics_process(0.001)
+ check(enemy.stun_left==1.5,"group arrival stuns too")
  var row:=load("res://data/upgrades/hook_shot_catch.tres") as SpellUpgrade
  check(row.quest.kind==SpellUpgradeQuest.Kind.HOOK_GROUP and row.quest.projectiles==3,"quest three at once")
  area.queue_free();await process_frame;quit(1 if failures else 0)
