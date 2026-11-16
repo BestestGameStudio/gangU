@@ -27,6 +27,7 @@ const TIER_FRAMES: Array[Texture2D] = [
 var _frame: TextureRect
 var _border_tier := 0
 var _locked := false
+var _unavailable := false
 var _grey_material: ShaderMaterial
 
 class PlaceholderSplash extends Control:
@@ -149,7 +150,7 @@ func _init() -> void:
 func setup(upgrade_name: String, description: String, use_token: bool, tint: Color = UiStyle.B_ACCENT) -> void:
 	name_label.text = upgrade_name
 	description_label.text = description
-	action_label.text = "Choose - use upgrade token" if use_token else "Choose upgrade"
+	action_label.text = ""
 	(splash as PlaceholderSplash).tint = tint
 	splash.queue_redraw()
 	tooltip_text = "%s\n%s\n%s" % [upgrade_name, description, action_label.text]
@@ -161,10 +162,12 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
 	_locked = state == "locked"
+	_unavailable = state == "unavailable"
+	_content.visible = not _unavailable
 	lock_sign.visible = _locked
 	name_label.visible = not _locked
 	description_label.visible = not _locked
-	action_label.visible = not _locked
+	action_label.visible = state == "applied"
 	(splash as PlaceholderSplash).plain = _locked
 	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 32.0
 	splash.queue_redraw()
@@ -177,8 +180,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
 	match state:
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
-		"ready": action_label.text = "Choose upgrade"
-		"token": action_label.text = "Choose - use upgrade token"
+		"ready": action_label.text = ""
+		"token": action_label.text = ""
 		"applied": action_label.text = "Applied"
 		_: action_label.text = "No upgrade available"
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
@@ -186,6 +189,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 		tooltip_text += "\n" + progress_label.text
 	if _locked:
 		tooltip_text = progress_label.text
+	if _unavailable:
+		tooltip_text = ""
 	call_deferred("_fit_content")
 
 ## #451: restyle the card border (Daniel: the color of the tier the card
@@ -204,10 +209,16 @@ func set_border_tier(tier: int) -> void:
 
 func _refresh_frame() -> void:
 	if _frame == null: return
-	_frame.texture = TIER_FRAMES[0 if _locked else _border_tier]
-	_frame.material = _grey_material if _locked else null
+	_frame.texture = TIER_FRAMES[0 if _locked or _unavailable else _border_tier]
+	_frame.material = _grey_material if _locked or _unavailable else null
 	_frame.visible = true
 	_restyle_border(UiStyle.B_DIM)
+	if _unavailable:
+		# Empty tiers are inert black cards, including hover/focus styles.
+		for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:
+			var style := get_theme_stylebox(style_name).duplicate() as StyleBoxFlat
+			style.bg_color = Color.BLACK
+			add_theme_stylebox_override(style_name, style)
 
 func _process(_delta: float) -> void:
 	_fit_content()
