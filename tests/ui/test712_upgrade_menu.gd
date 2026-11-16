@@ -102,7 +102,7 @@ func run() -> void:
 	await tick()
 	check(progress.upgrade_menu(panel._selected).all(func(item): return item.state == "applied"), "complete chain remains visible as applied")
 	check(panel._upgrade_cards.all(func(card): return card.disabled and not card.lock_sign.visible), "applied cards cannot be chosen again")
-	check(panel._upgrade_cards.all(func(card): return not card.progress_bar.visible and not card.progress_label.visible and card.splash.custom_minimum_size.y <= 48), "applied tiers show art without progress")
+	check(panel._upgrade_cards.all(func(card): return not card.progress_bar.visible and not card.progress_label.visible), "applied tiers show copy without progress")
 	var mana: Spell = load("res://data/spells/mana_shot.tres")
 	menu = progress.upgrade_menu(mana)
 	check(menu[1].state == "unavailable" and menu[2].state == "unavailable", "short chains do not invent upgrade content")
@@ -154,6 +154,8 @@ func run() -> void:
 		check((fit_card.progress_bar.get_theme_stylebox("fill").bg_color == UpgradeCard.SATISFIED_PROGRESS) == (state == "ready"), "progress fill resets on state transition: " + state)
 	for label in [fit_card.name_label, fit_card.description_label]:
 		check(label.get_global_rect().position.x >= fit_card.global_position.x + UpgradeCard.CONTENT_INSET and label.get_global_rect().end.x <= fit_card.get_global_rect().end.x - UpgradeCard.CONTENT_INSET, "title/description stay20px inside card sides")
+	check(fit_card.find_children("*Placeholder*", "", true, false).is_empty(), "no placeholder art node or label remains")
+	check(fit_card.name_label.global_position.y >= fit_card.global_position.y + 32 and fit_card.name_label.global_position.y < fit_card.global_position.y + 40, "applied title moves up below ornate top border")
 	fit_card.queue_free()
 	main.queue_free()
 	await tick()
