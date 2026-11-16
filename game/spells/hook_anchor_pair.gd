@@ -34,6 +34,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
  if not is_instance_valid(owner_player) or owner_player.hp<=0 or not owner_player.is_inside_tree():queue_free();return
+ _tick_emitter(delta)
  if consumed:
   if not is_instance_valid(active_reel) or active_reel.is_queued_for_deletion() or not is_instance_valid(caught_enemy):
    queue_free();return
@@ -54,6 +55,10 @@ func _physics_process(delta: float) -> void:
     consumed=true;caught_enemy=enemy;active_reel=reel
     lure.global_position=enemy.global_position
     break
+
+ queue_redraw()
+
+func _tick_emitter(delta: float) -> void:
  # One voice/note emitter for all pairs belonging to one player.
  var first:Node=null
  for node in get_tree().get_nodes_in_group("hook_anchor_pairs"):
@@ -61,7 +66,6 @@ func _physics_process(delta: float) -> void:
  if first==self:
   whistle_left-=delta;note_age+=delta;_voice.global_position=owner_player.global_position
   if whistle_left<=0.0:_voice.play();whistle_left=maxf(5.0,_voice.stream.get_length())
- queue_redraw()
 
 func _draw() -> void:
  if not is_instance_valid(anchor) or not is_instance_valid(lure):return
