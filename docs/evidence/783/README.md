@@ -5,3 +5,5 @@ At its clamped aimed endpoint (up to560px), Hook Shot Specialization pulls all l
 The base upgrade quest is three successful hooks in consecutive casts; misses reset unfinished progress. Successful hook events, not damaging hits, advance it. Group-hook events count enemies acquired together, used by the next upgrade.
 
 Test783 exercises three enemies within72px, one outside, and the exact serialized base quest. Test781 covers base and test129 preserves all-base-spell catalog inclusion. Art remains temporary until PR790.
+
+Daniel steering: one shared group controller and one rope. Enemies converge onto a single longitudinal bunch, preferred spacing12px compressed to24px total span. Shared center speed uses heaviest living member weight; individual collision-safe bunch correction does not create separate ropes. Player movement bends the shared reel with the same acceleration/inertia.
