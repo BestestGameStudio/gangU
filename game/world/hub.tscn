@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://bgangu7hub"]
+[gd_scene load_steps=7 format=3 uid="uid://bgangu7hub"]
 
 [ext_resource type="Script" path="res://game/world/hub_floor.gd" id="hub_floor"]
 [ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://game/world/gate.tscn" id="2"]
@@ -6,7 +6,15 @@
 [ext_resource type="PackedScene" uid="uid://bgangu218dir" path="res://game/ui/spell_directory.tscn" id="8"]
 [ext_resource type="PackedScene" uid="uid://bgangu325sta" path="res://game/ui/bestiary_station.tscn" id="9_best"]
 
+[ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="terrain"]
+
 [node name="Hub" type="Node2D"]
+
+[node name="Terrain" type="Node2D" parent="."]
+visible = false
+script = ExtResource("terrain")
+cell_size = 32
+art_enabled = false
 
 [node name="Floor" type="Node2D" parent="."]
 script = ExtResource("hub_floor")
