@@ -157,6 +157,30 @@ func run() -> void:
 	check(fit_card.find_children("*Placeholder*", "", true, false).is_empty(), "no placeholder art node or label remains")
 	check(fit_card.name_label.global_position.y >= fit_card.global_position.y + 32 and fit_card.name_label.global_position.y < fit_card.global_position.y + 40, "applied title moves up below ornate top border")
 	fit_card.queue_free()
+	# #763: all spell descriptions, long slot names, and upgrade states keep
+	# the same integer card size and global anchors.
+	var anchors: Array[Vector2] = []
+	for card in panel._upgrade_cards: anchors.append(card.global_position)
+	for file_name in DirAccess.get_files_at("res://data/spells"):
+		if not file_name.ends_with(".tres"): continue
+		var sample := load("res://data/spells/" + file_name) as Spell
+		if sample == null: continue
+		caster.unlock_spell(sample)
+		caster.clear_slot(2)
+		if not caster.get_slots().has(sample): caster.assign_slot(2, sample)
+		panel._selected = sample
+		panel._refresh()
+		for frame in 8: await process_frame
+		for index in panel._upgrade_cards.size():
+			var card: UpgradeCard = panel._upgrade_cards[index]
+			check(card.size == Vector2(174, 232) and card.global_position == anchors[index], "fixed card bounds and anchor: " + file_name + " / " + str(index))
+	for state in ["locked", "ready", "token", "applied", "unavailable"]:
+		for card in panel._upgrade_cards:
+			card.setup("Long upgrade title repeated for wrapping", "Long description. ".repeat(60), false)
+			card.set_unlock_state(state, 5, 10)
+		for frame in 8: await process_frame
+		for index in panel._upgrade_cards.size():
+			check(panel._upgrade_cards[index].size == Vector2(174, 232) and panel._upgrade_cards[index].global_position == anchors[index], "fixed card bounds across " + state)
 	main.queue_free()
 	await tick()
 	print("[712] ", checks, " checks, ", failures, " failures")

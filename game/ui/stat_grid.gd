@@ -120,6 +120,8 @@ func _init() -> void:
 	name = "StatsBox"
 	add_theme_constant_override("separation", 6)
 	_header = Label.new()
+	_header.clip_text = true
+	_header.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_header.name = "Header"
 	_header.add_theme_font_size_override("font_size", TITLE_FONT)
 	add_child(_header)

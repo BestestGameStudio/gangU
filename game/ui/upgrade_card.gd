@@ -2,8 +2,9 @@ class_name UpgradeCard
 extends Button
 ## #402 presentation only. The panel owns eligibility, path IDs and actions.
 ## No placeholder illustration: applied text uses the card interior.
-const CARD_WIDTH := 176.0
-const CARD_HEIGHT := CARD_WIDTH * 64.0 / 48.0
+# #763: integer 3:4 bounds for every state and all three splash-art slices.
+const CARD_WIDTH := 174.0
+const CARD_HEIGHT := 232.0
 const CONTENT_INSET := 20
 const SATISFIED_PROGRESS := Color("58d878")
 const LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-lock.png")
@@ -36,7 +37,9 @@ var _grey_material: ShaderMaterial
 
 func _init() -> void:
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
+	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	clip_text = true
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	UiStyle.style_button(self, UiStyle.B_ACCENT, 10)
 	var margin := MarginContainer.new()
