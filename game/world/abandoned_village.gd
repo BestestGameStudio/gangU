@@ -196,11 +196,8 @@ func _drop_reward() -> void:
 func _draw() -> void:
 	# Static atlas: three collapsed-house variants and one dry well.
 	# Houses and the well are solid (#546); see plant_footprints().
-	for x in range(-9, 9):
-		for y in range(-1, 1):
-			var cell := Vector2i(x, y)
-			draw_texture_rect_region(TerrainArt.TILES, Rect2(Vector2(x * 64, y * 64), Vector2(64, 64)),
-				Rect2(TerrainArt.variant(cell, 484) * 64, TerrainArt.row(&"ground") * 64, 64, 64), Color(0.8, 0.75, 0.62))
+	# The east-west road is part of the overworld dual-grid (dirt), see
+	# OverworldGround._compute_lattice_type.
 	for side: int in [-1, 1]:
 		for column: int in [-1, 0, 1]:
 			var at := Vector2(column * 170, side * 170)

@@ -115,6 +115,12 @@ func _init() -> void:
 	z_index = -80
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
+	var black := Node2D.new()
+	black.name = "BlackBackdrop"
+	black.z_as_relative = false
+	black.z_index = -99 ## above BackgroundGrid (-100), below the ground
+	black.draw.connect(func() -> void: black.draw_rect(Rect2(-20000, -20000, 40000, 40000), Color.BLACK))
+	add_child(black)
 	_grass_top = Node2D.new()
 	_grass_top.name = "GrassTop"
 	_grass_top.z_as_relative = false
@@ -493,7 +499,7 @@ func _in_patch(p: Vector2) -> bool:
 const ARRIVAL_STONE_R := 88.0
 const GATE_PAD_R := 76.0
 ## Cells past the outline that the border covers (drawn) and blocks (collision).
-const BORDER_DRAWN := 448.0
+const BORDER_DRAWN := 112.0
 const BORDER_BLOCKED := 192.0
 var _lattice_memo: Dictionary = {}
 var _desert_noise: FastNoiseLite
@@ -533,6 +539,14 @@ func _compute_lattice_type(p: Vector2) -> int:
 	# Arrival clearing and the pad under every gate.
 	if p.distance_to(spawn) <= ARRIVAL_STONE_R:
 		return DualGrid.T.STONE
+	# Abandoned village road: a wobbly dirt band running east-west through it.
+	var vil := get_parent().get_node_or_null("AbandonedVillage") if get_parent() != null else null
+	if vil != null:
+		var q: Vector2 = p - (vil as Node2D).position
+		var wob_y := 14.0 * sin(q.x / 90.0) + 8.0 * sin(q.x / 37.0 + 1.0)
+		var half_w := 44.0 + 8.0 * sin(q.x / 61.0 + 2.0)
+		if absf(q.x) < 600.0 and absf(q.y - wob_y) < half_w:
+			return DualGrid.T.DIRT
 	if not desert_near:
 		for l in landmarks:
 			if p.distance_to(l) <= GATE_PAD_R:
