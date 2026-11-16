@@ -6,14 +6,9 @@ class_name OverworldGround
 ## roads and away from the gates. Layout is read from the parent scene on
 ## _ready (PlayerSpawn + every Gate sibling), so moving an entrance in
 ## overworld.tscn moves its road with it. Deterministic (hashed, no RNG).
-## #391 (Daniel, 2026-11-09: "trees block everything, enemies can pathfind
-## around trees, all trees collide"): every decor TREE is now solid - its
-## circle marks blocking cells on the area's Terrain grid, so walking,
-## dashing, knockback and blinks all stop at trees and grid-wired movers
-## (enemies, summons) path around them. Rocks stay walkable decor.
-## #407 (Daniel, 2026-11-09: "trees should block projectiles"): each tree's
-## drawn circle is also registered on the Terrain grid as an indestructible
-## projectile blocker - player, summon and enemy shots all stop at it.
+## #771: trees collide only in a small rectangle at the narrow trunk base.
+## Precise movement/projectile queries and debug physics boxes share it;
+## coarse navigation cells route around it without widening actual collision.
 ## #419 (Daniel, 2026-11-09: "remove the visible dirt paths leading to
 ## gates, keep it cosmetic"): the roads are no longer drawn. They are still
 ## computed (`roads`, `road_distance`) because decor placement keeps trees
@@ -182,9 +177,8 @@ func _draw_canopy(c: Node2D) -> void:
 		var r: float = d["r"]
 		if not _view.grow(r*3.0).has_point(at): continue
 		var tex := _tree_textures[TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 7, TREE_SPRITES)]
-		# Bottom-centre anchored: the crown (~90% of the sprite width) spans
-		# the collision circle (slightly over), the trunk foot sits just
-		# below the circle's centre.
+		# Bottom-centre anchored. Collision uses the same art transform,
+		# but only the narrow trunk base, never this canopy.
 		var k := (2.0 * r * 1.3) / (tex.get_width() * 0.9)
 		var size := tex.get_size() * k
 		var foot := at + Vector2(0.0, r * 0.85)
@@ -290,43 +284,37 @@ func _build_patches() -> void:
 			patch_colors.append(GRASS_DARK if _hash01(gx, gy, 25) < 0.5 else GRASS_LIGHT)
 			n += 1
 
-## #391: every decor tree marks its cells on the area's Terrain grid as
-## OBSTACLE (blocking). Not the TREE type: TREE is destroyable under any
-## damage, so one stray spell would silently delete a tree's collision
-## while its code-drawn circle stays. The tree's own cell is always
-## blocked; further cells are blocked when their CENTER falls inside the
-## tree circle, keeping the blocked patch at or inside the visual. No
-## Terrain sibling (harnesses, older fixtures) = decor stays purely
-## visual, the pre-#391 behavior.
+## #771: keep tree hitboxes out of the cell store: a full terrain cell
+## is wider than a trunk. Village cell/circle footprints stay unchanged.
 func _plant_tree_collision(area: Node) -> void:
 	var map := area.get_node_or_null("Terrain") as TerrainMap
 	if map == null:
 		return
 	var cells := {}
 	var blockers: Array[Vector3] = []
+	var trunks: Array[Rect2] = []
 	for d in decor:
-		if d["kind"] != "tree":
-			continue
-		var at: Vector2 = d["at"]
-		var r: float = d["r"]
-		# #407: the drawn canopy circle also stops every projectile.
-		blockers.append(Vector3(at.x, at.y, r))
-		var lo := map.world_to_cell(at - Vector2(r, r))
-		var hi := map.world_to_cell(at + Vector2(r, r))
-		for cx in range(lo.x, hi.x + 1):
-			for cy in range(lo.y, hi.y + 1):
-				var cell := Vector2i(cx, cy)
-				if map.cell_to_world(cell).distance_to(at) <= r:
-					cells[cell] = TerrainTypes.OBSTACLE
-		# A small tree near a cell corner has no cell center inside its
-		# circle: its own cell is blocked regardless, so no tree is
-		# walkable at its own position.
-		cells[map.world_to_cell(at)] = TerrainTypes.OBSTACLE
+		if d["kind"] == "tree": trunks.append(tree_trunk_rect(d))
+	map.set_trunk_blockers(trunks)
 	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
 		village.plant_footprints(map, cells, blockers) # #546 houses + well
 	map.set_cells(cells)
 	map.set_projectile_blockers(blockers)
+
+## #771: a small box inside the narrow trunk, above the baked shadow.
+## Same variant/scale/foot transform as _draw_canopy; canopy never collides.
+func tree_trunk_rect(d: Dictionary) -> Rect2:
+	var at: Vector2 = d["at"]
+	var r: float = d["r"]
+	var variant := TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 7, TREE_SPRITES)
+	var tex := load("res://assets/sprites/terrain/tree_%d.png" % (variant + 1)) as Texture2D
+	var k := (2.0 * r * 1.3) / (tex.get_width() * 0.9)
+	var size := tex.get_size() * k
+	var foot := at + Vector2(0, r * 0.85)
+	var width := 6.0 if tex.get_width() == 56 else 8.0
+	var source := Rect2(Vector2(tex.get_width() * 0.5 - width * 0.5, tex.get_height() - 16), Vector2(width, 6))
+	return Rect2(foot - Vector2(size.x * 0.5, size.y) + source.position * k, source.size * k)
 
 ## #461: hashed tall-grass patch centres (deterministic, no RNG). Decor is
 ## left exactly as it was; grass simply never covers a tree's cells.

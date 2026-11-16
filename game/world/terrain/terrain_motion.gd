@@ -22,13 +22,13 @@ static func resolve(map: TerrainMap, position: Vector2, previous: Vector2, desir
 		var target: Vector2 = desired * map.speed_multiplier_at_cell(here)
 		var friction: float = map.friction_at_cell(here)
 		velocity = target if friction >= 1.0 else previous.move_toward(target, friction * GRIP * delta)
-	if _can_step(map, here, position + velocity * delta, can_swim):
+	if map.trunk_block_t(position, velocity * delta) < 0 and _can_step(map, here, position + velocity * delta, can_swim):
 		return velocity
 	var along_x := Vector2(velocity.x, 0.0)
-	if _can_step(map, here, position + along_x * delta, can_swim):
+	if map.trunk_block_t(position, along_x * delta) < 0 and _can_step(map, here, position + along_x * delta, can_swim):
 		return along_x
 	var along_y := Vector2(0.0, velocity.y)
-	if _can_step(map, here, position + along_y * delta, can_swim):
+	if map.trunk_block_t(position, along_y * delta) < 0 and _can_step(map, here, position + along_y * delta, can_swim):
 		return along_y
 	return Vector2.ZERO
 
@@ -36,7 +36,7 @@ static func resolve(map: TerrainMap, position: Vector2, previous: Vector2, desir
 ## cells are never enterable (for now), BLOCKING ones only by a swimmer
 ## when the tile is swimmable. A null map allows everything.
 static func can_enter(map: TerrainMap, world_pos: Vector2, can_swim: bool) -> bool:
-	return map == null or map.can_enter_cell(map.world_to_cell(world_pos), can_swim)
+	return map == null or (not map.trunk_contains(world_pos) and map.can_enter_cell(map.world_to_cell(world_pos), can_swim))
 
 ## #266: the terrain seam for every movement that is not a per-frame
 ## velocity (pushes/knockback, spell blinks/leaps, scripted shoves). Walks
@@ -46,6 +46,8 @@ static func can_enter(map: TerrainMap, world_pos: Vector2, can_swim: bool) -> bo
 static func clamp_displacement(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool) -> Vector2:
 	if map == null:
 		return to
+	var trunk_t := map.trunk_block_t(from, to - from)
+	if trunk_t >= 0: to = from.lerp(to, maxf(0, trunk_t - 0.001))
 	var step := maxf(float(map.cell_size) * 0.25, 1.0)
 	var steps := maxi(ceili(from.distance_to(to) / step), 1)
 	var reached := from
