@@ -153,7 +153,7 @@ func _on_claimed_tree_exiting(node: Node) -> void:
 func _on_hit_landed(e: HitEvent) -> void:
 	if e.target == null or not e.target.is_in_group(PhysicsLayers.ENEMY_GROUP):
 		return
-	if e.killed and e.target.is_in_group(&"boss"):
+	if e.killed and (e.target.is_in_group(&"boss") or _is_defeated_general(e.target)):
 		_boss_stop(e.position)
 		return
 	# Per-spell feel knob (#678): heavier spells carry a higher multiplier.
@@ -164,6 +164,12 @@ func _on_hit_landed(e: HitEvent) -> void:
 	if e.result != null and e.result.crit_tier > 0:
 		duration += crit_bonus_per_tier * e.result.crit_tier
 	_extend_stop(duration, stack_cap)
+
+
+## #692: the Sand General (a DesertStatue, not in the "boss" group) gets the
+## same finisher on his killing blow.
+func _is_defeated_general(target: Node) -> bool:
+	return target is DesertStatue and (target as DesertStatue).is_defeated_general()
 
 
 ## Starts a stop, or max-extends the active one (never stacks, never

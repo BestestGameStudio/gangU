@@ -158,6 +158,13 @@ func _draw() -> void:
 		draw_rect(Rect2(-22, 33, 44, 4), Color("3d3432"))
 		draw_rect(Rect2(-22, 33, 44.0 * hp / max_hp, 4), Color("ba8161"))
 
+## #692: true for the killing blow's target once the Sand General has fallen
+## (the arena sets _won before it records the hit). The general is a
+## DesertStatue, not an Enemy in the "boss" group, so HitStop asks this to
+## stage the boss finisher for him; the small statues never qualify.
+func is_defeated_general() -> bool:
+	return possessed and arena is DesertStatueArena and (arena as DesertStatueArena)._won
+
 func _general_direction(direction: Vector2) -> void:
 	if direction.is_zero_approx():
 		return
