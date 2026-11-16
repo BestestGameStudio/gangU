@@ -183,10 +183,10 @@ func _process(delta: float) -> bool:
 						if c is UpgradeCard and not c.get_parent().get_parent().is_queued_for_deletion():
 							texts.append(c.name_label.text)
 							buttons.append(c)
-					if texts != ["Split shot [S]"] or buttons.size() != 1:
+					if texts != ["Split shot [S]", "Wide split [M]", "Signature"] or buttons.size() != 3:
 						print("[E] FAIL chain upgrade card: ", texts); ok = false
 						return _done()
-					print("[E] single chain upgrade card renders OK")
+					print("[E] full chain and unavailable tier render OK")
 					# Focus regression (live Chrome bug): with any panel button
 					# holding GUI focus, a faithful Tab must STILL close the panel;
 					# before the fix the focused button consumed Tab as
@@ -266,7 +266,7 @@ func _process(delta: float) -> bool:
 					for c2 in panel._upgrade_box.find_children("*", "UpgradeCard", true, false):
 						if c2 is UpgradeCard and not c2.get_parent().get_parent().is_queued_for_deletion():
 							buttons2.append(c2)
-					if buttons2.size() != 1 or not buttons2[0].name_label.text.begins_with("Split shot"):
+					if buttons2.size() != 3 or not buttons2[0].name_label.text.begins_with("Split shot"):
 						print("[E] FAIL chain card after reselect: ", buttons2.map(func(b): return b.name_label.text)); ok = false
 						return _done()
 					buttons2[0].pressed.emit()
