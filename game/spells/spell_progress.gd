@@ -65,7 +65,7 @@ func get_upgrade_paths(spell: Spell) -> Array[SpellUpgrade]:
 	return out
 
 ## #331: Water Ball (and, #370, Stone Hammer) uses ONE progression route. Once the
-## player holds any upgrade descended from `spell` (e.g. Guided Water Ball
+## player holds any upgrade descended from `spell` (e.g. Water Splash
 ## from Water Ball), that spell's other branches stay closed, even if a
 ## second copy of the base is looted later. Other spell trees keep their
 ## existing duplicate-copy behavior. False without a caster.
