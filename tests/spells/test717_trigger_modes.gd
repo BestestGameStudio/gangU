@@ -237,12 +237,12 @@ func run() -> void:
 	var tide := caster.live_shots(sig)[0] as WaterShotProjectile
 	tide.set_physics_process(false); tide._physics_process(1.0)
 	caster.aim_override = tide.global_position + Vector2(0, 100)
-	check(caster.release_water_shots(sig) == 1 and caster.release_water_shots(sig) == 0, "Signature redirect has0.5s cooldown")
+	check(caster.release_water_shots(sig) == 1 and caster.release_water_shots(sig) == 1 and caster._water_redirect_cooldown == 0.0, "Signature redirects repeatedly without cooldown")
 	tide._physics_process(1.0); check(tide.hovering, "Signature released shot returns to hover at target")
 	tide._physics_process(100); check(not tide.is_queued_for_deletion(), "Signature hover has no expiry")
 	caster._water_redirect_cooldown = 0
 	caster.aim_override = tide.global_position + Vector2(200, 0)
-	check(caster.release_water_shots(sig) == 1 and tide._redirect_curve_left > 0.0, "Signature can redirect again after cooldown")
+	check(caster.release_water_shots(sig) == 1 and tide._redirect_curve_left > 0.0, "Signature can redirect again immediately")
 	for offset in [Vector2(-200, 0), Vector2(200, 0), Vector2(0, -200), Vector2(0, 200), Vector2(-20, 0)]:
 		tide.hovering = true; tide.released = true; tide.direction = Vector2.RIGHT
 		var goal: Vector2 = tide.global_position + offset
@@ -258,7 +258,7 @@ func run() -> void:
 	var initial_tide := caster.live_shots(sig)[-1] as WaterShotProjectile
 	initial_tide.set_physics_process(false)
 	check(not initial_tide.released and initial_tide.alternate_toward(initial_tide.global_position + Vector2(-100, -40)) and initial_tide.released, "Signature alternate redirects first flight, not just released shots")
-	check(initial_tide.alternate_toward(initial_tide.global_position + Vector2(100, -40)), "Signature travelling redirect remains repeatable behind caster cooldown")
+	check(initial_tide.alternate_toward(initial_tide.global_position + Vector2(100, -40)), "Signature travelling redirect remains repeatable")
 	check(load("res://data/spells/water_shot_reservoir.tres").tags.has(SpellTags.PIERCING) and sig.tags.has(SpellTags.PIERCING) and not hover.tags.has(SpellTags.PIERCING), "only Mastery/Signature pierce")
 	# Real Projectile hit dispatch while stationary: normal damage, with tier-specific survival.
 	var landed: Array[HitEvent] = []
@@ -300,7 +300,7 @@ func run() -> void:
 	tide.hovering = true; tide._on_body_entered(next_target)
 	check(next_target.received == sig.damage, "Signature tick cooldown is per enemy, not global")
 
-	check(SpellDescription.for_spell(sig).contains("Ctrl + fire") and SpellDescription.for_spell(sig).contains("every 0.5s"), "panel uses Ctrl and explains Signature contact tick")
+	check(not SpellDescription.for_spell(sig).contains("0.5s cooldown") and SpellDescription.for_spell(sig).contains("re-aims all shots;") and SpellDescription.for_spell(sig).contains("Ctrl + fire") and SpellDescription.for_spell(sig).contains("every 0.5s"), "panel uses Ctrl and explains Signature contact tick")
 	for shot in caster.live_shots(sig): shot.queue_free()
 	await process_frame
 	caster.aim_override = caster.global_position + Vector2(100, 0)
