@@ -47,10 +47,6 @@ func unit() -> float:
 func color() -> Color:
 	return UiStyle.RANK_COLORS[tier] if tier != NONE else Color.TRANSPARENT
 
-## The frame hugs the icon rect exactly; nothing extends past it.
-func overhang() -> float:
-	return 0.0
-
 func _draw() -> void:
 	if tier == NONE:
 		return
