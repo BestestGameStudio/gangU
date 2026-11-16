@@ -1,7 +1,7 @@
 extends SceneTree
 ## E production mount + first playable config harness: Main mounts the
 ## reward/progression children ONCE, wired with the approved 2026-11-07
-## package: single-Bolt pool table, two fork upgrades at 10 Fire Ball casts,
+## package: single-Bolt pool table, the Fire Ball chain's Split upgrade at
 ## DungeonA demo enemies carrying that table. Asserts mount shape and the
 ## approved config only - Mastery/Signature remain unbuilt.
 var scene: Node
@@ -59,28 +59,26 @@ func _process(delta: float) -> bool:
 				print("[E] reward pool mounted once OK")
 			if get_nodes_in_group("spell_progress").size() != 1:
 				print("[E] FAIL spell_progress group size"); ok = false
-			# Provider wiring: caster resolved, exactly the two approved fork
-			# paths for Fire Ball, both gated at 10 casts (equal-cost choice).
+			# Provider wiring: caster resolved; Fire Ball's fixed chain (#703)
+			# starts with Split, gated at 10 casts.
 			var fireball: Spell = load("res://data/spells/fire_ball.tres")
 			var mana: Spell = load("res://data/spells/mana_shot.tres")
-			var paths: Array = progress.get_upgrade_paths(fireball)
-			if paths.size() == 2:
-				print("[E] provider exposes both fork paths OK")
+			var next_fb: SpellUpgrade = progress.next_upgrade(fireball)
+			if next_fb != null and next_fb.id == &"fireball_split":
+				print("[E] provider exposes Fire Ball's chain start (split) OK")
 			else:
-				print("[E] FAIL fork path count: ", paths.size()); ok = false
-			for u in paths:
-				if u.xp_threshold != 10:
-					print("[E] FAIL threshold: ", u.id, "=", u.xp_threshold); ok = false
-			# #211: Mana Shot now has its two Specialization paths (Volley +
-			# Lance), same 10-cast tier-1 gate as the Fire Ball forks.
-			var mana_paths: Array = progress.get_upgrade_paths(mana)
-			if mana_paths.size() == 2 and mana_paths[0].id == &"manashot_volley" and mana_paths[1].id == &"manashot_lance":
-				print("[E] provider exposes both Mana Shot paths OK")
+				print("[E] FAIL Fire Ball chain start: ", next_fb.id if next_fb != null else "null"); ok = false
+			if next_fb != null and next_fb.xp_threshold != 10:
+				print("[E] FAIL threshold: ", next_fb.id, "=", next_fb.xp_threshold); ok = false
+			# #211/#703: Mana Shot's chain is the single Volley upgrade, same
+			# 10-cast tier-1 gate as Fire Ball's.
+			var next_mana: SpellUpgrade = progress.next_upgrade(mana)
+			if next_mana != null and next_mana.id == &"manashot_volley":
+				print("[E] provider exposes Mana Shot's chain start (volley) OK")
 			else:
-				print("[E] FAIL Mana Shot paths: ", mana_paths.map(func(u): return u.id)); ok = false
-			for u in mana_paths:
-				if u.xp_threshold != 10 or u.tier != 1:
-					print("[E] FAIL mana threshold/tier: ", u.id); ok = false
+				print("[E] FAIL Mana Shot chain start: ", next_mana.id if next_mana != null else "null"); ok = false
+			if next_mana != null and (next_mana.xp_threshold != 10 or next_mana.tier != 1):
+				print("[E] FAIL mana threshold/tier: ", next_mana.id); ok = false
 			# Threshold gate via the REAL signal path: 9 casts no, 10 yes.
 			var caster: Node = scene.get_node("Player/SpellCaster")
 			for i in 9:
@@ -89,7 +87,7 @@ func _process(delta: float) -> bool:
 				print("[E] FAIL can_upgrade below 10 casts"); ok = false
 			caster.spell_cast.emit(fireball)
 			if progress.can_upgrade(fireball):
-				print("[E] fork unlocks at exactly 10 casts OK")
+				print("[E] chain upgrade unlocks at exactly 10 casts OK")
 			else:
 				print("[E] FAIL cannot upgrade at 10 casts"); ok = false
 			# Panel: hidden at boot, player resolved, provider wired.
@@ -165,8 +163,8 @@ func _process(delta: float) -> bool:
 					step = 0
 					phase = 2; t = 0
 		2:
-			# Apply path through the REAL panel buttons: the 10 casts emitted in
-			# phase 0 qualify both forks; open the panel, select, click.
+			# Apply through the REAL panel buttons: the 10 casts emitted in
+			# phase 0 qualify the chain's Split upgrade; open, select, click.
 			var panel := scene.get_node("EquipPanel")
 			var progress := scene.get_node("SpellProgress")
 			var caster: Node = scene.get_node("Player/SpellCaster")
@@ -185,11 +183,10 @@ func _process(delta: float) -> bool:
 						if c is UpgradeCard and not c.get_parent().get_parent().is_queued_for_deletion():
 							texts.append(c.name_label.text)
 							buttons.append(c)
-					texts.sort()
-					if texts != ["Beam [S]", "Split shot [S]"] or buttons.size() != 2:
-						print("[E] FAIL fork buttons: ", texts); ok = false
+					if texts != ["Split shot [S]"] or buttons.size() != 1:
+						print("[E] FAIL chain upgrade card: ", texts); ok = false
 						return _done()
-					print("[E] both fork buttons render after fix OK")
+					print("[E] single chain upgrade card renders OK")
 					# Focus regression (live Chrome bug): with any panel button
 					# holding GUI focus, a faithful Tab must STILL close the panel;
 					# before the fix the focused button consumed Tab as
@@ -269,8 +266,10 @@ func _process(delta: float) -> bool:
 					for c2 in panel._upgrade_box.find_children("*", "UpgradeCard", true, false):
 						if c2 is UpgradeCard and not c2.get_parent().get_parent().is_queued_for_deletion():
 							buttons2.append(c2)
-					var split_btn: Button = buttons2[0] if buttons2[0].name_label.text.begins_with("Split shot") else buttons2[1]
-					split_btn.pressed.emit()
+					if buttons2.size() != 1 or not buttons2[0].name_label.text.begins_with("Split shot"):
+						print("[E] FAIL chain card after reselect: ", buttons2.map(func(b): return b.name_label.text)); ok = false
+						return _done()
+					buttons2[0].pressed.emit()
 					if sig_log.size() != 1 or sig_log[0] != fireball:
 						print("[E] FAIL upgrades_changed: ", sig_log.size(), " calls"); ok = false
 					else:
@@ -329,7 +328,7 @@ func _process(delta: float) -> bool:
 					return false
 		3:
 			# Second scenario on a FRESH scene: per-run reset (no arrows at 0
-			# casts), then the Beam fork applied - arrow must clear the same.
+			# casts), then the chain's Split applied - arrow must clear the same.
 			match step:
 				0:
 					scene.queue_free()
@@ -362,21 +361,21 @@ func _process(delta: float) -> bool:
 						print("[E] FAIL chevron missing after reset+10"); ok = false
 						return _done()
 					var progress4: Node = scene.get_node("SpellProgress")
-					progress4.apply_upgrade(fb4, &"fireball_beam")
+					progress4.apply_upgrade(fb4, &"fireball_split")
 					step = 3
 				3:
 					var hud5: Node = scene.get_node("HUD")
 					var fb5: Spell = load("res://data/spells/fire_ball.tres")
-					var beam: Spell = load("res://data/spells/fire_ball_beam.tres")
+					var split5: Spell = load("res://data/spells/fire_ball_split.tres")
 					var caster5: Node = scene.get_node("Player/SpellCaster")
 					if caster5.get_slots().has(fb5):
-						print("[E] FAIL fireball still slotted after Beam apply"); ok = false
-					elif not caster5.get_slots().has(beam):
-						print("[E] FAIL beam not slotted after apply"); ok = false
-					elif _chevron_shown(hud5, caster5, beam):
-						print("[E] FAIL chevron on fresh Beam slot"); ok = false
+						print("[E] FAIL fireball still slotted after Split apply"); ok = false
+					elif not caster5.get_slots().has(split5):
+						print("[E] FAIL split not slotted after apply"); ok = false
+					elif _chevron_shown(hud5, caster5, split5):
+						print("[E] FAIL chevron on fresh Split slot"); ok = false
 					else:
-						print("[E] chevron clears after Beam apply OK")
+						print("[E] chevron clears after Split apply OK")
 					return _done()
 		_:
 			return true

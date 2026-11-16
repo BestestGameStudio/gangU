@@ -19,10 +19,10 @@ extends ModalPanel
 ## clicking a slot is refused with a hint. There is deliberately no
 ## unequip action (unsettled). Rows stay Button-free (gui_input) and the
 ## slot bar lives OUTSIDE the Rows box, so #218's row-structure contract
-## is untouched. Upgrade-path listing stays display-only.
+## is untouched. Upgrade-chain listing stays display-only.
 ##
 ## (#318) Each row also shows the spell's current tier and its full upgrade
-## tree from SpellProgress (direct paths with live cast progress, deeper
+## chain from SpellProgress (next upgrade with live cast progress, deeper
 ## tiers indented below). Still read-only: nothing here applies upgrades.
 ##
 ## UI is code-built; the look comes from UiStyle. While visible the panel
@@ -31,17 +31,17 @@ extends ModalPanel
 ## group.
 
 const ROW_PAD := 6.0
-## (#318) Upgrade-path listing under each spell row.
-const PATH_FONT_SIZE := 12
-const PATH_INDENT := 14.0
-const MAX_PATH_DEPTH := 4
+## (#318) Upgrade-chain listing under each spell row.
+const CHAIN_FONT_SIZE := 12
+const CHAIN_INDENT := 14.0
+const MAX_CHAIN_DEPTH := 4
 ## Display names indexed by SpellUpgrade.tier / SpellProgress.get_tier.
 const TIER_NAMES: Array[String] = ["Base", "Specialization", "Mastery", "Signature"]
 
 var _caster: SpellCaster
 ## (#375) Currently selected row spell; null = browsing (slot bar hidden).
 var _selected: Spell = null
-## (#318) Upgrade-path provider, discovered via the "spell_progress" group
+## (#318) Upgrade provider, discovered via the "spell_progress" group
 ## at render time (main.gd mounts it after this panel). Optional: a missing
 ## provider just shows "No further upgrades".
 var _progress: SpellProgress
@@ -214,28 +214,28 @@ func _make_row(spell: Spell) -> Control:
 			slot_label.name = "SlotLabel"
 			slot_label.text = SpellCaster.slot_key_label(slot_idx)
 			slot_label.add_theme_color_override("font_color", UiStyle.B_ACCENT)
-			slot_label.add_theme_font_size_override("font_size", PATH_FONT_SIZE)
+			slot_label.add_theme_font_size_override("font_size", CHAIN_FONT_SIZE)
 			hbox.add_child(slot_label)
 	var tier_label := Label.new()
 	tier_label.name = "TierLabel"
 	var tier: int = _progress.get_tier(spell) if _progress != null else 0
 	tier_label.text = TIER_NAMES[clampi(tier, 0, TIER_NAMES.size() - 1)]
 	tier_label.add_theme_color_override("font_color", UiStyle.RANK_COLORS[clampi(tier, 0, UiStyle.RANK_COLORS.size() - 1)])
-	tier_label.add_theme_font_size_override("font_size", PATH_FONT_SIZE)
+	tier_label.add_theme_font_size_override("font_size", CHAIN_FONT_SIZE)
 	hbox.add_child(tier_label)
-	var paths := VBoxContainer.new()
-	paths.name = "Paths"
-	paths.add_theme_constant_override("separation", 2)
-	vbox.add_child(paths)
-	if _progress == null or _progress.get_upgrade_paths(spell).is_empty():
+	var chain_box := VBoxContainer.new()
+	chain_box.name = "Chain"
+	chain_box.add_theme_constant_override("separation", 2)
+	vbox.add_child(chain_box)
+	if _progress == null or _progress.next_upgrade(spell) == null:
 		var none := Label.new()
-		none.name = "NoPathsLabel"
+		none.name = "NoChainLabel"
 		none.text = "No further upgrades"
 		none.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.7))
-		none.add_theme_font_size_override("font_size", PATH_FONT_SIZE)
-		paths.add_child(none)
+		none.add_theme_font_size_override("font_size", CHAIN_FONT_SIZE)
+		chain_box.add_child(none)
 	else:
-		_add_paths(paths, spell, 0, {spell: true}, true)
+		_add_chain(chain_box, spell, 0, {spell: true}, true)
 	for child: Control in row.find_children("*", "Control", true, false):
 		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return row
@@ -322,45 +322,49 @@ func _refresh_slot_bar() -> void:
 ## rank colour. Only the owned spell's direct paths show live cast progress
 ## (cast counts exist only for held spells); deeper lines show the threshold.
 ## `seen` guards against cyclic upgrade data.
-func _add_paths(box: VBoxContainer, source: Spell, depth: int, seen: Dictionary, owned: bool) -> void:
-	if depth >= MAX_PATH_DEPTH:
+func _add_chain(box: VBoxContainer, source: Spell, depth: int, seen: Dictionary, owned: bool) -> void:
+	if depth >= MAX_CHAIN_DEPTH:
 		return
-	for u in _progress.get_upgrade_paths(source):
-		var line := HBoxContainer.new()
-		line.name = "PathLine"
-		line.set_meta("upgrade_id", u.id)
-		line.set_meta("depth", depth)
-		line.add_theme_constant_override("separation", 6)
-		var indent := Control.new()
-		indent.custom_minimum_size = Vector2(PATH_INDENT * (depth + 1), 0)
-		line.add_child(indent)
-		var tier := clampi(u.tier, 0, UiStyle.RANK_COLORS.size() - 1)
-		var label := Label.new()
-		label.name = "PathLabel"
-		label.text = "%s %s  [%s]" % [">" if depth == 0 else ">>", u.display_name, TIER_NAMES[clampi(u.tier, 0, TIER_NAMES.size() - 1)]]
-		label.add_theme_color_override("font_color", UiStyle.RANK_COLORS[tier])
-		label.add_theme_font_size_override("font_size", PATH_FONT_SIZE)
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		line.add_child(label)
-		var req := Label.new()
-		req.name = "RequirementLabel"
-		if owned:
-			var casts := mini(_progress.cast_count(source), u.xp_threshold)
-			req.text = "READY" if casts >= u.xp_threshold else "%d/%d casts" % [casts, u.xp_threshold]
-			if casts >= u.xp_threshold:
-				req.add_theme_color_override("font_color", UiStyle.B_ACCENT)
-			else:
-				req.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	# #703: one fixed linear chain per spell - a single next upgrade, walked
+	# link by link (no branches).
+	var u := _progress.next_upgrade(source)
+	if u == null:
+		return
+	var line := HBoxContainer.new()
+	line.name = "ChainLine"
+	line.set_meta("upgrade_id", u.id)
+	line.set_meta("depth", depth)
+	line.add_theme_constant_override("separation", 6)
+	var indent := Control.new()
+	indent.custom_minimum_size = Vector2(CHAIN_INDENT * (depth + 1), 0)
+	line.add_child(indent)
+	var tier := clampi(u.tier, 0, UiStyle.RANK_COLORS.size() - 1)
+	var label := Label.new()
+	label.name = "ChainLabel"
+	label.text = "%s %s  [%s]" % [">" if depth == 0 else ">>", u.display_name, TIER_NAMES[clampi(u.tier, 0, TIER_NAMES.size() - 1)]]
+	label.add_theme_color_override("font_color", UiStyle.RANK_COLORS[tier])
+	label.add_theme_font_size_override("font_size", CHAIN_FONT_SIZE)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(label)
+	var req := Label.new()
+	req.name = "RequirementLabel"
+	if owned:
+		var casts := mini(_progress.cast_count(source), u.xp_threshold)
+		req.text = "READY" if casts >= u.xp_threshold else "%d/%d casts" % [casts, u.xp_threshold]
+		if casts >= u.xp_threshold:
+			req.add_theme_color_override("font_color", UiStyle.B_ACCENT)
 		else:
-			req.text = "%d casts" % u.xp_threshold
-			req.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.75))
-		req.add_theme_font_size_override("font_size", PATH_FONT_SIZE)
-		line.add_child(req)
-		box.add_child(line)
-		if u.result_spell != null and not seen.has(u.result_spell):
-			var next_seen := seen.duplicate()
-			next_seen[u.result_spell] = true
-			_add_paths(box, u.result_spell, depth + 1, next_seen, false)
+			req.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
+	else:
+		req.text = "%d casts" % u.xp_threshold
+		req.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.75))
+	req.add_theme_font_size_override("font_size", CHAIN_FONT_SIZE)
+	line.add_child(req)
+	box.add_child(line)
+	if u.result_spell != null and not seen.has(u.result_spell):
+		var next_seen := seen.duplicate()
+		next_seen[u.result_spell] = true
+		_add_chain(box, u.result_spell, depth + 1, next_seen, false)
 
 func _on_spell_unlocked(_spell: Spell) -> void:
 	if visible:

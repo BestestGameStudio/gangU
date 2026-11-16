@@ -6,9 +6,7 @@ const IMPACT: AudioStream = preload("res://assets/audio/sfx/fireball_impact.ogg"
 ## Both cues were too loud in the deployed mix. Preserve the approved streams.
 const VOLUME_DB: float = -10.0
 const IDS: Array[StringName] = [
-	&"fire_ball", &"fire_ball_split", &"fire_ball_split_heavy", &"fire_ball_split_wide",
-	&"fire_ball_beam", &"fire_ball_beam_heavy", &"fire_ball_beam_homing",
-	&"fire_ball_beam_long", &"fire_ball_beam_piercing",
+	&"fire_ball", &"fire_ball_split", &"fire_ball_split_wide",
 ]
 
 static func supports(spell: Spell) -> bool:

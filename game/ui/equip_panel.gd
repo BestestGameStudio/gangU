@@ -36,11 +36,12 @@ class_name EquipPanel
 ## UPGRADE HOOK (contract proposed to the #36-38 writer; panel side only):
 ##   Optional provider node via upgrader_path. Duck-typed:
 ##     can_upgrade(spell) -> bool
-##     get_upgrade_paths(spell) -> Array of {id, name}
-##     apply_upgrade(spell, path_id) -> bool
+##     next_upgrade(spell) -> SpellUpgrade or null (one fixed linear chain
+##       per spell, #703; no branch choice)
+##     apply_upgrade(spell, upgrade_id) -> bool
 ##     signal upgrades_changed(spell)
 ##   When no provider is wired, no upgrade UI is rendered. Progression
-##   qualification, stages and path contents are the provider writer's scope.
+##   qualification, stages and chain contents are the provider writer's scope.
 
 ## Explicit wiring convention (matches HUD): set before tree entry, or the
 ## Player.find fallback applies. Production mount is a separate window.
@@ -79,9 +80,10 @@ const DRAG_THRESHOLD := 10.0
 ## viewport); the upgrade scroll fills whatever height is left, so content
 ## changes never resize the panel.
 const UPGRADE_CARD_GAP := 12
-# Two #441-slim cards + gap + scrollbar (Daniel 2026-11-15, #700: spells
-# cap at 2 upgrade paths, so the UI fits 2 cards instead of 3): 2 x 176 +
-# 12 + 8, rounded up; the 3-column stat grid (348) fits under it. The
+# Sized for up to 2 #441-slim cards + gap + scrollbar (#700, Daniel
+# 2026-11-15); #703's fixed linear chains show ONE card, the width stays so
+# the plate never resizes (#416): 2 x 176 + 12 + 8, rounded up; the
+# 3-column stat grid (348) fits under it. The
 ## #416 no-resize rule covers WIDTH too: the column floor keeps the plate
 # one fixed size.
 const DETAIL_WIDTH := 384.0
@@ -134,10 +136,10 @@ func _pin_icon(b: Button, left: float) -> SpellIcon:
 
 ## #38: compact ASCII tier suffix on upgrade-channel buttons only (lead UX
 ## call: [S]/[M]/[G] for Specialization/Mastery/Signature, Base shows
-## nothing). Reads the path's own tier when the provider exposes one;
+## nothing). Reads the upgrade's own tier when the provider exposes one;
 ## providers without a tier field degrade to no suffix. Display-only.
-func _tier_suffix(path: Variant) -> String:
-	match _path_tier(path):
+func _tier_suffix(upgrade: Variant) -> String:
+	match _upgrade_tier(upgrade):
 		1:
 			return " [S]"
 		2:
@@ -146,18 +148,19 @@ func _tier_suffix(path: Variant) -> String:
 			return " [G]"
 	return ""
 
-## Tier the path upgrades INTO (0 Base .. 3 Signature); 0 when the provider
-## exposes no tier. Shared by the [S]/[M]/[G] suffix and the #451 card border.
-func _path_tier(path: Variant) -> int:
-	var tier: Variant = (path as Resource).get(&"tier") if path is Resource else null
+## Tier the upgrade advances INTO (0 Base .. 3 Signature); 0 when the
+## provider exposes no tier. Shared by the [S]/[M]/[G] suffix and the #451
+## card border.
+func _upgrade_tier(upgrade: Variant) -> int:
+	var tier: Variant = (upgrade as Resource).get(&"tier") if upgrade is Resource else null
 	return clampi(int(tier), 0, UiStyle.RANK_COLORS.size() - 1) if tier != null else 0
 
-## A provider path is a SpellUpgrade or a {id, display_name} Dictionary.
-func _path_field(path: Variant, key: StringName) -> Variant:
-	if path is Dictionary:
-		return (path as Dictionary).get(key)
-	if path is Object:
-		return (path as Object).get(key)
+## A provider upgrade row is a SpellUpgrade or a {id, display_name} Dictionary.
+func _upgrade_field(upgrade: Variant, key: StringName) -> Variant:
+	if upgrade is Dictionary:
+		return (upgrade as Dictionary).get(key)
+	if upgrade is Object:
+		return (upgrade as Object).get(key)
 	return null
 
 ## #255: rank border tier for an owned spell (Base when the provider has no
@@ -176,8 +179,8 @@ func _can_upgrade(spell: Spell) -> bool:
 func _can_token_upgrade(spell: Spell) -> bool:
 	return spell != null and _upgrader != null and _upgrader.has_method(&"can_token_upgrade") and _upgrader.call(&"can_token_upgrade", spell)
 
-func _path_needs_token(spell: Spell, path: Variant) -> bool:
-	return _upgrader != null and _upgrader.has_method(&"path_needs_token") and _upgrader.call(&"path_needs_token", spell, path)
+func _upgrade_needs_token(spell: Spell, upgrade: Variant) -> bool:
+	return _upgrader != null and _upgrader.has_method(&"upgrade_needs_token") and _upgrader.call(&"upgrade_needs_token", spell, upgrade)
 
 func _ready() -> void:
 	visible = false
@@ -438,36 +441,38 @@ func _refresh() -> void:
 		cards.add_theme_constant_override("separation", UPGRADE_CARD_GAP)
 		scroll.add_child(cards)
 		var token_ready := _can_token_upgrade(_selected)
-		var paths: Array = _upgrader.call(&"get_upgrade_paths", _selected)
-		for path: Variant in paths:
-			var needs_token := _path_needs_token(_selected, path)
-			# A path offered by neither route (threshold unmet, no token) is
-			# not shown; with no token API this is the unchanged listing.
+		# #703: one fixed linear chain per spell - at most ONE next upgrade.
+		var next: Variant = _upgrader.call(&"next_upgrade", _selected)
+		var candidates: Array = [next] if next != null else []
+		for upgrade: Variant in candidates:
+			var needs_token := _upgrade_needs_token(_selected, upgrade)
+			# An upgrade offered by neither route (threshold unmet, no token)
+			# is not shown; with no token API this is the unchanged listing.
 			if needs_token and not token_ready:
 				continue
 			var b := UpgradeCard.new()
-			var result := _path_field(path, &"result_spell") as Spell
+			var result := _upgrade_field(upgrade, &"result_spell") as Spell
 			var description := SpellDescription.for_spell(result)
 			if result != null and result.projectile_count > 0:
 				# #441: short form so the line does not wrap on the slimmer cards (Daniel: "shorten").
 				description += "\n%s px | %s px/s" % [int(result.range), int(result.projectile_speed)]
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
-			b.setup(str(_path_field(path, &"display_name")) + _tier_suffix(path), description, needs_token)
-			# #451: border in the color of the tier this upgrade leads into.
-			b.set_border_tier(_path_tier(path))
-			var pid: Variant = _path_field(path, &"id")
+			b.setup(str(_upgrade_field(upgrade, &"display_name")) + _tier_suffix(upgrade), description, needs_token)
+			# #451/#702: ornate frame in the colorway of the tier this upgrade advances into.
+			b.set_border_tier(_upgrade_tier(upgrade))
+			var pid: Variant = _upgrade_field(upgrade, &"id")
 			if needs_token:
 				b.pressed.connect(func() -> void: _on_token_upgrade_pressed(pid))
 			else:
 				b.pressed.connect(func() -> void: _on_upgrade_pressed(pid))
 			cards.add_child(b)
 
-func _on_upgrade_pressed(path_id: Variant) -> void:
+func _on_upgrade_pressed(upgrade_id: Variant) -> void:
 	if _upgrader == null or _selected == null:
 		return
 	var sel := _selected
-	if not _upgrader.call(&"apply_upgrade", sel, path_id):
+	if not _upgrader.call(&"apply_upgrade", sel, upgrade_id):
 		push_warning("EquipPanel: apply_upgrade refused; refreshing.")
 	elif _caster != null and not _caster.get_unlocked().has(sel):
 		# Successful replace consumed the selected spell; drop the stale
@@ -476,11 +481,11 @@ func _on_upgrade_pressed(path_id: Variant) -> void:
 	_refresh()
 
 ## #315: same flow as _on_upgrade_pressed, spending one boss upgrade token.
-func _on_token_upgrade_pressed(path_id: Variant) -> void:
+func _on_token_upgrade_pressed(upgrade_id: Variant) -> void:
 	if _upgrader == null or _selected == null or not _upgrader.has_method(&"apply_upgrade_with_token"):
 		return
 	var sel := _selected
-	if not _upgrader.call(&"apply_upgrade_with_token", sel, path_id):
+	if not _upgrader.call(&"apply_upgrade_with_token", sel, upgrade_id):
 		push_warning("EquipPanel: token upgrade refused; refreshing.")
 	elif _caster != null and not _caster.get_unlocked().has(sel):
 		_selected = null
