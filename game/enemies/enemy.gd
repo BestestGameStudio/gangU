@@ -312,6 +312,11 @@ func chase_speed() -> float:
 var freeze := FreezeHold.new()
 ## An external displacement owns locomotion, never damage or lifecycle.
 var displacement_owner: Node = null
+var stun_left := 0.0
+
+func stun(seconds: float) -> void:
+	stun_left = maxf(stun_left, seconds)
+
 var _spawn_claim_pending := true
 
 func set_frozen(frozen: bool) -> void:
@@ -328,8 +333,9 @@ func _physics_process(delta: float) -> void:
 		_spawn_claim_pending = false
 		for bubble in get_tree().get_nodes_in_group(&"freeze_bubbles"):
 			bubble.claim(self)
-	if freeze.is_frozen() or is_instance_valid(displacement_owner):
-		return
+	if freeze.is_frozen(): return
+	stun_left = maxf(stun_left - delta, 0.0)
+	if stun_left > 0.0 or is_instance_valid(displacement_owner): return
 	_rally_left = maxf(_rally_left - delta, 0.0)
 	# #331: a strong knockback owns the body until it decays below
 	# KNOCKBACK_CONTROL, so the push reads; the behavior resumes after.

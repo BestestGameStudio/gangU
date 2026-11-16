@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SpellUpgrade" load_steps=6 format=3]
+[ext_resource type="Script" path="res://game/spells/spell_upgrade.gd" id="1"]
+[ext_resource type="Spell" path="res://data/spells/hook_shot_magnet.tres" id="2"]
+[ext_resource type="Spell" path="res://data/spells/hook_shot_catch.tres" id="3"]
+[ext_resource type="Script" path="res://game/spells/spell_upgrade_quest.gd" id="4"]
+[sub_resource type="Resource" id="quest"]
+script = ExtResource("4")
+kind = 4
+objective = "Hook 3 enemies at the same time."
+goal = 1
+projectiles = 3
+[resource]
+script = ExtResource("1")
+id = &"hook_shot_catch"
+display_name = "Catch and release"
+source_spell = ExtResource("2")
+result_spell = ExtResource("3")
+tier = 2
+quest = SubResource("quest")
