@@ -85,6 +85,8 @@ var _patch_slots: Dictionary = {}
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
 var decor: Array[Dictionary] = []
 var _canopy: Node2D
+const TREE_SPRITES := 3
+static var _tree_textures: Array[Texture2D] = []
 ## #461: tall-grass patches. Centres/radii are hashed like the decor; the
 ## patch is the set of Terrain cells whose centre falls inside the circle,
 ## so what is drawn is exactly what conceals. Cells are in the area's
@@ -154,26 +156,29 @@ func _make_canopy() -> Node2D:
 	c.name = "Canopy"
 	c.z_as_relative = false
 	c.z_index = CANOPY_Z
-	c.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	c.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	c.draw.connect(_draw_canopy.bind(c))
 	add_child(c)
 	return c
 
 func _draw_canopy(c: Node2D) -> void:
-	var row := TerrainArt.row(&"tree_summer") * TerrainArt.OBJ_CELL
+	if _tree_textures.is_empty():
+		for n in TREE_SPRITES:
+			_tree_textures.append(load("res://assets/sprites/terrain/tree_%d.png" % (n + 1)) as Texture2D)
 	for d in decor:
 		if d["kind"] != "tree":
 			continue
 		var at: Vector2 = d["at"]
 		var r: float = d["r"]
-		if not _view.grow(r*2.0).has_point(at): continue
-		# The sprite's crown is ~70 of its 80 px and centred ~38 px down:
-		# scale it so the crown spans the collision circle (slightly over).
-		var sz := TerrainArt.OBJ_CELL * (2.0 * r * 1.15) / 70.0
-		var col := TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 4)
-		c.draw_texture_rect_region(TerrainArt.OBJECTS,
-			Rect2(at - Vector2(sz * 0.5, sz * 0.47), Vector2(sz, sz)),
-			Rect2(col * TerrainArt.OBJ_CELL, row, TerrainArt.OBJ_CELL, TerrainArt.OBJ_CELL))
+		if not _view.grow(r*3.0).has_point(at): continue
+		var tex := _tree_textures[TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 7, TREE_SPRITES)]
+		# Bottom-centre anchored: the crown (~90% of the sprite width) spans
+		# the collision circle (slightly over), the trunk foot sits just
+		# below the circle's centre.
+		var k := (2.0 * r * 1.3) / (tex.get_width() * 0.9)
+		var size := tex.get_size() * k
+		var foot := at + Vector2(0.0, r * 0.85)
+		c.draw_texture_rect(tex, Rect2(foot - Vector2(size.x * 0.5, size.y), size), false)
 
 ## Harness introspection: the node that draws the tree crowns.
 func canopy() -> Node2D:
@@ -592,7 +597,7 @@ func _draw() -> void:
 		if d["kind"] == "tree":
 			# #418: only the ground shadow stays on the floor layer; the
 			# canopy itself is drawn by the Canopy child, above characters.
-			draw_circle(at + Vector2(4, r * 0.55), r * 0.9, Color(SHADOW, 0.45))
+			pass  # new tree sprites carry their own baked shadow
 		else:
 			var rock := PackedVector2Array()
 			for i in 6:
