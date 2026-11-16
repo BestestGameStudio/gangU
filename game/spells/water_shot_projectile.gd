@@ -59,10 +59,7 @@ func release_toward(target: Vector2) -> bool:
 	if not hovering and not (released and spell.water_shot_repeat_redirect): return false
 	var d := target - global_position
 	if d.length_squared() < 0.01: return false
-	_redirect_curve_target = target
-	_redirect_curve_left = spell.redirect_curve_duration
-	if _redirect_curve_left <= 0.0:
-		direction = d.normalized(); rotation = direction.angle()
+	_begin_redirect_curve(target)
 	if spell.water_shot_repeat_redirect:
 		hover_target = global_position + d.limit_length(maxf(spell.range - 1.0, 0.0))
 	if hovering or spell.water_shot_repeat_redirect: _traveled = 0.0

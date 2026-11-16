@@ -144,6 +144,24 @@ func run() -> void:
 	check(base_shot._redirect_curve_left == 0.0 and base_shot.direction.y > 0.9, "redirect finishes short0.15s bend")
 	check(base_shot.get_node("WaterShotArt") is AnimatedSprite2D and base_shot.get_node("WaterShotArt").is_playing() and base_shot.get_node("WaterShotArt").sprite_frames.get_frame_count(&"spin") == 8, "Water Shot ball spins during flight")
 	check(not base_shot.can_redirect() and not caster._redirect_gate(ws, true), "base exhausted redirect permits next normal cast")
+	# Redirects must make immediate progress toward the new point, not loop
+	# through the old heading. Exercise left/right, behind, vertical and near.
+	for offset in [Vector2(-200, 0), Vector2(200, 0), Vector2(0, -200), Vector2(0, 200), Vector2(-20, 0)]:
+		caster._cast_spell(ws)
+		var probe: Projectile = caster.live_shots(ws)[-1]
+		probe.set_physics_process(false)
+		probe.direction = Vector2.RIGHT
+		var start := probe.global_position
+		var goal: Vector2 = start + offset
+		probe.redirect(goal)
+		var forward := true
+		for frame in 10:
+			var was := probe.global_position
+			probe._physics_process(0.015)
+			forward = forward and (probe.global_position - was).dot(offset.normalized()) > 0.0
+			forward = forward and probe.direction.dot(offset.normalized()) > 0.96
+		check(forward, "redirect stays in narrow forward cone without looping: " + str(offset))
+		probe.queue_free()
 	var hover: Spell = load("res://data/spells/water_shot_hover.tres")
 	var made: Array[WaterShotProjectile] = []
 	for i in 4:
@@ -181,6 +199,17 @@ func run() -> void:
 	caster._water_redirect_cooldown = 0
 	caster.aim_override = tide.global_position + Vector2(100, 0)
 	check(caster.release_water_shots(sig) == 1 and tide._redirect_curve_left > 0.0, "Signature can redirect again after cooldown")
+	for offset in [Vector2(-200, 0), Vector2(200, 0), Vector2(0, -200), Vector2(0, 200), Vector2(-20, 0)]:
+		tide.hovering = true; tide.released = true; tide.direction = Vector2.RIGHT
+		var goal: Vector2 = tide.global_position + offset
+		tide.release_toward(goal)
+		var forward := true
+		for frame in 10:
+			var was := tide.global_position
+			tide._physics_process(0.015)
+			if not tide.hovering:
+				forward = forward and (tide.global_position - was).dot(offset.normalized()) > 0.0
+		check(forward, "Signature release makes forward progress without looping: " + str(offset))
 	check(load("res://data/spells/water_shot_reservoir.tres").tags.has(SpellTags.PIERCING) and sig.tags.has(SpellTags.PIERCING) and not hover.tags.has(SpellTags.PIERCING), "only Mastery/Signature pierce")
 	# Real Projectile hit dispatch while stationary: normal damage, with tier-specific survival.
 	var target := WaterTarget.new(); root.add_child(target)
