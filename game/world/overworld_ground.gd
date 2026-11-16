@@ -516,6 +516,11 @@ func _lattice_type(x: int, y: int) -> int:
 func _compute_lattice_type(p: Vector2) -> int:
 	if not covers(p):
 		return DualGrid.T.CLIFF
+	# Only grass meets the cliff edge (the edge art is grass over void).
+	if _inner_edge.is_empty():
+		_inner_edge = _blob(-140.0)
+	if not Geometry2D.is_point_in_polygon(p, _inner_edge):
+		return DualGrid.T.GRASS
 	var parent := get_parent()
 	var desert := parent.get_node_or_null("DesertStatueArena") as DesertStatueArena if parent != null else null
 	var desert_near := false
@@ -566,11 +571,15 @@ func _compute_lattice_type(p: Vector2) -> int:
 
 var _cobble_nodes: Dictionary = {}
 var _dirt_nodes: Dictionary = {}
+var _lane_nodes: Dictionary = {}
+var _inner_edge := PackedVector2Array()
 
 ## One-tile-wide trails: snap every path polyline onto the 64px lattice and
 ## fill the corner of each diagonal step so the trail stays connected.
 func _build_cobble_nodes(origin: Vector2) -> void:
+	var seg_i := 0
 	for seg: PackedVector2Array in AbandonedVillage.path_segments():
+		seg_i += 1
 		var prev := Vector2i(-99999, -99999)
 		for k in range(seg.size() - 1):
 			var a := seg[k] + origin
@@ -582,18 +591,22 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 					continue
 				if prev.x != -99999 and node.x != prev.x and node.y != prev.y:
 					_cobble_nodes[Vector2i(node.x, prev.y)] = true
+					if seg_i == 1:
+						_lane_nodes[Vector2i(node.x, prev.y)] = true
 				_cobble_nodes[node] = true
+				if seg_i == 1:
+					_lane_nodes[node] = true
 				prev = node
 	# Cobble -> dirt -> grass: a ragged dirt ring around the trail. Every
 	# neighbour is dirt except hashed gaps, plus a patchy second ring.
-	for c: Vector2i in _cobble_nodes.keys():
+	for c: Vector2i in _lane_nodes.keys():
 		for dy in range(-2, 3):
 			for dx in range(-2, 3):
 				var n := c + Vector2i(dx, dy)
 				if _cobble_nodes.has(n):
 					continue
 				var ring := maxi(absi(dx), absi(dy))
-				var keep := 0.7 if ring == 1 else 0.0
+				var keep := 0.55 if ring == 1 else 0.0
 				if _hash01(n.x, n.y, 313) < keep:
 					_dirt_nodes[n] = true
 
