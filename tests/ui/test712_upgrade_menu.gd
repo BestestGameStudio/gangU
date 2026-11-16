@@ -32,6 +32,15 @@ func run() -> void:
 	check(menu.size() == 3 and menu.all(func(item): return item.state == "locked"), "all three shown before XP gate")
 	check(panel._upgrade_cards.size() == 3, "three mounted cards")
 	check(panel._upgrade_cards.all(func(card): return card.disabled and card.lock_sign.visible and card.progress_bar.visible), "locked cards disabled with lock and bar")
+	await tick()
+	var viewport_rect := panel._upgrade_scroll.get_global_rect()
+	check(panel._upgrade_cards.all(func(card): return viewport_rect.encloses(card.progress_bar.get_global_rect()) and viewport_rect.encloses(card.progress_label.get_global_rect())), "three progress bars and counts fit without scrolling")
+	var plate_size := panel._plate.size
+	panel._on_slot_pressed(2)
+	await tick()
+	panel._on_slot_pressed(2)
+	await tick()
+	check(panel._plate.size.is_equal_approx(plate_size), "selecting/deselecting keeps fixed panel size")
 	var original_card := panel._upgrade_cards[0]
 	for i in 5: caster.spell_cast.emit(water)
 	check(panel._upgrade_cards[0] == original_card and original_card.progress_bar.value == 5, "live progress updates existing card without losing focus")

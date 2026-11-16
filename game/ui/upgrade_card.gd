@@ -58,7 +58,7 @@ func _init() -> void:
 	margin.add_child(_content)
 	splash = PlaceholderSplash.new()
 	splash.name = "PlaceholderSplash"
-	splash.custom_minimum_size = Vector2(0, 55)
+	splash.custom_minimum_size = Vector2(0, 32)
 	_content.add_child(splash)
 	var placeholder_label := Label.new()
 	placeholder_label.name = "PlaceholderLabel"
@@ -98,6 +98,9 @@ func _init() -> void:
 	progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	progress_label.visible = false
 	_content.add_child(progress_label)
+	# Qualification is always above the long description, so the lock/bar
+	# stay visible without scrolling even when an upgrade has lengthy text.
+	_content.move_child(description_label, _content.get_child_count() - 1)
 	lock_sign = LockSign.new()
 	lock_sign.name = "LockSign"
 	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -142,7 +145,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	if not source_name.is_empty():
 		progress_label.text += " - " + source_name
 	match state:
-		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - first unlock " + prerequisite
+		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = "Choose upgrade"
 		"token": action_label.text = "Choose - use upgrade token"
 		"applied": action_label.text = "Applied"
@@ -150,6 +153,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
 	if progress_label.visible:
 		tooltip_text += "\n" + progress_label.text
+	if not prerequisite.is_empty():
+		tooltip_text += "\nFirst unlock " + prerequisite
 	call_deferred("_fit_content")
 
 ## #451: restyle the card border (Daniel: the color of the tier the card
@@ -181,6 +186,6 @@ func _fit_content() -> void:
 	for label: Label in [name_label, description_label, action_label, progress_label]:
 		var font := label.get_theme_font("font")
 		text_height += font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, width, label.get_theme_font_size("font_size")).y
-	var height := maxf(200.0, maxf(text_height + 55.0 + 15.0, _content.get_combined_minimum_size().y) + 24.0)
+	var height := maxf(200.0, maxf(text_height + 32.0 + 25.0, _content.get_combined_minimum_size().y) + 24.0)
 	if not is_equal_approx(custom_minimum_size.y, height):
 		custom_minimum_size.y = height
