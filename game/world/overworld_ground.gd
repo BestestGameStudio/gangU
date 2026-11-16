@@ -548,6 +548,8 @@ func _compute_lattice_type(p: Vector2) -> int:
 				_build_cobble_nodes((vil as Node2D).position)
 			if _cobble_nodes.has(Vector2i((p / 64.0).round())):
 				return DualGrid.T.COBBLE
+			if _dirt_nodes.has(Vector2i((p / 64.0).round())):
+				return DualGrid.T.DIRT
 		# No stray dirt patches around the village.
 		if q.length() < 470.0:
 			return DualGrid.T.GRASS
@@ -563,6 +565,7 @@ func _compute_lattice_type(p: Vector2) -> int:
 	return DualGrid.T.GRASS
 
 var _cobble_nodes: Dictionary = {}
+var _dirt_nodes: Dictionary = {}
 
 ## One-tile-wide trails: snap every path polyline onto the 64px lattice and
 ## fill the corner of each diagonal step so the trail stays connected.
@@ -581,6 +584,18 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 					_cobble_nodes[Vector2i(node.x, prev.y)] = true
 				_cobble_nodes[node] = true
 				prev = node
+	# Cobble -> dirt -> grass: a ragged dirt ring around the trail. Every
+	# neighbour is dirt except hashed gaps, plus a patchy second ring.
+	for c: Vector2i in _cobble_nodes.keys():
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				var n := c + Vector2i(dx, dy)
+				if _cobble_nodes.has(n):
+					continue
+				var ring := maxi(absi(dx), absi(dy))
+				var keep := 0.85 if ring == 1 else 0.12
+				if _hash01(n.x, n.y, 313) < keep:
+					_dirt_nodes[n] = true
 
 func _draw_dual_grid() -> void:
 	var grown := _blob(BORDER_DRAWN)

@@ -25,6 +25,7 @@ const PAIRS: Array = [
 	[T.SANDSTONE, T.SAND, "dualgrid_sandstone_on_sand"],
 	[T.STONE, T.DIRT, "dualgrid_stonebrick_on_dirt"],
 	[T.COBBLE, T.GRASS, "dualgrid_cobble_on_grass"],
+	[T.COBBLE, T.DIRT, "dualgrid_cobble_on_dirt"],
 	[T.CLIFF, T.GRASS, "dualgrid_cliff_on_grass"],
 	[T.CLIFF, T.DIRT, "dualgrid_cliff_on_dirt"],
 	[T.CLIFF, T.SAND, "dualgrid_cliff_on_sand"],
@@ -45,7 +46,10 @@ static var _textures: Dictionary = {}
 static func _tex(name: String) -> Texture2D:
 	if not _textures.has(name):
 		var path := DIR + name + ".png"
-		if not ResourceLoader.exists(path) and name.contains("cobble"):
+		if not ResourceLoader.exists(path) and name == "dualgrid_cobble_on_dirt":
+			# Placeholder until the cobble-on-dirt sheet lands.
+			path = DIR + "dualgrid_cobble_on_grass.png"
+		elif not ResourceLoader.exists(path) and name.contains("cobble"):
 			# Placeholder until the cobble sheets land: reuse stonebrick.
 			path = DIR + name.replace("cobble", "stonebrick") + ".png"
 		_textures[name] = load(path) as Texture2D if ResourceLoader.exists(path) else null
