@@ -9,6 +9,9 @@ extends RefCounted
 ## are the owner-confirmed set.
 
 const ROWS: Array[SpellUpgrade] = [
+	preload("res://data/upgrades/water_shot_hover.tres"),
+	preload("res://data/upgrades/water_shot_reservoir.tres"),
+	preload("res://data/upgrades/water_shot_tide.tres"),
 	## Fire Ball chain: split -> split_wide (tiers 1/2).
 	preload("res://data/upgrades/fireball_split.tres"),
 	preload("res://data/upgrades/fireball_m2_split_wide.tres"),

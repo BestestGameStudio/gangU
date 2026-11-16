@@ -321,6 +321,7 @@ func can_cast() -> bool:
 	return equipped_spell != null and cooldown_remaining(equipped_spell) <= 0.0
 
 func _process(delta: float) -> void:
+	_water_redirect_cooldown = maxf(_water_redirect_cooldown - delta, 0.0)
 	for s: Spell in _cooldowns.keys():
 		_cooldowns[s] = maxf(_cooldowns[s] - delta, 0.0)
 	_tick_hammer(delta)
@@ -351,6 +352,9 @@ func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, 
 		match event.command:
 			SpellTriggerRouter.Command.CAST:
 				if is_charging(source): continue # A held action owns this source until release/cancel.
+				if source.water_shot_hover_cap > 0 and event.alternate:
+					if event.get("fresh", just_pressed): release_water_shots(source)
+					continue
 				var payload := source.trigger_payload(event.mode, event.alternate)
 				if _redirect_gate(payload, event.get("fresh", just_pressed)): continue
 				if cooldown_remaining(source) <= 0.0:
@@ -416,6 +420,19 @@ func _redirect_gate(spell: Spell, just_pressed: bool) -> bool:
 	if just_pressed:
 		redirect_shots(spell)
 	return true
+
+## #740 alternate activation releases hovering shots, Signature also re-aims released shots.
+var _water_redirect_cooldown := 0.0
+
+func release_water_shots(spell: Spell) -> int:
+	if spell.water_shot_repeat_redirect and _water_redirect_cooldown > 0.0: return 0
+	var count := 0
+	for p in live_shots(spell):
+		if p is WaterShotProjectile and (p as WaterShotProjectile).release_toward(aim_point()):
+			count += 1
+	if count > 0 and spell.water_shot_repeat_redirect:
+		_water_redirect_cooldown = spell.water_shot_redirect_cooldown
+	return count
 
 ## #331 Water Ball bubble branch: the owner's live shield, if any.
 func active_shield() -> WaterShield:
@@ -661,7 +678,10 @@ func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 ## pure SpellFanout helper (defaults return [dir]).
 func _spawn_fanout(spell: Spell, dir: Vector2) -> void:
 	for d in SpellFanout.directions(dir, spell.projectile_count, spell.spread_degrees):
-		var p: Projectile = projectile_scene.instantiate()
+		var p: Projectile = WaterShotProjectile.new() if spell.water_shot_hover_cap > 0 else projectile_scene.instantiate()
+		if p is WaterShotProjectile:
+			(p as WaterShotProjectile).prepare_shape()
+			(p as WaterShotProjectile).hover_target = global_position + (aim_point() - global_position).limit_length(maxf(spell.range - 1.0, 0.0))
 		p.setup(spell, d, get_parent())
 		p.cursor_provider = aim_point # #331: steer Water Balls chase the aim point
 		get_tree().current_scene.add_child(p)

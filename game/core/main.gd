@@ -62,6 +62,13 @@ func _ready() -> void:
 	var caster: SpellCaster = $Player/SpellCaster
 	for i in mini(caster.starting_spells.size(), SpellCaster.SLOT_COUNT):
 		caster.assign_slot(i, caster.starting_spells[i])
+	# Water Shot starts on E without displacing any existing starting spell.
+	var water_shot: Spell = preload("res://data/spells/water_shot.tres")
+	caster.unlock_spell(water_shot)
+	for slot in SpellCaster.SLOT_COUNT:
+		if caster.get_slots()[slot] == water_shot: caster.clear_slot(slot)
+	if caster.get_slots()[3] == null: caster.assign_slot(3, water_shot)
+	else: caster.bind_first_free(water_shot)
 	## #678/#687: hit stop - one service node subscribed to the OnHit bus. It
 	## freezes movers briefly on every landed spell impact against an enemy
 	## and stages the boss stop (a longer freeze + the camera focus beat) on

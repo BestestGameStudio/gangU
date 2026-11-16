@@ -80,6 +80,18 @@ class_name Spell
 ## other spell, so their casting is unchanged.
 @export var terrain_block: StringName = &""
 
+## #740 Water Shot:0 disables hover; negative duration means indefinite.
+@export var water_shot_hover_duration: float = 0.0
+@export var water_shot_hover_cap: int = 0
+@export var water_shot_repeat_redirect: bool = false
+@export var water_shot_redirect_cooldown: float = 0.5
+@export var water_shot_hover_spread_radius: float = 14.0
+@export var water_shot_hover_spread_speed: float = 12.0
+@export var projectile_art: Texture2D = null
+@export var projectile_frames: SpriteFrames = null
+@export var redirect_curve_duration: float = 0.0
+@export var projectile_trail_art: Texture2D = null
+
 ## ---- #331 Water Ball tree. Every field defaults to OFF, so every existing
 ## spell casts exactly as before. Provisional placeholder numbers live on
 ## the water_ball*.tres resources only - balance is an open human choice.

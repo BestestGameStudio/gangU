@@ -116,6 +116,9 @@ var _chase_t := 0.0
 ## (Daniel 2026-11-09) redirects this shot has used; spell.redirect_limit
 ## caps them (0 = unlimited). Guided tier 1 turns once, then casts normally.
 var _redirect_count := 0
+var _redirect_curve_left := 0.0
+var _redirect_curve_heading := Vector2.RIGHT
+var _redirect_curve_offset := 0.0
 
 func set_frozen(frozen: bool) -> void:
 	freeze.apply(frozen, _sprite)
@@ -199,10 +202,24 @@ func redirect(target: Vector2) -> bool:
 	_redirect_count += 1
 	var d := target - global_position
 	if d.length_squared() > 0.0:
-		direction = d.normalized()
-		rotation = direction.angle()
+		_begin_redirect_curve(target)
 	_chase_t = 0.0
 	return true
+
+## Redirect is a small bend, not a full-speed U-turn through the old heading.
+## Fix the new bearing once, cap its initial visual bend to15degrees and settle.
+## Nearby targets use a straight bearing so the bend cannot carry past them.
+func _begin_redirect_curve(target: Vector2) -> void:
+	var d := target - global_position
+	_redirect_curve_heading = d.normalized()
+	_redirect_curve_left = spell.redirect_curve_duration
+	if d.length() <= spell.projectile_speed * _redirect_curve_left:
+		_redirect_curve_left = 0.0
+	_redirect_curve_offset = clampf(angle_difference(_redirect_curve_heading.angle(), direction.angle()), -PI / 12.0, PI / 12.0)
+	if _redirect_curve_left <= 0.0:
+		_redirect_curve_offset = 0.0
+	direction = _redirect_curve_heading.rotated(_redirect_curve_offset)
+	rotation = direction.angle()
 
 func _chasing_cursor() -> bool:
 	if spell.cursor_chase_time < 0.0:
@@ -249,6 +266,11 @@ func _wire_glow_and_trail() -> void:
 		_trail.name = "Trail"
 		_trail.top_level = true # points live in world space behind the shot
 		_trail.width = visual_radius() * 1.4
+		if spell.projectile_trail_art != null:
+			_trail.texture = spell.projectile_trail_art
+			_trail.texture_mode = Line2D.LINE_TEXTURE_STRETCH
+			_trail.width = 4.0
+			_trail.modulate.a = 0.22
 		var curve := Curve.new()
 		curve.add_point(Vector2(0.0, 0.15))
 		curve.add_point(Vector2(1.0, 1.0))
@@ -310,6 +332,25 @@ static func sprite_anim_for(s: Spell) -> StringName:
 ## animation instead. The root already faces the flight direction and the art
 ## is authored pointing +X, so no extra rotation is needed.
 func _wire_sprite() -> void:
+	if spell.projectile_frames != null:
+		var art := AnimatedSprite2D.new()
+		art.name = "WaterShotArt"
+		_sprite = art
+		_sprite_base = art.scale
+		art.sprite_frames = spell.projectile_frames
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		add_child(art); art.play(&"spin")
+		_dart.hide(); _visual.hide()
+		return
+	if spell.projectile_art != null:
+		var art := Sprite2D.new()
+		art.name = "WaterShotArt"
+		art.texture = spell.projectile_art
+		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		add_child(art)
+		_dart.hide()
+		_visual.hide()
+		return
 	var anim: StringName = sprite_anim_for(spell)
 	if anim == &"":
 		return
@@ -349,6 +390,11 @@ func _physics_process(delta: float) -> void:
 	# #331: Water Ball steer branch - turn toward the cursor while chasing.
 	if _chasing_cursor():
 		_turn_toward(cursor_point(), spell.cursor_turn_rate * delta)
+	if _redirect_curve_left > 0.0:
+		_redirect_curve_left = maxf(_redirect_curve_left - delta, 0.0)
+		var fraction := _redirect_curve_left / maxf(spell.redirect_curve_duration, 0.001)
+		direction = _redirect_curve_heading.rotated(_redirect_curve_offset * fraction)
+		rotation = direction.angle()
 	_chase_t += delta
 	_life_t += delta
 	var step: float = spell.projectile_speed * delta

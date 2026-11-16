@@ -104,7 +104,7 @@ func _process(delta: float) -> bool:
 				var fire: Spell = load("res://data/spells/fire_ball.tres")
 				var split: Spell = load("res://data/spells/fire_ball_split.tres")
 				var unl: Array = caster.get_unlocked()
-				if unl.size() != 2 or unl[0] != split or unl[1].spell_name != "Mana Shot":
+				if unl.size() != 3 or unl[0] != split or unl[1].spell_name != "Mana Shot" or unl[2].id() != &"water_shot":
 					print("[PROG] FAIL unlocked own-index swap: ", unl.map(func(s): return s.spell_name)); ok = false
 				elif caster.get_slots()[0] != split:
 					print("[PROG] FAIL slot 0 not preserved with split"); ok = false

@@ -1,0 +1,44 @@
+{
+  "name": "water-shot-icon",
+  "w": 24,
+  "h": 24,
+  "palette": {
+    "o": "#167aaf",
+    "b": "#1769ec",
+    "d": "#1451bd",
+    "r": "#2c9af3",
+    "c": "#46d5f4",
+    "w": "#d8faff"
+  },
+  "frames": [
+    {
+      "ms": 62,
+      "rows": [
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        ".........cccccc.........",
+        ".......ccrrrrrrcc.......",
+        "......crrrbbbbrrrc......",
+        ".....crrbbbbbbbbrrc.....",
+        ".....crbbwwbbbbbbrc.....",
+        "....crrbbbbbbdddbrrc....",
+        "....crbbbbbbbdddbbrc....",
+        "....wwbbbbbbbbdbbbrc....",
+        "....wwbbbddbbbbbbbww....",
+        "....wwbbdddddbbbbbww....",
+        "....wrrbdddddbbbbrww....",
+        ".....crbddddbbbbbrw.....",
+        ".....crrbbbbbbbbrrc.....",
+        "......crrrbbbbrrrc......",
+        ".......ccrrrrrrcc.......",
+        ".........cccccc.........",
+        "........................",
+        "........................",
+        "........................",
+        "........................"
+      ]
+    }
+  ]
+}
