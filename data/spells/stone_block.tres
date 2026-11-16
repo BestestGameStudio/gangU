@@ -1,9 +1,12 @@
-[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://bgangu216blk"]
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://bgangu216blk"]
 
 [ext_resource type="Script" path="res://game/spells/spell.gd" id="1_spell"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/spell_icons_frames.tres" id="2_frames"]
 
 [resource]
 script = ExtResource("1_spell")
+icon_frames = ExtResource("2_frames")
+icon_prefix = &"block"
 mode = 0
 spell_name = "Stone Block"
 cooldown = 3.0

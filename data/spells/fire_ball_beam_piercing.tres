@@ -7,7 +7,7 @@
 script = ExtResource("1_spell")
 mode = 5
 icon_frames = ExtResource("2_frames")
-icon_prefix = &"fireball"
+icon_prefix = &"fireball_beam_piercing"
 icon_upgraded = true
 spell_name = "Fire Ball Beam Piercing"
 cooldown = 1.2

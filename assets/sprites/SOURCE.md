@@ -241,17 +241,35 @@ key_dist 54 matches nothing) and every pixel was kept. Cut by
 windows, 4:1 downsample to the 47x48 cells). Reproduce:
 `python3 -I tools/sprites/extract_frames.py pack tools/sprites/specs/spell_icons.json <issue-207-sheet.png> assets/sprites/spell_icons.png --tres data/sprites/spell_icons_frames.tres`.
 
-## Layout
-- Cell: 47x48 px, baseline row 48. Sheet: 7 cols x 3 rows (329x144).
-- Rows: fireball, mana, bolt. Cols: 0 base icon, 1 green-chevron upgrade
-  icon, 2 alternate base (extracted, unused), 3-6 gray cooldown sweep at
-  increasing coverage (~15/40/60/85%). SpriteFrames
-  (data/sprites/spell_icons_frames.tres): `<row>_base` (1 frame),
-  `<row>_upgraded` (1 frame), `<row>_sweep` (4 frames, cols 3-6).
-- Since #238 the `<row>_sweep` frames are packed but unused: cooldown is a
-  code-drawn wipe in `SpellIcon`. `<row>_upgraded` is used only by surfaces
-  without the upgrade overlay (shop, hub directory); the HUD and Tab panel
-  draw `upgrade_chevron.png` over `<row>_base`.
+## Layout (2026-11-15: raw glyphs + separate frame, per Mitra)
+- The game now assembles every icon: `spell_icon_frame.png` (separate frame
+  asset) underneath + one raw glyph from this sheet on top. Nothing is baked
+  together any more; cooldown stays the code-drawn wipe and the upgrade
+  indicator stays the code-drawn chevron.
+- Cell: 47x48 px. Sheet: 7 cols x 39 rows (329x1872); only column 0 is
+  used. All 39 rows are now generator-drawn primitives, ONE PER SPELL AND
+  PER UPGRADE (see tools/sprites/gen_spell_icons.py GLYPHS for the row
+  order; reproduced by `python3 -I tools/sprites/gen_spell_icons.py`).
+- Revamp (2026-11-15 v4, Mitra): hammer family redrawn as a proper
+  sledgehammer (blocky double-faced head, collar, long gripped handle;
+  modifiers kept); rows 0-2 fireball/mana/bolt redrawn as primitives (the
+  old glow-on-black extraction is gone); every tile gets a polish pass -
+  rim light up-left, ambient shade down-right, hard outlines, no halo.
+- SpriteFrames (data/sprites/spell_icons_frames.tres): `<prefix>_base` and
+  `<prefix>_upgraded` per row, both pointing at the same glyph cell - the
+  HUD draws its chevron overlay on base, the shop's baked `_upgraded` lookup
+  resolves to the same art. Sweep anims are gone (code never played them).
+- Old layout (pre-2026-11-15), for history: 7 cols x 3 rows; cols were
+  0 base, 1 green-chevron upgrade, 2 alternate base, 3-6 cooldown sweep.
+
+# spell_icon_frame.png - icon frame the game composes under every glyph
+
+The dark metal frame ring + corner gems + near-black interior, extracted
+from the committed mana tile (same #207 source as spell_icons.png) with the
+interior filled. 47x48. Drawn by `SpellIcon` as the control texture, with
+the spell's raw glyph (from spell_icons.png) on a TextureRect child above
+it, so frame, glyph, chevron, cooldown wipe and rank border are all
+independent layers.
 
 # upgrade_chevron.png - upgrade-available overlay (#238)
 

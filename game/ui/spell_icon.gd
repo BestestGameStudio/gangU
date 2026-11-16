@@ -23,12 +23,16 @@ extends TextureRect
 ## #257: a real spell with no art shows this sprite; a null spell (empty slot)
 ## keeps the empty UiStyle box.
 const NO_ICON_TEXTURE: Texture2D = preload("res://assets/sprites/spell_icon_placeholder.png")
+## The dark metal frame is its own asset: the game assembles frame + raw glyph
+## for every icon, so glyphs never bake the frame in.
+const FRAME_TEXTURE: Texture2D = preload("res://assets/sprites/spell_icon_frame.png")
 const CHEVRON_FRAMES: SpriteFrames = preload("res://data/sprites/upgrade_chevron_frames.tres")
 const CHEVRON_ANIM := &"pulse"
 const CHEVRON_SIDE_FRAC := 0.75
 const CHEVRON_RISE_SECONDS := 0.9
 
 var _placeholder: Panel
+var _art: TextureRect
 var _wipe: ColorRect
 var _chevron: TextureRect
 var _rank: SpellRankBorder
@@ -50,6 +54,17 @@ func _init(side: float = UiStyle.ICON_SIZE, upgrade_overlay: bool = false) -> vo
 	_placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_placeholder.add_theme_stylebox_override("panel", UiStyle.icon_placeholder())
 	add_child(_placeholder)
+	# Raw glyph layer, drawn above this control's own texture (the frame) and
+	# below the cooldown wipe / chevron / rank overlays.
+	_art = TextureRect.new()
+	_art.name = "GlyphArt"
+	_art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art.visible = false
+	add_child(_art)
 	_wipe = ColorRect.new()
 	_wipe.name = "CooldownWipe"
 	_wipe.color = UiStyle.COOLDOWN_WIPE
@@ -72,8 +87,16 @@ func _init(side: float = UiStyle.ICON_SIZE, upgrade_overlay: bool = false) -> vo
 	add_child(_rank)
 
 func show_spell(spell: Spell) -> void:
-	texture = _base_texture(spell)
-	_placeholder.visible = texture == null
+	var art := _base_texture(spell)
+	_placeholder.visible = art == null
+	if art != null and art != NO_ICON_TEXTURE:
+		# assemble: this control draws the frame, the child draws the raw glyph
+		texture = FRAME_TEXTURE
+		_art.texture = art
+		_art.visible = true
+	else:
+		texture = art
+		_art.visible = false
 
 ## tier: 0..3 = Base/Specialization/Mastery/Signature; SpellRankBorder.NONE
 ## (-1) hides the border.
