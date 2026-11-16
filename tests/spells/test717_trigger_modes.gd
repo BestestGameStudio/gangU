@@ -205,7 +205,7 @@ func run() -> void:
 	check(spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_speed + 0.1), "hover separation is slow, at most12px per second")
 	for i in 180:
 		for shot in spread_shots: shot._physics_process(1.0 / 60)
-	check(spread_shots[0].global_position.distance_to(spread_shots[1].global_position) > 20 and spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_radius + 0.1), "coincident hover shots spread inside20px radius without overlap")
+	check(spread_shots[0].global_position.distance_to(spread_shots[1].global_position) > 20 and spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_radius + 0.1), "coincident hover shots spread inside14px radius without overlap")
 	target.queue_free()
 
 	main.queue_free();await process_frame
