@@ -167,7 +167,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	progress_fill.bg_color = SATISFIED_PROGRESS if state == "ready" and casts >= threshold else UiStyle.B_DIM
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
-	progress_label.text = (objective + "\n%d / %d" if not objective.is_empty() else "%d / %d casts") % [mini(casts, maxi(threshold, 0)), threshold]
+	var count_text := "%d / %d" % [mini(casts, maxi(threshold, 0)), threshold]
+	progress_label.text = objective + "\n" + count_text if not objective.is_empty() else count_text + " casts"
 	match state:
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = ""
