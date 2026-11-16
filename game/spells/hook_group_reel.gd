@@ -27,8 +27,11 @@ func heaviest_weight() -> float:
 
 func _physics_process(delta: float) -> void:
  if not is_instance_valid(target) or not target.is_inside_tree() or (target is Player and target.hp<=0):queue_free();return
- for enemy in enemies.duplicate():
-  if not is_instance_valid(enemy) or enemy.hp<=0 or enemy.displacement_owner!=self:enemies.erase(enemy)
+ # Remove by index: Godot's typed Array.erase rejects a freed Enemy,
+ # leaving it here to error again on every later physics frame (#801).
+ for i in range(enemies.size()-1, -1, -1):
+  var enemy = enemies[i]
+  if not is_instance_valid(enemy) or enemy.hp<=0 or enemy.displacement_owner!=self:enemies.remove_at(i)
  if enemies.is_empty():queue_free();return
  # One frozen member pauses the whole connected bunch, preserving formation.
  for enemy in enemies:
