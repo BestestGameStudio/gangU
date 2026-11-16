@@ -194,3 +194,26 @@ func cast_mode() -> CastMode:
 ## Spell built in code with no resource file.
 func id() -> StringName:
 	return StringName(resource_path.get_file().get_basename())
+
+## #717: HOW a key triggers a spell, separate from CastMode's cast SHAPE.
+## Bit flags allow tap + charge on one key. Defaults preserve held refire.
+enum TriggerMode { DEFAULT = 1, ALTERNATE = 2, CHARGING = 4 }
+@export_flags("Default", "Alternate", "Charging") var trigger_modes: int = TriggerMode.DEFAULT
+## Optional effect definitions. Null reuses this spell's ordinary effect.
+## Cooldown and cast credit still belong to the equipped source spell.
+@export var alternate_spell: Spell = null
+@export var charged_spell: Spell = null
+@export var alternate_can_charge: bool = false
+@export_range(0.0, 5.0, 0.01) var charge_delay: float = 0.25
+
+func supports_trigger(trigger: TriggerMode) -> bool:
+	return (trigger_modes & trigger) != 0
+
+func trigger_payload(trigger: TriggerMode, alternate: bool = false) -> Spell:
+	if trigger == TriggerMode.CHARGING:
+		if alternate and alternate_spell != null:
+			return alternate_spell.charged_spell if alternate_spell.charged_spell != null else alternate_spell
+		return charged_spell if charged_spell != null else self
+	if trigger == TriggerMode.ALTERNATE and alternate_spell != null:
+		return alternate_spell
+	return self

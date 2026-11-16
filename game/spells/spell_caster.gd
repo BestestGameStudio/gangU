@@ -57,6 +57,8 @@ var hammer_state := StoneHammerState.new()
 ## and Spell -> the input action that opened it (only that key releases it).
 var _vortexes: Dictionary = {}
 var _vortex_actions: Dictionary = {}
+var _charges: Dictionary = {} # Source spell -> true, includes non-vortex charges.
+var _trigger_router := SpellTriggerRouter.new()
 
 const SLOT_COUNT := 6
 
@@ -322,41 +324,40 @@ func _process(delta: float) -> void:
 	for s: Spell in _cooldowns.keys():
 		_cooldowns[s] = maxf(_cooldowns[s] - delta, 0.0)
 	_tick_hammer(delta)
-	if not _vortexes.is_empty():
+	if not _charges.is_empty():
 		_prune_charges()
-	if _input_casts_suppressed():
+	if _input_casts_suppressed() or not _owner_alive():
+		_consume_trigger_commands(_trigger_router.cancel_all(), &"", false)
 		return
-	# #370: a held Vortex Hammer key charges instead of casting; the release
-	# swings. Handled before the pressed checks so the release is seen.
-	var cast_held := Input.is_action_pressed(&"cast")
-	if _charge_input(equipped_spell, &"cast", cast_held):
-		pass
-	# #246: a HELD cast button auto-refires the moment the cooldown completes
-	# (pressed, not just_pressed). can_cast() gates the cooldown frames, so a
-	# held Space/LMB fires once per press, then refires on completion with no
-	# re-click; releasing the button stops it.
-	elif cast_held and not _redirect_gate(equipped_spell, Input.is_action_just_pressed(&"cast")) and can_cast():
-		cast()
-	# #10: switching is caster-owned (player.gd untouched). The action has no
-	# key bound until the human key choice lands; harness drives next_spell().
+	var alternate := Input.is_physical_key_pressed(KEY_ALT)
+	_route_trigger_input(equipped_spell, &"cast", alternate, delta)
 	if InputMap.has_action(&"switch_spell") and Input.is_action_just_pressed(&"switch_spell"):
 		next_spell()
-	# #10 slots: direct per-slot cast on keys 1-6 (registered in _ready).
-	# #246: same held-button auto-refire here. can_cast_slot gates empty and
-	# cooling slots up front, so a held key refires on cooldown completion
-	# and never spams cast_slot's refusal warnings while it runs.
 	for i in SLOT_COUNT:
-		var action := StringName("spell_slot_%d" % (i + 1))
-		if _charge_input(_slots[i], action, Input.is_action_pressed(action)):
-			continue
-		if not Input.is_action_pressed(action):
-			continue
-		# #331: a steer Water Ball with shots in flight re-aims them on a
-		# fresh press instead of casting (held keys never recast it).
-		if _redirect_gate(_slots[i], Input.is_action_just_pressed(action)):
-			continue
-		if can_cast_slot(i):
-			cast_slot(i)
+		_route_trigger_input(_slots[i], StringName("spell_slot_%d" % (i + 1)), alternate, delta)
+
+func _route_trigger_input(spell: Spell, action: StringName, alternate: bool, delta: float) -> void:
+	_consume_trigger_commands(_trigger_router.sample(action, spell,
+		Input.is_action_pressed(action), alternate, delta), action,
+		Input.is_action_just_pressed(action))
+
+func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, just_pressed: bool) -> void:
+	for event: Dictionary in commands:
+		var source: Spell = event.spell
+		match event.command:
+			SpellTriggerRouter.Command.CAST:
+				var payload := source.trigger_payload(event.mode, event.alternate)
+				if _redirect_gate(payload, just_pressed): continue
+				if cooldown_remaining(source) <= 0.0:
+					_cast_spell(payload, source)
+			SpellTriggerRouter.Command.BEGIN_CHARGE:
+				begin_charge(source, action)
+			SpellTriggerRouter.Command.RELEASE_CHARGE:
+				if _vortex_actions.get(source, &"") == action:
+					release_charge(source, source.trigger_payload(Spell.TriggerMode.CHARGING, event.alternate))
+			SpellTriggerRouter.Command.CANCEL_CHARGE:
+				if _vortex_actions.get(source, &"") == action or action == &"":
+					cancel_charge(source)
 
 func cast() -> void:
 	_cast_spell(equipped_spell)
@@ -507,15 +508,17 @@ func _tick_hammer(delta: float) -> void:
 ## Crush Signature: open the vortex for `spell` (key pressed). Refused while
 ## on cooldown, already charging, or for spells without a vortex.
 func begin_charge(spell: Spell, action: StringName = &"") -> bool:
-	if spell == null or spell.hammer_vortex_radius <= 0.0 or is_charging(spell):
+	if spell == null or not spell.supports_trigger(Spell.TriggerMode.CHARGING) or is_charging(spell):
 		return false
 	if cooldown_remaining(spell) > 0.0:
 		return false
 	var owner_node := get_parent()
 	if not _owner_alive():
 		return false
-	var radius := spell.hammer_vortex_radius * hammer_state.size_scale(spell, owner_node)
-	_vortexes[spell] = HammerVortex.spawn(get_tree().current_scene, spell, hammer_target.bind(spell), radius)
+	if spell.hammer_vortex_radius > 0.0:
+		var radius := spell.hammer_vortex_radius * hammer_state.size_scale(spell, owner_node)
+		_vortexes[spell] = HammerVortex.spawn(get_tree().current_scene, spell, hammer_target.bind(spell), radius)
+	_charges[spell] = true
 	_vortex_actions[spell] = action
 	return true
 
@@ -529,26 +532,25 @@ func _owner_alive() -> bool:
 ## Drops vortexes whose spell left every cast key (unequipped, upgraded) or
 ## whose caster died, so none is left pulling with no key to release it.
 func _prune_charges() -> void:
-	for s: Spell in _vortexes.keys():
+	for s: Spell in _charges.keys():
 		if not is_charging(s) or not _owner_alive() or not (_slots.has(s) or equipped_spell == s):
 			cancel_charge(s)
 
 func is_charging(spell: Spell) -> bool:
-	var v: Variant = _vortexes.get(spell)
-	return v != null and is_instance_valid(v)
+	return _charges.has(spell)
 
 func active_vortex(spell: Spell) -> HammerVortex:
 	return _vortexes.get(spell) if is_charging(spell) else null
 
 ## Crush Signature: key released - close the vortex and swing. Returns
 ## false when nothing was charging.
-func release_charge(spell: Spell) -> bool:
+func release_charge(spell: Spell, payload: Spell = null) -> bool:
 	if not is_charging(spell):
 		_vortexes.erase(spell)
 		_vortex_actions.erase(spell)
 		return false
 	cancel_charge(spell)
-	_cast_spell(spell)
+	_cast_spell(payload if payload != null else spell, spell)
 	return true
 
 ## Closes the vortex without swinging.
@@ -558,22 +560,7 @@ func cancel_charge(spell: Spell) -> void:
 		(v as Node).queue_free()
 	_vortexes.erase(spell)
 	_vortex_actions.erase(spell)
-
-## Input routing for vortex spells. Returns true when the input belongs to a
-## vortex spell (so the normal cast paths skip it): press opens the vortex,
-## release swings. Another key holding the same spell's vortex is ignored.
-func _charge_input(spell: Spell, action: StringName, pressed: bool) -> bool:
-	if spell == null or spell.hammer_vortex_radius <= 0.0:
-		return false
-	if is_charging(spell):
-		if _vortex_actions.get(spell, &"") != action:
-			return true
-		if not pressed:
-			release_charge(spell)
-		return true
-	if pressed:
-		begin_charge(spell, action)
-	return true
+	_charges.erase(spell)
 
 ## #10 slots input routing (joint pin with the equip/upgrade panel F): while a
 ## node in the "modal_ui" group exists (F joins it ONLY while visible), the
@@ -591,7 +578,7 @@ func _input_casts_suppressed() -> bool:
 ## [dir], so every existing spell behaves exactly as before. ONE cooldown
 ## entry and ONE cooldown_started/spell_cast signal per CAST, not per
 ## projectile; per-projectile setup/range/despawn is Projectile's own.
-func _cast_spell(spell: Spell) -> void:
+func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 	if spell == null:
 		return
 	# #305: the Signature bubble anchors at the CAST POINT, captured before
@@ -655,8 +642,9 @@ func _cast_spell(spell: Spell) -> void:
 					_run_burst(spell, spell.burst_count - 1)
 	# #268: the owning Player's cooldown reduction shortens the cooldown this
 	# cast starts. With no Player parent (or zero CDR) it is spell.cooldown.
-	_start_cooldown(spell, cooldown_base)
-	spell_cast.emit(spell)
+	var credit := cast_owner if cast_owner != null else spell
+	_start_cooldown(credit, cooldown_base)
+	spell_cast.emit(credit)
 	FireballAudio.cast(self, spell) # #584: one cue per committed cast, not per shot.
 	# #110: brief muzzle accent at the cast point, facing the aim direction.
 	# Visual only; parented to the scene root, lifetime owned by the effect.
