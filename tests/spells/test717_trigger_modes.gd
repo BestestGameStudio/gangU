@@ -16,7 +16,7 @@ func run() -> void:
 	s.trigger_modes = Spell.TriggerMode.DEFAULT | Spell.TriggerMode.CHARGING | Spell.TriggerMode.ALTERNATE
 	check(router.sample(&"q", s, true, false, 0.1).is_empty(), "tap press waits")
 	e = router.sample(&"q", s, false, false, 0.1)
-	check(e.size() == 1 and e[0].command == SpellTriggerRouter.Command.CAST and e[0].mode == Spell.TriggerMode.DEFAULT, "short tap casts default on release")
+	check(e.size() == 1 and e[0].command == SpellTriggerRouter.Command.CAST and e[0].mode == Spell.TriggerMode.DEFAULT and e[0].fresh, "short tap casts default on release")
 	check(router.sample(&"q", s, true, false, 0.24).is_empty(), "under0.25 does not charge")
 	e = router.sample(&"q", s, true, false, 0.01)
 	check(e.size() == 1 and e[0].command == SpellTriggerRouter.Command.BEGIN_CHARGE, "0.25 starts charge")
@@ -71,6 +71,28 @@ func run() -> void:
 	caster._consume_trigger_commands(local.sample(&"q", s, true, false, 0.25), &"q", true)
 	caster._consume_trigger_commands(local.cancel_all(), &"", false)
 	check(not caster.is_charging(s) and credits.size() == 2, "modal cancellation does not fire")
+	# Production charge retry when held through cooldown uses the same route.
+	local.cancel_all(); caster.cancel_charge(s)
+	caster._cooldowns[s] = 0.1
+	caster._trigger_router = SpellTriggerRouter.new()
+	Input.action_press(&"spell_slot_3")
+	caster._route_trigger_input(s, &"spell_slot_3", false, 0.25)
+	check(not caster.is_charging(s), "charge cannot start during cooldown")
+	caster._cooldowns.clear()
+	caster._route_trigger_input(s, &"spell_slot_3", false, 0.01)
+	check(caster.is_charging(s), "held charge retries once cooldown clears")
+	Input.action_release(&"spell_slot_3")
+	caster._route_trigger_input(s, &"spell_slot_3", false, 0.01)
+	check(not caster.is_charging(s) and credits.size() == 3, "actual action release casts one charge")
+	caster._trigger_router.cancel_all(); caster._cooldowns.clear()
+	other.mode = Spell.CastMode.NONE
+	for action: StringName in [&"cast", &"spell_slot_1", &"spell_slot_2", &"spell_slot_3", &"spell_slot_4", &"spell_slot_5", &"spell_slot_6"]:
+		Input.action_press(action)
+		caster._route_trigger_input(other, action, false, 0.01)
+		Input.action_release(action)
+		caster._route_trigger_input(other, action, false, 0.01)
+		caster._cooldowns.clear()
+	check(credits.size() == 10, "equipped and all six slot actions use shared routing")
 	main.queue_free();await process_frame
 	print("[717] ",checks," checks, ",failed," failures")
 	quit(1 if failed else 0)

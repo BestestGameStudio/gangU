@@ -351,7 +351,7 @@ func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, 
 		match event.command:
 			SpellTriggerRouter.Command.CAST:
 				var payload := source.trigger_payload(event.mode, event.alternate)
-				if _redirect_gate(payload, just_pressed): continue
+				if _redirect_gate(payload, event.get("fresh", just_pressed)): continue
 				if cooldown_remaining(source) <= 0.0:
 					_cast_spell(payload, source)
 			SpellTriggerRouter.Command.BEGIN_CHARGE:
