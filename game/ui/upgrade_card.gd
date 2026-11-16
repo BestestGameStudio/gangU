@@ -129,7 +129,7 @@ func _init() -> void:
 	grey_shader.code = "shader_type canvas_item; void fragment() { vec4 c = texture(TEXTURE, UV); float g = dot(c.rgb, vec3(0.299, 0.587, 0.114)); COLOR = vec4(vec3(g * 0.6), c.a); }"
 	_grey_material = ShaderMaterial.new()
 	_grey_material.shader = grey_shader
-	# Text ignores input, but the nested scroll must still accept wheel/drag.
+	# Card-description scrolling is disabled above (pre-existing behavior).
 	# PASS lets clicks continue to this upgrade Button.
 	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
 	scroll.get_v_scroll_bar().mouse_filter = Control.MOUSE_FILTER_STOP
