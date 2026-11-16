@@ -120,9 +120,9 @@ func _init() -> void:
 	lock_sign.name = "LockSign"
 	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	lock_sign.offset_left = -24
-	lock_sign.offset_top = -28
+	lock_sign.offset_top = -92
 	lock_sign.offset_right = 24
-	lock_sign.offset_bottom = 28
+	lock_sign.offset_bottom = -36
 	lock_sign.visible = false
 	add_child(lock_sign)
 	for child: Control in find_children("*", "Control", true, false):
@@ -166,7 +166,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	description_label.visible = not _locked
 	action_label.visible = not _locked
 	(splash as PlaceholderSplash).plain = _locked
-	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 + 12.0 if _locked else 32.0
+	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 32.0
 	splash.queue_redraw()
 	_refresh_frame()
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
