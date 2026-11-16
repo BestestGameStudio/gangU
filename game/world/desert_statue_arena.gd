@@ -140,6 +140,7 @@ var audio: DesertStatueAudio
 const CombatEffects := preload("res://game/combat/combat_effects.gd")
 const SPEAR_VISUAL := preload("res://game/world/desert_spear_visual.gd")
 const PROJECTILE := preload("res://game/spells/projectile.tscn")
+const RUIN_LIGHTS := preload("res://game/world/desert_ruin_lights.gd")
 const BOMBARDMENT := preload("res://game/world/desert_bombardment.gd")
 
 func _ready() -> void:
@@ -171,6 +172,11 @@ func _ready() -> void:
 	add_child(audio)
 	_make_ui()
 	_ensure_backdrop()
+	var ruin_lights := RUIN_LIGHTS.new()
+	ruin_lights.name = "RuinLights"
+	ruin_lights.arena_radius = arena_radius
+	ruin_lights.barrier_radius = barrier_radius
+	add_child(ruin_lights)
 	get_tree().node_added.connect(_watch_enemy_spawn)
 
 func _make_ui() -> void:
