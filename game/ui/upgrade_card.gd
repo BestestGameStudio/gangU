@@ -86,6 +86,7 @@ func _init() -> void:
 	description_label.name = "Description"
 	description_label.add_theme_font_size_override("font_size", 16)
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description_label.add_theme_constant_override("line_spacing", -2)
 	description_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.add_child(description_label)
 	action_label = Label.new()
@@ -239,6 +240,7 @@ func _fit_content() -> void:
 		var available := CARD_HEIGHT - 24.0 - title_height - 10.0
 		var text_height := font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 16).y * 1.35 + 8.0
 		splash.custom_minimum_size.y = 16.0 if text_height + 48.0 > available else 48.0
+		splash.get_node("PlaceholderLabel").visible = splash.custom_minimum_size.y >= 32.0
 		description_label.add_theme_font_size_override("font_size", 16)
 	# Frame art is 48x64. Card height never follows the description length;
 	# complete unlocked details fit inside the frame without scrolling.
