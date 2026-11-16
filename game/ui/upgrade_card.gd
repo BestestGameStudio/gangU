@@ -239,6 +239,7 @@ func _fit_content() -> void:
 		var available := CARD_HEIGHT - 24.0 - title_height - 10.0
 		var text_height := font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 16).y * 1.35 + 8.0
 		splash.custom_minimum_size.y = 16.0 if text_height + 48.0 > available else 48.0
+		splash.get_node("PlaceholderLabel").visible = splash.custom_minimum_size.y >= 32.0
 		description_label.add_theme_font_size_override("font_size", 16)
 	# Frame art is 48x64. Card height never follows the description length;
 	# complete unlocked details fit inside the frame without scrolling.
