@@ -17,6 +17,8 @@ signal health_changed(current: int, max_hp: int)
 var movement_constraint: Callable
 
 var max_hp: int
+## Data-only relative weight, copied from the definition like the other stats.
+var weight: float = 1.0
 var speed: float
 var contact_damage: int
 var contact_cooldown: float
@@ -46,6 +48,7 @@ var contact_range: float
 		definition = value
 		if value != null:
 			max_hp = value.max_hp
+			weight = value.weight
 			speed = value.speed
 			contact_damage = value.contact_damage
 			contact_cooldown = value.contact_cooldown

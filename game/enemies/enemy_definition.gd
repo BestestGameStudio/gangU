@@ -13,6 +13,9 @@ extends Resource
 ## with its real consumer).
 
 @export var max_hp: int = 30
+## Relative unitless weight; an ordinary mustache warrior is 1.0.
+## Data only: does not affect movement, damage, collision or knockback.
+@export var weight: float = 1.0
 @export var speed: float = 110.0
 @export var contact_damage: int = 10
 @export var contact_cooldown: float = 0.8
