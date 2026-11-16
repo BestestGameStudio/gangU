@@ -412,8 +412,30 @@ func _win() -> void:
 	# The barrier falls with the general: the way out of the arena opens.
 	if is_instance_valid(player) and player.movement_constraint == Callable(self,"constrain_player_position"):
 		player.movement_constraint = Callable()
+	_add_corpse_footprint()
 	_drop_reward.call_deferred()
 	queue_redraw()
+
+## #685: the fallen general keeps a solid footprint on the WORLD layer so
+## the player can no longer walk through the corpse. A StaticBody2D with an
+## empty mask blocks movement but never emits contact: no damage, no hit
+## flashes (damage_statue already returns early on _won). Pickups are Area2D
+## triggers on the PICKUP layer and pass through, and the footprint stays
+## the statue's own size so the opened exit path is never sealed.
+func _add_corpse_footprint() -> void:
+	var footprint := StaticBody2D.new()
+	footprint.collision_layer = PhysicsLayers.WORLD
+	footprint.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var circle := CircleShape2D.new()
+	# Smaller than the live body and, critically, smaller than the RewardDrop
+	# trigger (24px): a player pressed against the footprint still overlaps
+	# drops spawned at the corpse, so pickups are never trapped (#685).
+	circle.radius = DesertStatue.BODY_RADIUS - 8.0
+	shape.shape = circle
+	footprint.add_child(shape)
+	footprint.position = possessed.position if is_instance_valid(possessed) else Vector2.ZERO
+	add_child(footprint)
 
 func _drop_reward() -> void:
 	var origin: Vector2 = possessed.global_position if is_instance_valid(possessed) else global_position
