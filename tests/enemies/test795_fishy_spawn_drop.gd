@@ -6,7 +6,7 @@ func check(ok:bool,text:String):
  if not ok:failures+=1
 func _initialize():run.call_deferred()
 func run():
- var source:=load('res://game/world/overworld.tscn').instantiate()
+ var source:Node=load('res://game/world/overworld.tscn').instantiate()
  var entries:Array[SpawnEntry]=source.get_node('FishySouth').entries
  for entry in entries:
   var area:=Node2D.new();root.add_child(area);current_scene=area
