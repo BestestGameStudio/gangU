@@ -23,8 +23,10 @@ extends Node
 ## physics steps; player input is still read on the next live frame. No
 ## pause/menu system exists today; when one lands, pause wins.
 ##
-## Timing runs on wall-clock milliseconds (Time.get_ticks_msec), never on
-## mover clocks, so the stop itself is immune to its own freeze.
+## Timing accumulates this node's own frame delta. HitStop is not a mover
+## and is never claimed, so the stop is immune to its own freeze, and the
+## counted seconds match rendered frames exactly (Engine.time_scale is
+## unused in this codebase).
 ##
 ## Overlaps: a hit during an active stop max-EXTENDS it (never stacks, never
 ## shortens) up to stack_cap from the stop's start, so fan-out and burst
@@ -70,8 +72,9 @@ const MOVER_GROUPS: Array[StringName] = [
 ]
 
 var _active := false
-var _stop_start_msec := 0
-var _stop_end_msec := 0
+## Seconds since the active stop began, and its current full length.
+var _elapsed := 0.0
+var _stop_length := 0.0
 ## Movers this stop currently claims; each entry is ONE claim on that
 ## mover's own FreezeHold.
 var _claimed: Array[Node] = []
@@ -98,10 +101,12 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not _active:
 		return
+
 	# Movers spawned mid-stop (a burst spell's later repetitions, a summoned
 	# shot) join the SAME stop instead of flying while everything else holds.
 	_claim_sweep()
-	if Time.get_ticks_msec() >= _stop_end_msec:
+	_elapsed += _delta
+	if _elapsed >= _stop_length:
 		_release_all()
 		_active = false
 
@@ -114,7 +119,12 @@ func _claim_sweep() -> void:
 				continue
 			_claimed.append(node)
 			node.call(&"set_frozen", true)
-			node.tree_exiting.connect(_on_claimed_tree_exiting.bind(node), CONNECT_ONE_SHOT)
+			# A mover can be claimed, released and claimed again by a later
+			# stop while its one-shot connection from the first claim is still
+			# live - only connect when it is not already.
+			var on_exit := _on_claimed_tree_exiting.bind(node)
+			if not node.tree_exiting.is_connected(on_exit):
+				node.tree_exiting.connect(on_exit, CONNECT_ONE_SHOT)
 
 
 func _release_all() -> void:
@@ -149,24 +159,21 @@ func _on_hit_landed(e: HitEvent) -> void:
 func _extend_stop(duration: float, cap: float) -> void:
 	if duration <= 0.0:
 		return
-	var now := Time.get_ticks_msec()
 	if not _active:
 		_active = true
-		_stop_start_msec = now
-		_stop_end_msec = now + _msec(duration)
+		_elapsed = 0.0
+		_stop_length = duration
 		_claim_sweep()
 		return
-	var wanted := mini(now + _msec(duration), _stop_start_msec + _msec(cap))
-	_stop_end_msec = maxi(_stop_end_msec, wanted)
+	_stop_length = maxf(_stop_length, minf(_elapsed + duration, cap))
 
 
 ## The killing blow on a boss: restarts the window at the boss duration,
 ## then flash + zoom punch. Play snaps back when the window ends.
 func _boss_stop() -> void:
-	var now := Time.get_ticks_msec()
 	_active = true
-	_stop_start_msec = now
-	_stop_end_msec = now + _msec(boss_stop_duration)
+	_elapsed = 0.0
+	_stop_length = boss_stop_duration
 	_claim_sweep()
 	_flash()
 	if camera != null:
@@ -179,7 +186,3 @@ func _flash() -> void:
 	_flash_rect.color = Color(flash_color, flash_intensity)
 	_flash_tween = create_tween()
 	_flash_tween.tween_property(_flash_rect, ^"color:a", 0.0, flash_fade_time)
-
-
-static func _msec(seconds: float) -> int:
-	return int(round(seconds * 1000.0))
