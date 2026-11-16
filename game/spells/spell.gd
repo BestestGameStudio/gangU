@@ -84,6 +84,7 @@ class_name Spell
 @export var water_shot_hover_duration: float = 0.0
 @export var water_shot_hover_cap: int = 0
 @export var water_shot_repeat_redirect: bool = false
+@export var water_shot_redirect_cooldown: float = 0.5
 @export var projectile_art: Texture2D = null
 
 ## ---- #331 Water Ball tree. Every field defaults to OFF, so every existing

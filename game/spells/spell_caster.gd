@@ -431,7 +431,7 @@ func release_water_shots(spell: Spell) -> int:
 		if p is WaterShotProjectile and (p as WaterShotProjectile).release_toward(aim_point()):
 			count += 1
 	if count > 0 and spell.water_shot_repeat_redirect:
-		_water_redirect_cooldown = 0.5
+		_water_redirect_cooldown = spell.water_shot_redirect_cooldown
 	return count
 
 ## #331 Water Ball bubble branch: the owner's live shield, if any.

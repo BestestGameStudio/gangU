@@ -57,6 +57,6 @@ func release_toward(target: Vector2) -> bool:
 	direction = d.normalized(); rotation = direction.angle()
 	if spell.water_shot_repeat_redirect:
 		hover_target = global_position + d.limit_length(maxf(spell.range - 1.0, 0.0))
-	if hovering: _traveled = 0.0
+	if hovering or spell.water_shot_repeat_redirect: _traveled = 0.0
 	hovering = false; released = true
 	return true

@@ -1,4 +1,7 @@
 extends SceneTree
+class WaterTarget extends CharacterBody2D:
+	var received := 0.0
+	func apply_damage(amount: float): received += amount
 var checks := 0
 var failed := 0
 func check(ok: bool, label: String) -> void:
@@ -123,6 +126,70 @@ func run() -> void:
 	if shield != null:
 		shield.ended.emit(false)
 	check(caster.cooldown_remaining(s) == big_ball.cooldown and caster.cooldown_remaining(big_ball) == 0 and caster.cooldown_duration(s) == big_ball.cooldown, "deferred Big Ball full cooldown and HUD stay on source")
+	# Water Shot reuses this input consumer; hover and redirect must not become casts.
+	caster._cooldowns.clear()
+	for shot in get_nodes_in_group(&"projectiles"): shot.queue_free()
+	await process_frame
+	var ws: Spell = load("res://data/spells/water_shot.tres")
+	caster.aim_override = caster.global_position + Vector2(100, 0)
+	caster._cast_spell(ws)
+	var base_shot: Projectile = caster.live_shots(ws)[0]
+	base_shot.set_physics_process(false)
+	caster.aim_override = base_shot.global_position + Vector2(0, 100)
+	before = credits.size()
+	check(caster._redirect_gate(ws, true) and base_shot.direction.y > 0.99 and credits.size() == before, "Water Shot base redirects once without extra cast credit")
+	check(not base_shot.can_redirect() and not caster._redirect_gate(ws, true), "base exhausted redirect permits next normal cast")
+	var hover: Spell = load("res://data/spells/water_shot_hover.tres")
+	var made: Array[WaterShotProjectile] = []
+	for i in 4:
+		caster.aim_override = caster.global_position + Vector2(100 + i * 20, 0)
+		caster._cast_spell(hover)
+		var shot := caster.live_shots(hover)[-1] as WaterShotProjectile
+		shot.set_physics_process(false); shot._physics_process(1.0); made.append(shot)
+	check(made[0].is_queued_for_deletion() and caster.live_shots(hover).size() == 3, "hover cap3 evicts oldest hovering shot")
+	var hp := made[-1]
+	check(hp.hovering, "shot reaches captured initial aim and hovers")
+	caster.aim_override = hp.global_position + Vector2(0, 100)
+	before = credits.size()
+	var alt_router := SpellTriggerRouter.new()
+	caster._consume_trigger_commands(alt_router.sample(&"water_test", hover, true, true, 0.01), &"water_test", true)
+	check(not hp.hovering and hp.released and hp.direction.y > 0.99 and credits.size() == before, "Alt-fire releases hover without casting or XP")
+	hp._physics_process(0.3)
+	check(not hp.hovering and hp.released and not hp.release_toward(Vector2.ZERO), "specialization released shot never hovers or redirects again")
+	caster.aim_override = caster.global_position + Vector2(100, 0); caster._cast_spell(hover)
+	var expires := caster.live_shots(hover)[-1] as WaterShotProjectile
+	expires.set_physics_process(false); expires._physics_process(1.0); expires._physics_process(1.99)
+	check(not expires.is_queued_for_deletion(), "hover lives before2s")
+	expires._physics_process(0.02); check(expires.is_queued_for_deletion(), "hover expires after2s")
+	var sig: Spell = load("res://data/spells/water_shot_tide.tres")
+	caster._cast_spell(sig)
+	var tide := caster.live_shots(sig)[0] as WaterShotProjectile
+	tide.set_physics_process(false); tide._physics_process(1.0)
+	caster.aim_override = tide.global_position + Vector2(0, 100)
+	check(caster.release_water_shots(sig) == 1 and caster.release_water_shots(sig) == 0, "Signature redirect has0.5s cooldown")
+	tide._physics_process(1.0); check(tide.hovering, "Signature released shot returns to hover at target")
+	tide._physics_process(100); check(not tide.is_queued_for_deletion(), "Signature hover has no expiry")
+	caster._water_redirect_cooldown = 0
+	caster.aim_override = tide.global_position + Vector2(100, 0)
+	check(caster.release_water_shots(sig) == 1 and tide.direction.x > 0.99, "Signature can redirect again after cooldown")
+	check(load("res://data/spells/water_shot_reservoir.tres").tags.has(SpellTags.PIERCING) and sig.tags.has(SpellTags.PIERCING) and not hover.tags.has(SpellTags.PIERCING), "only Mastery/Signature pierce")
+	# Real Projectile hit dispatch while stationary: normal damage, with tier-specific survival.
+	var target := WaterTarget.new(); root.add_child(target)
+	caster._cast_spell(hover)
+	var fragile := caster.live_shots(hover)[-1] as WaterShotProjectile
+	fragile.set_physics_process(false); fragile._physics_process(1.0); fragile._on_body_entered(target)
+	check(target.received == hover.damage and fragile.is_queued_for_deletion(), "hover contact deals normal damage and destroys Specialization")
+	var reservoir: Spell = load("res://data/spells/water_shot_reservoir.tres")
+	caster._cast_spell(reservoir)
+	var piercing := caster.live_shots(reservoir)[-1] as WaterShotProjectile
+	piercing.set_physics_process(false); piercing._physics_process(1.0)
+	var before_damage := target.received
+	piercing._on_body_entered(target)
+	check(target.received == before_damage + reservoir.damage and not piercing.is_queued_for_deletion() and piercing.hovering, "Mastery contact deals normal damage and retains hovering shot")
+	piercing._physics_process(4.99); check(not piercing.is_queued_for_deletion(), "Mastery hover survives before5s")
+	piercing._physics_process(0.02); check(piercing.is_queued_for_deletion(), "Mastery hover expires after5s")
+	target.queue_free()
+
 	main.queue_free();await process_frame
 	print("[717] ",checks," checks, ",failed," failures")
 	quit(1 if failed else 0)
