@@ -1,0 +1,7 @@
+# Simultaneous Hook pulls
+
+All Hook types can acquire an already hooked enemy. One HookPullStack owns that enemy's movement and sums contributor vectors before one2400px/s resultant speed cap. Each single contribution keeps weight-scaled1500px/s nominal speed and2400 acceleration. Group contributions retain the heaviest living member's speed rule; signature means tier3 Rock fishing primary, whose120px endpoint group acquisition is explicitly tested. Anchors use18px arrival and player destinations32px. Each arriving/ending contributor releases independently; remaining reels keep control. Existing single-reel paths stay intact until a second contributor exists.
+
+Test803 covers equal/opposite cancellation, unequal opposite, perpendicular and same-direction capped vector sums, actual opposing pulls, contributor exit, every group tier endpoint acquisition/stacked stop/release, mixed anchor-lure/group lifecycle, killed/freed members and heaviest-member speed. Full suite rerun required after final changes. Tests are scripted physics probes, not an interactive browser playthrough.
+
+stacked-pulls.mp4 is an actual-main-scene scripted recording: equal opposite anchor-point pulls hold an enemy still, perpendicular pulls move diagonally, and signature Rock primary plus base pull stop near the player. Captures were inspected. Script stages enemies, targets and reels; it is not manual gameplay or independent review evidence.

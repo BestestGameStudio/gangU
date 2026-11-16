@@ -11,6 +11,8 @@ func run():
  check(HookPullStack.combined(vectors,2400)==Vector2.ZERO,'equal opposite pulls cancel')
  vectors=[Vector2(1500,0),Vector2(0,1500)]
  check(HookPullStack.combined(vectors,2400).is_equal_approx(Vector2(1500,1500)),'perpendicular pull preserves vector components')
+ vectors=[Vector2(1000,0),Vector2(-500,0)]
+ check(HookPullStack.combined(vectors,2400)==Vector2(500,0),'unequal opposite pulls retain stronger direction')
  vectors=[Vector2(1500,0),Vector2(1500,0)]
  check(HookPullStack.combined(vectors,2400)==Vector2(2400,0),'same direction sums then caps2400')
  var area:=Node2D.new();root.add_child(area);current_scene=area
@@ -78,6 +80,8 @@ func run():
  var group=HookGroupReel.begin(area,members,player,load('res://data/spells/hook_shot_rock.tres'));group.set_physics_process(false)
  var extra=HookReel.begin(area,light,left,s);extra.set_physics_process(false)
  check(group.heaviest_weight()==5 and HookReel.speed_for(group.spell,group.heaviest_weight())==300,'signature group retains heaviest weight speed rule')
+ group._physics_process(1.0)
+ check(group.pull_velocity(light,0.016).length()<=300.01,'stacked signature contribution capped by heaviest weight')
  heavy.free();group._physics_process(0.016)
  check(group.heaviest_weight()==1,'freed heavy member prunes without freeze errors')
  light.free();group._physics_process(0.016);await process_frame

@@ -80,7 +80,7 @@ func pull_velocity(victim: Enemy, delta: float) -> Vector2:
  var spacing := minf(12.0,24.0/maxf(enemies.size()-1,1))
  var slot := global_position+_axis*(index-(enemies.size()-1)*0.5)*spacing
  var offset := slot-victim.global_position
- var speed := minf(reel_velocity.length()+offset.length()*8.0,spell.hook_max_reel_speed)
+ var speed := minf(reel_velocity.length()+offset.length()*8.0,HookReel.speed_for(spell,heaviest_weight()))
  return offset.normalized()*minf(speed,offset.length()/maxf(delta,0.000001))
 
 func member_arrived(victim: Enemy) -> void:
