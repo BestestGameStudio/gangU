@@ -66,10 +66,15 @@ func _ready() -> void:
 	## freezes movers briefly on every landed spell impact against an enemy
 	## and stages the boss stop (a longer freeze + the camera focus beat) on
 	## a boss kill.
-	var hit_stop := HitStop.new()
-	hit_stop.name = "HitStop"
+	## #692: the node lives in main.tscn so its knobs are editable in the
+	## Inspector; only the camera link is wired here (a scene-set NodePath on
+	## a typed export resolves null silently, see the satchel note below).
+	var hit_stop := get_node_or_null("HitStop") as HitStop
+	if hit_stop == null:
+		hit_stop = HitStop.new()
+		hit_stop.name = "HitStop"
+		add_child(hit_stop)
 	hit_stop.camera = $FollowCamera
-	add_child(hit_stop)
 	## #12 production wiring: ONE persistent satchel mounted on Main so carried
 	## count survives area swaps. Code assign, not a tscn NodePath - a scene-set
 	## NodePath on a typed export resolves null silently (verified in #12 prep).

@@ -44,6 +44,7 @@ extends Node
 ## Hard cap in seconds on a normal stop's total length, measured from its
 ## start; further hits only max-extend up to here. PLACEHOLDER.
 @export var stack_cap: float = 0.12
+@export_group("Boss finisher")
 ## Boss finisher (#692): the killing blow on a boss runs the whole camera
 ## beat in slow motion. Engine.time_scale drops to this at the kill and
 ## stays there for the beat, so the death animation plays in slow-mo under
@@ -58,10 +59,15 @@ extends Node
 ## returns to the player. All boss-beat times are REAL seconds (the beat
 ## runs in slow-mo, #692). PLACEHOLDERs - Mitra's ask is maximum impact.
 @export var zoom_amount: float = 1.3
-@export var zoom_in_time: float = 0.1
-@export var boss_focus_hold: float = 2.4
+## Real seconds of the pan + zoom ramp onto the boss (#692: Mitra asked for
+## a more gradual ramp; was a 0.1s snap). Eased in and out.
+@export var zoom_in_time: float = 0.9
+## Real seconds the camera HOLDS on the fallen boss (slow-mo + input lock).
+@export var boss_focus_hold: float = 1.8
+## Real seconds for the zoom and the time scale to ease back to normal.
 @export var zoom_out_time: float = 0.5
 
+@export_group("")
 ## The follow camera that plays the boss-stop beat. Assigned by main.gd;
 ## null only in harness scenes without one.
 @export var camera: FollowCamera = null
