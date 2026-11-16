@@ -25,7 +25,7 @@ class_name Spell
 @export var hit_stop: float = 1.0
 @export var radius: float = 4.0 ## Projectile hit radius in pixels.
 @export var tags: Array[StringName] = [] ## Delivery + effect classification (#66). Metadata only, from the SpellTags vocabulary; never behavior parameters.
-@export var range: float = 1500.0 ## Max projectile travel distance in pixels.
+@export var range: float = 600.0 ## Max projectile travel distance in pixels.
 @export var projectile_speed: float = 500.0
 @export var projectile_color: Color = Color(0.4, 0.8, 1.0)
 ## (#263) Visual-only projectile feel. None of these touch hit radius,

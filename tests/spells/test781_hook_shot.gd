@@ -9,6 +9,7 @@ func run() -> void:
  var area := Node2D.new(); root.add_child(area); current_scene = area
  var player := (load("res://game/player/player.tscn") as PackedScene).instantiate() as Player
  area.add_child(player); player.global_position = Vector2(100, 100)
+ check(Spell.new().range == 600.0, "global projectile range default unchanged")
  var s := load("res://data/spells/hook_shot.tres") as Spell
  check(s.damage == 0 and s.cast_mode() == Spell.CastMode.HOOK, "zero damage hook definition")
  check(HookReel.speed_for(s, 0.5) == 2400 and HookReel.speed_for(s, 5) == 300, "weight speed and cap")
