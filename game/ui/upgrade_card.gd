@@ -1,7 +1,7 @@
 class_name UpgradeCard
 extends Button
 ## #402 presentation only. The panel owns eligibility, path IDs and actions.
-## Splash is deliberately a code-drawn placeholder, never claimed final art.
+## No placeholder illustration: applied text uses the card interior.
 const CARD_WIDTH := 176.0
 const CARD_HEIGHT := CARD_WIDTH * 64.0 / 48.0
 const CONTENT_INSET := 20
@@ -14,7 +14,7 @@ var action_label: Label
 var progress_bar: ProgressBar
 var progress_label: Label
 var lock_sign: Control
-var splash: Control
+var _concealed_spacer: Control
 var _content: VBoxContainer
 var border_color: Color = UiStyle.B_ACCENT
 
@@ -34,25 +34,13 @@ var _concealed := false
 var _unavailable := false
 var _grey_material: ShaderMaterial
 
-class PlaceholderSplash extends Control:
-	var tint := Color(0.95, 0.75, 0.25)
-	var plain := false
-	func _draw() -> void:
-		if plain: return
-		var r := Rect2(Vector2.ZERO, size)
-		draw_style_box(UiStyle.row(UiStyle.B_DIM, 0), r)
-		var c := Vector2(size.x * 0.5, size.y * 0.3)
-		var radius := minf(12.0, size.y * 0.2)
-		var points := PackedVector2Array([c + Vector2(0, -radius), c + Vector2(radius * 0.8, 0), c + Vector2(0, radius), c + Vector2(-radius * 0.8, 0)])
-		draw_colored_polygon(points, Color(tint, 0.24))
-		draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), tint, 2.0, true)
-
 func _init() -> void:
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	UiStyle.style_button(self, UiStyle.B_ACCENT, 10)
 	var margin := MarginContainer.new()
+	margin.name = "CardMargin"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", CONTENT_INSET)
 	margin.add_theme_constant_override("margin_right", CONTENT_INSET)
@@ -68,19 +56,9 @@ func _init() -> void:
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 3)
 	scroll.add_child(_content)
-	splash = PlaceholderSplash.new()
-	splash.name = "PlaceholderSplash"
-	splash.custom_minimum_size = Vector2(0, 32)
-	_content.add_child(splash)
-	var placeholder_label := Label.new()
-	placeholder_label.name = "PlaceholderLabel"
-	placeholder_label.text = "PLACEHOLDER ART"
-	placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	placeholder_label.add_theme_font_size_override("font_size", 16)
-	placeholder_label.add_theme_color_override("font_color", UiStyle.TEXT_DIM)
-	splash.add_child(placeholder_label)
-	placeholder_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	placeholder_label.offset_top = -12
+	_concealed_spacer = Control.new()
+	_concealed_spacer.name = "ConcealedProgressSpacer"
+	_content.add_child(_concealed_spacer)
 	name_label = Label.new()
 	name_label.name = "UpgradeName"
 	name_label.add_theme_font_size_override("font_size", 32)
@@ -161,8 +139,6 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 	name_label.text = upgrade_name
 	description_label.text = description
 	action_label.text = ""
-	(splash as PlaceholderSplash).tint = tint
-	splash.queue_redraw()
 	tooltip_text = "%s\n%s\n%s" % [upgrade_name, description, action_label.text]
 	call_deferred("_fit_content")
 
@@ -181,11 +157,10 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	name_label.visible = not _concealed
 	description_label.visible = not _concealed
 	action_label.visible = false
-	(splash as PlaceholderSplash).plain = _concealed
-	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _concealed else 48.0
-	splash.queue_redraw()
+	_concealed_spacer.visible = _concealed
+	_concealed_spacer.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0
+	(get_node("CardMargin") as MarginContainer).add_theme_constant_override("margin_top", 12 if _concealed else 32)
 	_refresh_frame()
-	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
 	progress_bar.visible = _concealed
 	progress_label.visible = progress_bar.visible
 	var progress_fill := progress_bar.get_theme_stylebox("fill") as StyleBoxFlat
@@ -243,18 +218,7 @@ func _fit_content() -> void:
 	var width := maxf(size.x - 2.0 * CONTENT_INSET, 0.0)
 	if not is_equal_approx(_content.custom_minimum_size.x, width):
 		_content.custom_minimum_size.x = width
-	if not _concealed and not _unavailable:
-		# Prefer a compact 48px illustration and native16px copy. Fit the complete
-		# description inside the fixed frame, never behind a scrollbar.
-		var font := description_label.get_theme_font("font")
-		var title_height := name_label.get_theme_font("font").get_multiline_string_size(name_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 32).y
-		var available := CARD_HEIGHT - 24.0 - title_height - 10.0
-		var text_height := font.get_multiline_string_size(description_label.text, HORIZONTAL_ALIGNMENT_LEFT, width, 16).y * 1.35 + 8.0
-		splash.custom_minimum_size.y = 16.0 if text_height + 48.0 > available else 48.0
-		splash.get_node("PlaceholderLabel").visible = splash.custom_minimum_size.y >= 32.0
-		description_label.add_theme_font_size_override("font_size", 16)
-	# Frame art is 48x64. Card height never follows the description length;
-	# complete unlocked details fit inside the frame without scrolling.
+	# Fixed geometry; native16px copy uses the space freed by removed art.
 	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 
 ## Bound long upgrade hover text rather than allowing Godot's default
