@@ -426,7 +426,10 @@ func _add_corpse_footprint() -> void:
 	footprint.collision_mask = 0
 	var shape := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = DesertStatue.BODY_RADIUS
+	# Smaller than the live body and, critically, smaller than the RewardDrop
+	# trigger (24px): a player pressed against the footprint still overlaps
+	# drops spawned at the corpse, so pickups are never trapped (#685).
+	circle.radius = DesertStatue.BODY_RADIUS - 8.0
 	shape.shape = circle
 	footprint.add_child(shape)
 	footprint.position = possessed.position if is_instance_valid(possessed) else Vector2.ZERO

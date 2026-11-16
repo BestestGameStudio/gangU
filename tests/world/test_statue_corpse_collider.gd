@@ -51,6 +51,8 @@ func _run() -> void:
 
 	arena.apply_damage(arena.hp)
 	_check(arena.hp == 0, "boss HP reaches 0")
+	await process_frame
+	await process_frame # _drop_reward is call_deferred from _win()
 
 	var footprint := _find_footprint(arena)
 	_check(footprint != null, "a solid footprint appears on the fallen general")
@@ -58,7 +60,7 @@ func _run() -> void:
 		_check(footprint.collision_layer == PhysicsLayers.WORLD, "footprint sits on the WORLD layer so the player collides")
 		_check(footprint.collision_mask == 0, "footprint mask is empty: it never senses or deals contact")
 		var circle := _footprint_circle(footprint)
-		_check(circle != null and circle.radius == DesertStatue.BODY_RADIUS, "footprint stays the statue's own size (exit and pickups stay clear)")
+		_check(circle != null and circle.radius < DesertStatue.BODY_RADIUS, "footprint is smaller than the live body (exit and pickup reach stay clear)")
 		if is_instance_valid(arena.possessed):
 			_check(footprint.position == arena.possessed.position, "footprint is centered on the corpse")
 
@@ -68,6 +70,32 @@ func _run() -> void:
 		general.flash = 0.0
 		arena.damage_statue(general, 100, 0)
 		_check(general.flash == 0.0 and general.hp == 0, "post-defeat hits deal no damage and trigger no flash")
+
+	# #685 geometry: the coin spawns at the corpse center, so the footprint
+	# must leave the pickup trigger reachable. Walk the player up against the
+	# footprint (tangent, no penetration): the coin must still be collected.
+	var coin: RewardDrop = null
+	for child in region.get_children():
+		var d := child as RewardDrop
+		if d != null and d.entry != null and d.entry.kind == RewardEntry.Kind.CURRENCY:
+			coin = d
+	_check(coin != null, "coin drop spawned at the corpse")
+	if coin != null and footprint != null:
+		var fr := _footprint_circle(footprint).radius
+		var pr := ((player.get_node("CollisionShape2D") as CollisionShape2D).shape as CircleShape2D).radius
+		var drop_shape: CircleShape2D = null
+		for sub in coin.get_children():
+			var s := sub as CollisionShape2D
+			if s != null:
+				drop_shape = s.shape as CircleShape2D
+		_check(drop_shape != null and fr < drop_shape.radius, "footprint radius leaves the pickup trigger reachable")
+		player.global_position = coin.global_position + Vector2.RIGHT * (fr + pr)
+		player.force_update_transform()
+		await physics_frame
+		await physics_frame
+		_check(not is_instance_valid(coin), "player pressed against the footprint collects the coin")
+		if is_instance_valid(arena.possessed):
+			_check(player.global_position.distance_to(arena.possessed.global_position) >= fr + pr - 0.6, "collection happened without penetrating the footprint")
 	area.queue_free()
 
 	await process_frame
