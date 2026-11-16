@@ -45,6 +45,10 @@ func boss_focus(point: Vector2, amount: float, in_time: float, hold_time: float,
 	if amount <= 0.0:
 		return
 	_focus_left = in_time + hold_time
+	# #692: the pan ORIGINATES on the player - start centered on them (the
+	# follow trails a few px behind) so it visibly travels player -> boss.
+	if target:
+		global_position = target.global_position
 	_focus_tween = create_tween()
 	# #692: the beat runs in slow-mo; its times are real seconds.
 	_focus_tween.set_ignore_time_scale(true)
