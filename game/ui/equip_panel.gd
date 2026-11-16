@@ -428,8 +428,7 @@ func _refresh() -> void:
 		var upgrade: Variant = item.upgrade
 		var b := UpgradeCard.new()
 		if upgrade == null:
-			var tier_names := ["Specialization", "Mastery", "Signature"]
-			b.setup(tier_names[item.tier - 1], "This spell's chain has no upgrade at this tier.", false)
+			b.setup("", "", false)
 		else:
 			var result := _upgrade_field(upgrade, &"result_spell") as Spell
 			var description := SpellDescription.for_spell(result)
