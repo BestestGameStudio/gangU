@@ -4,6 +4,8 @@ extends Button
 ## Splash is deliberately a code-drawn placeholder, never claimed final art.
 const CARD_WIDTH := 176.0
 const CARD_HEIGHT := CARD_WIDTH * 64.0 / 48.0
+const CONTENT_INSET := 20
+const SATISFIED_PROGRESS := Color("58d878")
 const LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-lock.png")
 const OPEN_LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-open-lock.png")
 var name_label: Label
@@ -52,8 +54,8 @@ func _init() -> void:
 	UiStyle.style_button(self, UiStyle.B_ACCENT, 10)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_left", CONTENT_INSET)
+	margin.add_theme_constant_override("margin_right", CONTENT_INSET)
 	margin.add_theme_constant_override("margin_top", 12)
 	margin.add_theme_constant_override("margin_bottom", 12)
 	add_child(margin)
@@ -101,6 +103,9 @@ func _init() -> void:
 	progress_bar.name = "UnlockProgress"
 	progress_bar.custom_minimum_size.y = 10
 	progress_bar.show_percentage = false
+	var progress_fill := StyleBoxFlat.new()
+	progress_fill.bg_color = UiStyle.B_DIM
+	progress_bar.add_theme_stylebox_override("fill", progress_fill)
 	progress_bar.visible = false
 	var progress_margin := MarginContainer.new()
 	progress_margin.add_theme_constant_override("margin_left", 12)
@@ -183,6 +188,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
 	progress_bar.visible = _concealed
 	progress_label.visible = progress_bar.visible
+	var progress_fill := progress_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	progress_fill.bg_color = SATISFIED_PROGRESS if state == "ready" and casts >= threshold else UiStyle.B_DIM
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
 	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
@@ -233,7 +240,7 @@ func _process(_delta: float) -> void:
 
 func _fit_content() -> void:
 	if not is_instance_valid(_content): return
-	var width := maxf(size.x - 40.0, 0.0)
+	var width := maxf(size.x - 2.0 * CONTENT_INSET, 0.0)
 	if not is_equal_approx(_content.custom_minimum_size.x, width):
 		_content.custom_minimum_size.x = width
 	if not _concealed and not _unavailable:
