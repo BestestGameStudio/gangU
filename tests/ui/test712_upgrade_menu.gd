@@ -46,6 +46,9 @@ func run() -> void:
 	check(panel._upgrade_cards.all(func(card): return not card.name_label.text.contains("[S]") and not card.name_label.text.contains("[M]") and not card.name_label.text.contains("[G]")), "upgrade names omit tier suffixes")
 	check(panel._upgrade_cards.all(func(card): return card.lock_sign.get_global_rect().get_center().is_equal_approx(card.get_global_rect().get_center())), "lock sprite centered on card on both axes")
 	check(panel._upgrade_cards.all(func(card): return card.lock_sign is TextureRect and card.lock_sign.texture == UpgradeCard.LOCK_TEXTURE), "SpriteU exported lock texture used")
+	var tip: Control = panel._upgrade_cards[0]._make_custom_tooltip("Long upgrade description for hover wrapping")
+	check(tip.get_child(0).autowrap_mode == TextServer.AUTOWRAP_WORD_SMART and tip.get_child(0).custom_minimum_size.x == 288, "upgrade hover text has bounded wrap width")
+	tip.free()
 	var plate_size := panel._plate.size
 	panel._on_slot_pressed(2)
 	await tick()
