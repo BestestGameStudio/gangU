@@ -10,6 +10,13 @@ extends Resource
 ## OwnedRelics); distinct relics carry distinct ids and never collapse,
 ## even with equal display names.
 
+## (#705, Daniel 2026-11-15) Rarity classification: Common, Rare, Mythical,
+## Legendary. Metadata only for now - no gameplay, drop-weight or color
+## behavior is tied to it yet.
+enum Rarity { COMMON, RARE, MYTHICAL, LEGENDARY }
+
+@export var rarity: Rarity = Rarity.COMMON
+
 ## Stable logical identity. Compared by OwnedRelics.add/has_id and by the
 ## shop's owned-offer exclusion - never by object pointer.
 @export var id: StringName
