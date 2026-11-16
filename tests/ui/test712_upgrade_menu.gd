@@ -20,6 +20,7 @@ func run() -> void:
 	var progress: SpellProgress = main.get_node("SpellProgress")
 	var panel: EquipPanel = main.get_node("EquipPanel")
 	var water: Spell = load("res://data/spells/water_ball.tres")
+	caster.clear_slot(2)
 	caster.unlock_spell(water)
 	caster.assign_slot(2, water)
 	panel.show_panel()

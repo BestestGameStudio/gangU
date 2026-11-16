@@ -26,11 +26,15 @@ var master_volume := DEFAULT_MASTER
 var _backdrop: PanelContainer
 var _slider: HSlider
 var _value_label: Label
+var _binding_buttons: Dictionary = {}
+var _capture_action := ""
+var _binding_status: Label
 
 func _ready() -> void:
 	layer = 10
 	master_volume = load_master_volume(settings_path)
 	apply_master_volume(master_volume)
+	KeyBindings.load_saved(settings_path)
 	_build_ui()
 	close()
 
@@ -95,6 +99,8 @@ func open() -> void:
 	_set_shown(true)
 
 func close() -> void:
+	_capture_action = ""
+	_refresh_bindings()
 	_set_shown(false)
 
 ## True when some other panel (map, equip, fast travel) is open.
@@ -125,7 +131,7 @@ func _build_ui() -> void:
 	_backdrop.name = "SettingsBackdrop"
 	_backdrop.add_theme_stylebox_override("panel", UiStyle.panel())
 	_backdrop.set_anchors_preset(Control.PRESET_CENTER)
-	_backdrop.custom_minimum_size = Vector2(380, 0)
+	_backdrop.custom_minimum_size = Vector2(540, 0)
 	_backdrop.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_backdrop.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(_backdrop)
@@ -162,6 +168,8 @@ func _build_ui() -> void:
 	row.add_child(_value_label)
 	_refresh_label()
 
+	_build_bindings(box)
+
 	var close_button := Button.new()
 	close_button.name = "Close"
 	close_button.text = "Close"
@@ -175,3 +183,83 @@ func _build_ui() -> void:
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
 	hint.add_theme_font_size_override("font_size", 16)
 	box.add_child(hint)
+
+func _build_bindings(box: VBoxContainer) -> void:
+	var heading := Label.new()
+	heading.text = "Controls - click a binding to change"
+	heading.add_theme_font_size_override("font_size", 22)
+	box.add_child(heading)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = 280
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(scroll)
+	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(rows)
+	for action: String in KeyBindings.ACTIONS:
+		var row := HBoxContainer.new()
+		rows.add_child(row)
+		var label := Label.new()
+		label.text = KeyBindings.ACTIONS[action]
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 18)
+		row.add_child(label)
+		var button := Button.new()
+		button.name = "Bind_" + action
+		button.custom_minimum_size.x = 120
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(func() -> void: begin_rebind(action))
+		row.add_child(button)
+		_binding_buttons[action] = button
+	_binding_status = Label.new()
+	_binding_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_binding_status.custom_minimum_size = Vector2(500, 36)
+	_binding_status.add_theme_font_size_override("font_size", 16)
+	_binding_status.text = "Esc cancels capture. Conflicting controls are not replaced."
+	box.add_child(_binding_status)
+	var reset := Button.new()
+	reset.name = "ResetBindings"
+	reset.text = "Reset controls to defaults"
+	reset.focus_mode = Control.FOCUS_NONE
+	reset.pressed.connect(reset_bindings)
+	box.add_child(reset)
+	_refresh_bindings()
+
+func _refresh_bindings() -> void:
+	for action: String in _binding_buttons:
+		_binding_buttons[action].text = "Press input..." if action == _capture_action else KeyBindings.action_label(action)
+
+func begin_rebind(action: String) -> void:
+	_capture_action = action
+	_binding_status.text = "Press a key or mouse button for %s. Esc cancels." % KeyBindings.ACTIONS[action]
+	_refresh_bindings()
+
+func reset_bindings() -> void:
+	_capture_action = ""
+	var error := KeyBindings.reset(settings_path)
+	_binding_status.text = "Default controls restored." if error == OK else "Controls reset, but could not save preferences."
+	_refresh_bindings()
+
+func _input(event: InputEvent) -> void:
+	if not is_open() or _capture_action.is_empty(): return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		_capture_action = ""
+		_binding_status.text = "Binding change cancelled."
+		_refresh_bindings()
+		get_viewport().set_input_as_handled()
+		return
+	if not ((event is InputEventKey or event is InputEventMouseButton) and event.is_pressed() and not event.is_echo()): return
+	get_viewport().set_input_as_handled()
+	var candidate := KeyBindings.normalized(event)
+	if candidate == null:
+		_binding_status.text = "Use a keyboard key or mouse button, not the wheel. Esc cancels."
+		return
+	var used_by := KeyBindings.conflict(_capture_action, candidate)
+	if not used_by.is_empty():
+		_binding_status.text = "%s is already used by %s. Choose another input or Esc." % [KeyBindings.label(candidate), used_by]
+		return
+	KeyBindings.assign(_capture_action, candidate)
+	var error := KeyBindings.save(settings_path)
+	_binding_status.text = "Binding saved." if error == OK else "Binding changed, but could not save preferences."
+	_capture_action = ""
+	_refresh_bindings()
