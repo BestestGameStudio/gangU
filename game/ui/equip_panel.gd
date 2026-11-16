@@ -74,15 +74,17 @@ const DRAG_THRESHOLD := 10.0
 
 ## #416 (Daniel, 2026-11-09): the menu must not change size when switching
 ## between player stats and spell stats, and the upgrades sit UNDER the
-## spell stats in a column wide enough for three upgrade cards. The detail
+## spell stats in a column sized for the upgrade cards. The detail
 ## column has a fixed width and the plate a fixed height (capped by the
 ## viewport); the upgrade scroll fills whatever height is left, so content
 ## changes never resize the panel.
 const UPGRADE_CARD_GAP := 12
-# Three #441-slim cards + gaps + scrollbar, but never narrower than the
-# player-stats grid's minimum width (589 measured): the #416 no-resize rule
-# covers WIDTH too, so the column floor keeps the plate one fixed size.
-const DETAIL_WIDTH := 600.0
+# Two #441-slim cards + gap + scrollbar (Daniel 2026-11-15, #700: spells
+# cap at 2 upgrade paths, so the UI fits 2 cards instead of 3): 2 x 176 +
+# 12 + 8, rounded up; the 3-column stat grid (348) fits under it. The
+## #416 no-resize rule covers WIDTH too: the column floor keeps the plate
+# one fixed size.
+const DETAIL_WIDTH := 384.0
 ## #441 (Daniel, 2026-11-09): the plate hugs its content instead of the old
 ## 620px fixed height ("a lot of empty vertical space below the spell
 ## slots"). Measured composition on the pinned harness: title 36 + sep 10 +
@@ -92,6 +94,9 @@ const DETAIL_WIDTH := 600.0
 ## #427 rebase: the relics section (separator + header + one names row, 83)
 ## sits below the columns, so the fixed height grows 442 -> 525 to keep the
 ## tallest state (upgrade cards + relics) inside it without resizing.
+## #700 re-measure (2 cards, 3-column grid): the tallest state shrinks to
+## ~360 (player stats 115 at 3 columns + sep + header ~35 + card ~200),
+## so 525 still covers it with slack and stays fixed.
 const PANEL_HEIGHT := 525.0
 const SCREEN_MARGIN := 16.0
 var _relics_box: VBoxContainer

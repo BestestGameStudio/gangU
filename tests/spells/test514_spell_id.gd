@@ -49,7 +49,8 @@ func _initialize() -> void:
 			_check(spr != null and spr.animation == StringName("%s_start" % row) and spr.sprite_frames.has_animation(row), "%s plays %s_start with a %s flight row" % [f, row, row])
 		proj.free()
 	_check(dispatched >= 25, "%d spells dispatched to a sprite row" % dispatched)
-	_check(n >= 40, "scanned %d shipped spells" % n)
+	# Floor drops 40 -> 36 with #700 (Water Ball Steer branch removed).
+	_check(n >= 36, "scanned %d shipped spells" % n)
 	var code := Spell.new()
 	code.mode = Spell.CastMode.PROJECTILE
 	code.spell_name = "Fire Ball"

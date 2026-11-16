@@ -189,7 +189,7 @@ func cast_mode() -> CastMode:
 	return mode
 
 ## #514: the spell's stable identity: its .tres file name (fire_ball,
-## water_ball_guided, ...). Display names are not unique (all Spirit Punch
+## water_splash, ...). Display names are not unique (all Spirit Punch
 ## tiers share one), so code that needs "which spell" keys on this. Empty for a
 ## Spell built in code with no resource file.
 func id() -> StringName:

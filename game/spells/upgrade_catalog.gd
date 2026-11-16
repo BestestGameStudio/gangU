@@ -36,14 +36,13 @@ const ROWS: Array[SpellUpgrade] = [
 	preload("res://data/upgrades/spirit_punch_burst.tres"),
 	preload("res://data/upgrades/spirit_punch_launch.tres"),
 	preload("res://data/upgrades/spirit_punch_bubble.tres"),
-	## Water Ball tree (#331): three branches from the base, tiers
-	## 1/2/3 each - Steer (guided -> seeking -> tidal seeker), Splash
-	## (splash -> barrage -> heavy rain), Bubble (water bubble ->
-	## surging -> big ball). Thresholds 10/15/20 mirror #305 and are
+	## Water Ball tree (#331, trimmed #700): two branches from the base,
+	## tiers 1/2/3 each - Splash (splash -> barrage -> heavy rain) and
+	## Bubble (water bubble -> surging -> big ball). Daniel 2026-11-15:
+	## spells are limited to 2 upgrade paths; the Steer branch (guided ->
+	## seeking -> tidal) was the third and is removed. One route per run,
+	## like Stone Hammer. Thresholds 10/15/20 mirror #305 and are
 	## provisional, not approved final balance.
-	preload("res://data/upgrades/water_guided.tres"),
-	preload("res://data/upgrades/water_seeking.tres"),
-	preload("res://data/upgrades/water_tidal.tres"),
 	preload("res://data/upgrades/water_splash.tres"),
 	preload("res://data/upgrades/water_barrage.tres"),
 	preload("res://data/upgrades/water_heavy_rain.tres"),
