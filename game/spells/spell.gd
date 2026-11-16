@@ -238,3 +238,5 @@ func trigger_payload(trigger: TriggerMode, alternate: bool = false) -> Spell:
 @export var hook_max_reel_speed: float = 2400.0
 @export var hook_reel_acceleration: float = 2400.0
 @export var hook_timeout: float = 8.0
+
+@export var hook_magnet_radius: float = 0.0
