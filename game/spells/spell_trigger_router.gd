@@ -53,3 +53,6 @@ func cancel_all() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for action: StringName in _held.keys(): out.append_array(cancel(action))
 	return out
+
+func is_charge_pending(action: StringName) -> bool:
+	return _held.has(action) and _held[action].charging

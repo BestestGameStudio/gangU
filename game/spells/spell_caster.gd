@@ -340,6 +340,10 @@ func _route_trigger_input(spell: Spell, action: StringName, alternate: bool, del
 	_consume_trigger_commands(_trigger_router.sample(action, spell,
 		Input.is_action_pressed(action), alternate, delta), action,
 		Input.is_action_just_pressed(action))
+	# A held charge may have begun during cooldown. Retry without casting
+	# early once the source becomes ready (legacy vortex behavior).
+	if _trigger_router.is_charge_pending(action):
+		begin_charge(spell, action)
 
 func _consume_trigger_commands(commands: Array[Dictionary], action: StringName, just_pressed: bool) -> void:
 	for event: Dictionary in commands:
