@@ -20,6 +20,7 @@ func _physics_process(delta: float) -> void:
 	if hovering:
 		if freeze.is_frozen(): return
 		_spread_hover(delta)
+		_update_feel()
 		hover_age += delta
 		_life_t += delta
 		if spell.water_shot_hover_duration > 0.0 and hover_age >= spell.water_shot_hover_duration:
@@ -31,8 +32,9 @@ func _physics_process(delta: float) -> void:
 		var distance := global_position.distance_to(hover_target)
 		if distance <= 0.1:
 			_enter_hover(); return
-		direction = global_position.direction_to(hover_target)
-		rotation = direction.angle()
+		if _redirect_curve_left <= 0.0:
+			direction = global_position.direction_to(hover_target)
+			rotation = direction.angle()
 		var travel_delta := minf(delta, distance / maxf(spell.projectile_speed, 0.001))
 		super._physics_process(travel_delta)
 		if not is_queued_for_deletion() and global_position.distance_to(hover_target) <= 0.1:
@@ -57,7 +59,10 @@ func release_toward(target: Vector2) -> bool:
 	if not hovering and not (released and spell.water_shot_repeat_redirect): return false
 	var d := target - global_position
 	if d.length_squared() < 0.01: return false
-	direction = d.normalized(); rotation = direction.angle()
+	_redirect_curve_target = target
+	_redirect_curve_left = spell.redirect_curve_duration
+	if _redirect_curve_left <= 0.0:
+		direction = d.normalized(); rotation = direction.angle()
 	if spell.water_shot_repeat_redirect:
 		hover_target = global_position + d.limit_length(maxf(spell.range - 1.0, 0.0))
 	if hovering or spell.water_shot_repeat_redirect: _traveled = 0.0

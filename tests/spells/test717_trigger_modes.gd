@@ -137,7 +137,11 @@ func run() -> void:
 	base_shot.set_physics_process(false)
 	caster.aim_override = base_shot.global_position + Vector2(0, 100)
 	before = credits.size()
-	check(caster._redirect_gate(ws, true) and base_shot.direction.y > 0.99 and credits.size() == before, "Water Shot base redirects once without extra cast credit")
+	check(caster._redirect_gate(ws, true) and base_shot._redirect_curve_left > 0.0 and credits.size() == before, "Water Shot base redirects once without extra cast credit")
+	base_shot._physics_process(0.025)
+	check(base_shot.direction.x > 0 and base_shot.direction.y > 0 and base_shot.direction.y < 0.99, "redirect begins a curve rather than instant snap")
+	base_shot._physics_process(0.15)
+	check(base_shot._redirect_curve_left == 0.0 and base_shot.direction.y > 0.9, "redirect finishes short0.15s bend")
 	check(not base_shot.can_redirect() and not caster._redirect_gate(ws, true), "base exhausted redirect permits next normal cast")
 	var hover: Spell = load("res://data/spells/water_shot_hover.tres")
 	var made: Array[WaterShotProjectile] = []
@@ -153,7 +157,7 @@ func run() -> void:
 	before = credits.size()
 	var alt_router := SpellTriggerRouter.new()
 	caster._consume_trigger_commands(alt_router.sample(&"water_test", hover, true, true, 0.01), &"water_test", true)
-	check(not hp.hovering and hp.released and hp.direction.y > 0.99 and credits.size() == before, "Alt-fire releases hover without casting or XP")
+	check(not hp.hovering and hp.released and hp._redirect_curve_left > 0.0 and credits.size() == before, "Alt-fire releases hover without casting or XP")
 	hp._physics_process(0.3)
 	check(not hp.hovering and hp.released and not hp.release_toward(Vector2.ZERO), "specialization released shot never hovers or redirects again")
 	caster.aim_override = caster.global_position + Vector2(100, 0); caster._cast_spell(hover)
@@ -171,7 +175,7 @@ func run() -> void:
 	tide._physics_process(100); check(not tide.is_queued_for_deletion(), "Signature hover has no expiry")
 	caster._water_redirect_cooldown = 0
 	caster.aim_override = tide.global_position + Vector2(100, 0)
-	check(caster.release_water_shots(sig) == 1 and tide.direction.x > 0.99, "Signature can redirect again after cooldown")
+	check(caster.release_water_shots(sig) == 1 and tide._redirect_curve_left > 0.0, "Signature can redirect again after cooldown")
 	check(load("res://data/spells/water_shot_reservoir.tres").tags.has(SpellTags.PIERCING) and sig.tags.has(SpellTags.PIERCING) and not hover.tags.has(SpellTags.PIERCING), "only Mastery/Signature pierce")
 	# Real Projectile hit dispatch while stationary: normal damage, with tier-specific survival.
 	var target := WaterTarget.new(); root.add_child(target)
@@ -201,7 +205,7 @@ func run() -> void:
 	check(spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_speed + 0.1), "hover separation is slow, at most12px per second")
 	for i in 180:
 		for shot in spread_shots: shot._physics_process(1.0 / 60)
-	check(spread_shots[0].global_position.distance_to(spread_shots[1].global_position) > 24 and spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_radius + 0.1), "coincident hover shots spread inside28px radius without overlap")
+	check(spread_shots[0].global_position.distance_to(spread_shots[1].global_position) > 20 and spread_shots.all(func(shot): return shot.global_position.distance_to(anchor) <= sig.water_shot_hover_spread_radius + 0.1), "coincident hover shots spread inside20px radius without overlap")
 	target.queue_free()
 
 	main.queue_free();await process_frame

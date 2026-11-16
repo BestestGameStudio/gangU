@@ -116,6 +116,8 @@ var _chase_t := 0.0
 ## (Daniel 2026-11-09) redirects this shot has used; spell.redirect_limit
 ## caps them (0 = unlimited). Guided tier 1 turns once, then casts normally.
 var _redirect_count := 0
+var _redirect_curve_left := 0.0
+var _redirect_curve_target := Vector2.ZERO
 
 func set_frozen(frozen: bool) -> void:
 	freeze.apply(frozen, _sprite)
@@ -199,8 +201,12 @@ func redirect(target: Vector2) -> bool:
 	_redirect_count += 1
 	var d := target - global_position
 	if d.length_squared() > 0.0:
-		direction = d.normalized()
-		rotation = direction.angle()
+		if spell.redirect_curve_duration > 0.0:
+			_redirect_curve_left = spell.redirect_curve_duration
+			_redirect_curve_target = target
+		else:
+			direction = d.normalized()
+			rotation = direction.angle()
 	_chase_t = 0.0
 	return true
 
@@ -249,6 +255,11 @@ func _wire_glow_and_trail() -> void:
 		_trail.name = "Trail"
 		_trail.top_level = true # points live in world space behind the shot
 		_trail.width = visual_radius() * 1.4
+		if spell.projectile_trail_art != null:
+			_trail.texture = spell.projectile_trail_art
+			_trail.texture_mode = Line2D.LINE_TEXTURE_STRETCH
+			_trail.width = 4.0
+			_trail.modulate.a = 0.22
 		var curve := Curve.new()
 		curve.add_point(Vector2(0.0, 0.15))
 		curve.add_point(Vector2(1.0, 1.0))
@@ -358,6 +369,12 @@ func _physics_process(delta: float) -> void:
 	# #331: Water Ball steer branch - turn toward the cursor while chasing.
 	if _chasing_cursor():
 		_turn_toward(cursor_point(), spell.cursor_turn_rate * delta)
+	if _redirect_curve_left > 0.0:
+		var want := global_position.direction_to(_redirect_curve_target)
+		if want.length_squared() > 0.0:
+			direction = Vector2.from_angle(lerp_angle(direction.angle(), want.angle(), minf(delta / _redirect_curve_left, 1.0)))
+			rotation = direction.angle()
+		_redirect_curve_left = maxf(_redirect_curve_left - delta, 0.0)
 	_chase_t += delta
 	_life_t += delta
 	var step: float = spell.projectile_speed * delta

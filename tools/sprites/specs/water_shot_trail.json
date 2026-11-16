@@ -1,0 +1,21 @@
+{
+  "name": "water-shot-trail",
+  "w": 8,
+  "h": 4,
+  "palette": {
+    "b": "#227ed1",
+    "c": "#4bc5ee",
+    "h": "#bcf4ff"
+  },
+  "frames": [
+    {
+      "ms": 200,
+      "rows": [
+        "........",
+        "..cccc..",
+        "bhhhhccb",
+        "........"
+      ]
+    }
+  ]
+}

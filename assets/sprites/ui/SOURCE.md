@@ -33,8 +33,8 @@ at read-only source revision7fd4617ebb9a084450fef7e428bee61357b26227.
 SpriteU remains unchanged. Same2x nearest placement as the closed lock.
 
 ## Water Shot art (#740)
-All new Water Shot art (spell icon and projectile reused while hovering) is
-original24x24 SpriteU-format JSON in tools/sprites/specs/water_shot_*.json.
+All new Water Shot art (spell icon, projectile reused while hovering, and faint trail texture) is
+original24x24 (trail8x4) SpriteU-format JSON in tools/sprites/specs/water_shot_*.json.
 Validated using SpriteU check_sprite.py; exported at1x by render_preview.py
 from read-only revision7fd4617ebb9a084450fef7e428bee61357b26227.
 PNGs in assets/sprites/spells/; no SpriteU source modifications.
