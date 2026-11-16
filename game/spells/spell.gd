@@ -195,7 +195,7 @@ class_name Spell
 ## Numeric values are stable for serialized resource data. A bare Spell is a
 ## projectile, matching its default projectile_count of one; non-projectile
 ## specs must set their mode rather than rely on unrelated optional fields.
-enum CastMode { NONE, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE }
+enum CastMode { NONE, HAMMER, SHIELD, RAIN, SPLASH, PROJECTILE, HOOK }
 
 @export var mode: CastMode = CastMode.PROJECTILE
 
@@ -231,3 +231,10 @@ func trigger_payload(trigger: TriggerMode, alternate: bool = false) -> Spell:
 	if trigger == TriggerMode.ALTERNATE and alternate_spell != null:
 		return alternate_spell
 	return self
+
+## Hook Shot: relative displacement force / enemy weight sets capped reel speed.
+@export var displacement_force: float = 1.0
+@export var hook_reel_speed: float = 600.0
+@export var hook_max_reel_speed: float = 1200.0
+@export var hook_reel_acceleration: float = 2400.0
+@export var hook_timeout: float = 8.0

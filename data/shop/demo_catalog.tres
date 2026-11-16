@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ShopCatalog" load_steps=23 format=3 uid="uid://bgangurshopcat"]
+[gd_resource type="Resource" script_class="ShopCatalog" load_steps=25 format=3 uid="uid://bgangurshopcat"]
 
 [ext_resource type="Script" path="res://game/economy/shop_catalog.gd" id="1"]
 [ext_resource type="Script" path="res://game/economy/shop_entry.gd" id="2"]
@@ -13,6 +13,8 @@
 [ext_resource type="Spell" path="res://data/spells/water_ball.tres" id="37"]
 
 [ext_resource type="Spell" path="res://data/spells/water_shot.tres" id="40"]
+
+[ext_resource type="Spell" path="res://data/spells/hook_shot.tres" id="hook"]
 
 [sub_resource type="Resource" id="40"]
 script = ExtResource("2")
@@ -64,6 +66,11 @@ script = ExtResource("2")
 good = ExtResource("37")
 price = 10
 
+[sub_resource type="Resource" id="hook"]
+script = ExtResource("2")
+good = ExtResource("hook")
+price = 10
+
 [resource]
 script = ExtResource("1")
-entries = Array[ExtResource("2")]([SubResource("6"), SubResource("15"), SubResource("18"), SubResource("21"), SubResource("22"), SubResource("26"), SubResource("27"), SubResource("34"), SubResource("37"), SubResource("40")])
+entries = Array[ExtResource("2")]([SubResource("hook"), SubResource("6"), SubResource("15"), SubResource("18"), SubResource("21"), SubResource("22"), SubResource("26"), SubResource("27"), SubResource("34"), SubResource("37"), SubResource("40")])

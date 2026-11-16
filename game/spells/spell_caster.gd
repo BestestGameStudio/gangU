@@ -19,6 +19,8 @@ class_name SpellCaster
 ## stays a no-op safeguard. Duplicate unlock grants get no new guard here
 ## (grant policy OPEN) - equip uniqueness is enforced by assign_slot only.
 
+signal hook_resolved(spell: Spell, count: int)
+
 signal spell_cast(spell: Spell)
 signal cooldown_started(spell: Spell, duration: float)
 signal spell_equipped(spell: Spell)
@@ -651,6 +653,14 @@ func _cast_spell(spell: Spell, cast_owner: Spell = null) -> void:
 	# #370 Stone Hammer: an overhead swing at the aim point (clamped to
 	# range). Its cooldown is the Rhythm combo's reduced one when it applies.
 	match spell.cast_mode():
+		Spell.CastMode.HOOK:
+			var hook := HookShot.new()
+			hook.prepare_shape()
+			hook.setup(spell, dir, get_parent())
+			hook.destination = global_position + (aim_point() - global_position).limit_length(spell.range)
+			hook.resolved.connect(func(count: int): hook_resolved.emit(credit, count))
+			get_tree().current_scene.add_child(hook)
+			hook.global_position = cast_pos
 		Spell.CastMode.HAMMER:
 			cooldown_base = _cast_hammer(spell)
 		Spell.CastMode.SHIELD:
