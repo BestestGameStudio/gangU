@@ -582,3 +582,11 @@ The exported 64x30 source is assembled with fixed 24px caps to 180x30, then scal
 `hp_bar_track.png` retains the existing151x60 alpha/star pattern, recolored from
 purple to warm charcoal/bronze. Track cap42px and original diagonal-striped
 `hp_bar_fill.png` are unchanged. No third-party art added.
+
+## Gilded thread spirit bar (#757)
+
+Original SpriteU-authored Gilded thread frame, track, cyan fill and mint ready
+textures exported using unchanged SpriteU7fd4617. Final PNGs284x16,
+trimmed/reassembled fixed12pxcaps and260pxmiddle, nearest-neighbor.
+HUD position relativeHP(38,46), fixedheight16, frameverticalmargins4.
+No spirit text; spirit gain/heal/channel logic unchanged. No third-party art.
