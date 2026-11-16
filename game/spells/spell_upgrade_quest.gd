@@ -1,7 +1,7 @@
 class_name SpellUpgradeQuest
 extends Resource
 ## Data-defined qualification for one upgrade row. No quest means legacy casts.
-enum Kind { CASTS, REDIRECTED_HITS, VOLLEY }
+enum Kind { CASTS, REDIRECTED_HITS, VOLLEY, HOOK_STREAK, HOOK_GROUP }
 @export var kind: Kind = Kind.CASTS
 @export_multiline var objective: String = ""
 @export_range(1, 10000) var goal: int = 1
