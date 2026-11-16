@@ -11,3 +11,5 @@ Quest plumbing: non-damaging hook result signals, separate from OnHit. Three con
 Focused test781: actual swept first-enemy detection, HP unchanged, moving target/lateral inertia, force/weight/cap math, single owner, cleanup, streak reset/completion, both Fishy rewards and grant exclusion. Existing shop test passes after catalog integration.
 
 Running-game clip: hook-demo.mp4 and still hook-demo.png. Real main scene/caster, spawned enemy at weight3 for slower visible reel; scripted player movement reverses vertically while the reel continues. Temporary geometry pending SpriteU art.
+
+Daniel speed follow-up: fast-reel.mp4 shows weight1 at1500px/s target speed (cap2400), with the same2400px/s² acceleration. Original hook-demo.mp4 retains weight3 staging of slower lateral inertia; current weight3 target speed is500px/s.
