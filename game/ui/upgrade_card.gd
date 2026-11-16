@@ -5,6 +5,7 @@ extends Button
 const CARD_WIDTH := 176.0
 const CARD_HEIGHT := CARD_WIDTH * 64.0 / 48.0
 const LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-lock.png")
+const OPEN_LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-open-lock.png")
 var name_label: Label
 var description_label: Label
 var action_label: Label
@@ -27,6 +28,7 @@ const TIER_FRAMES: Array[Texture2D] = [
 var _frame: TextureRect
 var _border_tier := 0
 var _locked := false
+var _concealed := false
 var _unavailable := false
 var _grey_material: ShaderMaterial
 
@@ -165,19 +167,21 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
 	_locked = state == "locked"
-	_content.add_theme_constant_override("separation", 5 if _locked else 3)
+	_concealed = state in ["locked", "ready", "token"]
+	(lock_sign as TextureRect).texture = OPEN_LOCK_TEXTURE if state in ["ready", "token"] else LOCK_TEXTURE
+	_content.add_theme_constant_override("separation", 5 if _concealed else 3)
 	_unavailable = state == "unavailable"
 	_content.visible = not _unavailable
-	lock_sign.visible = _locked
-	name_label.visible = not _locked
-	description_label.visible = not _locked
+	lock_sign.visible = _concealed
+	name_label.visible = not _concealed
+	description_label.visible = not _concealed
 	action_label.visible = false
-	(splash as PlaceholderSplash).plain = _locked
-	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 48.0
+	(splash as PlaceholderSplash).plain = _concealed
+	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _concealed else 48.0
 	splash.queue_redraw()
 	_refresh_frame()
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
-	progress_bar.visible = _locked
+	progress_bar.visible = _concealed
 	progress_label.visible = progress_bar.visible
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
@@ -191,7 +195,7 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
 	if progress_label.visible:
 		tooltip_text += "\n" + progress_label.text
-	if _locked:
+	if _concealed:
 		tooltip_text = progress_label.text
 	if _unavailable:
 		tooltip_text = ""
@@ -213,8 +217,8 @@ func set_border_tier(tier: int) -> void:
 
 func _refresh_frame() -> void:
 	if _frame == null: return
-	_frame.texture = TIER_FRAMES[0 if _locked or _unavailable else _border_tier]
-	_frame.material = _grey_material if _locked or _unavailable else null
+	_frame.texture = TIER_FRAMES[0 if _concealed or _unavailable else _border_tier]
+	_frame.material = _grey_material if _concealed or _unavailable else null
 	_frame.visible = true
 	_restyle_border(UiStyle.B_DIM)
 	if _unavailable:
@@ -232,7 +236,7 @@ func _fit_content() -> void:
 	var width := maxf(size.x - 40.0, 0.0)
 	if not is_equal_approx(_content.custom_minimum_size.x, width):
 		_content.custom_minimum_size.x = width
-	if not _locked and not _unavailable:
+	if not _concealed and not _unavailable:
 		# Prefer a compact 48px illustration and native16px copy. Fit the complete
 		# description inside the fixed frame, never behind a scrollbar.
 		var font := description_label.get_theme_font("font")
