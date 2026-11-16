@@ -238,15 +238,73 @@ func _drop_reward() -> void:
 	get_parent().add_child(drop)
 	drop.global_position = global_position
 
+## Props: [sprite name, village-local ground point]. Pure decoration (no
+## collision yet). Layout follows Mitra's reference: cart in the lane,
+## barrels and woodpiles by the houses, low walls behind the north plots, a
+## fence in front of the south plots, a small walled graveyard by the tower.
+static func prop_list() -> Array:
+	var l: Array = []
+	l.append(["cart", Vector2(-70, lane_y(-70) + 30)])
+	for x in [-250, -194, 194, 250]:
+		l.append(["wall_straight", Vector2(x, -140)])
+	l.append(["wall_end", Vector2(-290, -140)])
+	l.append(["wall_corner", Vector2(290, -140)])
+	l.append(["wall_straight", Vector2(-138, -146)])
+	l.append(["firewood_leanto", Vector2(-80, -64)])
+	l.append(["barrel_a", Vector2(86, -60)])
+	l.append(["barrel_b", Vector2(-248, -60)])
+	l.append(["barrel_a", Vector2(250, -58)])
+	l.append(["firewood_leanto", Vector2(-272, 224)])
+	l.append(["barrel_b", Vector2(-236, 228)])
+	l.append(["barrel_a", Vector2(224, 228)])
+	for x in [-250, -194, -138]:
+		l.append(["fence_straight", Vector2(x, 268)])
+	l.append(["fence_leaning", Vector2(-24, 268)])
+	l.append(["fence_straight", Vector2(32, 268)])
+	l.append(["fence_gap", Vector2(150, 268)])
+	l.append(["fence_straight", Vector2(206, 268)])
+	# Graveyard beside the bell tower.
+	l.append(["wall_straight", Vector2(326, 70)])
+	l.append(["wall_end", Vector2(374, 70)])
+	l.append(["grave_cross", Vector2(318, 106)])
+	l.append(["grave_round", Vector2(346, 102)])
+	l.append(["grave_slab", Vector2(372, 114)])
+	l.append(["grave_cross", Vector2(330, 144)])
+	l.append(["grave_slab", Vector2(358, 150)])
+	# Flowers and dead sunflowers creeping along edges.
+	for f in [["flower_purple", -300, 40], ["flower_white", -210, 44], ["flower_purple", -40, 48], ["flower_white", 120, 52],
+			["flower_purple", 214, 46], ["flower_white", -120, -30], ["flower_purple", 60, -28], ["flower_white", 240, -26],
+			["flower_purple", -200, 250], ["flower_white", 60, 250]]:
+		l.append([f[0], Vector2(f[1], f[2])])
+	l.append(["sunflower_dead", Vector2(-300, 70)])
+	l.append(["sunflower_dead", Vector2(286, 232)])
+	l.append(["sunflower_dead", Vector2(300, 190)])
+	return l
+
+static var _prop_tex: Dictionary = {}
+
+static func _prop(name: String) -> Texture2D:
+	if not _prop_tex.has(name):
+		_prop_tex[name] = load("res://assets/sprites/village/prop_%s.png" % name) as Texture2D
+	return _prop_tex[name]
+
 func _draw() -> void:
-	# Vine-covered sprites, bottom-centre anchored on the ground contact point.
+	# Vine-covered sprites, bottom-centre anchored on the ground contact point,
+	# drawn back to front so overlaps read correctly.
 	# Houses and the well are solid (#546); see plant_footprints().
+	var items: Array = []
 	for side: int in [-1, 1]:
 		for column: int in [-1, 0, 1]:
 			var variant := posmod(column + 1 + (1 if side > 0 else 0), 3)
-			_draw_prop(HOUSES[variant], house_foot(column, side))
-	_draw_prop(WELL_TEX, WELL_FOOT, 1.5)
-	_draw_prop(TOWER_TEX, TOWER_FOOT)
+			items.append([house_foot(column, side).y, HOUSES[variant], house_foot(column, side), 1.0])
+	items.append([WELL_FOOT.y, WELL_TEX, WELL_FOOT, 1.5])
+	items.append([TOWER_FOOT.y, TOWER_TEX, TOWER_FOOT, 1.0])
+	for pr in prop_list():
+		var foot: Vector2 = pr[1]
+		items.append([foot.y, _prop(pr[0]), foot, 1.0])
+	items.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	for it in items:
+		_draw_prop(it[1], it[2], it[3])
 
 func _draw_prop(tex: Texture2D, foot: Vector2, k: float = 1.0) -> void:
 	var size := tex.get_size() * k
