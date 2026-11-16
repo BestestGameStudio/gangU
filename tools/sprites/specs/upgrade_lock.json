@@ -1,0 +1,46 @@
+{
+  "name": "upgrade-lock",
+  "w": 24,
+  "h": 28,
+  "palette": {
+    "o": "#25262c",
+    "s": "#60636b",
+    "h": "#a1a5af",
+    "l": "#c7cbd3"
+  },
+  "frames": [
+    {
+      "ms": 1000,
+      "rows": [
+        "........................",
+        "........................",
+        ".........ooooooo........",
+        ".......oohhhhhhho.......",
+        ".......ohhssssshho......",
+        ".......hss.....sso......",
+        "......ohs.......soo.....",
+        "......ohs.......sho.....",
+        "......ohs.......sho.....",
+        "......ohs.......sho.....",
+        ".....oohsoooooooshoo....",
+        "....ohhhhhhhhhhhhhhho...",
+        "....ohlllllllllllllho...",
+        "....ohlllllllllllllho...",
+        "....ohlllllllllllllho...",
+        "....ohlllllllllllllho...",
+        "....ohlllllllllllllho...",
+        "....ohlllllllllllllho...",
+        "....ohlllllooolllllho...",
+        "....ohlllllooolllllho...",
+        "....ohllllllollllllho...",
+        "....ohllllllollllllho...",
+        "....ohllllllollllllho...",
+        "....ohlllllllllllllho...",
+        "....ohsssssssssssssho...",
+        "....ooooooooooooooooo...",
+        "........................",
+        "........................"
+      ]
+    }
+  ]
+}

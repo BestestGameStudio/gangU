@@ -3,6 +3,8 @@ extends Button
 ## #402 presentation only. The panel owns eligibility, path IDs and actions.
 ## Splash is deliberately a code-drawn placeholder, never claimed final art.
 const CARD_WIDTH := 176.0
+const CARD_HEIGHT := CARD_WIDTH * 64.0 / 48.0
+const LOCK_TEXTURE: Texture2D = preload("res://assets/sprites/ui/upgrade-lock.png")
 var name_label: Label
 var description_label: Label
 var action_label: Label
@@ -14,7 +16,7 @@ var _content: VBoxContainer
 var border_color: Color = UiStyle.B_ACCENT
 
 ## #700: ornate card frame (assets/sprites/ui/card-frame-*.png, SpriteU
-## format; provenance in assets/sprites/ui/SOURCE.md): nine-patch with a
+## format; provenance in assets/sprites/ui/SOURCE.md): aspect-preserved with a
 ## transparent interior, one colorway per upgrade tier (UiStyle.RANK_COLORS).
 const TIER_FRAMES: Array[Texture2D] = [
 	preload("res://assets/sprites/ui/card-frame-silver.png"),
@@ -22,11 +24,16 @@ const TIER_FRAMES: Array[Texture2D] = [
 	preload("res://assets/sprites/ui/card-frame-red.png"),
 	preload("res://assets/sprites/ui/card-frame-purple.png"),
 ]
-var _frame: NinePatchRect
+var _frame: TextureRect
+var _border_tier := 0
+var _locked := false
+var _grey_material: ShaderMaterial
 
 class PlaceholderSplash extends Control:
 	var tint := Color(0.95, 0.75, 0.25)
+	var plain := false
 	func _draw() -> void:
+		if plain: return
 		var r := Rect2(Vector2.ZERO, size)
 		draw_style_box(UiStyle.row(UiStyle.B_DIM, 0), r)
 		var c := size * 0.5
@@ -34,16 +41,9 @@ class PlaceholderSplash extends Control:
 		draw_colored_polygon(points, Color(tint, 0.24))
 		draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), tint, 2.0, true)
 
-## Vector padlock: no font-dependent emoji or missing-glyph square.
-class LockSign extends Control:
-	func _draw() -> void:
-		var c := size * 0.5
-		draw_style_box(UiStyle.row(Color(0.65, 0.67, 0.72), 4), Rect2(c + Vector2(-11, -2), Vector2(22, 18)))
-		draw_arc(c + Vector2(0, -2), 8, PI, TAU, 16, Color(0.8, 0.82, 0.86), 3, true)
-		draw_circle(c + Vector2(0, 5), 2, Color(0.85, 0.87, 0.9))
-
 func _init() -> void:
-	custom_minimum_size = Vector2(CARD_WIDTH, 200)
+	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
+	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	UiStyle.style_button(self, UiStyle.B_ACCENT, 10)
 	var margin := MarginContainer.new()
@@ -53,9 +53,14 @@ func _init() -> void:
 	margin.add_theme_constant_override("margin_top", 12)
 	margin.add_theme_constant_override("margin_bottom", 12)
 	add_child(margin)
+	var scroll := ScrollContainer.new()
+	scroll.name = "CardContentScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	margin.add_child(scroll)
 	_content = VBoxContainer.new()
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.add_theme_constant_override("separation", 5)
-	margin.add_child(_content)
+	scroll.add_child(_content)
 	splash = PlaceholderSplash.new()
 	splash.name = "PlaceholderSplash"
 	splash.custom_minimum_size = Vector2(0, 32)
@@ -91,9 +96,14 @@ func _init() -> void:
 	progress_bar.custom_minimum_size.y = 10
 	progress_bar.show_percentage = false
 	progress_bar.visible = false
-	_content.add_child(progress_bar)
+	var progress_margin := MarginContainer.new()
+	progress_margin.add_theme_constant_override("margin_left", 12)
+	progress_margin.add_theme_constant_override("margin_right", 12)
+	_content.add_child(progress_margin)
+	progress_margin.add_child(progress_bar)
 	progress_label = Label.new()
 	progress_label.name = "UnlockProgressText"
+	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	progress_label.add_theme_font_size_override("font_size", 12)
 	progress_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	progress_label.visible = false
@@ -101,22 +111,37 @@ func _init() -> void:
 	# Qualification is always above the long description, so the lock/bar
 	# stay visible without scrolling even when an upgrade has lengthy text.
 	_content.move_child(description_label, _content.get_child_count() - 1)
-	lock_sign = LockSign.new()
+	var lock_texture := TextureRect.new()
+	lock_texture.texture = LOCK_TEXTURE
+	lock_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lock_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lock_texture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	lock_sign = lock_texture
 	lock_sign.name = "LockSign"
-	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lock_sign.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	lock_sign.offset_left = -24
+	lock_sign.offset_top = -92
+	lock_sign.offset_right = 24
+	lock_sign.offset_bottom = -36
 	lock_sign.visible = false
-	splash.add_child(lock_sign)
+	add_child(lock_sign)
 	for child: Control in find_children("*", "Control", true, false):
 		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	_frame = NinePatchRect.new()
+	var grey_shader := Shader.new()
+	grey_shader.code = "shader_type canvas_item; void fragment() { vec4 c = texture(TEXTURE, UV); float g = dot(c.rgb, vec3(0.299, 0.587, 0.114)); COLOR = vec4(vec3(g * 0.6), c.a); }"
+	_grey_material = ShaderMaterial.new()
+	_grey_material.shader = grey_shader
+	# Text ignores input, but the nested scroll must still accept wheel/drag.
+	# PASS lets clicks continue to this upgrade Button.
+	scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	scroll.get_v_scroll_bar().mouse_filter = Control.MOUSE_FILTER_STOP
+	_frame = TextureRect.new()
 	_frame.name = "TierFrame"
 	_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_frame.patch_margin_left = 12
-	_frame.patch_margin_right = 12
-	_frame.patch_margin_top = 13
-	_frame.patch_margin_bottom = 4
+	_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_frame.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # pixel art: no softening
 	_frame.visible = false
 	add_child(_frame)
@@ -131,19 +156,25 @@ func setup(upgrade_name: String, description: String, use_token: bool, tint: Col
 	call_deferred("_fit_content")
 
 ## #712: state is supplied by the progression provider, never inferred from
-## button tint. Disabled states still expose their description and progress.
+## button tint. Locked tiers expose only a grey frame, lock and cast progress.
 func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: String = "", source_name: String = "") -> void:
 	disabled = state not in ["ready", "token"]
 	mouse_default_cursor_shape = Control.CURSOR_ARROW if disabled else Control.CURSOR_POINTING_HAND
-	lock_sign.visible = state == "locked"
+	_locked = state == "locked"
+	lock_sign.visible = _locked
+	name_label.visible = not _locked
+	description_label.visible = not _locked
+	action_label.visible = not _locked
+	(splash as PlaceholderSplash).plain = _locked
+	splash.custom_minimum_size.y = CARD_HEIGHT * 0.5 - 22.0 if _locked else 32.0
+	splash.queue_redraw()
+	_refresh_frame()
 	splash.get_node("PlaceholderLabel").visible = not lock_sign.visible
 	progress_bar.visible = state in ["locked", "ready", "token"]
 	progress_label.visible = progress_bar.visible
 	progress_bar.max_value = maxi(threshold, 1)
 	progress_bar.value = mini(casts, maxi(threshold, 0))
 	progress_label.text = "%d / %d casts" % [mini(casts, maxi(threshold, 0)), threshold]
-	if not source_name.is_empty():
-		progress_label.text += " - " + source_name
 	match state:
 		"locked": action_label.text = "Locked" if prerequisite.is_empty() else "Locked - previous tier first"
 		"ready": action_label.text = "Choose upgrade"
@@ -153,8 +184,8 @@ func set_unlock_state(state: String, casts: int, threshold: int, prerequisite: S
 	tooltip_text = "%s\n%s\n%s" % [name_label.text, description_label.text, action_label.text]
 	if progress_label.visible:
 		tooltip_text += "\n" + progress_label.text
-	if not prerequisite.is_empty():
-		tooltip_text += "\nFirst unlock " + prerequisite
+	if _locked:
+		tooltip_text = progress_label.text
 	call_deferred("_fit_content")
 
 ## #451: restyle the card border (Daniel: the color of the tier the card
@@ -163,12 +194,18 @@ func _restyle_border(color: Color) -> void:
 	border_color = color
 	UiStyle.style_button(self, color, 10)
 
-## #700: show the ornate SpriteU card frame in the tier colorway instead of
+## #700/#715: show the aspect-preserved ornate card frame in the tier colorway instead of
 ## the flat code-drawn border. tier indexes TIER_FRAMES / RANK_COLORS.
 func set_border_tier(tier: int) -> void:
 	if _frame == null:
 		return
-	_frame.texture = TIER_FRAMES[clampi(tier, 0, TIER_FRAMES.size() - 1)]
+	_border_tier = clampi(tier, 0, TIER_FRAMES.size() - 1)
+	_refresh_frame()
+
+func _refresh_frame() -> void:
+	if _frame == null: return
+	_frame.texture = TIER_FRAMES[0 if _locked else _border_tier]
+	_frame.material = _grey_material if _locked else null
 	_frame.visible = true
 	_restyle_border(UiStyle.B_DIM)
 
@@ -177,15 +214,22 @@ func _process(_delta: float) -> void:
 
 func _fit_content() -> void:
 	if not is_instance_valid(_content): return
-	var width := maxf(size.x - 24.0, 0.0)
+	var width := maxf(size.x - 40.0, 0.0)
 	if not is_equal_approx(_content.custom_minimum_size.x, width):
 		_content.custom_minimum_size.x = width
-	# Text wrapping can change minimum height without resizing the Button.
-	# Propagate it to the HBox so ScrollContainer has real scrollable content.
-	var text_height := 0.0
-	for label: Label in [name_label, description_label, action_label, progress_label]:
-		var font := label.get_theme_font("font")
-		text_height += font.get_multiline_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, width, label.get_theme_font_size("font_size")).y
-	var height := maxf(200.0, maxf(text_height + 32.0 + 25.0, _content.get_combined_minimum_size().y) + 24.0)
-	if not is_equal_approx(custom_minimum_size.y, height):
-		custom_minimum_size.y = height
+	# Frame art is 48x64. Card height never follows the description length;
+	# long unlocked details scroll inside the frame instead of distorting it.
+	custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
+
+## Bound long upgrade hover text rather than allowing Godot's default
+## unwrapped tooltip to spill across the other cards and off the panel.
+func _make_custom_tooltip(for_text: String) -> Object:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiStyle.panel())
+	var label := Label.new()
+	label.custom_minimum_size.x = 288
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 14)
+	label.text = for_text
+	panel.add_child(label)
+	return panel

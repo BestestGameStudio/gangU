@@ -183,7 +183,7 @@ func _process(delta: float) -> bool:
 						if c is UpgradeCard and not c.get_parent().get_parent().is_queued_for_deletion():
 							texts.append(c.name_label.text)
 							buttons.append(c)
-					if texts != ["Split shot [S]", "Wide split [M]", "Signature"] or buttons.size() != 3:
+					if texts != ["Split shot", "Wide split", "Signature"] or buttons.size() != 3:
 						print("[E] FAIL chain upgrade card: ", texts); ok = false
 						return _done()
 					print("[E] full chain and unavailable tier render OK")

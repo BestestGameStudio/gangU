@@ -84,19 +84,10 @@ const UPGRADE_CARD_GAP := 12
 # #712: all three 176px tier cards visible together at the default viewport.
 # Fixed width still prevents resizing when selecting/deselecting a spell.
 const DETAIL_WIDTH := 568.0
-## #441 (Daniel, 2026-11-09): the plate hugs its content instead of the old
-## 620px fixed height ("a lot of empty vertical space below the spell
-## slots"). Measured composition on the pinned harness: title 36 + sep 10 +
-## columns 376 (player stats 115 + sep + upgrades header ~35 + one full
-## upgrade card 216 at the #441 card width; the slots column needs 289) +
-## plate margins 20. Still FIXED so the #416 no-resize rule holds.
-## #427 rebase: the relics section (separator + header + one names row, 83)
-## sits below the columns, so the fixed height grows 442 -> 525 to keep the
-## tallest state (upgrade cards + relics) inside it without resizing.
-## #700 re-measure (2 cards, 3-column grid): the tallest state shrinks to
-## ~360 (player stats 115 at 3 columns + sep + header ~35 + card ~200),
-## so 525 still covers it with slack and stays fixed.
-const PANEL_HEIGHT := 525.0
+## #715: four core spell stats share one row before adding height. The
+## original 525px plate still clipped the native 3:4 frames, so add 48px
+## of fixed height; width stays unchanged. Smaller viewports retain scroll.
+const PANEL_HEIGHT := 573.0
 const SCREEN_MARGIN := 16.0
 var _relics_box: VBoxContainer
 var _relics_list: HFlowContainer
@@ -131,22 +122,8 @@ func _pin_icon(b: Button, left: float) -> SpellIcon:
 	b.add_child(icon)
 	return icon
 
-## #38: compact ASCII tier suffix on upgrade-channel buttons only (lead UX
-## call: [S]/[M]/[G] for Specialization/Mastery/Signature, Base shows
-## nothing). Reads the upgrade's own tier when the provider exposes one;
-## providers without a tier field degrade to no suffix. Display-only.
-func _tier_suffix(upgrade: Variant) -> String:
-	match _upgrade_tier(upgrade):
-		1:
-			return " [S]"
-		2:
-			return " [M]"
-		3:
-			return " [G]"
-	return ""
-
 ## Tier the upgrade advances INTO (0 Base .. 3 Signature); 0 when the
-## provider exposes no tier. Shared by the [S]/[M]/[G] suffix and the #451
+## provider exposes no tier. Used by the #451
 ## card border.
 func _upgrade_tier(upgrade: Variant) -> int:
 	var tier: Variant = (upgrade as Resource).get(&"tier") if upgrade is Resource else null
@@ -392,6 +369,7 @@ func hide_panel() -> void:
 func _refresh_stats() -> void:
 	if _player == null:
 		return
+	_stats_box.set_columns(4 if _selected != null else StatGrid.COLUMNS)
 	_stats_box.set_description(SpellDescription.for_spell(_selected))
 	if _selected != null:
 		_stats_box.set_entries(_selected.spell_name, StatSheet.spell_entries(_selected, _player, _caster))
@@ -459,7 +437,7 @@ func _refresh() -> void:
 				description += "\n%s px | %s px/s" % [int(result.range), int(result.projectile_speed)]
 			if description.is_empty():
 				description = "Upgrade content is not available yet."
-			b.setup(str(_upgrade_field(upgrade, &"display_name")) + _tier_suffix(upgrade), description, item.state == "token")
+			b.setup(str(_upgrade_field(upgrade, &"display_name")), description, item.state == "token")
 			var pid: Variant = _upgrade_field(upgrade, &"id")
 			# Resolve the route again when pressed: live cast progress may have
 			# qualified this card since it was constructed, avoiding wasted tokens.

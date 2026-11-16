@@ -14,3 +14,13 @@ L/R 12, T 13, B 4), added in #702.
   gold = tier 1 (Specialization), red = tier 2 (Mastery), purple = tier 3
   (Signature).
 - Interiors are transparent: spell icon art and card content show through.
+
+## upgrade-lock.png (#715)
+Original 24x28 grey padlock authored in SpriteU JSON format at
+`tools/sprites/specs/upgrade_lock.json`. Validated with SpriteU
+`tools/check_sprite.py` and exported through SpriteU
+`tools/render_preview.py --scale 1` at source revision
+`7fd4617ebb9a084450fef7e428bee61357b26227`. Exact first-frame PNG copied
+into gangU. SpriteU source was read-only: no edits, issues, commits or PRs.
+Silhouette narrowed and extended vertically per owner feedback.
+Drawn at 2x nearest horizontally centered, above the mid-card progress bar per latest owner layout.
