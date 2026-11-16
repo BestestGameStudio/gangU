@@ -14,12 +14,12 @@ const CLEAR_COINS := 100
 const SPAWN_RADIUS := 540.0
 ## Doors are bottom-centre of each house sprite, facing south.
 const DOOR_OFFSET := Vector2(0.0, 62.0 - 0.0)
-const PATH_HALF_WIDTH := 24.0
-const LANE_HALF_WIDTH := 27.0
+const PATH_HALF_WIDTH := 20.0
+const LANE_HALF_WIDTH := 22.0
 
 ## Lane centre line y at village-local x: a slow S-curve.
 static func lane_y(x: float) -> float:
-	return 16.0 * sin(x / 120.0) + 7.0 * sin(x / 47.0 + 1.0)
+	return 26.0 * sin(x / 88.0) + 8.0 * sin(x / 41.0 + 1.0)
 
 ## Cobble lane (narrow, winding) plus short flagstone walks to every door.
 static func path_segments() -> Array[PackedVector2Array]:
@@ -28,7 +28,7 @@ static func path_segments() -> Array[PackedVector2Array]:
 	var x := -270.0
 	while x <= 290.0:
 		lane.append(Vector2(x, lane_y(x)))
-		x += 30.0
+		x += 15.0
 	segs.append(lane)
 	for column: int in [-1, 0, 1]:
 		var cx := column * 170.0
@@ -37,8 +37,8 @@ static func path_segments() -> Array[PackedVector2Array]:
 		segs.append(PackedVector2Array([nd, Vector2(cx, lane_y(cx))]))
 		# South houses: down the gap beside the house, then across to the door.
 		var sd := house_foot(column, 1) + Vector2(0, 14)
-		var gap := cx + 88.0
-		segs.append(PackedVector2Array([Vector2(gap, lane_y(gap)), Vector2(gap, sd.y), sd]))
+		var gap := cx + 62.0
+		segs.append(PackedVector2Array([Vector2(gap, lane_y(gap)), Vector2(gap, sd.y - 52.0)]))
 	return segs
 
 const HOUSE_HALF := Vector2(44, 30)

@@ -243,7 +243,7 @@ func _blob(d: float) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in OUTLINE_POINTS:
 		var a := TAU * i / OUTLINE_POINTS
-		var wob := 1.0 + (_hash01(i, 0, 11) - 0.5) * 0.12
+		var wob := 1.0 + 0.027 * (sin(3.0 * a + 1.0) + 0.7 * sin(5.0 * a + 2.0) + 0.5 * sin(9.0 * a))
 		# #635: asymmetric south radius - the outline stays a superset of
 		# the old ellipse, so no existing slot check changes result.
 		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
@@ -544,17 +544,10 @@ func _compute_lattice_type(p: Vector2) -> int:
 	if vil != null:
 		var q: Vector2 = p - (vil as Node2D).position
 		if absf(q.x) < 420.0 and absf(q.y) < 300.0:
-			var segs := AbandonedVillage.path_segments()
-			for i in segs.size():
-				var seg: PackedVector2Array = segs[i]
-				var near := 1e9
-				for k in range(seg.size() - 1):
-					near = minf(near, q.distance_to(Geometry2D.get_closest_point_to_segment(q, seg[k], seg[k + 1])))
-				var base := AbandonedVillage.LANE_HALF_WIDTH if i == 0 else AbandonedVillage.PATH_HALF_WIDTH
-				# Irregular, worn edges: the width wanders along the lane.
-				var half_w := base + 9.0 * sin(q.x / 37.0 + q.y / 53.0) * sin(q.y / 23.0 + q.x / 61.0)
-				if near < half_w:
-					return DualGrid.T.COBBLE
+			if _cobble_nodes.is_empty():
+				_build_cobble_nodes((vil as Node2D).position)
+			if _cobble_nodes.has(Vector2i((p / 64.0).round())):
+				return DualGrid.T.COBBLE
 		# No stray dirt patches around the village.
 		if q.length() < 470.0:
 			return DualGrid.T.GRASS
@@ -568,6 +561,26 @@ func _compute_lattice_type(p: Vector2) -> int:
 			if _hash01(g.x, g.y, 61) < 0.25 and p.distance_to(spawn) > ARRIVAL_STONE_R + 128.0:
 				return DualGrid.T.DIRT
 	return DualGrid.T.GRASS
+
+var _cobble_nodes: Dictionary = {}
+
+## One-tile-wide trails: snap every path polyline onto the 64px lattice and
+## fill the corner of each diagonal step so the trail stays connected.
+func _build_cobble_nodes(origin: Vector2) -> void:
+	for seg: PackedVector2Array in AbandonedVillage.path_segments():
+		var prev := Vector2i(-99999, -99999)
+		for k in range(seg.size() - 1):
+			var a := seg[k] + origin
+			var b := seg[k + 1] + origin
+			var n := int(a.distance_to(b) / 8.0) + 1
+			for t in n + 1:
+				var node := Vector2i((a.lerp(b, float(t) / n) / 64.0).round())
+				if node == prev:
+					continue
+				if prev.x != -99999 and node.x != prev.x and node.y != prev.y:
+					_cobble_nodes[Vector2i(node.x, prev.y)] = true
+				_cobble_nodes[node] = true
+				prev = node
 
 func _draw_dual_grid() -> void:
 	var grown := _blob(BORDER_DRAWN)
