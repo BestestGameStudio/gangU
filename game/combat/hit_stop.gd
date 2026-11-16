@@ -25,10 +25,10 @@ extends Node
 ## physics steps; player input is still read on the next live frame. No
 ## pause/menu system exists today; when one lands, pause wins.
 ##
-## Timing accumulates this node's own frame delta. HitStop is not a mover
-## and is never claimed, so the stop is immune to its own freeze, and the
-## counted seconds match rendered frames exactly (Engine.time_scale is
-## unused in this codebase).
+## Timing accumulates this node's own frame delta, divided by
+## Engine.time_scale so it counts REAL seconds (only the boss finisher, #692,
+## touches the time scale, and it restores 1.0 itself). HitStop is not a
+## mover and is never claimed, so the stop is immune to its own freeze.
 ##
 ## Overlaps: a hit during an active stop max-EXTENDS it (never stacks, never
 ## shortens) up to stack_cap from the stop's start, so fan-out and burst
@@ -44,17 +44,22 @@ extends Node
 ## Hard cap in seconds on a normal stop's total length, measured from its
 ## start; further hits only max-extend up to here. PLACEHOLDER.
 @export var stack_cap: float = 0.12
-## Boss stop: freeze seconds on the killing blow against a boss. Replaces
-## the normal stop for that hit. PLACEHOLDER.
-@export var boss_stop_duration: float = 0.4
+## Boss finisher (#692): the killing blow on a boss runs the whole camera
+## beat in slow motion. Engine.time_scale drops to this at the kill and
+## stays there for the beat, so the death animation plays in slow-mo under
+## the zoom; every mover, the player included, is frozen (input locked)
+## for the same span. Then the time scale eases back to 1.0 over
+## zoom_out_time. 1.0 = no slow-mo. PLACEHOLDER.
+@export var boss_slowmo_scale: float = 0.35
 ## Boss stop camera beat (#687): zoom multiplier at the peak (1.3 = 30%
 ## in), reached in zoom_in_time seconds, the frame then HOLDS on the fallen
 ## boss for boss_focus_hold seconds while the death animation plays zoomed,
 ## and the zoom eases back to neutral over zoom_out_time as the follow
-## returns to the player. PLACEHOLDERs - Mitra's ask is maximum impact.
+## returns to the player. All boss-beat times are REAL seconds (the beat
+## runs in slow-mo, #692). PLACEHOLDERs - Mitra's ask is maximum impact.
 @export var zoom_amount: float = 1.3
 @export var zoom_in_time: float = 0.1
-@export var boss_focus_hold: float = 1.6
+@export var boss_focus_hold: float = 2.4
 @export var zoom_out_time: float = 0.5
 
 ## The follow camera that plays the boss-stop beat. Assigned by main.gd;
@@ -78,23 +83,44 @@ var _stop_length := 0.0
 ## Movers this stop currently claims; each entry is ONE claim on that
 ## mover's own FreezeHold.
 var _claimed: Array[Node] = []
+## #692: a boss finisher is running (slow-mo + full freeze), and the
+## real-time ease of the time scale back to 1.0 after it.
+var _boss_active := false
+var _ramp_left := 0.0
 
 
 func _ready() -> void:
 	OnHit.bus().hit_landed.connect(_on_hit_landed)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# Counted in REAL seconds: the finisher slows Engine.time_scale, which
+	# scales this node's own delta too.
+	var real_delta := delta / maxf(Engine.time_scale, 0.001)
+	if _ramp_left > 0.0:
+		_ramp_left = maxf(_ramp_left - real_delta, 0.0)
+		var t := 1.0 - _ramp_left / maxf(zoom_out_time, 0.001)
+		Engine.time_scale = lerpf(boss_slowmo_scale, 1.0, t)
 	if not _active:
 		return
 
 	# Movers spawned mid-stop (a burst spell's later repetitions, a summoned
 	# shot) join the SAME stop instead of flying while everything else holds.
 	_claim_sweep()
-	_elapsed += _delta
+	_elapsed += real_delta
 	if _elapsed >= _stop_length:
 		_release_all()
 		_active = false
+		if _boss_active:
+			_boss_active = false
+			_ramp_left = zoom_out_time
+			if zoom_out_time <= 0.0:
+				Engine.time_scale = 1.0
+
+
+## The time scale must never outlive this node (scene change, quit).
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
 
 
 ## One claim on every live mover not already claimed by this stop.
@@ -143,7 +169,7 @@ func _on_hit_landed(e: HitEvent) -> void:
 ## Starts a stop, or max-extends the active one (never stacks, never
 ## shortens) up to `cap` seconds from the stop's start.
 func _extend_stop(duration: float, cap: float) -> void:
-	if duration <= 0.0:
+	if duration <= 0.0 or _boss_active:
 		return
 	if not _active:
 		_active = true
@@ -154,13 +180,18 @@ func _extend_stop(duration: float, cap: float) -> void:
 	_stop_length = maxf(_stop_length, minf(_elapsed + duration, cap))
 
 
-## The killing blow on a boss: restarts the window at the boss duration and
-## starts the camera cinematic on the fallen boss's position. Play snaps
-## back when the window ends; the camera hold outlasts the freeze.
+## The killing blow on a boss (#692 finisher): slow-mo on, every mover
+## frozen (the player's input is locked) and the camera beat started on the
+## fallen boss's position. The freeze, the slow-mo and the camera hold all
+## last zoom_in_time + boss_focus_hold real seconds; then play resumes and
+## the time scale eases back to normal while the zoom eases out.
 func _boss_stop(at: Vector2) -> void:
 	_active = true
+	_boss_active = true
 	_elapsed = 0.0
-	_stop_length = boss_stop_duration
+	_ramp_left = 0.0
+	_stop_length = zoom_in_time + boss_focus_hold
+	Engine.time_scale = clampf(boss_slowmo_scale, 0.05, 1.0)
 	_claim_sweep()
 	if camera != null:
 		camera.boss_focus(at, zoom_amount, zoom_in_time, boss_focus_hold, zoom_out_time)

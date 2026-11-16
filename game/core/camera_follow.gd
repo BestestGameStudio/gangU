@@ -46,6 +46,8 @@ func boss_focus(point: Vector2, amount: float, in_time: float, hold_time: float,
 		return
 	_focus_left = in_time + hold_time
 	_focus_tween = create_tween()
+	# #692: the beat runs in slow-mo; its times are real seconds.
+	_focus_tween.set_ignore_time_scale(true)
 	_focus_tween.set_parallel(true)
 	_focus_tween.tween_property(self, ^"zoom", _base_zoom * amount, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_focus_tween.tween_property(self, ^"global_position", point, in_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -55,7 +57,7 @@ func boss_focus(point: Vector2, amount: float, in_time: float, hold_time: float,
 
 func _physics_process(delta: float) -> void:
 	if _focus_left > 0.0:
-		_focus_left = maxf(_focus_left - delta, 0.0)
+		_focus_left = maxf(_focus_left - delta / maxf(Engine.time_scale, 0.001), 0.0)
 		return
 	if target:
 		# Frame-rate independent exponential smoothing toward the target.

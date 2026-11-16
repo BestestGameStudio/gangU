@@ -195,7 +195,9 @@ func _update_sprite(delta: float) -> void:
 	var clock := general_arena._phase_two_attack_time
 	_sprite.position.y = -22.0-general_arena.general_height
 	_sprite.z_index = 100 if general_arena.general_height > 0.0 else -1
-	if is_instance_valid(general_arena.player):
+	# #692: once defeated the general keeps the facing he fell with - the
+	# corpse must not turn or mirror as the player walks past.
+	if is_instance_valid(general_arena.player) and general_arena.hp > 0:
 		# Follow aim during windup, then keep it locked through the strike.
 		# Triple slash retargets each dash in the arena and turns with travel.
 		if clock < 0.0 or attack >= GENERAL_MOVES.size() or not general_arena._phase_two_locked:
