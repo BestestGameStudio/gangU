@@ -89,14 +89,20 @@ func _run() -> void:
 			if s != null:
 				drop_shape = s.shape as CircleShape2D
 		_check(drop_shape != null and fr < drop_shape.radius, "footprint radius leaves the pickup trigger reachable")
-		player.global_position = coin.global_position + Vector2.RIGHT * (fr + pr)
+		# Walk into the footprint with real collision moves (no teleport): the
+		# corpse must stop the player, and the trigger must still be reached.
+		player.global_position = coin.global_position + Vector2.RIGHT * (fr + pr + 24.0)
 		player.force_update_transform()
-		# Area/body sync lags a couple of physics steps; give it a few frames.
-		for i in 10:
+		var dir := (coin.global_position - player.global_position).normalized()
+		var collected := false
+		for i in 40:
+			player.velocity = dir * 200.0
+			player.move_and_slide()
 			await physics_frame
 			if not is_instance_valid(coin):
+				collected = true
 				break
-		_check(not is_instance_valid(coin), "player pressed against the footprint collects the coin")
+		_check(collected, "player walking into the footprint collects the coin")
 		if is_instance_valid(arena.possessed):
 			_check(player.global_position.distance_to(arena.possessed.global_position) >= fr + pr - 0.6, "collection happened without penetrating the footprint")
 	area.queue_free()
