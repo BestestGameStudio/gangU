@@ -206,6 +206,11 @@ func _ready() -> void:
 	# death - spells, cast XP, upgrade tiers/tokens and relics persist across
 	# death; coins, the world and the map still reset with this reload.
 	ProgressionCarry.apply_pending(self)
+	if OS.has_feature("web"):
+		var web_save := WebRunSave.new()
+		web_save.name = "WebRunSave"
+		add_child(web_save)
+		web_save.start.call_deferred(self)
 	# Absent flag: no load, node, callbacks, counter traversal or export.
 	if OS.get_cmdline_user_args().has("--gameperf"):
 		var script: Script = load("res://game/core/game_perf_probe.gd")
