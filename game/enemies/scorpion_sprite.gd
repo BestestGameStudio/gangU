@@ -5,6 +5,9 @@ func _on_health_changed(current: int, max_hp_value: int) -> void:
 	var e := get_parent() as EnemyScorpion
 	if e != null and e._behavior is EnemyBehaviorScorpion:
 		var state := (e._behavior as EnemyBehaviorScorpion).state
+		if e.is_stunned():
+			_last_hp = current
+			return
 		if state not in [EnemyBehaviorScorpion.State.CHASE,EnemyBehaviorScorpion.State.BURIED]:
 			_last_hp = current
 			return

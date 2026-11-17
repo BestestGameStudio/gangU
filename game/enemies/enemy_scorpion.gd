@@ -24,6 +24,9 @@ func _ready() -> void:
 	sprite.animation_changed.connect(_sync_tip_shape)
 	set_buried(true)
 
+func stun_halo_position() -> Vector2:
+	return Vector2(0,-16)
+
 func is_combat_targetable() -> bool:
 	return not buried and hp > 0
 
@@ -53,8 +56,12 @@ func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	var result := DamageCalc.compute(float(amount),null,damage_modifiers,damage_rng)
 	super.apply_damage(result.amount,crit_tier)
 
-func apply_calculated_damage(amount: int, crit_tier: int = 0) -> void:
-	if not buried: super.apply_damage(amount,crit_tier)
+func apply_calculated_damage(amount: int, crit_tier: int = 0, hit: HitContext = null) -> void:
+	if buried or hp <= 0: return
+	var tip_hit := hit != null and hit.shape != HitContext.Shape.AREA and stinger_exposed() and hit.overlaps_circle(stinger_tip(),weakspot_radius)
+	super.apply_damage(amount,crit_tier)
+	if tip_hit and hp > 0 and _behavior is EnemyBehaviorScorpion:
+		(_behavior as EnemyBehaviorScorpion).extend_stinger_stun()
 
 func set_frozen(frozen: bool) -> void:
 	super.set_frozen(frozen)
@@ -137,11 +144,25 @@ func _sync_tip_shape() -> void:
 	_tip_shape.set_deferred("disabled",not stinger_exposed())
 	if not buried: _tip_shape.position = to_local(stinger_tip())
 
+func _hold_grounded_stinger() -> void:
+	if not is_stunned() or sprite == null: return
+	if sprite.current_action() != &"attack" or sprite.frame != 2:
+		play_action(&"attack",true)
+		sprite.set_frame_and_progress(2,0.0)
+	sprite.pause()
+
+func stun(seconds: float) -> void:
+	super.stun(seconds)
+	_hold_grounded_stinger()
+	_sync_tip_shape()
+
 func _physics_process(delta: float) -> void:
+	_hold_grounded_stinger()
 	super._physics_process(delta)
 	_sync_tip_shape()
 
 func _process(delta: float) -> void:
+	_hold_grounded_stinger()
 	super._process(delta)
 	_sync_tip_shape()
 	if freeze.is_frozen(): return

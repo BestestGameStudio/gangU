@@ -257,10 +257,11 @@ func _deal(body: Node, amount: float, mods: DamageModifiers, hit_radius: float, 
 		rng = source.get(&"damage_rng") as RandomNumberGenerator
 	if rng == null:
 		rng = RandomNumberGenerator.new()
-	var result := DamageCalc.compute(amount, mods, HitContext.receiver_modifiers(body, HitContext.area(target, hit_radius, kind)), rng)
+	var context := HitContext.area(target,hit_radius,kind)
+	var result := DamageCalc.compute(amount, mods, HitContext.receiver_modifiers(body, context), rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
-		(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier)
+		(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier, context)
 	else:
 		body.call(&"apply_damage", result.amount)
 	OnHit.end(receipt, body)
