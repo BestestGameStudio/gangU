@@ -3,8 +3,9 @@ extends Node2D
 ## #370 Stone Hammer: one overhead swing. The hammer rises over the caster's
 ## head and crashes down on `target` after spell.hammer_windup seconds, then
 ## deals the spell's damage once to every living enemy within the strike
-## radius. Code-drawn (no sprite art yet): a stone head on a wooden handle,
-## a landing marker during the wind-up and a dust ring + cracks on impact.
+## radius. Sprite art (assets/sprites/stone_hammer.png) for the stone head, wooden
+## handle and impact cracks; the landing marker and dust ring stay vector so
+## the strike radius reads exactly as before.
 ##
 ## Upgrades read off the spell (see spell.gd, #370 block) and the caster's
 ## StoneHammerState:
@@ -31,6 +32,10 @@ const STONE := Color(0.58, 0.55, 0.5)
 const STONE_DARK := Color(0.27, 0.25, 0.23)
 const HANDLE := Color(0.5, 0.33, 0.18)
 const DUST := Color(0.72, 0.62, 0.45)
+const ART := preload("res://assets/sprites/stone_hammer.png")
+const HEAD_SRC := Rect2(0, 0, 15, 9)
+const HANDLE_SRC := Rect2(16, 0, 2, 4)
+const CRACK_SRC := Rect2(24, 0, 32, 32)
 
 var spell: Spell
 var source: Node2D
@@ -78,6 +83,7 @@ static func spawn(parent: Node, p_spell: Spell, p_source: Node2D, p_caster: Spel
 
 func _ready() -> void:
 	add_to_group(&"stone_hammers")
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	z_index = 2
 	radius = spell.hammer_radius * size_scale
 	if spell.hammer_jump and source is Player:
@@ -327,13 +333,13 @@ func _draw() -> void:
 func _draw_hammer(hand: Vector2, head: Vector2) -> void:
 	var axis := head - hand
 	var ang := axis.angle() if axis.length() > 0.5 else -PI * 0.5
-	draw_line(hand, head, HANDLE, 4.0 * sqrt(size_scale))
+	# Handle: the strip is stretched along the swing, same width as the old line.
+	var w := 4.0 * sqrt(size_scale)
+	draw_set_transform(hand, ang, Vector2.ONE)
+	draw_texture_rect_region(ART, Rect2(0.0, -w * 0.5, axis.length(), w), HANDLE_SRC)
 	var sz := HEAD_SIZE * size_scale
 	draw_set_transform(head, ang + PI * 0.5, Vector2.ONE)
-	var rect := Rect2(-sz * 0.5, sz)
-	draw_rect(rect, STONE, true)
-	draw_rect(Rect2(rect.position, Vector2(sz.x, sz.y * 0.3)), STONE.lightened(0.25), true)
-	draw_rect(rect, STONE_DARK, false, 2.0)
+	draw_texture_rect_region(ART, Rect2(-sz * 0.5, sz), HEAD_SRC)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_impact() -> void:
@@ -341,14 +347,11 @@ func _draw_impact() -> void:
 	var a := 1.0 - k
 	draw_circle(Vector2.ZERO, radius * (0.7 + 0.5 * k), Color(DUST.r, DUST.g, DUST.b, 0.35 * a))
 	draw_arc(Vector2.ZERO, radius * (0.8 + 0.6 * k), 0.0, TAU, 40, Color(0.95, 0.85, 0.65, a), 3.0)
-	for i in 7:
-		var ang := TAU * float(i) / 7.0 + 0.4
-		var d := Vector2(cos(ang), sin(ang))
-		draw_line(d * radius * 0.15, d * radius * (0.6 + 0.2 * sin(i * 1.7)), Color(0.2, 0.17, 0.14, a), 2.0)
+	var cs := radius * 1.6
+	draw_texture_rect_region(ART, Rect2(-cs * 0.5, -cs * 0.5, cs, cs), CRACK_SRC, Color(1.0, 1.0, 1.0, a))
 	if spell.hammer_shockwave_radius > 0.0:
 		var r := shockwave_radius() * (0.4 + 0.6 * k)
 		draw_arc(Vector2.ZERO, r, 0.0, TAU, 56, Color(1.0, 0.9, 0.7, 0.8 * a), 4.0 * a + 1.0)
 	# The head rests in the crater while the dust settles.
 	var sz := HEAD_SIZE * size_scale
-	draw_rect(Rect2(-sz * 0.5, sz), Color(STONE.r, STONE.g, STONE.b, a), true)
-	draw_rect(Rect2(-sz * 0.5, sz), Color(STONE_DARK.r, STONE_DARK.g, STONE_DARK.b, a), false, 2.0)
+	draw_texture_rect_region(ART, Rect2(-sz * 0.5, sz), HEAD_SRC, Color(1.0, 1.0, 1.0, a))
