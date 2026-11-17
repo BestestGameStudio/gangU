@@ -9,7 +9,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 DIRECTIONS = ('s', 'se', 'e', 'ne', 'n', 'nw', 'w', 'sw')
-ACTIONS = ('idle', 'walk', 'attack', 'hurt', 'death', 'pincer')
+ACTIONS = ('idle', 'walk', 'attack', 'hurt', 'death', 'pincer', 'emerge', 'bury')
 
 def main():
     source = json.loads((ROOT / 'tools/sprites/specs/scorpion.spriteu.json').read_text())
