@@ -100,7 +100,7 @@ const _GRAVELLY: Dictionary = {
 	&"attack_grunt": preload("res://assets/audio/sfx/mustache_warrior/gravelly/attack_grunt.ogg"),
 	&"attack_exertion": preload("res://assets/audio/sfx/mustache_warrior/gravelly/attack_exertion.ogg"),
 	&"hurt_yelp": preload("res://assets/audio/sfx/mustache_warrior/gravelly/hurt_yelp.ogg"),
-	&"death_groan": preload("res://assets/audio/sfx/mustache_warrior/gravelly/death_groan.ogg"),
+	&"death_groan": preload("res://assets/audio/sfx/mustache_warrior/gravelly/death_groan.wav"),
 }
 const _EXCITABLE: Dictionary = {
 	&"idle_mutter": preload("res://assets/audio/sfx/mustache_warrior/excitable/idle_mutter.ogg"),
@@ -112,7 +112,7 @@ const _EXCITABLE: Dictionary = {
 	&"attack_grunt": preload("res://assets/audio/sfx/mustache_warrior/excitable/attack_grunt.ogg"),
 	&"attack_exertion": preload("res://assets/audio/sfx/mustache_warrior/excitable/attack_exertion.ogg"),
 	&"hurt_yelp": preload("res://assets/audio/sfx/mustache_warrior/excitable/hurt_yelp.ogg"),
-	&"death_groan": preload("res://assets/audio/sfx/mustache_warrior/excitable/death_groan.ogg"),
+	&"death_groan": preload("res://assets/audio/sfx/mustache_warrior/excitable/death_groan.wav"),
 }
 const _STREAMS: Dictionary = {&"gravelly": _GRAVELLY, &"excitable": _EXCITABLE}
 
