@@ -62,7 +62,7 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 		else:
 			summon.velocity = Vector2.ZERO
 			if _contact_timer <= 0.0:
-				var hit := DamageCalc.compute(def.contact_damage, summon.damage_modifiers, target.damage_modifiers, summon.damage_rng)
+				var hit := DamageCalc.compute(def.contact_damage, summon.damage_modifiers, HitContext.receiver_modifiers(target, HitContext.contact(summon.global_position)), summon.damage_rng)
 				var receipt := OnHit.begin(target)
 				target.apply_damage(hit.amount, hit.crit_tier) # #208: tier colors the number
 				OnHit.end(receipt, target)

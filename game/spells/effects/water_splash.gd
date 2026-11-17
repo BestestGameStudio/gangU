@@ -122,14 +122,14 @@ func _land() -> void:
 		if hp == null or int(hp) <= 0:
 			continue
 		if (e as Node2D).global_position.distance_to(target) <= spell.splash_radius:
-			deal_damage(e, spell, source)
+			deal_damage(e, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius))
 			hits += 1
 	# #420: barricades take any player-sourced damage, splash included. Not
 	# counted in `hits` (enemy hits only, as before).
 	if Barricade.is_player_side(OnHit.live(source)):
 		for b in get_tree().get_nodes_in_group(&"barricades"):
 			if is_instance_valid(b) and (b as Node2D).global_position.distance_to(target) <= spell.splash_radius:
-				deal_damage(b, spell, source)
+				deal_damage(b, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius))
 	landed.emit(target, hits)
 	queue_redraw()
 
@@ -156,7 +156,7 @@ func _draw() -> void:
 ## #390: `delivery` labels the shared OnHit report (Water Shield passes contact).
 ## `p_source` is untyped: a splash/rain can land after its caster was freed,
 ## and a freed object passed to a typed Node parameter is a script error.
-static func deal_damage(body: Node, p_spell: Spell, p_source: Variant, delivery: StringName = OnHit.DELIVERY_SPLASH) -> void:
+static func deal_damage(body: Node, p_spell: Spell, p_source: Variant, delivery: StringName = OnHit.DELIVERY_SPLASH, context: HitContext = null) -> void:
 	if body == null or not body.has_method(&"apply_damage"):
 		return
 	var attacker := OnHit.live(p_source)
@@ -169,7 +169,7 @@ static func deal_damage(body: Node, p_spell: Spell, p_source: Variant, delivery:
 		rng = attacker.get(&"damage_rng") as RandomNumberGenerator
 	if rng == null:
 		rng = RandomNumberGenerator.new()
-	var result := DamageCalc.compute(p_spell.damage, mods, body.get(&"damage_modifiers") as DamageModifiers, rng)
+	var result := DamageCalc.compute(p_spell.damage, mods, HitContext.receiver_modifiers(body, context), rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
 		(body as Enemy).apply_damage(result.amount, result.crit_tier)

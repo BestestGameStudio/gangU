@@ -210,7 +210,7 @@ func _land() -> void:
 	for e in hit_list:
 		if _drop_parent == null:
 			_drop_parent = e.get_parent()
-		_deal(e, spell.damage, mods)
+		_deal(e, spell.damage, mods, radius + HIT_PAD)
 		hits += 1
 		if int(e.get(&"hp")) <= 0:
 			kills += 1
@@ -220,13 +220,13 @@ func _land() -> void:
 			if hit_list.has(e):
 				continue
 			if (e as Node2D).global_position.distance_to(target) <= shockwave_radius() + HIT_PAD:
-				_deal(e, spell.hammer_shockwave_damage, mods)
+				_deal(e, spell.hammer_shockwave_damage, mods, shockwave_radius() + HIT_PAD)
 	# #420: barricades take any player-sourced damage. Slam radius only; not
 	# counted as hits/kills, so the Rhythm/dice bookkeeping is unchanged.
 	if Barricade.is_player_side(OnHit.live(source)):
 		for b in get_tree().get_nodes_in_group(&"barricades"):
 			if is_instance_valid(b) and (b as Node2D).global_position.distance_to(target) <= radius + HIT_PAD:
-				_deal(b, spell.damage, mods)
+				_deal(b, spell.damage, mods, radius + HIT_PAD)
 	if caster != null and is_instance_valid(caster):
 		var res: Dictionary = caster.hammer_state.register_strike(spell, hits, kills)
 		if int(res["tone_step"]) > 0:
@@ -249,7 +249,7 @@ func _living_enemies() -> Array[Node]:
 		out.append(e)
 	return out
 
-func _deal(body: Node, amount: float, mods: DamageModifiers) -> void:
+func _deal(body: Node, amount: float, mods: DamageModifiers, hit_radius: float) -> void:
 	if not body.has_method(&"apply_damage"):
 		return
 	var rng: RandomNumberGenerator = null
@@ -257,7 +257,7 @@ func _deal(body: Node, amount: float, mods: DamageModifiers) -> void:
 		rng = source.get(&"damage_rng") as RandomNumberGenerator
 	if rng == null:
 		rng = RandomNumberGenerator.new()
-	var result := DamageCalc.compute(amount, mods, body.get(&"damage_modifiers") as DamageModifiers, rng)
+	var result := DamageCalc.compute(amount, mods, HitContext.receiver_modifiers(body, HitContext.area(target, hit_radius)), rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
 		(body as Enemy).apply_damage(result.amount, result.crit_tier)
