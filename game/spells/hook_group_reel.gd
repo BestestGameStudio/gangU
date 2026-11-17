@@ -13,8 +13,9 @@ static func begin(parent: Node, candidates: Array[Enemy], destination: Node2D, d
  var group := HookGroupReel.new();group.target=destination;group.spell=definition
  var center := Vector2.ZERO
  for enemy in candidates:
-  if not is_instance_valid(enemy) or enemy.hp<=0 or is_instance_valid(enemy.displacement_owner):continue
-  group.enemies.append(enemy);center+=enemy.global_position;enemy.displacement_owner=group
+  if not is_instance_valid(enemy) or enemy.hp<=0:continue
+  if not HookPullStack.attach(enemy,group):continue
+  group.enemies.append(enemy);center+=enemy.global_position
  if group.enemies.is_empty():group.free();return null
  parent.add_child(group);group.global_position=center/group.enemies.size()
  return group
@@ -31,7 +32,7 @@ func _physics_process(delta: float) -> void:
  # leaving it here to error again on every later physics frame (#801).
  for i in range(enemies.size()-1, -1, -1):
   var enemy = enemies[i]
-  if not is_instance_valid(enemy) or enemy.hp<=0 or enemy.displacement_owner!=self:enemies.remove_at(i)
+  if not is_instance_valid(enemy) or enemy.hp<=0 or not HookPullStack.contains(enemy,self):enemies.remove_at(i)
  if enemies.is_empty():queue_free();return
  # One frozen member pauses the whole connected bunch, preserving formation.
  for enemy in enemies:
@@ -55,6 +56,9 @@ func _physics_process(delta: float) -> void:
   if enemy.global_position.distance_to(target.global_position)<=stop_distance+0.01:
    enemy.velocity=Vector2.ZERO
    continue
+  if enemy.displacement_owner is HookPullStack:
+   arrived=false
+   continue
   var to_slot:=slot-enemy.global_position
   var step:=minf((next_speed+to_slot.length()*8.0)*delta,spell.hook_max_reel_speed*delta)
   var before:=enemy.global_position
@@ -68,9 +72,28 @@ func _physics_process(delta: float) -> void:
  if arrived: _arrive()
  queue_redraw()
 
+func pull_velocity(victim: Enemy, delta: float) -> Vector2:
+ for member in enemies:
+  if is_instance_valid(member) and member.freeze.is_frozen(): return Vector2.ZERO
+ var index := enemies.find(victim)
+ if index < 0: return Vector2.ZERO
+ var spacing := minf(12.0,24.0/maxf(enemies.size()-1,1))
+ var slot := global_position+_axis*(index-(enemies.size()-1)*0.5)*spacing
+ var offset := slot-victim.global_position
+ var speed := minf(reel_velocity.length()+offset.length()*8.0,HookReel.speed_for(spell,heaviest_weight()))
+ return offset.normalized()*minf(speed,offset.length()/maxf(delta,0.000001))
+
+func member_arrived(victim: Enemy) -> void:
+ HookPullStack.detach(victim,self)
+ enemies.erase(victim)
+ victim.velocity=Vector2.ZERO
+ if spell.hook_arrival_stun>0.0:victim.stun(spell.hook_arrival_stun)
+ if enemies.is_empty():queue_free()
+
 func _arrive() -> void:
  reel_velocity=Vector2.ZERO
  for enemy in enemies:
+  HookPullStack.detach(enemy,self)
   enemy.velocity=Vector2.ZERO
   if spell.hook_arrival_stun>0.0:enemy.stun(spell.hook_arrival_stun)
  queue_free()
@@ -83,4 +106,4 @@ func _draw() -> void:
 
 func _exit_tree() -> void:
  for enemy in enemies:
-  if is_instance_valid(enemy) and enemy.displacement_owner==self:enemy.displacement_owner=null
+  if is_instance_valid(enemy):HookPullStack.detach(enemy,self)

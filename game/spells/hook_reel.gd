@@ -27,10 +27,10 @@ static func stop_at_contact(from: Vector2, motion: Vector2, destination: Vector2
  return motion * hit if hit >= 0.0 and hit <= 1.0 else motion
 
 static func begin(parent: Node, victim: Enemy, destination: Node2D, definition: Spell) -> HookReel:
- if not is_instance_valid(victim) or victim.hp <= 0 or is_instance_valid(victim.displacement_owner): return null
+ if not is_instance_valid(victim) or victim.hp <= 0: return null
  var reel := HookReel.new()
  reel.enemy = victim; reel.target = destination; reel.spell = definition
- victim.displacement_owner = reel
+ if not HookPullStack.attach(victim, reel): reel.free(); return null
  victim.hook_taunt_target = null; victim.hook_taunt_left = 0.0
  parent.add_child(reel)
  return reel
@@ -38,7 +38,7 @@ static func begin(parent: Node, victim: Enemy, destination: Node2D, definition: 
 func _physics_process(delta: float) -> void:
  if not is_instance_valid(enemy) or enemy.hp <= 0 or not is_instance_valid(target) or not target.is_inside_tree() or (target is Player and target.hp <= 0):
   queue_free(); return
- if enemy.displacement_owner != self: queue_free(); return
+ if not HookPullStack.contains(enemy, self): queue_free(); return
  if enemy.freeze.is_frozen(): return
  age += delta
  if age >= spell.hook_timeout: queue_free(); return
@@ -51,6 +51,8 @@ func _physics_process(delta: float) -> void:
  var next_speed := move_toward(reel_velocity.length(), speed, spell.hook_reel_acceleration * delta)
  reel_velocity = offset.normalized() * next_speed
  var motion := offset.normalized() * minf(next_speed * delta, maxf(offset.length() - stop_distance, 0.0))
+ if enemy.displacement_owner is HookPullStack:
+  queue_redraw(); return
  var before := enemy.global_position
  enemy.move_and_collide(motion)
  if enemy.terrain != null:
@@ -60,7 +62,14 @@ func _physics_process(delta: float) -> void:
   _arrive(); return
  queue_redraw()
 
+func pull_velocity(_victim: Enemy, _delta: float) -> Vector2:
+ return reel_velocity
+
+func member_arrived(_victim: Enemy) -> void:
+ _arrive()
+
 func _arrive() -> void:
+ HookPullStack.detach(enemy, self)
  arrived = true
  reel_velocity = Vector2.ZERO
  enemy.velocity = Vector2.ZERO
@@ -75,5 +84,4 @@ func _draw() -> void:
   draw_texture_rect(ROPE_ART, Rect2(0,-2,start.distance_to(end),4), true)
 
 func _exit_tree() -> void:
- if is_instance_valid(enemy) and enemy.displacement_owner == self:
-  enemy.displacement_owner = null
+ if is_instance_valid(enemy): HookPullStack.detach(enemy, self)
