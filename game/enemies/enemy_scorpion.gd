@@ -192,4 +192,4 @@ func charge_warning() -> Dictionary:
 	var reach := charge_travel(b._aim,b.dash_distance)
 	return {"origin":global_position-b._aim*24.0,"direction":b._aim,
 		"length":reach+48.0,"width":48.0,
-		"progress":clampf(b._time/b.sting_windup_duration(),0.0,1.0)}
+		"progress":clampf(b._time/b.charge_windup_duration(),0.0,1.0)}
