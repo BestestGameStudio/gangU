@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 [ext_resource type="PackedScene" path="res://game/enemies/enemy_base.tscn" id="1"]
 [ext_resource type="Script" path="res://game/enemies/enemy_scorpion.gd" id="2"]
 [ext_resource type="Resource" path="res://data/enemies/scorpion.tres" id="3"]
 [ext_resource type="SpriteFrames" path="res://data/sprites/scorpion_frames.tres" id="4"]
 [ext_resource type="Script" path="res://game/enemies/scorpion_sprite.gd" id="5"]
+[ext_resource type="Script" path="res://game/enemies/scorpion_charge_telegraph.gd" id="6"]
 [sub_resource type="CircleShape2D" id="body"]
 radius = 13.0
 [sub_resource type="CircleShape2D" id="tip"]
@@ -28,3 +29,6 @@ disabled = true
 [node name="StingerShape" type="CollisionShape2D" parent="." index="3"]
 shape = SubResource("tip")
 disabled = true
+
+[node name="ChargeTelegraph" type="Node2D" parent="." index="4"]
+script = ExtResource("6")

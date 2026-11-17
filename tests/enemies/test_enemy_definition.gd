@@ -274,8 +274,11 @@ func _test_scorpion() -> void:
 	_check(b.state == b.State.EMERGE and not e.buried,"rush reaches sting range and emerges")
 	b.physics_step(e,p,0.30)
 	_check(b.state == b.State.STING_WINDUP,"300ms emerge -> sting tell")
-	b.physics_step(e,p,0.36)
-	_check(b.state == b.State.STING_DASH,"360ms locked tell -> dash")
+	b.physics_step(e,p,0.17)
+	_check(b.state == b.State.STING_WINDUP,"initial tell remains before fast deadline")
+	b.physics_step(e,p,0.01)
+	_check(b.state == b.State.STING_DASH,"initial fast locked tell -> dash")
+	_check(b.sting_windup_duration() == b.STING_WINDUP,"later stings retain normal windup")
 	p.position = Vector2(0,500)
 	for i in 21: b.physics_step(e,p,1.0/60.0)
 	_check(b.state == b.State.MISS_STUN,"miss -> stun")
@@ -454,6 +457,20 @@ func _test_scorpion() -> void:
 	e.stun_left = 0.0
 	e._hold_grounded_stinger()
 	_check(e.sprite.frame == 0,"stun: generic hold releases original pose after expiry")
+	# Telegraph is state-owned and predicts the grounded-tip sweep, not
+	# the raised windup pose. Geometry remains aligned in every octant.
+	b._enter(e,b.State.EMERGE)
+	_check(e.charge_warning().is_empty(),"scorpion: emerge alone has no dash warning")
+	for direction in [Vector2.RIGHT,Vector2(1,1).normalized(),Vector2.DOWN,Vector2(-1,1).normalized(),Vector2.LEFT,Vector2(-1,-1).normalized(),Vector2.UP,Vector2(1,-1).normalized()]:
+		e.face_player(direction)
+		b._aim = direction
+		b._enter(e,b.State.STING_WINDUP)
+		var warning := e.charge_warning()
+		_check(warning.direction == direction and warning.length == b.dash_distance+48.0 and warning.width == 48.0,"scorpion: warning uses actual dash sweep dimensions")
+		e.sprite.set_frame_and_progress(2,0.0)
+		_check(warning.origin.is_equal_approx(e.stinger_tip()-direction*24.0),"scorpion: warning predicts future grounded tip")
+		b._enter(e,b.State.MISS_STUN)
+		_check(e.charge_warning().is_empty(),"scorpion: warning clears outside windup")
 	# Player i-frames refuse the sting and lead to miss, not success.
 	p.position = e.position+Vector2(100,0)
 	p.set_invulnerable(true)
