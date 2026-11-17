@@ -207,15 +207,19 @@ def draw_boulder(cv, rng, x, y, r):
     cv.own(m, False)
 
 def draw_tufts(cv, rng, x, y):
+    # #838: upright blades (mid foot, lit tip), never a flat dark bar: the old
+    # 3 px dark base row read as a random shadow streak on grass.
     for _ in range(int(3 + rng.random() * 4)):
-        tx, ty = x + (rng.random() - 0.5) * 20, y - rng.random() * 8
-        tip = GRASS[5] if rng.random() < 0.5 else GRASS[4]
-        cv.px(tx, ty, GRASS[1]); cv.px(tx - 1, ty, GRASS[1]); cv.px(tx + 1, ty, GRASS[1])
-        cv.px(tx - 1, ty - 1, GRASS[3]); cv.px(tx + 1, ty - 2, tip); cv.px(tx, ty - 1, GRASS[4])
+        tx, ty = int(round(x + (rng.random() - 0.5) * 20)), int(round(y - rng.random() * 8))
+        blades = [(-1, 2), (0, 3), (1, 2)]
         if rng.random() < 0.5:
-            cv.px(tx - 2, ty - 2, tip)
-        if rng.random() < 0.4:
-            cv.px(tx + 2, ty - 1, GRASS[3]); cv.px(tx + 2, ty - 3, tip)
+            blades.append((2, 2))
+        for dx, h in blades:
+            if dx != 0 and rng.random() < 0.25:
+                continue
+            tip = GRASS[5] if (dx + int(rng.random() * 2)) % 2 == 0 else GRASS[4]
+            for k in range(h):
+                cv.px(tx + dx, ty - k, tip if k == h - 1 else GRASS[3] if k else GRASS[2])
 
 def draw_flowers(cv, rng, x, y):
     c = FLOWERS[rng.integers(0, 4)]                                 # one species per cluster
@@ -260,7 +264,14 @@ def main():
     for row, kind in enumerate(KINDS):
         for v in range(VARIANTS):
             rng = np.random.default_rng(1000 + row * 31 + v)
+            before = cv.shadow.copy()
             paint(cv, row, kind, v, rng, v * CELL_W + FOOT[0], row * CELL_H + FOOT[1])
+            # #838: a ground shadow must stay inside its own cell. A tree shadow
+            # ran past its cell bottom into the top rows of the pine cell below
+            # and drew a stray dark bar above every larger pine.
+            keep = np.zeros((H, W), bool)
+            keep[row * CELL_H:(row + 1) * CELL_H, v * CELL_W:(v + 1) * CELL_W] = True
+            cv.shadow[~keep] = before[~keep]
     painted = np.any(cv.c != SENTINEL, axis=-1)
     solid = painted & ~cv.over
     base = np.zeros((H, W, 4), np.float32)
