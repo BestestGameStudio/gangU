@@ -269,7 +269,7 @@ func _test_scorpion() -> void:
 	_check(e.hp == 500 and not HitContext.targetable(e),"hidden refuses damage and targeting")
 	b.physics_step(e,p,0.01)
 	_check(b.state == b.State.BURROW_RUSH,"nearby player triggers rush")
-	p.position = Vector2(100,0)
+	p.position = Vector2(180,0)
 	b.physics_step(e,p,0.01)
 	_check(b.state == b.State.EMERGE and not e.buried,"rush reaches sting range and emerges")
 	b.physics_step(e,p,0.30)
@@ -434,7 +434,7 @@ func _test_scorpion() -> void:
 	_check_scorpion_pose(e,&"bury_w",[[60,60],[60,58],[60,64],[60,75],[60,86],[-1,-1]])
 	_check_scorpion_pose(e,&"bury_sw",[[70,59],[68,58],[70,63],[72,73],[72,84],[-1,-1]])
 	e.face_player(Vector2.RIGHT)
-	# Grounded body vulnerability replaces tip targeting; no extension bonus.
+	# Grounded body vulnerability and accepted-player miss-only extension.
 	b._enter(e,b.State.MISS_STUN)
 	_check(e.is_stunned() and e.stinger_grounded(),"stun: grounded miss status")
 	var halo := e.get_node("StunHalo") as EnemyStunHalo
@@ -448,11 +448,51 @@ func _test_scorpion() -> void:
 	_check(e.hp == hp_grounded-10,"armor: raw body damage also loses shell while grounded")
 	e.apply_calculated_damage(1,0,body_hit)
 	e.apply_calculated_damage(1,0,body_hit)
-	_check(b._miss_duration == 1.0 and b._time == 0.4,"stun: repeated body hits cannot extend flat1s miss")
+	_check(b._miss_duration == 1.0 and b._time == 0.4,"stun: unattributed raw/calculated calls cannot extend miss")
 	b.physics_step(e,p,0.59)
 	_check(e.is_stunned(),"stun: miss remains before1s")
 	b.physics_step(e,p,0.02)
-	_check(not e.is_stunned(),"stun: miss ends after1s despite hits")
+	_check(not e.is_stunned(),"stun: miss ends after1s without accepted player event")
+	# Actual shared splash/body delivery authenticates attacker and acceptance.
+	b._enter(e,b.State.MISS_STUN)
+	b.physics_step(e,p,0.4)
+	var small_spell := Spell.new()
+	small_spell.damage = 1.0
+	var enemy_attacker := Node2D.new()
+	area.add_child(enemy_attacker)
+	WaterSplash.deal_damage(e,small_spell,enemy_attacker,OnHit.DELIVERY_SPLASH,HitContext.area(e.position,40))
+	_check(b._miss_duration == 1.0,"stun: non-player accepted AoE cannot extend")
+	WaterSplash.deal_damage(e,small_spell,p,OnHit.DELIVERY_SPLASH,HitContext.area(e.position,40))
+	_check(b._miss_duration == 3.0 and b._time == 0.4,"stun: first accepted player AoE adds2s without resetting elapsed")
+	WaterSplash.deal_damage(e,small_spell,p,OnHit.DELIVERY_SPLASH,HitContext.area(e.position,40))
+	_check(b._miss_duration == 3.0,"stun: repeated player AoE does not stack")
+	e.set_frozen(true)
+	e._physics_process(1.0)
+	_check(b._time == 0.4,"stun: freeze holds extended deadline clock")
+	e.set_frozen(false)
+	b.physics_step(e,p,2.59)
+	_check(e.is_stunned(),"stun: extended episode persists until3s")
+	b.physics_step(e,p,0.02)
+	_check(not e.is_stunned(),"stun: extended episode ends after3s")
+	b._enter(e,b.State.MISS_STUN)
+	var direct_shot: Projectile = load("res://game/spells/projectile.tscn").instantiate()
+	direct_shot.setup(small_spell,Vector2.RIGHT,p)
+	area.add_child(direct_shot)
+	direct_shot.set_physics_process(false)
+	direct_shot._resolve_body_hit(e,HitContext.projectile(e.position,e.position,1))
+	_check(b._miss_duration == 3.0,"stun: new miss re-arms for actual player BODY projectile")
+	b._enter(e,b.State.MISS_STUN)
+	var zero_spell := small_spell.duplicate() as Spell
+	zero_spell.damage = 0.0
+	WaterSplash.deal_damage(e,zero_spell,p,OnHit.DELIVERY_SPLASH,HitContext.area(e.position,40))
+	_check(b._miss_duration == 3.0,"stun: accepted zero player roll still qualifies under OnHit")
+	b._enter(e,b.State.CHASE)
+	e.stun(0.4)
+	var generic_before := e.stun_left
+	WaterSplash.deal_damage(e,small_spell,p,OnHit.DELIVERY_SPLASH,HitContext.area(e.position,40))
+	_check(e.stun_left == generic_before,"stun: generic stun never gains missed-sting bonus")
+	e.stun_left = 0.0
+	e._hold_grounded_stinger()
 	halo._process(0.0)
 	_check(not halo.visible and not halo.is_playing(),"stun: halo stops on expiry")
 	b._enter(e,b.State.RECOVER)
@@ -504,6 +544,7 @@ func _test_scorpion() -> void:
 	shape.shape = box
 	wall.add_child(shape)
 	area.add_child(wall)
+	b._aim = Vector2.RIGHT
 	b._enter(e,b.State.CHARGE_WINDUP)
 	await physics_frame
 	await physics_frame
@@ -519,6 +560,7 @@ func _test_scorpion() -> void:
 	area.add_child(map)
 	map.set_cell(Vector2i(2,0),TerrainTypes.MOUNTAIN)
 	e.terrain = map
+	b._aim = Vector2.RIGHT
 	b._enter(e,b.State.CHARGE_WINDUP)
 	var terrain_length: float = e.charge_warning().length-48.0
 	b._enter(e,b.State.CHARGE)
@@ -601,7 +643,7 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,0.36)
 	_check(b.state == b.State.STING_HOP and not e.stinger_grounded(),"hop: windup enters raised-tail hop, not early strike")
 	b.physics_step(e,p,0.05)
-	_check(e.position.is_equal_approx(Vector2(16,0)) and e.sprite.position.y < -31.9,"hop: half-time quick16px ground travel and12px visual arc")
+	_check(e.position.is_equal_approx(Vector2(18,0)) and e.sprite.position.y < -31.9,"hop: half-time stops short18px ground travel and12px visual arc")
 	e.set_frozen(true)
 	var hop_clock := b._time
 	e._physics_process(0.2)
@@ -615,7 +657,7 @@ func _test_scorpion() -> void:
 	b._enter(e,b.State.STING_WINDUP)
 	b.physics_step(e,p,0.36)
 	b.physics_step(e,p,0.1)
-	_check(e.position.is_equal_approx(Vector2(32,0)),"hop: retreating target caps total ground travel32")
+	_check(e.position.is_equal_approx(Vector2(60,0)),"hop: retreating target caps total ground travel60")
 	# Constraints clip the hop too; no wall slide or forbidden movement.
 	e.position = Vector2.ZERO
 	e.movement_constraint = func(point: Vector2) -> Vector2: return Vector2(minf(point.x,8.0),point.y)
@@ -634,11 +676,32 @@ func _test_scorpion() -> void:
 	reel.set_physics_process(false)
 	held_before = e.position
 	e._physics_process(1.0/60.0)
-	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(320,0)),"hop reel: samples ground drive without moving")
-	expected_velocity = Enemy.force_step(Vector2(320,0),e.reel_force_velocity,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(600,0)),"hop reel: samples ground drive without moving")
+	expected_velocity = Enemy.force_step(Vector2(600,0),e.reel_force_velocity,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
 	reel._physics_process(1.0/60.0)
 	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0),"hop reel: real HookReel performs sole integrated move")
 	reel.free()
+	# New trigger boundary is shared by chase, opening and launch recheck.
+	for separation in [110.0,110.1]:
+		e.position = Vector2.ZERO
+		p.position = Vector2(separation,0)
+		b._sting_cd = 0.0
+		b._charge_cd = 0.0
+		b._enter(e,b.State.CHASE)
+		b.physics_step(e,p,0.01)
+		_check(b.state == (b.State.STING_WINDUP if separation == 110.0 else b.State.CHARGE_WINDUP),"sting: chase uses exact110 boundary")
+		b._enter(e,b.State.BURIED)
+		b.physics_step(e,p,0.01)
+		b.physics_step(e,p,0.01)
+		b.physics_step(e,p,0.30)
+		_check(b.state == (b.State.STING_WINDUP if separation == 110.0 else b.State.CHARGE_WINDUP),"sting: opening uses exact110 boundary")
+	b._enter(e,b.State.CHARGE_WINDUP)
+	p.position = Vector2(110,0)
+	b.physics_step(e,p,0.36)
+	_check(b.state == b.State.STING_WINDUP,"sting: charge rechecks expanded110 radius at launch")
+	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.1)
+	_check(e.position.is_equal_approx(Vector2(58,0)) and b.state == b.State.STING_STRIKE,"hop:110 target closes58 to52 spacing, no overshoot")
 	area.free()
 
 func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array) -> void:

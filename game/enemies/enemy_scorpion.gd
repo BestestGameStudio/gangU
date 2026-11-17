@@ -19,6 +19,12 @@ func _ready() -> void:
 	damage_modifiers.add(_shell)
 	_body_shape = get_node("CollisionShape2D")
 	set_buried(true)
+	OnHit.bus().hit_landed.connect(_on_player_hit)
+
+func _on_player_hit(event: HitEvent) -> void:
+	if event.target != self or not event.attacker is Player or buried or hp <= 0: return
+	if _behavior is EnemyBehaviorScorpion:
+		(_behavior as EnemyBehaviorScorpion).extend_miss_stun()
 
 func stun_halo_position() -> Vector2:
 	# Per-pose opaque top preserves a10px gap over the actual larger model.
