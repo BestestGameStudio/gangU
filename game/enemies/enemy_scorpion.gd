@@ -60,9 +60,8 @@ func apply_damage(amount: int, crit_tier: int = 0) -> void:
 func apply_calculated_damage(amount: int, crit_tier: int = 0, hit: HitContext = null) -> void:
 	if buried or hp <= 0: return
 	var tip_hit := hit != null and hit.shape != HitContext.Shape.AREA and stinger_exposed() and hit.overlaps_circle(stinger_tip(),weakspot_radius)
-	var before := hp
 	super.apply_damage(amount,crit_tier)
-	if tip_hit and hp < before and hp > 0 and _behavior is EnemyBehaviorScorpion:
+	if tip_hit and hp > 0 and _behavior is EnemyBehaviorScorpion:
 		(_behavior as EnemyBehaviorScorpion).extend_stinger_stun()
 
 func set_frozen(frozen: bool) -> void:
