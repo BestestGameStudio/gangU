@@ -318,7 +318,7 @@ var reel_force_velocity := Vector2.ZERO
 var _sampling_reel_propulsion := false
 
 static func force_step(propulsion: Vector2, pull_velocity: Vector2, force: Vector2, mass: float, delta: float, cap: float) -> Vector2:
-	return (propulsion + (pull_velocity + force / maxf(mass,0.1) * delta).limit_length(cap)).limit_length(cap)
+	return (propulsion + (pull_velocity + force / maxf(mass,0.1) * delta).limit_length(cap)).limit_length(2400.0)
 
 func resolve_reel_force(force: Vector2, delta: float, cap: float) -> Vector2:
 	var combined := force_step(reel_propulsion,reel_force_velocity,force,weight,delta,cap)

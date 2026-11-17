@@ -895,7 +895,7 @@ func _phase_two_execute(attack: int, t: float, _delta: float) -> void:
 			if beat >= 0.22 and beat < 0.46:
 				var destination := _phase_two_bash_start.move_toward(_phase_two_aim,81.6*clampf((beat-0.22)/0.24,0.0,1.0))
 				_phase_two_boss_position = _constrain_boss_position(destination)
-				if not _phase_two_dash_hit and _phase_two_boss_position.distance_to(target_offset) < DASH_HIT_RADIUS:
+				if not _phase_two_dash_hit and possessed.position.distance_to(target_offset) < DASH_HIT_RADIUS:
 					player.apply_damage(attack_damage)
 					_phase_two_dash_hit = true
 		2: # Visible broad slash uses the SAME sector as its warning.
@@ -916,7 +916,7 @@ func _phase_two_execute(attack: int, t: float, _delta: float) -> void:
 			var dash_progress := clampf(t/0.42,0.0,1.0)
 			var eased_progress := 1.0-pow(1.0-dash_progress,3.0)
 			_phase_two_boss_position = _constrain_boss_position(_phase_two_bash_start+_phase_two_bash_direction*175.0*eased_progress)
-			if t <= 0.42 and not _phase_two_bash_hit and _phase_two_boss_position.distance_to(target_offset) < BASH_HIT_RADIUS:
+			if t <= 0.42 and not _phase_two_bash_hit and possessed.position.distance_to(target_offset) < BASH_HIT_RADIUS:
 				_phase_two_bash_hit = true
 				_show_phase_two_impact(target_offset,68.0,0.32)
 				player.apply_damage(attack_damage)

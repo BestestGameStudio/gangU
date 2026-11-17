@@ -65,7 +65,7 @@ func _physics_process(delta: float) -> void:
   # No inherited sideways velocity and no overshoot of the current bunch slot.
   var enemy_motion:=to_slot.normalized()*minf(step,to_slot.length())
   if not enemy.reel_propulsion.is_zero_approx():
-   enemy_motion=enemy.resolve_reel_force(pull_force(enemy),delta,spell.hook_max_reel_speed)*delta
+   enemy_motion=enemy.resolve_reel_force(pull_force(enemy),delta,pull_speed_limit(enemy))*delta
   enemy_motion=HookReel.stop_at_contact(enemy.global_position,enemy_motion,target.global_position,stop_distance)
   enemy.move_and_collide(enemy_motion)
   if enemy.terrain!=null:enemy.global_position=TerrainMotion.clamp_displacement(enemy.terrain,before,enemy.global_position,enemy.can_swim)
@@ -74,8 +74,14 @@ func _physics_process(delta: float) -> void:
  if arrived: _arrive()
  queue_redraw()
 
+func pull_speed_limit(_victim: Enemy) -> float:
+ return HookReel.speed_for(spell,heaviest_weight())
+
 func pull_force(victim: Enemy) -> Vector2:
- return victim.global_position.direction_to(target.global_position)*spell.hook_reel_acceleration*spell.displacement_force
+ for member in enemies:
+  if is_instance_valid(member) and member.freeze.is_frozen(): return Vector2.ZERO
+ # All members inherit the group's heaviest effective mass.
+ return victim.global_position.direction_to(target.global_position)*spell.hook_reel_acceleration*spell.displacement_force*maxf(victim.weight,0.1)/heaviest_weight()
 
 func pull_velocity(victim: Enemy, delta: float) -> Vector2:
  for member in enemies:

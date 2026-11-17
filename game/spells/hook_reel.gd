@@ -54,7 +54,7 @@ func _physics_process(delta: float) -> void:
  if enemy.displacement_owner is HookPullStack:
   queue_redraw(); return
  if not enemy.reel_propulsion.is_zero_approx():
-  motion = enemy.resolve_reel_force(pull_force(enemy),delta,spell.hook_max_reel_speed)*delta
+  motion = enemy.resolve_reel_force(pull_force(enemy),delta,pull_speed_limit(enemy))*delta
   motion = stop_at_contact(enemy.global_position,motion,target.global_position,stop_distance)
  var before := enemy.global_position
  enemy.move_and_collide(motion)
@@ -64,6 +64,9 @@ func _physics_process(delta: float) -> void:
  if enemy.global_position.distance_to(target.global_position) <= stop_distance + 0.01:
   _arrive(); return
  queue_redraw()
+
+func pull_speed_limit(victim: Enemy) -> float:
+ return speed_for(spell,victim.weight)
 
 func pull_force(victim: Enemy) -> Vector2:
  return victim.global_position.direction_to(target.global_position)*spell.hook_reel_acceleration*spell.displacement_force
