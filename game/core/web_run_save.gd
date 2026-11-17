@@ -9,6 +9,8 @@ const MAX_BYTES := 4000000
 var main: Node
 var status := ""
 var _timer := 0.0
+var _label_left := 0.0 ## #827: seconds the info label stays visible (0 = until replaced)
+const RESTORED_SECONDS := 4.0
 var _restoring := false
 var _callback: JavaScriptObject
 var _label: Label
@@ -36,7 +38,7 @@ func start(host: Node) -> void:
    _restoring=true
    restore(state)
    _restoring=false
-   _set_status("Local progression restored")
+   _set_status("Local progression restored",RESTORED_SECONDS)
  _callback=JavaScriptBridge.create_callback(_on_browser_event)
  var window:=JavaScriptBridge.get_interface("window")
  window.ganguRunSave=_callback
@@ -58,6 +60,9 @@ func start(host: Node) -> void:
 
 func _process(delta:float) -> void:
  if not enabled:return
+ if _label_left>0.0:
+  _label_left-=delta
+  if _label_left<=0.0 and _label!=null:_label.text=""
  _timer+=delta
  if _timer>=1.0:
   _timer=0.0;save_now()
@@ -65,8 +70,9 @@ func _process(delta:float) -> void:
 func _on_browser_event(_args:Array) -> void:
  save_now()
 
-func _set_status(text:String) -> void:
+func _set_status(text:String,seconds:float=0.0) -> void:
  status=text
+ _label_left=seconds
  if _label!=null:_label.text=text
 
 func save_now() -> bool:
