@@ -37,6 +37,7 @@ static func spawn(p_owner: Node2D, p_face: int, p_entry: RewardEntry, p_drop_par
 	return d
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_to_group(&"hammer_dice")
 	z_index = 5
 	_shown = randi_range(1, 6)
@@ -78,14 +79,8 @@ func _settle() -> void:
 	drop.global_position = at + Vector2(randf_range(-24.0, 24.0), 18.0)
 	parent.call_deferred(&"add_child", drop)
 
-const PIPS := {
-	1: [Vector2(0, 0)],
-	2: [Vector2(-1, -1), Vector2(1, 1)],
-	3: [Vector2(-1, -1), Vector2(0, 0), Vector2(1, 1)],
-	4: [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)],
-	5: [Vector2(-1, -1), Vector2(1, -1), Vector2(0, 0), Vector2(-1, 1), Vector2(1, 1)],
-	6: [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(1, 1)],
-}
+const ART := preload("res://assets/sprites/hammer_dice.png")
+const FACE_PX := 13.0 ## art px per face; drawn at 2x = SIZE + 4 world px
 
 func _draw() -> void:
 	var fade := 1.0
@@ -95,12 +90,10 @@ func _draw() -> void:
 	var pop := 1.0 + (0.25 * maxf(1.0 - (_t - ROLL_TIME) / 0.2, 0.0) if _settled else 0.0)
 	draw_set_transform(Vector2.ZERO, tumble, Vector2.ONE * pop)
 	var half := SIZE * 0.5
-	var rect := Rect2(-half, -half, SIZE, SIZE)
-	draw_rect(rect.grow(2.0), Color(0.1, 0.08, 0.06, fade), true)
-	draw_rect(rect, Color(0.97, 0.95, 0.9, fade), true)
-	var pip := Color(0.15, 0.12, 0.1, fade) if _shown != 6 or not _settled else Color(0.8, 0.15, 0.1, fade)
-	for p: Vector2 in PIPS[_shown]:
-		draw_circle(p * SIZE * 0.27, 2.4, pip)
+	# Faces 1-6, then a red 6 (the settled high roll).
+	var face := 6 if (_shown == 6 and _settled) else _shown - 1
+	var out := half + 2.0
+	draw_texture_rect_region(ART, Rect2(-out, -out, out * 2.0, out * 2.0), Rect2(face * FACE_PX, 0.0, FACE_PX, FACE_PX), Color(1.0, 1.0, 1.0, fade))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _settled and entry != null and entry.kind == RewardEntry.Kind.CURRENCY:
 		var font := ThemeDB.fallback_font
