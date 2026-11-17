@@ -415,6 +415,9 @@ func _test_scorpion() -> void:
 	# direct tip application extends this stun, preserving elapsed time.
 	b._enter(e,b.State.MISS_STUN)
 	_check(e.is_stunned(),"stun: behavior opts into generic status")
+	var halo := e.get_node("StunHalo") as EnemyStunHalo
+	halo._process(0.0)
+	_check(halo.visible and halo.is_playing() and halo.position == Vector2(0,-16),"stun: behavior shows looping halo at scorpion anchor")
 	b.physics_step(e,p,0.4)
 	var before_hit := b._time
 	var tip_hit := HitContext.projectile(e.stinger_tip(),e.stinger_tip(),1.0)
@@ -424,6 +427,8 @@ func _test_scorpion() -> void:
 	_check(b._miss_duration == 1.0,"stun: AoE full damage does not trigger direct-tip bonus")
 	e.apply_calculated_damage(1,0,HitContext.projectile(e.position-Vector2(200,0),e.position-Vector2(200,0),1.0))
 	_check(b._miss_duration == 1.0,"stun: shell hit does not extend")
+	e.apply_calculated_damage(0,0,tip_hit)
+	_check(b._miss_duration == 1.0,"stun: zero-damage receipt does not extend")
 	e.apply_calculated_damage(1,0,tip_hit)
 	_check(b._miss_duration == 3.0 and b._time == before_hit,"stun: first tip adds2s without resetting elapsed time")
 	e.apply_calculated_damage(1,0,tip_hit)
@@ -432,6 +437,8 @@ func _test_scorpion() -> void:
 	_check(e.is_stunned(),"stun: extended miss remains before3s")
 	b.physics_step(e,p,0.02)
 	_check(not e.is_stunned(),"stun: extended miss ends at3s")
+	halo._process(0.0)
+	_check(not halo.visible and not halo.is_playing(),"stun: halo stops immediately on real stun end")
 	b._enter(e,b.State.MISS_STUN)
 	e.apply_calculated_damage(1,0,tip_hit)
 	_check(b._miss_duration == 3.0,"stun: bonus re-arms next miss")
@@ -444,6 +451,8 @@ func _test_scorpion() -> void:
 	_check(e.sprite.frame == 2 and not e.sprite.is_playing(),"stun: hurt cannot raise grounded stinger")
 	_check(e.is_stunned(),"stun: generic enemy stun uses same status hook")
 	e.stun_left = 0.0
+	e._hold_grounded_stinger()
+	_check(e.sprite.frame == 0,"stun: generic hold releases original pose after expiry")
 	# Player i-frames refuse the sting and lead to miss, not success.
 	p.position = e.position+Vector2(100,0)
 	p.set_invulnerable(true)

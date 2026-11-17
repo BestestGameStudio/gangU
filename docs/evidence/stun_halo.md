@@ -41,3 +41,25 @@ python tools/sprites/pack_stun_halo_spriteu.py
 ```
 
 No scene/behavior mutation, issue, PR, commit or push is included in this handoff.
+
+## Runtime verification (#858)
+
+`Enemy.is_stunned()` combines the existing generic timer with an explicit behavior
+opt-in. EnemyStunHalo only reads that status; it never changes a clock. Scorpion
+miss stun is1s; first accepted direct tip hit adds2s once to the current deadline.
+AoE, shell hits, raw/unlocated damage and modifier queries do not grant the bonus.
+The next miss re-arms it. Both miss stun and generic Enemy.stun hold attack frame2,
+whose tip is down at ground height. Hurt cannot interrupt the held pose. Generic
+stun restores the pre-hold sprite action before resumed AI chooses its next action.
+No pincer, sting wind-up, recovery, bird, boss, lighting or audio timing changes.
+
+Godot4.5.1 native scripted fixture shows generic stun during a raise,1s miss, and
+real Water Shot hits to the grounded tip: HP100->88 adds2s; second hit HP88->76
+does not stack. Actual Player, SpellCaster, projectile collision and damage path;
+scripted positions/state transitions, flat sand fixture and paused AI outside
+miss steps. No browser, obstacle-rich or external-displacement qualification.
+Video is delivered separately, not committed, per showcase-video guidance.
+
+Core enemy harness guards timer, once/reset, accepted-hit context, held pose,
+freeze/thaw, halo anchor/lifecycle and unchanged pincer timing. Full suite run uses
+Godot4.5.1; final result is recorded in the PR.
