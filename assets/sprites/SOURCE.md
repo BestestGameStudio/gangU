@@ -631,3 +631,16 @@ specks, waves and the tide are drawn procedurally. Not extracted from a board.
 ## Thrown rock and Barricade sprites (#847)
 
 - `thrown_rock.png` (7x7), `rock_shadow.png` (6x6, black), `barricade.png` (21x24 strip, three 7x24 frames: intact, first crack, both cracks): authored in SpriteU (`tools/gen_rock_barricade.py`, `sprites/thrown-rock.json`, `rock-shadow.json`, `barricade.json`, `characters/rock-barricade.md`) and exported with `--export`. Drawn at 2x. CC0 references viewed only (OpenGameArt Wood plank, Wooden Blockade Texture, Set of pixel art projectiles); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/16
+
+## Scorpion burrow transitions (#853)
+
+Original project art, generated into SpriteU char-mode JSON with
+`tools/sprites/append_scorpion_burrow.py` and the original anatomy rig in
+`tools/sprites/scorpion_pose_source.py`. Not SpriteU-editor hand-drawing.
+The packer reads that JSON, with no external asset input. Revision 2 adds
+sand falling from the back and more body/leg/tail motion.
+
+Six frames at 50ms for each emerge/bury direction (0.30s), eight directions,
+non-looping. Atlas 512x2496: original rows 0-26 are RGBA-identical; emerge
+27-32, bury 33-38. Repack with `pack_scorpion_spriteu.py`. Final emerge
+matches idle; final bury is a mound, to be hidden by gameplay afterward.

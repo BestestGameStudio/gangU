@@ -24,3 +24,11 @@ pack_scorpion_spriteu.py regenerates the transparent atlas and SpriteFrames reso
 ## Evidence
 
 All frames are connected, inside64px and touch no cell boundary. Previews are art-only animation playback, not gameplay or AI demos. Runtime integration and gameplay verification are out of scope. CI and independent exact-head review are still required before merge.
+
+## Burrow transitions (#853)
+
+Revision 2 adds `emerge_*` and `bury_*`, six 50ms frames each, 300ms total,
+eight directions and non-looping. Original animation data is unchanged.
+Atlas 512x2496, new rows 27-32 (emerge) and 33-38 (bury). The deterministic
+SpriteU-source generator and anatomy rig are committed alongside the packer.
+See `docs/evidence/scorpion/burrow-preview.md` for reproduction and caveats.
