@@ -627,3 +627,7 @@ specks, waves and the tide are drawn procedurally. Not extracted from a board.
 ## Hammer dice faces (#839 follow-up)
 
 - `hammer_dice.png`: 91x13 strip, seven 13x13 faces (1-6, then a red 6), drawn at 2x = the old 26x26 die with outline. Authored in SpriteU (`tools/gen_stone_hammer.py`, `sprites/hammer-dice.json`, `characters/stone-hammer.md`), exported with `--export`. CC0 reference viewed only (OpenGameArt "32x32 pixel d6 dice roll & results"); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/15
+
+## Thrown rock and Barricade sprites (#847)
+
+- `thrown_rock.png` (7x7), `rock_shadow.png` (6x6, black), `barricade.png` (21x24 strip, three 7x24 frames: intact, first crack, both cracks): authored in SpriteU (`tools/gen_rock_barricade.py`, `sprites/thrown-rock.json`, `rock-shadow.json`, `barricade.json`, `characters/rock-barricade.md`) and exported with `--export`. Drawn at 2x. CC0 references viewed only (OpenGameArt Wood plank, Wooden Blockade Texture, Set of pixel art projectiles); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/16
