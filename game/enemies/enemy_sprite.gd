@@ -99,13 +99,14 @@ func _variant(base: StringName) -> StringName:
 	var name := StringName("%s_%s" % [base, DIR_SUFFIXES[octant]])
 	return name if sprite_frames.has_animation(name) else base
 
-## Mirror toward a horizontal direction (art faces right). Tiny x is ignored
-## so a target straight above/below never flickers the facing.
+## Explicit stationary facing for directional actors; no locomotion needed.
 func face_direction(direction: Vector2) -> void:
 	if direction.length_squared() > 0.001:
 		_facing = direction
 		if not _directional: face(direction.x)
 
+## Mirror toward a horizontal direction (art faces right). Tiny x is ignored
+## so a target straight above/below never flickers the facing.
 func face(dir_x: float) -> void:
 	if absf(dir_x) > 0.5:
 		flip_h = (dir_x < 0.0) != art_faces_left
