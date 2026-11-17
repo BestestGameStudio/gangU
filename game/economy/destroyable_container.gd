@@ -41,7 +41,10 @@ func _ready() -> void:
 	if definition != null:
 		hp = maxi(definition.max_hp, 0)
 		if has_node("Visual"):
-			get_node("Visual").set(&"color", definition.body_color)
+			# Sprite is authored near the default body colour; tint by the ratio so
+			# each definition keeps its body colour (approximately: the sprite green is ~4% low).
+			var c := definition.body_color
+			(get_node("Visual") as CanvasItem).modulate = Color(c.r / 0.6, c.g / 0.45, c.b / 0.25, c.a)
 
 ## #5 duck-type outer guard: source unknown -> rejected (Daniel's gate).
 func apply_damage(amount: int) -> void:

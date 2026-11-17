@@ -677,3 +677,7 @@ pincer22-26, emerge27-32, bury33-38. Eight direction columns S,SE,E,NE,N,NW,W,SW
 Ground anchor native(64,84), runtime sprite(0,-20). Runtime tip metadata is exact
 instrumented rig geometry, including transition occlusion; source and packer
 are included. Full provenance/verification: docs/evidence/large_scorpion.md.
+
+## Breakable crate sprite (#861)
+
+- `destroyable_crate.png` (10x10): authored in SpriteU (`tools/gen_pickups.py`, `sprites/destroyable-crate.json`, `characters/pickups.md`) and exported with `--export`. Drawn at 2x = 20x20. CC0 reference viewed only (OpenGameArt 16x16 boxes, crates, chests); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/17
