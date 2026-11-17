@@ -1,0 +1,724 @@
+{
+  "source_base": "a22c1c8b46a6b28964dfcb6c320d392e280ec0e2",
+  "source_candidate": "fbb4851",
+  "runs": [
+    {
+      "name": "path-base-111022.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 59,
+          "median_us": 19.0,
+          "p95_us": 22
+        },
+        "all9_physics_callbacks": {
+          "max_us": 21686,
+          "median_us": 2043.0,
+          "p95_us": 9295
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 142,
+          "median_us": 90.0,
+          "p95_us": 108
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 21,
+          "median_us": 1.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 85,
+          "median_us": 79.0,
+          "p95_us": 84
+        },
+        "path_steer_us": {
+          "max_us": 20757,
+          "median_us": 1170.0,
+          "p95_us": 8414
+        },
+        "player_hp": 100,
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12,
+        "trajectory_sha256": "0831947ed08fda2e743b48304bf87ebdd7bff44c4af28e5358467d99c46854d8"
+      }
+    },
+    {
+      "name": "path-base-111100.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 53,
+          "median_us": 18.0,
+          "p95_us": 21
+        },
+        "all9_physics_callbacks": {
+          "max_us": 21696,
+          "median_us": 2051.5,
+          "p95_us": 9281
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 218,
+          "median_us": 78.0,
+          "p95_us": 102
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 3,
+          "median_us": 1.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 86,
+          "median_us": 80.0,
+          "p95_us": 85
+        },
+        "path_steer_us": {
+          "max_us": 20809,
+          "median_us": 1188.0,
+          "p95_us": 8403
+        },
+        "player_hp": 100,
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12,
+        "trajectory_sha256": "1cef5804d3ceac8fdf0032f0ef75e276e0224e73ea6ad814a97fccaed4381ed5"
+      }
+    },
+    {
+      "name": "path-base-110944.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 57,
+          "median_us": 18.0,
+          "p95_us": 22
+        },
+        "all9_physics_callbacks": {
+          "max_us": 24943,
+          "median_us": 2123.5,
+          "p95_us": 9304
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 207,
+          "median_us": 80.0,
+          "p95_us": 101
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 27,
+          "median_us": 1.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 86,
+          "median_us": 79.0,
+          "p95_us": 85
+        },
+        "path_steer_us": {
+          "max_us": 23855,
+          "median_us": 1248.5,
+          "p95_us": 8434
+        },
+        "player_hp": 100,
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12,
+        "trajectory_sha256": "259fb111dd46f4e8ccf183f549d9664ecf81377b78a48c1c3eb3619803aa2835"
+      }
+    },
+    {
+      "name": "path-candidate-111003.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 62,
+          "median_us": 18.0,
+          "p95_us": 22
+        },
+        "all9_physics_callbacks": {
+          "max_us": 18101,
+          "median_us": 1904.5,
+          "p95_us": 6927
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 289,
+          "median_us": 81.0,
+          "p95_us": 101
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 8,
+          "median_us": 1.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 86,
+          "median_us": 80.0,
+          "p95_us": 84
+        },
+        "path_steer_us": {
+          "max_us": 17159,
+          "median_us": 1020.5,
+          "p95_us": 6081
+        },
+        "player_hp": 100,
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12,
+        "trajectory_sha256": "92ae36acf99a13fc23f6ba17298d16f2ad06a9dc58ba2547762cc554ae906db0"
+      }
+    },
+    {
+      "name": "path-candidate-111118.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 55,
+          "median_us": 20.0,
+          "p95_us": 22
+        },
+        "all9_physics_callbacks": {
+          "max_us": 17582,
+          "median_us": 1917.0,
+          "p95_us": 7283
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 268,
+          "median_us": 84.0,
+          "p95_us": 105
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 8,
+          "median_us": 1.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 86,
+          "median_us": 80.0,
+          "p95_us": 85
+        },
+        "path_steer_us": {
+          "max_us": 16679,
+          "median_us": 1033.0,
+          "p95_us": 6401
+        },
+        "player_hp": 100,
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12,
+        "trajectory_sha256": "da26802e287d6db6e399881229d8c4067f8fa316bd4ffaf560ee8f078a4f6728"
+      }
+    },
+    {
+      "name": "path-candidate-111040.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 62,
+          "median_us": 19.0,
+          "p95_us": 21
+        },
+        "all9_physics_callbacks": {
+          "max_us": 17610,
+          "median_us": 1859.5,
+          "p95_us": 7214
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 145,
+          "median_us": 81.0,
+          "p95_us": 103
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 6,
+          "median_us": 1.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 86,
+          "median_us": 80.0,
+          "p95_us": 85
+        },
+        "path_steer_us": {
+          "max_us": 16747,
+          "median_us": 1008.0,
+          "p95_us": 6372
+        },
+        "player_hp": 100,
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12,
+        "trajectory_sha256": "263fdf52d1ea6ac0741cfe0abe5244dc590c09d030189ac89877cd5db51fabb1"
+      }
+    },
+    {
+      "name": "path-paired-100.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 73,
+          "median_us": 20.0,
+          "p95_us": 28
+        },
+        "all9_physics_callbacks": {
+          "max_us": 38359,
+          "median_us": 3348.0,
+          "p95_us": 15318
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 251,
+          "median_us": 90.0,
+          "p95_us": 123
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 20,
+          "median_us": 2.0,
+          "p95_us": 2
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "mismatches": 0,
+        "ordinary_enemy_count": 100,
+        "path_calls": {
+          "max_us": 88,
+          "median_us": 83.0,
+          "p95_us": 87
+        },
+        "path_steer_us": {
+          "max_us": 18994,
+          "median_us": 1082.0,
+          "p95_us": 6474
+        },
+        "player_hp": 100,
+        "reference_steer_us": {
+          "max_us": 24077,
+          "median_us": 1247.5,
+          "p95_us": 8346
+        },
+        "samples": 1000,
+        "sprite_count": 100,
+        "statue_count": 12
+      }
+    },
+    {
+      "name": "path-paired-9.json",
+      "data": {
+        "all12_statue_process_callbacks": {
+          "max_us": 69,
+          "median_us": 16.0,
+          "p95_us": 21
+        },
+        "all9_physics_callbacks": {
+          "max_us": 19286,
+          "median_us": 333.0,
+          "p95_us": 5950
+        },
+        "all9_sprite_callbacks": {
+          "max_us": 36,
+          "median_us": 11.0,
+          "p95_us": 12
+        },
+        "arena_state": 0,
+        "empty_loop": {
+          "max_us": 16,
+          "median_us": 1.0,
+          "p95_us": 1
+        },
+        "method": "headless manual callback dispatch delta1/60, callbacks auto-disabled,120Hz pacing,40 warmup samples, no render/redraw service time",
+        "mismatches": 0,
+        "ordinary_enemy_count": 9,
+        "path_calls": {
+          "max_us": 8,
+          "median_us": 7.0,
+          "p95_us": 7
+        },
+        "path_steer_us": {
+          "max_us": 10233,
+          "median_us": 110.0,
+          "p95_us": 151
+        },
+        "player_hp": 100,
+        "reference_steer_us": {
+          "max_us": 8923,
+          "median_us": 104.0,
+          "p95_us": 5500
+        },
+        "samples": 1000,
+        "sprite_count": 9,
+        "statue_count": 12
+      }
+    }
+  ],
+  "rendered_candidate": [
+    {
+      "draw_calls": 45.0,
+      "label": "0:baseline",
+      "physics_median_ms": 16.103,
+      "process_median_ms": 200.897,
+      "section": "gate",
+      "wall_max_ms": 234.146,
+      "wall_median_ms": 216.004,
+      "wall_min_ms": 210.443
+    },
+    {
+      "draw_calls": 47.0,
+      "label": "0:enemy_physics_off",
+      "physics_median_ms": 0.288,
+      "process_median_ms": 195.045,
+      "section": "gate",
+      "wall_max_ms": 196.044,
+      "wall_median_ms": 193.8635,
+      "wall_min_ms": 192.312
+    },
+    {
+      "draw_calls": 47.0,
+      "label": "0:restored_physics",
+      "physics_median_ms": 14.342,
+      "process_median_ms": 194.514,
+      "section": "gate",
+      "wall_max_ms": 224.047,
+      "wall_median_ms": 209.9265,
+      "wall_min_ms": 206.66
+    },
+    {
+      "draw_calls": 47.0,
+      "label": "0:sprite_process_off",
+      "physics_median_ms": 12.833,
+      "process_median_ms": 195.503,
+      "section": "gate",
+      "wall_max_ms": 227.293,
+      "wall_median_ms": 210.8065,
+      "wall_min_ms": 205.402
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:restored_sprite",
+      "physics_median_ms": 10.1705,
+      "process_median_ms": 202.02,
+      "section": "gate",
+      "wall_max_ms": 233.537,
+      "wall_median_ms": 221.0185,
+      "wall_min_ms": 210.593
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:sprites_hidden",
+      "physics_median_ms": 8.771,
+      "process_median_ms": 196.61,
+      "section": "gate",
+      "wall_max_ms": 224.575,
+      "wall_median_ms": 216.3055,
+      "wall_min_ms": 208.244
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:restored_visible",
+      "physics_median_ms": 7.641,
+      "process_median_ms": 194.633,
+      "section": "gate",
+      "wall_max_ms": 214.885,
+      "wall_median_ms": 207.3935,
+      "wall_min_ms": 204.706
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:collision_masks_zero",
+      "physics_median_ms": 6.595,
+      "process_median_ms": 195.0195,
+      "section": "gate",
+      "wall_max_ms": 214.556,
+      "wall_median_ms": 206.688,
+      "wall_min_ms": 203.815
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:restored_collisions",
+      "physics_median_ms": 6.263,
+      "process_median_ms": 197.423,
+      "section": "gate",
+      "wall_max_ms": 215.521,
+      "wall_median_ms": 208.6015,
+      "wall_min_ms": 203.65
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "1:baseline",
+      "physics_median_ms": 8.6615,
+      "process_median_ms": 196.9235,
+      "section": "gate",
+      "wall_max_ms": 236.247,
+      "wall_median_ms": 213.309,
+      "wall_min_ms": 208.149
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "1:enemy_physics_off",
+      "physics_median_ms": 0.269,
+      "process_median_ms": 193.239,
+      "section": "gate",
+      "wall_max_ms": 196.857,
+      "wall_median_ms": 192.963,
+      "wall_min_ms": 191.182
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "1:restored_physics",
+      "physics_median_ms": 7.538,
+      "process_median_ms": 196.518,
+      "section": "gate",
+      "wall_max_ms": 223.814,
+      "wall_median_ms": 212.105,
+      "wall_min_ms": 207.735
+    },
+    {
+      "draw_calls": 43.0,
+      "label": "1:sprite_process_off",
+      "physics_median_ms": 9.111,
+      "process_median_ms": 197.0385,
+      "section": "gate",
+      "wall_max_ms": 232.735,
+      "wall_median_ms": 218.5825,
+      "wall_min_ms": 211.24
+    },
+    {
+      "draw_calls": 43.0,
+      "label": "1:restored_sprite",
+      "physics_median_ms": 9.304,
+      "process_median_ms": 196.491,
+      "section": "gate",
+      "wall_max_ms": 226.64,
+      "wall_median_ms": 216.55,
+      "wall_min_ms": 208.661
+    },
+    {
+      "draw_calls": 36.0,
+      "label": "1:sprites_hidden",
+      "physics_median_ms": 8.365,
+      "process_median_ms": 195.445,
+      "section": "gate",
+      "wall_max_ms": 221.063,
+      "wall_median_ms": 213.7305,
+      "wall_min_ms": 207.336
+    },
+    {
+      "draw_calls": 37.0,
+      "label": "1:restored_visible",
+      "physics_median_ms": 6.989,
+      "process_median_ms": 204.459,
+      "section": "gate",
+      "wall_max_ms": 224.491,
+      "wall_median_ms": 211.46,
+      "wall_min_ms": 205.543
+    },
+    {
+      "draw_calls": 39.0,
+      "label": "1:collision_masks_zero",
+      "physics_median_ms": 2.416,
+      "process_median_ms": 196.891,
+      "section": "gate",
+      "wall_max_ms": 219.286,
+      "wall_median_ms": 208.905,
+      "wall_min_ms": 205.859
+    },
+    {
+      "draw_calls": 39.0,
+      "label": "1:restored_collisions",
+      "physics_median_ms": 6.371,
+      "process_median_ms": 199.2325,
+      "section": "gate",
+      "wall_max_ms": 221.667,
+      "wall_median_ms": 212.901,
+      "wall_min_ms": 209.661
+    }
+  ],
+  "rendered_base": [
+    {
+      "draw_calls": 45.0,
+      "label": "0:baseline",
+      "physics_median_ms": 22.65,
+      "process_median_ms": 197.4355,
+      "section": "gate",
+      "wall_max_ms": 236.274,
+      "wall_median_ms": 220.907,
+      "wall_min_ms": 209.357
+    },
+    {
+      "draw_calls": 47.0,
+      "label": "0:enemy_physics_off",
+      "physics_median_ms": 0.298,
+      "process_median_ms": 196.559,
+      "section": "gate",
+      "wall_max_ms": 200.4,
+      "wall_median_ms": 194.1765,
+      "wall_min_ms": 191.89
+    },
+    {
+      "draw_calls": 47.0,
+      "label": "0:restored_physics",
+      "physics_median_ms": 15.9955,
+      "process_median_ms": 195.25,
+      "section": "gate",
+      "wall_max_ms": 231.778,
+      "wall_median_ms": 218.11,
+      "wall_min_ms": 208.395
+    },
+    {
+      "draw_calls": 47.0,
+      "label": "0:sprite_process_off",
+      "physics_median_ms": 13.9525,
+      "process_median_ms": 194.636,
+      "section": "gate",
+      "wall_max_ms": 225.437,
+      "wall_median_ms": 218.3355,
+      "wall_min_ms": 206.476
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:restored_sprite",
+      "physics_median_ms": 11.155,
+      "process_median_ms": 194.906,
+      "section": "gate",
+      "wall_max_ms": 230.023,
+      "wall_median_ms": 223.542,
+      "wall_min_ms": 217.487
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:sprites_hidden",
+      "physics_median_ms": 9.409,
+      "process_median_ms": 193.3685,
+      "section": "gate",
+      "wall_max_ms": 223.912,
+      "wall_median_ms": 218.891,
+      "wall_min_ms": 211.12
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:restored_visible",
+      "physics_median_ms": 7.9685,
+      "process_median_ms": 194.532,
+      "section": "gate",
+      "wall_max_ms": 220.781,
+      "wall_median_ms": 214.053,
+      "wall_min_ms": 204.135
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:collision_masks_zero",
+      "physics_median_ms": 7.347,
+      "process_median_ms": 193.42,
+      "section": "gate",
+      "wall_max_ms": 224.027,
+      "wall_median_ms": 210.857,
+      "wall_min_ms": 203.369
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "0:restored_collisions",
+      "physics_median_ms": 6.438,
+      "process_median_ms": 193.797,
+      "section": "gate",
+      "wall_max_ms": 227.807,
+      "wall_median_ms": 212.493,
+      "wall_min_ms": 208.176
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "1:baseline",
+      "physics_median_ms": 10.6295,
+      "process_median_ms": 194.832,
+      "section": "gate",
+      "wall_max_ms": 237.852,
+      "wall_median_ms": 223.202,
+      "wall_min_ms": 212.502
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "1:enemy_physics_off",
+      "physics_median_ms": 0.276,
+      "process_median_ms": 194.112,
+      "section": "gate",
+      "wall_max_ms": 196.603,
+      "wall_median_ms": 193.233,
+      "wall_min_ms": 191.901
+    },
+    {
+      "draw_calls": 31.0,
+      "label": "1:restored_physics",
+      "physics_median_ms": 8.539,
+      "process_median_ms": 195.752,
+      "section": "gate",
+      "wall_max_ms": 233.354,
+      "wall_median_ms": 223.4465,
+      "wall_min_ms": 209.341
+    },
+    {
+      "draw_calls": 43.0,
+      "label": "1:sprite_process_off",
+      "physics_median_ms": 10.84,
+      "process_median_ms": 193.9645,
+      "section": "gate",
+      "wall_max_ms": 247.014,
+      "wall_median_ms": 232.0565,
+      "wall_min_ms": 219.959
+    },
+    {
+      "draw_calls": 43.0,
+      "label": "1:restored_sprite",
+      "physics_median_ms": 10.62,
+      "process_median_ms": 195.105,
+      "section": "gate",
+      "wall_max_ms": 236.265,
+      "wall_median_ms": 232.1595,
+      "wall_min_ms": 223.52
+    },
+    {
+      "draw_calls": 36.0,
+      "label": "1:sprites_hidden",
+      "physics_median_ms": 8.882,
+      "process_median_ms": 194.59,
+      "section": "gate",
+      "wall_max_ms": 231.482,
+      "wall_median_ms": 228.296,
+      "wall_min_ms": 220.98
+    },
+    {
+      "draw_calls": 37.0,
+      "label": "1:restored_visible",
+      "physics_median_ms": 7.9,
+      "process_median_ms": 194.291,
+      "section": "gate",
+      "wall_max_ms": 224.763,
+      "wall_median_ms": 217.2085,
+      "wall_min_ms": 212.292
+    },
+    {
+      "draw_calls": 39.0,
+      "label": "1:collision_masks_zero",
+      "physics_median_ms": 6.815,
+      "process_median_ms": 194.258,
+      "section": "gate",
+      "wall_max_ms": 214.406,
+      "wall_median_ms": 209.51,
+      "wall_min_ms": 207.747
+    },
+    {
+      "draw_calls": 39.0,
+      "label": "1:restored_collisions",
+      "physics_median_ms": 6.94,
+      "process_median_ms": 195.905,
+      "section": "gate",
+      "wall_max_ms": 233.91,
+      "wall_median_ms": 215.6805,
+      "wall_min_ms": 209.493
+    }
+  ]
+}

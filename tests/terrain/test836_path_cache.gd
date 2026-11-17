@@ -52,10 +52,28 @@ func run():
    check(ca.plans==re.plans and ca._replan_timer==re._replan_timer,'replan cadence unchanged')
    cp+=cv/60;rp+=rv/60
    check(cp==rp,'exact integrated position')
- # Swapping maps with equal revisions must never reuse another map's answer.
- other.set_cell(Vector2i(1,0),TerrainTypes.OBSTACLE)
- for used in [map,other,map,other]:
-  check(candidate._find_path(used,Vector2.ZERO,Vector2(300,0))==reference._find_path(used,Vector2.ZERO,Vector2(300,0)),'map identity')
+ # Equal revisions, opposite nav answers at the SAME coordinates.
+ var open_map:=new_map();var blocked_map:=new_map()
+ open_map.set_cell(Vector2i(1,0),TerrainTypes.GRASS)
+ blocked_map.set_cell(Vector2i(1,0),TerrainTypes.OBSTACLE)
+ check(open_map.revision==blocked_map.revision,'identity fixture has equal revisions')
+ var open_path:=reference._find_path(open_map,Vector2.ZERO,Vector2(160,0))
+ var blocked_path:=reference._find_path(blocked_map,Vector2.ZERO,Vector2(160,0))
+ check(open_path!=blocked_path,'identity fixture has opposing routes')
+ for used in [open_map,blocked_map,open_map,blocked_map]:
+  check(candidate._find_path(used,Vector2.ZERO,Vector2(160,0))==reference._find_path(used,Vector2.ZERO,Vector2(160,0)),'map identity at equal revision')
+  check(candidate._passable(used,Vector2i(1,0),false)==reference._passable(used,Vector2i(1,0),false),'map identity flags')
+ open_map.free();blocked_map.free()
+ # Populated palette overrides must change cached movement, then restore it.
+ var palette_map:=new_map();palette_map.set_cell(Vector2i(1,0),TerrainTypes.GRASS)
+ for movement in [TerrainTypes.Movement.WALKABLE,TerrainTypes.Movement.BLOCKING,TerrainTypes.Movement.FALLING,TerrainTypes.Movement.WALKABLE]:
+  var tile:=TerrainTile.new();tile.id=TerrainTypes.GRASS;tile.movement=movement
+  var palette:=TerrainPalette.new();palette.tiles=[tile];palette_map.palette=palette
+  var walk:bool=movement==TerrainTypes.Movement.WALKABLE
+  check(candidate._passable(palette_map,Vector2i(1,0),false)==walk,'populated palette movement flags')
+  check(candidate._hard_obstacle(palette_map,Vector2i(1,0))==not walk,'populated palette hard flags')
+  check(candidate._find_path(palette_map,Vector2.ZERO,Vector2(160,0))==reference._find_path(palette_map,Vector2.ZERO,Vector2(160,0)),'populated palette path parity')
+ palette_map.free()
  # Both navigation-query bits and full paths invalidate on cell/trunk/palette writes.
  for mutation in 4:
   candidate._find_path(other,Vector2.ZERO,Vector2(300,0))
