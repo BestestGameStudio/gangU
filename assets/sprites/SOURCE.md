@@ -614,3 +614,4 @@ specks, waves and the tide are drawn procedurally. Not extracted from a board.
 ## Cliff shore flattened and front-only rock (#820)
 
 - `terrain/dualgrid_water_on_cliff.png`: regenerated with `tools/sprites/gen_water_sheets.py`. The rock side of every cliff shore tile is now one flat colour (88,82,88) instead of cobble, to match the flat rock fill the engine draws in world space (`game/world/overworld_cliff_rock.gd`). Water side unchanged. Source of the rock tones: the cliff set it was derived from (`dualgrid_cliff_on_grass`).
+- `terrain/dualgrid_cliff_on_sand.png`: rock side flattened to the same (88,82,88) with `tools/sprites/gen_cliff_flat.py` (sand pixels untouched), so the rock/sand seam beside the beach has no cobble or dark wedge.

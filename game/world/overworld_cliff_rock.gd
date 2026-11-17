@@ -12,11 +12,17 @@ class_name OverworldCliffRock
 
 var ground: OverworldGround
 var _last_view := Rect2()
+var _last_frame := 0
+var _seam_seen := false
 
 const BASE := Color8(88, 82, 88)
 const LIGHT := Color8(104, 98, 104)
 const DARK := Color8(70, 65, 74)
-const LIP := Color8(126, 118, 112)
+const LIP := Color8(112, 105, 111)
+const WALL_MID := Color8(74, 69, 78)
+const WALL_LIGHT := Color8(82, 77, 86)
+const WALL_DARK := Color8(66, 61, 70)
+const WALL_FOOT := Color8(54, 50, 60)
 const WALL_H := 60.0
 const PX := 4.0 ## art pixel size in world px
 
@@ -26,8 +32,12 @@ func _init() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 func _process(_d: float) -> void:
-	if ground != null and ground._view != _last_view:
+	if ground == null:
+		return
+	var f: int = ground._water._frame if ground._water != null else 0
+	if ground._view != _last_view or (_seam_seen and f != _last_frame):
 		_last_view = ground._view
+		_last_frame = f
 		queue_redraw()
 
 func _is_rock(i: int, j: int) -> bool:
@@ -51,9 +61,11 @@ func _draw() -> void:
 	var view := ground._view
 	var lo := Vector2i((view.position / 64.0).floor()) - Vector2i.ONE
 	var hi := Vector2i((view.end / 64.0).ceil()) + Vector2i.ONE
+	_seam_seen = false
 	for j in range(lo.y, hi.y + 1):
 		for i in range(lo.x, hi.x + 1):
 			if not _is_rock(i, j):
+				_seam(i, j)
 				continue
 			var o := Vector2(i, j) * 64.0
 			draw_rect(Rect2(o, Vector2(64, 64)), BASE)
@@ -71,18 +83,35 @@ func _hints(i: int, j: int, o: Vector2) -> void:
 
 func _wall(i: int, j: int, o: Vector2) -> void:
 	var y0 := o.y + 64.0 - WALL_H
+	var foot := o.y + 64.0 - 2.0 * PX
 	for c in 16:
 		var gx := i * 16 + c
 		var t := _h(gx, 0, 71)
-		var col := BASE.lerp(LIGHT, 0.55) if t > 0.7 else (DARK if t < 0.28 else BASE.darkened(0.1))
-		var top := y0 + floorf(_h(gx, 0, 72) * 3.0) * PX ## ragged top, per column
+		var col := WALL_LIGHT if t > 0.72 else (WALL_DARK if t < 0.3 else WALL_MID)
 		var x := o.x + c * PX
-		draw_rect(Rect2(x, top, PX, o.y + 64.0 - top), col)
-		# darker toward the foot, in three steps
-		draw_rect(Rect2(x, o.y + 64.0 - 3.0 * PX, PX, PX), Color(0, 0, 0, 0.12))
-		draw_rect(Rect2(x, o.y + 64.0 - 2.0 * PX, PX, PX), Color(0, 0, 0, 0.2))
-		draw_rect(Rect2(x, o.y + 64.0 - PX, PX, PX), Color(0, 0, 0, 0.3))
-		draw_rect(Rect2(x, top, PX, PX), LIP)
-		# a long crack on some columns
-		if _h(gx, 0, 73) < 0.2:
-			draw_rect(Rect2(x, top + PX * 3.0, PX, PX * (2.0 + floorf(_h(gx, 0, 74) * 5.0))), DARK)
+		draw_rect(Rect2(x, y0, PX, foot - y0), col)
+		draw_rect(Rect2(x, foot, PX, 2.0 * PX), WALL_FOOT)
+	draw_rect(Rect2(o.x, y0, 64.0, PX), LIP) ## one straight lit lip along the top
+
+## A cell where sand, rock and water all meet has no sheet of its own and the
+## water layer drew it as a pale sand tile. Redraw it as rock meeting water
+## (the sand corner counts as rock), same animated sheet as the shore.
+func _seam(i: int, j: int) -> void:
+	var cs := [
+		ground._lattice_type(i, j),
+		ground._lattice_type(i + 1, j),
+		ground._lattice_type(i + 1, j + 1),
+		ground._lattice_type(i, j + 1),
+	]
+	if not (cs.has(DualGrid.T.CLIFF) and cs.has(DualGrid.T.SAND) and cs.has(DualGrid.T.WATER)):
+		return
+	_seam_seen = true
+	for k in 4:
+		if cs[k] == DualGrid.T.SAND:
+			cs[k] = DualGrid.T.CLIFF
+	var t := DualGrid.tile(i, j, cs, _last_frame)
+	if t.is_empty():
+		return
+	var o := Vector2(i, j) * 64.0
+	draw_rect(Rect2(o, Vector2(64, 64)), BASE)
+	draw_texture_rect_region(t["tex"], Rect2(o, Vector2(64, 64)), t["src"])
