@@ -590,3 +590,23 @@ textures exported using unchanged SpriteU7fd4617. Final PNGs284x16,
 trimmed/reassembled fixed12pxcaps and260pxmiddle, nearest-neighbor.
 HUD position relativeHP(38,46), fixedheight16, frameverticalmargins4.
 No spirit text; spirit gain/heal/channel logic unchanged. No third-party art.
+
+## Overworld water, south beach and shore life (#811)
+
+Original SpriteU-authored art (SpriteU repo, branch `water-terrain-sprites`
+and its `tools/gen_wildlife.py`, `gen_water_tile.py`, `gen_driftwood.py`,
+`gen_palm_tree.py`); no third-party art. Reference pixel art (itch.io seagull,
+fish and beach packs, OpenGameArt shoreline tiles) was viewed for style only;
+nothing is copied or shipped.
+- `dualgrid_water_on_{sand,cliff,grass,dirt}.png`: 256x1280, five 256x256
+  dual-grid frames stacked vertically (loop 220/160/220/160/140 ms), built by
+  `tools/sprites/gen_water_sheets.py` + `gen_water_tex.py` from the shipped
+  sheets' geometry. `dualgrid_sand_on_dirt.png`: new 256x256 sheet.
+- `palm_1/2.png`, `driftwood_1/2.png`: beach props, 1 frame each.
+- `seagull.png` (4 frames flap), `fish.png` (4 frames swim),
+  `fish_splash.png` (5 frames), `seashell.png` (3 variants),
+  `footprint.png` (left, right): 32x32 cells in horizontal strips, facing
+  right, nearest filtering.
+Code only: shore tiles' flat sand/grass/dirt base colours are keyed transparent
+at load (`overworld_water.gd`) so the shader ground shows through; depth,
+specks, waves and the tide are drawn procedurally. Not extracted from a board.
