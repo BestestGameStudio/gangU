@@ -46,7 +46,20 @@ func modifiers_for_hit(hit: HitContext) -> DamageModifiers:
 
 func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	if buried: return # no mutation/receipt for an underground hit
-	super.apply_damage(amount, crit_tier)
+	# Raw/unlocated calls (including a future DoT) never guess a weak spot.
+	var result := DamageCalc.compute(float(amount),null,damage_modifiers,damage_rng)
+	super.apply_damage(result.amount,crit_tier)
+
+func apply_calculated_damage(amount: int, crit_tier: int = 0) -> void:
+	if not buried: super.apply_damage(amount,crit_tier)
+
+func set_frozen(frozen: bool) -> void:
+	super.set_frozen(frozen)
+	if not freeze.is_frozen() and _behavior is EnemyBehaviorScorpion:
+		var state := (_behavior as EnemyBehaviorScorpion).state
+		if state in [EnemyBehaviorScorpion.State.MISS_STUN,EnemyBehaviorScorpion.State.STING_DASH]:
+			sprite.set_frame_and_progress(2,0.0)
+			sprite.pause()
 
 func face_player(direction: Vector2) -> void:
 	if direction.length_squared() > 0.001:
@@ -89,6 +102,7 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if _tip_shape != null and not buried:
 		_tip_shape.position = to_local(stinger_tip())
+	if freeze.is_frozen(): return
 	if _behavior is EnemyBehaviorScorpion and (_behavior as EnemyBehaviorScorpion).state == EnemyBehaviorScorpion.State.BURROW_RUSH:
 		_trail_clock += delta
 		if _trail_clock >= 0.025:

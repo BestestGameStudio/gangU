@@ -147,6 +147,7 @@ func _initialize() -> void:
 	_check(labels.size() == 3, "(e) null definition table + no direct table -> no drop (null behavior preserved)")
 
 	await _test_fishy_audio()
+	await _test_scorpion()
 
 	if failures == 0:
 		print("[98] PASS")
@@ -246,3 +247,115 @@ func _test_fishy_audio() -> void:
 	fish.free()
 	second.free()
 	p.free()
+
+## Scorpion core contract: type-local concealment, hit resolution and attack
+## state timing. No content-count/tuning-only harness is added.
+func _test_scorpion() -> void:
+	var area := Node2D.new()
+	root.add_child(area)
+	current_scene = area
+	var p: Player = load("res://game/player/player.tscn").instantiate()
+	area.add_child(p)
+	p.set_physics_process(false)
+	p.global_position = Vector2(200,0)
+	var e: EnemyScorpion = load("res://game/enemies/enemy_scorpion.tscn").instantiate()
+	e.player_path = NodePath("../"+p.name)
+	area.add_child(e)
+	e.set_physics_process(false)
+	await process_frame
+	var b := e._behavior as EnemyBehaviorScorpion
+	_check(b != null and e.hp == 100 and e.buried,"definition + initial buried state")
+	e.apply_damage(99)
+	_check(e.hp == 100 and not HitContext.targetable(e),"hidden refuses damage and targeting")
+	b.physics_step(e,p,0.01)
+	_check(b.state == b.State.BURROW_RUSH,"nearby player triggers rush")
+	p.position = Vector2(100,0)
+	b.physics_step(e,p,0.01)
+	_check(b.state == b.State.EMERGE and not e.buried,"rush reaches sting range and emerges")
+	b.physics_step(e,p,0.30)
+	_check(b.state == b.State.STING_WINDUP,"300ms emerge -> sting tell")
+	b.physics_step(e,p,0.36)
+	_check(b.state == b.State.STING_DASH,"360ms locked tell -> dash")
+	p.position = Vector2(0,500)
+	for i in 21: b.physics_step(e,p,1.0/60.0)
+	_check(b.state == b.State.MISS_STUN,"miss -> stun")
+	_check(e.sprite.frame == 2 and not e.sprite.is_playing(),"miss holds forward strike pose")
+	var tip := e.stinger_tip()
+	var shell := HitContext.projectile(e.global_position+Vector2(-100,0),e.global_position+Vector2(-100,0),1)
+	var weak := HitContext.projectile(tip,tip,1)
+	var aoe := HitContext.area(e.global_position,1)
+	var rng := RandomNumberGenerator.new()
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(shell),rng).amount in [19,20],"shell reduces damage80percent")
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(weak),rng).amount == 100,"actual tip bypasses shell")
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(aoe),rng).amount == 100,"all AoE bypasses shell")
+	var f := e.sprite.frame
+	e.apply_calculated_damage(1)
+	_check(e.sprite.frame == f and e.sprite.current_action() == &"attack","damage preserves miss pose")
+	b.physics_step(e,p,0.47)
+	_check(b.state == b.State.MISS_STUN,"stun holds before500ms")
+	b.physics_step(e,p,0.03)
+	_check(b.state == b.State.CHASE,"stun ends at500ms")
+	p.position = e.position+Vector2(20,0)
+	b.physics_step(e,p,0.01)
+	_check(b.state == b.State.PINCER_WINDUP,"close -> pincer")
+	b.physics_step(e,p,0.52)
+	_check(b.state == b.State.PINCER_STRIKE,"pincer impact at520ms")
+	p.set_invulnerable(false)
+	var hp := p.hp
+	b.physics_step(e,p,0.01)
+	_check(p.hp == hp-15,"pincer applies15 through shared damage")
+	b.physics_step(e,p,0.06)
+	b.physics_step(e,p,0.32)
+	p.position = e.position+Vector2(1000,0)
+	b.physics_step(e,p,2.0)
+	_check(b.state == b.State.BURY,"out of range2s -> bury")
+	b.physics_step(e,p,0.30)
+	_check(b.state == b.State.BURIED and e.hp == 99,"bury hides without healing")
+
+	# Computed shell damage is never reduced twice; raw unlocated damage is.
+	e.set_buried(false)
+	b._enter(e,b.State.CHASE)
+	e.hp = 100
+	var expected := DamageCalc.compute(25.0,null,e.damage_modifiers,e.damage_rng).amount
+	e.apply_damage(25)
+	_check(e.hp == 100-expected,"scorpion: raw/unlocated damage stays armored")
+	e.hp = 100
+	e.apply_calculated_damage(expected)
+	_check(e.hp == 100-expected,"scorpion: calculated damage not armored twice")
+	b._enter(e,b.State.MISS_STUN)
+	e.set_frozen(true)
+	var clock := b._time
+	e._physics_process(0.4)
+	_check(b._time == clock,"scorpion: freeze pauses miss timer")
+	e.set_frozen(false)
+	_check(e.sprite.frame == 2 and not e.sprite.is_playing(),"scorpion: thaw preserves held forward stinger")
+	# Real projectile path reaches tip-only geometry outside the body circle.
+	b._enter(e,b.State.CHASE)
+	e.face_player(Vector2.RIGHT)
+	e.play_action(&"attack",true)
+	e.sprite.set_frame_and_progress(2,0.0)
+	e.sprite.pause()
+	e.get_node("StingerShape").position = e.to_local(e.stinger_tip())
+	e.hp = 100
+	await physics_frame
+	await physics_frame
+	var spell := Spell.new()
+	spell.damage = 10.0
+	spell.radius = 1.0
+	spell.range = 1000.0
+	var shot: Projectile = load("res://game/spells/projectile.tscn").instantiate()
+	shot.setup(spell,Vector2.DOWN,p)
+	area.add_child(shot)
+	shot.set_physics_process(false)
+	var tip_now := e.stinger_tip()
+	shot.global_position = tip_now + Vector2(0,40)
+	shot._sweep_segment(tip_now-Vector2(0,40),Vector2(0,80))
+	_check(e.hp == 90,"scorpion: tip-only actual physics hit deals unreduced damage")
+	# Player i-frames refuse the sting and lead to miss, not success.
+	p.position = e.position+Vector2(100,0)
+	p.set_invulnerable(true)
+	b._aim = Vector2.RIGHT
+	b._enter(e,b.State.STING_DASH)
+	for i in 21: b.physics_step(e,p,1.0/60.0)
+	_check(b.state == b.State.MISS_STUN,"scorpion: i-frames count as sting miss")
+	area.free()

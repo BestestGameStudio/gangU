@@ -172,7 +172,7 @@ static func deal_damage(body: Node, p_spell: Spell, p_source: Variant, delivery:
 	var result := DamageCalc.compute(p_spell.damage, mods, HitContext.receiver_modifiers(body, context), rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
-		(body as Enemy).apply_damage(result.amount, result.crit_tier)
+		(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier)
 	else:
 		body.call(&"apply_damage", result.amount)
 	OnHit.end(receipt, body)

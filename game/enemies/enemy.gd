@@ -138,6 +138,11 @@ const FLASH_TIME: float = 0.12
 ## #110: combat feedback - code-drawn death burst + hit spark (visual only).
 const CombatEffects = preload("res://game/combat/combat_effects.gd")
 
+## Calculated hits already include receiver modifiers. Separate from a raw
+## unlocated damage request so opt-in enemies never reduce a rolled hit twice.
+func apply_calculated_damage(amount: int, crit_tier: int = 0) -> void:
+	apply_damage(amount, crit_tier)
+
 ## crit_tier (#208) only colors the damage number; HP math ignores it.
 func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	if hp <= 0:

@@ -260,7 +260,7 @@ func _deal(body: Node, amount: float, mods: DamageModifiers, hit_radius: float, 
 	var result := DamageCalc.compute(amount, mods, HitContext.receiver_modifiers(body, HitContext.area(target, hit_radius, kind)), rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
-		(body as Enemy).apply_damage(result.amount, result.crit_tier)
+		(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier)
 	else:
 		body.call(&"apply_damage", result.amount)
 	OnHit.end(receipt, body)

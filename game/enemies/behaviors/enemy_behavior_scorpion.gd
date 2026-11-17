@@ -106,10 +106,10 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		State.STING_WINDUP:
 			if _time >= STING_WINDUP: _enter(e,State.STING_DASH)
 		State.STING_DASH:
-			var before := e.global_position
+			var before := e.stinger_tip()
 			_move(e,delta,_remaining)
 			if alive and not _landed:
-				var near := Geometry2D.get_closest_point_to_segment(player.global_position,before+_aim*27.0,e.global_position+_aim*27.0)
+				var near := Geometry2D.get_closest_point_to_segment(player.global_position,before,e.stinger_tip())
 				if near.distance_to(player.global_position) <= 24.0:
 					_landed = e.deal_hit(player,sting_damage,OnHit.DELIVERY_MELEE) != null
 			if _remaining <= 0.0 or _time >= dash_distance/dash_speed:
