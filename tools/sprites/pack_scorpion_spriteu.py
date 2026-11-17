@@ -14,22 +14,28 @@ ACTIONS = ('idle', 'walk', 'attack', 'hurt', 'death', 'pincer', 'emerge', 'bury'
 def main():
     source = json.loads((ROOT / 'tools/sprites/specs/scorpion.spriteu.json').read_text())
     palette = {k: tuple(bytes.fromhex(v.lstrip('#'))) + (255,) for k, v in source['palette'].items()}
-    counts = [len(source['animations'][a + '_s']['frames']) for a in ACTIONS]
-    atlas = Image.new('RGBA', (512, 64 * sum(counts)))
+    counts = [len(source['animations'][a + '_s_q00']['frames']) for a in ACTIONS]
+    atlas = Image.new('RGBA', (1024, 128 * sum(counts)))
     textures, animations = [], []
     row = 0
     for action, count in zip(ACTIONS, counts):
         for col, direction in enumerate(DIRECTIONS):
             name = action + '_' + direction
-            frames = source['animations'][name]['frames']
+            frames = source['animations'][name + '_q00']['frames']
             assert len(frames) == count
             refs = []
             for frame_index, frame in enumerate(frames):
-                image = Image.new('RGBA', (64, 64))
-                image.putdata([palette.get(c, (0, 0, 0, 0)) for line in frame['rows'] for c in line])
-                atlas.paste(image, (col * 64, (row + frame_index) * 64))
+                image = Image.new('RGBA', (128, 128))
+                for qy in range(2):
+                    for qx in range(2):
+                        quad = source['animations'][name + f'_q{qx}{qy}']['frames'][frame_index]
+                        assert quad['ms'] == frame['ms']
+                        pixels = Image.new('RGBA',(64,64))
+                        pixels.putdata([palette.get(c,(0,0,0,0)) for line in quad['rows'] for c in line])
+                        image.paste(pixels,(qx*64,qy*64))
+                atlas.paste(image, (col * 128, (row + frame_index) * 128))
                 key = f'Atlas_{row + frame_index}_{col}'
-                textures.append(f'[sub_resource type="AtlasTexture" id="{key}"]\natlas = ExtResource("1_sheet")\nregion = Rect2({col * 64}, {(row + frame_index) * 64}, 64, 64)\n')
+                textures.append(f'[sub_resource type="AtlasTexture" id="{key}"]\natlas = ExtResource("1_sheet")\nregion = Rect2({col * 128}, {(row + frame_index) * 128}, 128, 128)\n')
                 refs.append('{"duration": ' + str(frame['ms'] / 100.0) + ', "texture": SubResource("' + key + '")}')
             animations.append('{"frames": [' + ', '.join(refs) + '], "loop": ' + ('true' if action in ('idle', 'walk') else 'false') + ', "name": &"' + name + '", "speed": 10.0}')
         row += count
