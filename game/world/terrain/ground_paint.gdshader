@@ -1,5 +1,6 @@
 shader_type canvas_item;
-render_mode unshaded;
+// No `unshaded`: it opts a canvas shader out of CanvasModulate, so the day-night tint skipped the ground.
+render_mode blend_mix;
 // Painted overworld ground: one quad over the whole field, no tiles.
 // `types` holds one texel per 64 px lattice point (DualGrid.T as R*255);
 // the shader samples it at a noise-warped position with bilinear weights per

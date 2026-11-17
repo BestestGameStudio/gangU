@@ -123,6 +123,15 @@ func _init() -> void:
 	black.z_index = -99 ## above BackgroundGrid (-100), below the ground
 	black.draw.connect(func() -> void: black.draw_rect(Rect2(-20000, -20000, 40000, 40000), Color.BLACK))
 	add_child(black)
+	_water = preload("res://game/world/overworld_water.gd").new()
+	_water.name = "Water"
+	_water.ground = self
+	add_child(_water)
+	_wildlife = OverworldWildlife.new()
+	_wildlife.name = "Wildlife"
+	_wildlife.ground = self
+	_wildlife.water = _water
+	add_child(_wildlife)
 	_grass_top = Node2D.new()
 	_grass_top.name = "GrassTop"
 	_grass_top.z_as_relative = false
@@ -140,6 +149,7 @@ func _ready() -> void:
 	queue_redraw()
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
+	_water.queue_redraw()
 
 func _process(_delta: float) -> void:
 	_update_view()
@@ -158,6 +168,7 @@ func _update_view() -> void:
 	queue_redraw()
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
+	_water.queue_redraw()
 
 ## #418: tree canopies draw on their own child at an absolute z above every
 ## character (player, enemies, summons all sit at z 0), so anyone standing
@@ -172,6 +183,72 @@ func _make_canopy() -> Node2D:
 	c.draw.connect(_draw_canopy.bind(c))
 	add_child(c)
 	return c
+
+static func _palm_texture(v: int) -> Texture2D:
+	if _palm_textures.is_empty():
+		for n in PALM_SPRITES:
+			_palm_textures.append(load("res://assets/sprites/terrain/palm_%d.png" % (n + 1)) as Texture2D)
+	return _palm_textures[v % PALM_SPRITES]
+
+static func _driftwood_texture(v: int) -> Texture2D:
+	if _driftwood_textures.is_empty():
+		for n in DRIFTWOOD_SPRITES:
+			_driftwood_textures.append(load("res://assets/sprites/terrain/driftwood_%d.png" % (n + 1)) as Texture2D)
+	return _driftwood_textures[v % DRIFTWOOD_SPRITES]
+
+## #811: same transform as the palm branch of _draw_canopy. The palm art is
+## cropped symmetric around the trunk column, so the base sits at bottom
+## centre exactly like the trees; the box hugs the narrower palm trunk.
+func palm_trunk_rect(d: Dictionary) -> Rect2:
+	var at: Vector2 = d["at"]
+	var r: float = d["r"]
+	var tex := _palm_texture(d["v"])
+	var k := (2.0 * r * 1.3) / (tex.get_height() * 0.95)
+	var size := tex.get_size() * k
+	var foot := at + Vector2(0, r * 0.85)
+	var width := 5.0
+	var source := Rect2(Vector2(tex.get_width() * 0.5 - width * 0.5, tex.get_height() - 10), Vector2(width, 5))
+	return Rect2(foot - Vector2(size.x * 0.5, size.y) + source.position * k, source.size * k)
+
+## #811: hashed beach set dressing on the south sand band - palms on the
+## inner band (walkable, trunk collision planted with the trees) and
+## driftwood along the waterline, inside and just past the outline.
+func _build_beach_decor() -> void:
+	beach_decor.clear()
+	var step := 90.0
+	var grass_rim := _blob(-40.0)       ## stay off the grass/sand blend
+	var sand_deep := _blob(-176.0)      ## inner limit for palms
+	var waterline := _blob(-64.0)       ## in-field driftwood hugs the shore
+	var outer_sand := _blob(BEACH_OUT - 24.0)
+	var x0 := int(floor((CENTER.x - RADII.x) / step))
+	var x1 := int(ceil((CENTER.x + RADII.x) / step))
+	var y0 := int(floor((CENTER.y + RADII.y * 0.35) / step))
+	var y1 := int(ceil((CENTER.y + RADII.y + SOUTH_EXTEND + BEACH_OUT) / step))
+	for gx in range(x0, x1 + 1):
+		for gy in range(y0, y1 + 1):
+			var at := Vector2(gx, gy) * step + Vector2(_hash01(gx, gy, 71) - 0.5, _hash01(gx, gy, 72) - 0.5) * step * 0.7
+			if not _is_south(at):
+				continue
+			var v := int(_hash01(gx, gy, 75) * 2.0) % 2
+			var h := _hash01(gx, gy, 73)
+			if covers(at):
+				if Geometry2D.is_point_in_polygon(at, sand_deep) or not Geometry2D.is_point_in_polygon(at, grass_rim):
+					continue
+				var near_decor := false
+				for d in decor:
+					if d["at"].distance_to(at) < 80.0:
+						near_decor = true
+						break
+				if near_decor:
+					continue
+				if h < 0.28 and _clear_spot(at):
+					beach_decor.append({"kind": "palm", "at": at,
+						"r": 28.0 + _hash01(gx, gy, 74) * 12.0, "v": v})
+				elif h < 0.48 and not Geometry2D.is_point_in_polygon(at, waterline):
+					beach_decor.append({"kind": "driftwood", "at": at, "r": 1.0, "v": v})
+			elif Geometry2D.is_point_in_polygon(at, outer_sand) and h < 0.22:
+				# Washed up on the outer sand, inside the blocked band.
+				beach_decor.append({"kind": "driftwood", "at": at, "r": 1.0, "v": v})
 
 ## Crowns and bushes in view, back to front (by foot y) so a southern crown
 ## overlaps the one behind it. Collision is only the trunk box at the foot.
@@ -188,6 +265,19 @@ func _draw_canopy(c: Node2D) -> void:
 	items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["foot"].y < b["foot"].y)
 	for it in items:
 		TerrainPieces.draw(c, true, it["kind"], it["v"], it["foot"])
+	# #811: beach palms, same bottom-centre anchoring but scaled by height
+	# (the art is wider than tall, unlike the trees).
+	for d in beach_decor:
+		if d["kind"] != "palm":
+			continue
+		var at: Vector2 = d["at"]
+		var r: float = d["r"]
+		if not _view.grow(r*3.0).has_point(at): continue
+		var tex := _palm_texture(d["v"])
+		var k := (2.0 * r * 1.3) / (tex.get_height() * 0.95)
+		var size := tex.get_size() * k
+		var foot := at + Vector2(0.0, r * 0.85)
+		c.draw_texture_rect(tex, Rect2(foot - Vector2(size.x * 0.5, size.y), size), false)
 
 ## Trunk base of a decor tree (the piece's foot).
 func tree_foot(d: Dictionary) -> Vector2:
@@ -228,6 +318,7 @@ func build_from(area: Node) -> void:
 	_collect_patrols(area)
 	_build_patches()
 	_build_decor()
+	_build_beach_decor()
 	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
 		village.shape_decor(self)
@@ -318,6 +409,8 @@ func _plant_tree_collision(area: Node) -> void:
 	var trunks: Array[Rect2] = []
 	for d in decor:
 		if d["kind"] == "tree": trunks.append(tree_trunk_rect(d))
+	for d in beach_decor:
+		if d["kind"] == "palm": trunks.append(palm_trunk_rect(d))
 	map.set_trunk_blockers(trunks)
 	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
@@ -553,6 +646,30 @@ const GATE_PAD_R := 76.0
 ## Cells past the outline that the border covers (drawn) and blocks (collision).
 const BORDER_DRAWN := 112.0
 const BORDER_BLOCKED := 192.0
+## #811 (Mitra, 2026-11-16: "extend the cliff so the cliff wall shows from
+## front-facing views, then blend into water ... the bottom becomes a beach
+## so water is the barrier"): the world edge in lattice terms. North/east/
+## west: the cliff wall reaches CLIFF_BAND past the outline, then ocean.
+## South: a sand beach runs BEACH_IN deep inside the outline and BEACH_OUT
+## past it, then ocean. Water tiles are drawn (animated) by OverworldWater;
+## the blocked band below already ends movement before either waterline.
+const CLIFF_BAND := 256.0
+const BEACH_IN := 192.0
+const BEACH_OUT := 128.0
+var _beach_inner := PackedVector2Array()
+var _beach_buffer := PackedVector2Array()
+var _beach_outer := PackedVector2Array()
+var _cliff_rim := PackedVector2Array()
+## Beach set dressing on the south sand: {"kind": "palm"|"driftwood",
+## "at": Vector2, "r": float, "v": int}. Palms draw on the Canopy and
+## collide at the trunk like trees; driftwood lies flat, no collision.
+var beach_decor: Array[Dictionary] = []
+var _water: OverworldWater
+var _wildlife: OverworldWildlife
+const PALM_SPRITES := 2
+const DRIFTWOOD_SPRITES := 2
+static var _palm_textures: Array[Texture2D] = []
+static var _driftwood_textures: Array[Texture2D] = []
 var _lattice_memo: Dictionary = {}
 var _desert_noise: FastNoiseLite
 
@@ -565,9 +682,33 @@ func _lattice_type(x: int, y: int) -> int:
 	_lattice_memo[key] = t
 	return t
 
+## #811: the south sector (a cone from CENTER opening downward) gets the
+## beach; every other edge keeps the cliff. The cone is wide enough that
+## the sand/cliff seam sits well outside the drawn border.
+func _is_south(p: Vector2) -> bool:
+	var d := p - CENTER
+	return d.y > 0.0 and absf(d.x) < d.y * 1.2
+
 func _compute_lattice_type(p: Vector2) -> int:
 	if not covers(p):
-		return DualGrid.T.CLIFF
+		if _is_south(p):
+			if _beach_outer.is_empty():
+				_beach_outer = _blob(BEACH_OUT)
+			return DualGrid.T.SAND if Geometry2D.is_point_in_polygon(p, _beach_outer) else DualGrid.T.WATER
+		if _cliff_rim.is_empty():
+			_cliff_rim = _blob(CLIFF_BAND)
+		return DualGrid.T.CLIFF if Geometry2D.is_point_in_polygon(p, _cliff_rim) else DualGrid.T.WATER
+	if _is_south(p):
+		if _beach_inner.is_empty():
+			_beach_inner = _blob(-BEACH_IN)
+		if not Geometry2D.is_point_in_polygon(p, _beach_inner):
+			return DualGrid.T.SAND
+		# Buffer band: no dirt pads or patches against the sand - there is
+		# no dirt-on-sand sheet, and the blend would draw as bare blocks.
+		if _beach_buffer.is_empty():
+			_beach_buffer = _blob(-(BEACH_IN + 64.0))
+		if not Geometry2D.is_point_in_polygon(p, _beach_buffer):
+			return DualGrid.T.GRASS
 	# Only grass meets the cliff edge (the edge art is grass over void).
 	if _inner_edge.is_empty():
 		_inner_edge = _blob(-140.0)
@@ -695,17 +836,20 @@ func _make_paint() -> Node2D:
 	return p
 
 func _build_ground_paint() -> void:
-	var lo := Vector2i(((CENTER - RADII * 1.1) / 64.0).floor()) - Vector2i(8, 8)
-	var hi := Vector2i(((CENTER + (RADII + Vector2(0, SOUTH_EXTEND)) * 1.1) / 64.0).ceil()) + Vector2i(8, 8)
+	var pad := Vector2i(8, 8) + Vector2i.ONE * int(ceil(CLIFF_BAND / 64.0)) ## #811: beach and water band reach past the outline
+	var lo := Vector2i(((CENTER - RADII * 1.1) / 64.0).floor()) - pad
+	var hi := Vector2i(((CENTER + (RADII + Vector2(0, SOUTH_EXTEND)) * 1.1) / 64.0).ceil()) + pad
 	var size := hi - lo + Vector2i.ONE
 	var img := Image.create(size.x, size.y, false, Image.FORMAT_R8)
-	var grown := _blob(BORDER_DRAWN)
+	var grown := _blob(CLIFF_BAND)
 	for j in size.y:
 		for i in size.x:
 			var p := lo + Vector2i(i, j)
 			var t := DualGrid.T.CLIFF
 			if Geometry2D.is_point_in_polygon(Vector2(p) * 64.0, grown):
 				t = _lattice_type(p.x, p.y)
+				if t == DualGrid.T.WATER:
+					t = DualGrid.T.SAND ## sand under the animated water layer
 			img.set_pixel(i, j, Color8(t, 0, 0))
 	var mat := _paint.material as ShaderMaterial
 	mat.set_shader_parameter("types", ImageTexture.create_from_image(img))
@@ -755,6 +899,14 @@ func _draw() -> void:
 		else:
 			var v := TerrainPieces.sized_variant((float(d["r"]) - 8.0) / 8.0, _hash01(int(at.x), int(at.y), 98))
 			TerrainPieces.draw(self, false, TerrainPieces.Kind.BOULDER, v, at)
+	# #811: driftwood lies flat on the sand, bottom-centre anchored, 1:1.
+	for d in beach_decor:
+		if d["kind"] != "driftwood":
+			continue
+		var at: Vector2 = d["at"]
+		if not _view.grow(64.0).has_point(at): continue
+		var tex := _driftwood_texture(d["v"])
+		draw_texture(tex, at - Vector2(tex.get_width() * 0.5, tex.get_height() * 0.75))
 
 ## #614: reserve_regions drops decor trees within a margin wider than a
 ## region's footprint, but _plant_tree_collision already marked those trees'
