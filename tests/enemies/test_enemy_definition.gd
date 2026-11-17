@@ -640,7 +640,9 @@ func _test_scorpion() -> void:
 	e.position = Vector2.ZERO
 	p.position = Vector2(70,0)
 	b._enter(e,b.State.STING_WINDUP)
-	b.physics_step(e,p,0.4)
+	b.physics_step(e,p,0.399)
+	_check(b.state == b.State.STING_WINDUP and e.position == Vector2.ZERO,"hop: full warning before any movement")
+	b.physics_step(e,p,0.0011)
 	_check(b.state == b.State.STING_HOP and not e.stinger_grounded(),"hop: windup enters raised-tail hop, not early strike")
 	b.physics_step(e,p,0.035)
 	_check(e.position.is_equal_approx(Vector2(18,0)) and e.sprite.position.y < -31.9,"hop: half-time stops short18px ground travel and12px visual arc")
