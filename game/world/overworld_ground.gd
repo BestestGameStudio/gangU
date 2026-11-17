@@ -684,8 +684,8 @@ var _desert_noise: FastNoiseLite
 ## everywhere else can just be the water"): the cliff band is full width
 ## only on the south-facing stretches of the edge and tapers to nothing
 ## toward the sides and the north, where grass meets the ocean directly.
-const CLIFF_FRONT_FROM := 0.15 ## sin(angle) below which there is no cliff
-const CLIFF_FRONT_FULL := 0.55 ## sin(angle) at which the band is full width
+const CLIFF_FRONT_FROM := 0.97 ## sin(angle) below which there is no cliff
+const CLIFF_FRONT_FULL := 0.99 ## sin(angle) at which the band is full width
 const CLIFF_FRONT_WIDTH := 32.0 ## just the brown face, then water up to its foot
 func _front_rim() -> PackedVector2Array:
 	var pts := PackedVector2Array()
