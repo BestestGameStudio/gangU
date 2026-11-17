@@ -125,7 +125,13 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 				_move(e,delta,minf(_remaining,maxf(0.0,distance-180.0)))
 		State.EMERGE:
 			if _time >= transition_time:
-				_enter(e,State.CHARGE_WINDUP)
+				if alive and distance <= sting_range:
+					_initial_charge = false
+					_aim = off.normalized()
+					e.face_player(_aim)
+					_enter(e,State.STING_WINDUP)
+				else:
+					_enter(e,State.CHARGE_WINDUP)
 		State.CHARGE_WINDUP:
 			_charge_length = e.charge_travel(_aim,dash_distance)
 			if _time >= sting_windup_duration(): _enter(e,State.CHARGE)
@@ -133,15 +139,23 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			var before := e.global_position
 			var step := minf(dash_speed*delta,_remaining)
 			var allowed := e.charge_travel(_aim,step)
-			if allowed > 0.001:
+			var externally_moved := is_instance_valid(e.displacement_owner)
+			if externally_moved:
+				# Enemy runs this branch only to sample self-propulsion. The
+				# reel/stack combines that drive with force and owns the sole move.
+				e.submit_external_motion(before+_aim*allowed,delta)
+			elif allowed > 0.001:
 				e.move_and_collide(_aim*allowed)
 			var traveled := maxf(0.0,(e.global_position-before).dot(_aim))
-			_remaining = maxf(0.0,_remaining-traveled)
+			# A held charge spends its propulsion budget, not the reel's net
+			# displacement. Opposing pulls must not extend the attack forever.
+			var spent := allowed if externally_moved else traveled
+			_remaining = maxf(0.0,_remaining-spent)
 			if alive and not _landed:
 				var near := Geometry2D.get_closest_point_to_segment(player.global_position,before,e.global_position)
 				if near.distance_to(player.global_position) <= CHARGE_HIT_RADIUS:
 					_landed = e.deal_hit(player,sting_damage,OnHit.DELIVERY_MELEE) != null
-			if _remaining <= 0.001 or traveled < step-0.01:
+			if _remaining <= 0.001 or spent < step-0.01:
 				if alive:
 					_aim = (player.global_position-e.global_position).normalized()
 					e.face_player(_aim)

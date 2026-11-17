@@ -564,6 +564,45 @@ func _test_scorpion() -> void:
 	b._enter(e,b.State.STING_STRIKE)
 	for i in 21: b.physics_step(e,p,1.0/60.0)
 	_check(b.state == b.State.MISS_STUN,"scorpion: i-frames count as sting miss")
+	# Production sole-mover seam: a hooked charge submits drive, never moves twice.
+	e.position = Vector2(650,0)
+	p.position = Vector2.ZERO
+	b._aim = Vector2.RIGHT
+	b._enter(e,b.State.CHARGE_WINDUP)
+	b._enter(e,b.State.CHARGE)
+	var hook: Spell = load("res://data/spells/hook_shot.tres")
+	var reel := HookReel.begin(area,e,p,hook)
+	reel.set_physics_process(false)
+	var held_before := e.position
+	e._physics_process(1.0/60.0)
+	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(600,0)),"charge reel: Enemy step submits600 propulsion without moving")
+	var expected_velocity := Enemy.force_step(Vector2(600,0),Vector2.ZERO,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	reel._physics_process(1.0/60.0)
+	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0),"charge reel: actual HookReel performs sole force-integrated move")
+	_check(e.position.x > held_before.x and e.position.x < held_before.x+10.0,"charge reel: opposing pull slows rather than double-moves charge")
+	_check(HookPullStack.contains(e,reel) and b.state == b.State.CHARGE,"charge reel: movement preserves ownership and charge state")
+	# Perpendicular force also changes the one resolved step, not a flat slow.
+	p.position = e.position+Vector2(0,-500)
+	e.reel_force_velocity = Vector2.ZERO
+	held_before = e.position
+	e._physics_process(1.0/60.0)
+	expected_velocity = Enemy.force_step(Vector2(600,0),Vector2.ZERO,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	_check(e.position == held_before,"charge reel: perpendicular pull still samples without displacement")
+	reel._physics_process(1.0/60.0)
+	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0) and e.position.y < held_before.y,"charge reel: actual pull deflects through force resolver")
+	# Charge propulsion ends on its own budget even if a pull cancels progress.
+	for i in 25:
+		if b.state == b.State.CHARGE: e._physics_process(1.0/60.0)
+	_check(b.state == b.State.PINCER_WINDUP,"charge reel: finite submitted budget still reaches pincer")
+	reel.free()
+	# Opening at close range obeys the same stationary selection as chase.
+	e.position = Vector2.ZERO
+	p.position = Vector2(20,0)
+	b._enter(e,b.State.BURIED)
+	b.physics_step(e,p,0.01)
+	b.physics_step(e,p,0.01)
+	b.physics_step(e,p,0.30)
+	_check(b.state == b.State.STING_WINDUP,"opening: close player selects stationary sting, not body charge")
 	area.free()
 
 func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array) -> void:

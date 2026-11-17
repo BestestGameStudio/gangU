@@ -178,11 +178,14 @@ damage delegates to the same HP mutation, preventing double armor.
 Type-local states own buried/rush/emerge/body-charge/sting/miss/chase/pincer/bury.
 Underground has no targeting, projectile collision, contact attack or accepted
 HP damage. Named states feed F2. Initial harmless rush has a sand trail and
-stops within180px;0.30s emerge then initial180ms charge tell (later360ms).
+stops within180px;0.30s emerge then initial180ms charge tell (later360ms), or a stationary sting when the
+player is already within70px.
 Body charge travels up to200px at600px/s with a24px swept hit radius and25damage,
 then always follows with pincer. Its body-centered warning covers reachable
 travel plus24px at each end, sharing physics/terrain/constraint clipping with
-execution, without wall sliding. At close range (within70px), a stationary
+execution, without wall sliding. While externally reeled, charge submits
+self-propulsion to the existing force resolver; the reel/stack remains the
+sole mover and the charge spends its own finite propulsion budget. At close range (within70px), a stationary
 25damage tail strike replaces the charge; the actual extended tip must hit.
 Charge selection outside close range uses the existing300px wake range.
 Pincer deals15 within50px after100ms first pose plus420ms held tell.
