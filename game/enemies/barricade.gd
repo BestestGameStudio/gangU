@@ -47,6 +47,7 @@ const THICKNESS: float = 12.0 ## along the line of fire (PLACEHOLDER)
 const WOOD := Color(0.55, 0.36, 0.18)
 const WOOD_DARK := Color(0.33, 0.2, 0.09)
 const WOOD_LIGHT := Color(0.72, 0.5, 0.27)
+const ART := preload("res://assets/sprites/barricade.png") ## 3 frames of 7x24 art px, drawn at 2x
 
 @export var max_hp: int = 150 ## "high health": ~6 Fire Balls / 15 Mana Shots (PLACEHOLDER)
 
@@ -60,6 +61,7 @@ var _dead := false
 var _flash_t := 0.0
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_to_group(&"cover")
 	add_to_group(&"barricades")
 	hp = max_hp
@@ -141,21 +143,17 @@ func _draw() -> void:
 	var half_t := THICKNESS * 0.5
 	var half_w := WIDTH * 0.5
 	draw_rect(Rect2(-half_t + 2.0, -half_w + 2.0, THICKNESS, WIDTH), Color(0, 0, 0, 0.3))
-	var planks := 4
-	var pw := WIDTH / planks
-	for i in planks:
-		var y := -half_w + i * pw
-		var c := (WOOD if i % 2 == 0 else WOOD_LIGHT).lerp(WOOD_DARK, (1.0 - frac) * 0.6)
-		draw_rect(Rect2(-half_t, y + 0.5, THICKNESS, pw - 1.0), c * tint)
-	# Cross brace + posts.
-	draw_line(Vector2(-half_t + 1, -half_w + 2), Vector2(half_t - 1, half_w - 2), WOOD_DARK * tint, 2.0)
-	draw_rect(Rect2(-half_t - 1.0, -half_w - 2.0, THICKNESS + 2.0, 4.0), WOOD_DARK * tint)
-	draw_rect(Rect2(-half_t - 1.0, half_w - 2.0, THICKNESS + 2.0, 4.0), WOOD_DARK * tint)
-	# Cracks appear as it decays / takes damage.
+	# Planks, posts, brace and cracks come from the sprite: frame 0 intact,
+	# 1 after the first crack (< 66 %), 2 after the second (< 33 %). The old
+	# plank darkening with damage is a modulate.
+	var frame := 0
 	if frac < 0.66:
-		draw_line(Vector2(-2, -half_w * 0.6), Vector2(3, -half_w * 0.1), Color(0.12, 0.07, 0.03), 1.5)
+		frame = 1
 	if frac < 0.33:
-		draw_line(Vector2(2, half_w * 0.2), Vector2(-3, half_w * 0.7), Color(0.12, 0.07, 0.03), 1.5)
+		frame = 2
+	var dark := Color.WHITE.lerp(Color(0.62, 0.62, 0.62), 1.0 - frac)
+	draw_texture_rect_region(ART, Rect2(-half_t - 1.0, -half_w - 2.0, THICKNESS + 2.0, WIDTH + 4.0),
+		Rect2(frame * 7.0, 0.0, 7.0, 24.0), dark * tint)
 	# HP bar (local -x side would rotate with the body; keep it short and
 	# readable in any orientation by drawing it unrotated).
 	draw_set_transform(Vector2.ZERO, -global_rotation)
