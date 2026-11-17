@@ -359,6 +359,13 @@ func _test_scorpion() -> void:
 	shot.global_position = tip_now + Vector2(0,40)
 	shot._sweep_segment(tip_now-Vector2(0,40),Vector2(0,80))
 	_check(e.hp == 100,"scorpion: removed tip collider does not receive tip-only projectile")
+	var body_shot: Projectile = load("res://game/spells/projectile.tscn").instantiate()
+	body_shot.setup(spell,Vector2.DOWN,p)
+	area.add_child(body_shot)
+	body_shot.set_physics_process(false)
+	body_shot.global_position = e.position+Vector2(0,-40)
+	body_shot._sweep_segment(e.position+Vector2(0,40),Vector2(0,-80))
+	_check(e.hp == 90,"scorpion: real BODY projectile while grounded deals full10 damage")
 	# Rendered suffix overrides aim during a terrain-path detour. Coordinates
 	# below were independently captured from the committed Python pixel rig.
 	e.facing = Vector2.RIGHT

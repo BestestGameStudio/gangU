@@ -197,7 +197,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			elif allowed > 0.001:
 				e.move_and_collide(_aim*allowed)
 			_remaining = maxf(0.0,_remaining-allowed)
-			if _time >= HOP_TIME: _enter(e,State.STING_STRIKE)
+			if _time+0.000001 >= HOP_TIME: _enter(e,State.STING_STRIKE)
 			else: e.set_hop_height(12.0*sin(PI*clampf(_time/HOP_TIME,0.0,1.0)))
 		State.STING_STRIKE:
 			# Stationary tail strike, independent of the body charge.
