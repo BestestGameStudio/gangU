@@ -619,3 +619,7 @@ specks, waves and the tide are drawn procedurally. Not extracted from a board.
 ## Pine shadow strays and tuft redraw (#838)
 
 - `terrain/terrain_pieces_base.png`: regenerated with `tools/sprites/draw_terrain_pieces.py`. Pine row (kind 1) variants 3-7 had 91 stray semi-transparent shadow pixels spilled from the tree shadow into the cell above, drawn as dark bars. The shadow is now clipped to its own cell. Tuft row (kind 5) redrawn as upright 1 px blades (no dark base row). All other rows are pixel-identical. Original art, no external reference pixels used.
+
+## Stone Hammer sprites (#839)
+
+- `stone_hammer.png`: 64x32 atlas drawn by `tools/sprites/gen_stone_hammer.py`: hammer head (15x9, drawn at 2x = the old 30x18 rectangle), 2x4 handle strip stretched along the swing, 32x32 radial crack star for the impact. Original pixel art in the style and palette of the existing sledgehammer spell icon and the old code colours; no external reference pixels used.
