@@ -127,7 +127,7 @@ func _step_hunt(enemy: Enemy, player, alive: bool, dist: float, delta: float) ->
 		_aim = (player.global_position - enemy.global_position).normalized()
 		_pounce_hit = false
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		enemy.play_action(&"telegraph", true)
 		if enemy.sprite != null:
 			enemy.sprite.set_glow(true)
@@ -141,11 +141,11 @@ func _step_hunt(enemy: Enemy, player, alive: bool, dist: float, delta: float) ->
 		goal = player.global_position
 	var chase := (goal - enemy.global_position).normalized() * enemy.speed
 	enemy.velocity = _hunt_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, chase, goal, enemy.speed, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 
 func _step_telegraph(enemy: Enemy, delta: float) -> void:
 	enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	_timer -= delta
 	if _timer <= 0.0:
 		state = POUNCE
@@ -174,7 +174,7 @@ func _step_recover(enemy: Enemy, player, alive: bool, delta: float) -> void:
 	if alive:
 		drift = (player.global_position - enemy.global_position).normalized() * enemy.speed * 0.2
 	enemy.velocity = _walk_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, drift, enemy.global_position + drift, enemy.speed, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	if _timer <= 0.0:
 		state = HUNT if alive else PROWL
 
@@ -193,7 +193,7 @@ func _walk(enemy: Enemy, at: Vector2, speed: float, delta: float) -> bool:
 	var arrived := to.length() <= RETREAT_ARRIVE * 0.5
 	var walk := Vector2.ZERO if arrived else to.normalized() * minf(speed, to.length() / maxf(delta, 0.0001))
 	enemy.velocity = _walk_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, walk, at, speed, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	return arrived
 
 ## Pack hunt: the cave reports a packmate in combat; converge from afar.

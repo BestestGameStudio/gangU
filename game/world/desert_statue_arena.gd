@@ -160,6 +160,7 @@ func _ready() -> void:
 		var definition := EnemyDefinition.new()
 		definition.max_hp = statue_max_hp
 		definition.speed = 0
+		definition.weight = 4.0
 		statue.definition = definition
 		statue.hp = statue_max_hp
 		statue.terrain = get_parent().get_node_or_null("Terrain") as TerrainMap
@@ -777,6 +778,24 @@ func _enter_phase_two() -> void:
 ## The sand general is arena-owned (like phase-one possession), so its HP
 ## remains the encounter HP and all attacks use the normal Player damage path.
 func _phase_two_step(delta: float) -> void:
+	# Rebase the attack's moving frame onto the actual actor after external pulls.
+	# Locked world-space aim stays fixed, but launch origins follow the actor.
+	if is_instance_valid(possessed):
+		var drift := possessed.position-_phase_two_boss_position
+		_phase_two_origin += drift
+		_phase_two_bash_start += drift
+		_phase_two_boss_position = possessed.position
+	var before := _phase_two_boss_position
+	_plan_phase_two_step(delta)
+	if is_instance_valid(possessed):
+		# Submit only this tick's planned displacement, not a teleport to a path.
+		var step := _phase_two_boss_position-before
+		if _phase_two_attack_index == 3 and general_height <= 0.0 and _phase_two_release_done:
+			possessed.reel_propulsion = Vector2.ZERO
+		else:
+			possessed.submit_external_motion(possessed.global_position+step,delta)
+
+func _plan_phase_two_step(delta: float) -> void:
 	_phase_two_impact_time = maxf(_phase_two_impact_time-delta, 0.0)
 	if _phase_two_shield_time > 0.0:
 		_phase_two_shield_time -= delta
@@ -793,8 +812,6 @@ func _phase_two_step(delta: float) -> void:
 	if _phase_two_bombardment != null:
 		_phase_two_bombardment.advance(delta)
 		_phase_two_boss_position = _constrain_boss_position(_phase_two_boss_position)
-	if is_instance_valid(possessed):
-		possessed.position = _phase_two_boss_position
 	_phase_two_attack_time += delta*phase_two_speed_multiplier
 	var move := _phase_two_attack_index
 	var windup: float = MOVE_WINDUP[move]
@@ -824,8 +841,9 @@ func _phase_two_step(delta: float) -> void:
 		else:
 			general_height = height*(1.0-pow(clampf((_phase_two_attack_time-windup-0.18)/0.22,0.0,1.0),2.0))
 	if is_instance_valid(possessed):
-		possessed.position = _phase_two_boss_position
 		possessed.collision_layer = 0 if general_height > 120.0 else PhysicsLayers.ENEMY
+		if general_height > 0.0:
+			_release_airborne_anchors(possessed)
 	if _phase_two_attack_time < windup:
 		return
 	var attack_time: float = _phase_two_attack_time-windup
@@ -838,8 +856,6 @@ func _phase_two_step(delta: float) -> void:
 		_phase_two_bash_direction = _phase_two_direction
 		_phase_two_bash_hit = false
 	_phase_two_execute(move, attack_time, delta)
-	if is_instance_valid(possessed):
-		possessed.position = _phase_two_boss_position
 	if attack_time >= release:
 		_phase_two_attack_time = -phase_two_attack_gap
 		_phase_two_attack_done = false
@@ -889,7 +905,7 @@ func _phase_two_execute(attack: int, t: float, _delta: float) -> void:
 			if beat >= 0.22 and beat < 0.46:
 				var destination := _phase_two_bash_start.move_toward(_phase_two_aim,81.6*clampf((beat-0.22)/0.24,0.0,1.0))
 				_phase_two_boss_position = _constrain_boss_position(destination)
-				if not _phase_two_dash_hit and _phase_two_boss_position.distance_to(target_offset) < DASH_HIT_RADIUS:
+				if not _phase_two_dash_hit and possessed.position.distance_to(target_offset) < DASH_HIT_RADIUS:
 					player.apply_damage(attack_damage)
 					_phase_two_dash_hit = true
 		2: # Visible broad slash uses the SAME sector as its warning.
@@ -903,14 +919,18 @@ func _phase_two_execute(attack: int, t: float, _delta: float) -> void:
 				_phase_two_release_done = true
 				general_height = 0.0
 				_phase_two_boss_position = _phase_two_aim
-				_show_phase_two_impact(_phase_two_aim,SLAM_RADIUS,0.55)
+				# Landing is the jump's explicit world-space destination, not a
+				# planned delta added to an old reel offset. Reels resume next tick.
+				possessed.position = _phase_two_aim
+				possessed.reel_force_velocity = Vector2.ZERO
+				_show_phase_two_impact(possessed.position,SLAM_RADIUS,0.55)
 				if target_offset.distance_to(_phase_two_aim) < SLAM_RADIUS:
 					player.apply_damage(attack_damage+5)
 		4: # Shield-first lunge, aligned to the warned capsule.
 			var dash_progress := clampf(t/0.42,0.0,1.0)
 			var eased_progress := 1.0-pow(1.0-dash_progress,3.0)
 			_phase_two_boss_position = _constrain_boss_position(_phase_two_bash_start+_phase_two_bash_direction*175.0*eased_progress)
-			if t <= 0.42 and not _phase_two_bash_hit and _phase_two_boss_position.distance_to(target_offset) < BASH_HIT_RADIUS:
+			if t <= 0.42 and not _phase_two_bash_hit and possessed.position.distance_to(target_offset) < BASH_HIT_RADIUS:
 				_phase_two_bash_hit = true
 				_show_phase_two_impact(target_offset,68.0,0.32)
 				player.apply_damage(attack_damage)
@@ -1274,3 +1294,12 @@ func _capsule(start: Vector2, end: Vector2, radius: float, fill: Color, ink: Col
 	draw_colored_polygon(points,fill)
 	points.append(points[0])
 	draw_polyline(points,ink,2.0,true)
+
+## Boss jumping, not player jumping, releases only its attached Rock pairs.
+func _release_airborne_anchors(victim: Enemy) -> void:
+	for pair in get_tree().get_nodes_in_group("hook_anchor_pairs"):
+		if pair.caught_enemy == victim:
+			if is_instance_valid(pair.active_reel):
+				HookPullStack.detach(victim,pair.active_reel)
+				pair.active_reel.queue_free()
+			pair.queue_free()

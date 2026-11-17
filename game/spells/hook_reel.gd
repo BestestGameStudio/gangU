@@ -53,6 +53,9 @@ func _physics_process(delta: float) -> void:
  var motion := offset.normalized() * minf(next_speed * delta, maxf(offset.length() - stop_distance, 0.0))
  if enemy.displacement_owner is HookPullStack:
   queue_redraw(); return
+ if not enemy.reel_propulsion.is_zero_approx():
+  motion = enemy.resolve_reel_force(pull_force(enemy),delta,pull_speed_limit(enemy))*delta
+  motion = stop_at_contact(enemy.global_position,motion,target.global_position,stop_distance)
  var before := enemy.global_position
  enemy.move_and_collide(motion)
  if enemy.terrain != null:
@@ -61,6 +64,12 @@ func _physics_process(delta: float) -> void:
  if enemy.global_position.distance_to(target.global_position) <= stop_distance + 0.01:
   _arrive(); return
  queue_redraw()
+
+func pull_speed_limit(victim: Enemy) -> float:
+ return speed_for(spell,victim.weight)
+
+func pull_force(victim: Enemy) -> Vector2:
+ return victim.global_position.direction_to(target.global_position)*spell.hook_reel_acceleration*spell.displacement_force
 
 func pull_velocity(_victim: Enemy, _delta: float) -> Vector2:
  return reel_velocity
@@ -73,6 +82,7 @@ func _arrive() -> void:
  arrived = true
  reel_velocity = Vector2.ZERO
  enemy.velocity = Vector2.ZERO
+ enemy.reel_force_velocity = Vector2.ZERO
  if spell.hook_arrival_stun > 0.0: enemy.stun(spell.hook_arrival_stun)
  queue_free()
 

@@ -91,8 +91,8 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 ## cells. Nav-less enemies keep the plain move_and_slide they had before.
 static func _slide(enemy: Enemy) -> void:
 	if enemy.nav == null:
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	var before := enemy.global_position
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	enemy.global_position = TerrainMotion.clamp_displacement(enemy.terrain, before, enemy.global_position, enemy.can_swim)

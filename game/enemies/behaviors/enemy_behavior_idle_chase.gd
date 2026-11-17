@@ -91,7 +91,7 @@ func _idle_step(enemy: Enemy, player, delta: float) -> void:
 		if to_spot.length() <= arrive_epsilon:
 			_spot = Vector2.INF
 			enemy.velocity = Vector2.ZERO
-			enemy.move_and_slide()
+			enemy.self_move_and_slide()
 			return
 		# Bounded travel: a spot can be walkable yet unreachable (water,
 		# disconnected walls), and TerrainPath yields zero movement when no
@@ -101,15 +101,15 @@ func _idle_step(enemy: Enemy, player, delta: float) -> void:
 			_spot = Vector2.INF
 			_pick_timer = _rng.randf_range(idle_pick_min, idle_pick_max)
 			enemy.velocity = Vector2.ZERO
-			enemy.move_and_slide()
+			enemy.self_move_and_slide()
 			return
 		var spd: float = enemy.speed * stroll_fraction
 		var desired: Vector2 = to_spot.normalized() * spd
 		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, desired, _spot, spd, delta, enemy.can_swim)
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	_pick_timer -= delta
 	if _pick_timer <= 0.0:
 		_pick_timer = _rng.randf_range(idle_pick_min, idle_pick_max)
@@ -132,14 +132,14 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 		_last_seen = Vector2.INF
 		_chasing_last_seen = false
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	if not _player_nearby(enemy, player, chase_exit_range):
 		_state = State.IDLE
 		_last_seen = Vector2.INF
 		_chasing_last_seen = false
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	if not enemy.sees(player):
 		# #633 (Daniel): sight lost (tall grass) - chase to the last seen
@@ -152,7 +152,7 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 			_search_timer = search_duration
 			_spot = Vector2.INF
 			enemy.velocity = Vector2.ZERO
-			enemy.move_and_slide()
+			enemy.self_move_and_slide()
 			return
 		# Bounded travel (#634 review): the last seen point can be
 		# unreachable (water for a non-swimmer, a blocked or disconnected
@@ -170,12 +170,12 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 			_spot = Vector2.INF
 			_last_seen = enemy.global_position
 			enemy.velocity = Vector2.ZERO
-			enemy.move_and_slide()
+			enemy.self_move_and_slide()
 			return
 		var to_seen: Vector2 = _last_seen - enemy.global_position
 		var want: Vector2 = to_seen.normalized() * spd0
 		enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, _last_seen, spd0, delta, enemy.can_swim)
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	_chasing_last_seen = false
 	_last_seen = player.global_position
@@ -183,7 +183,7 @@ func _chase_step(enemy: Enemy, player, delta: float) -> void:
 	var spd: float = enemy.chase_speed()
 	var chase: Vector2 = to_player.normalized() * spd if to_player.length() > 8.0 else Vector2.ZERO
 	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, chase, player.global_position, spd, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	if to_player.length() <= enemy.contact_range and _contact_timer <= 0.0:
 		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		_contact_timer = enemy.contact_cooldown
@@ -205,7 +205,7 @@ func _search_step(enemy: Enemy, player, delta: float) -> void:
 		var p: Variant = _pick_walkable_near(enemy, _last_seen, search_radius)
 		if p == null:
 			enemy.velocity = Vector2.ZERO
-			enemy.move_and_slide()
+			enemy.self_move_and_slide()
 			return
 		_spot = p
 		var spd0: float = enemy.speed * stroll_fraction
@@ -214,18 +214,18 @@ func _search_step(enemy: Enemy, player, delta: float) -> void:
 	if to_spot.length() <= arrive_epsilon:
 		_spot = Vector2.INF
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	_travel_timer -= delta
 	if _travel_timer <= 0.0:
 		_spot = Vector2.INF
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	var spd: float = enemy.speed * stroll_fraction
 	var desired: Vector2 = to_spot.normalized() * spd
 	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, desired, _spot, spd, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 
 ## #639: an alerted red converges on the alert spot's flank ring at chase
 ## speed. Seeing the player switches straight to CHASE (and re-alerts);
@@ -244,12 +244,12 @@ func _alert_step(enemy: Enemy, player, delta: float) -> void:
 		_search_timer = search_duration
 		_spot = Vector2.INF
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		return
 	var spd: float = enemy.chase_speed()
 	var want: Vector2 = (_alert_target - enemy.global_position).normalized() * spd
 	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, _alert_target, spd, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 
 ## Entering CHASE on a spotting alerts nearby red mustaches (#639) through
 ## the AlertBus autoload. Each broadcast carries a sequence so a receiver
