@@ -401,7 +401,9 @@ func _physics_process(delta: float) -> void:
 	# settled position.
 	var launch_finished := false
 	if _launch_time_left > 0.0:
-		desired = _launch_dir * _launch_speed
+		# Like dash, only move for the remaining fraction of the final tick.
+		var launch_scale := minf(_launch_time_left, delta) / delta if delta > 0.0 else 1.0
+		desired = _launch_dir * _launch_speed * launch_scale
 		_launch_time_left = maxf(_launch_time_left - delta, 0.0)
 		if _launch_time_left == 0.0:
 			launch_finished = true
