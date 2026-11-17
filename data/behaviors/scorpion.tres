@@ -1,0 +1,4 @@
+[gd_resource type="Resource" script_class="EnemyBehaviorScorpion" load_steps=2 format=3]
+[ext_resource type="Script" path="res://game/enemies/behaviors/enemy_behavior_scorpion.gd" id="1"]
+[resource]
+script = ExtResource("1")

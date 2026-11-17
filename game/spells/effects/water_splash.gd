@@ -119,7 +119,7 @@ func _land() -> void:
 		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var hp: Variant = e.get(&"hp")
-		if hp == null or int(hp) <= 0:
+		if hp == null or int(hp) <= 0 or not HitContext.targetable(e):
 			continue
 		if (e as Node2D).global_position.distance_to(target) <= spell.splash_radius:
 			deal_damage(e, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius, &"splash"))

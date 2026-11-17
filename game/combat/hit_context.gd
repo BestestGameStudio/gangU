@@ -53,3 +53,7 @@ static func receiver_modifiers(target: Object, context: HitContext = null) -> Da
 	if context != null and target.has_method(&"modifiers_for_hit"):
 		return target.call(&"modifiers_for_hit", context) as DamageModifiers
 	return target.get(&"damage_modifiers") as DamageModifiers
+
+## Optional combat concealment, independent of tall-grass visual sight.
+static func targetable(target: Object) -> bool:
+	return not target.has_method(&"is_combat_targetable") or bool(target.call(&"is_combat_targetable"))

@@ -106,7 +106,7 @@ func _nearest_enemy(summon: Summon) -> Enemy:
 	var best_d := INF
 	for e in summon.get_tree().get_nodes_in_group("enemies"):
 		var enemy := e as Enemy
-		if enemy == null or enemy.hp <= 0:
+		if enemy == null or enemy.hp <= 0 or not HitContext.targetable(enemy):
 			continue
 		# #461: an enemy hidden in tall grass is not a target.
 		if not TallGrass.can_see(summon.terrain, summon.global_position, enemy.global_position):

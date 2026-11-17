@@ -244,7 +244,7 @@ func _living_enemies() -> Array[Node]:
 		if not is_instance_valid(e) or not (e is Node2D) or e.is_queued_for_deletion():
 			continue
 		var hp: Variant = e.get(&"hp")
-		if hp == null or int(hp) <= 0:
+		if hp == null or int(hp) <= 0 or not HitContext.targetable(e):
 			continue
 		out.append(e)
 	return out

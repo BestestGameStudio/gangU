@@ -1,0 +1,30 @@
+[gd_scene load_steps=8 format=3]
+[ext_resource type="PackedScene" path="res://game/enemies/enemy_base.tscn" id="1"]
+[ext_resource type="Script" path="res://game/enemies/enemy_scorpion.gd" id="2"]
+[ext_resource type="Resource" path="res://data/enemies/scorpion.tres" id="3"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/scorpion_frames.tres" id="4"]
+[ext_resource type="Script" path="res://game/enemies/scorpion_sprite.gd" id="5"]
+[sub_resource type="CircleShape2D" id="body"]
+radius = 13.0
+[sub_resource type="CircleShape2D" id="tip"]
+radius = 12.0
+[node name="Scorpion" instance=ExtResource("1")]
+script = ExtResource("2")
+definition = ExtResource("3")
+[node name="Shadow" parent="." index="0"]
+position = Vector2(0,5)
+color = Color(0,0,0,0.3)
+polygon = PackedVector2Array(-19,0,-10,-5,10,-5,19,0,10,5,-10,5)
+[node name="Sprite" parent="." index="1"]
+script = ExtResource("5")
+texture_filter = 1
+position = Vector2(0,-9)
+sprite_frames = ExtResource("4")
+animation = &"idle_s"
+burst_color = Color(0.34,0.39,0.47,1)
+[node name="CollisionShape2D" parent="." index="2"]
+shape = SubResource("body")
+disabled = true
+[node name="StingerShape" type="CollisionShape2D" parent="." index="3"]
+shape = SubResource("tip")
+disabled = true

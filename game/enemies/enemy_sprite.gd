@@ -61,7 +61,7 @@ func _ready() -> void:
 	var body := get_parent()
 	if body != null and body.has_signal("health_changed"):
 		body.connect(&"health_changed", _on_health_changed)
-	play(&"idle")
+	play(_variant(&"idle"))
 
 ## Current one-shot / held action, or &"" while on locomotion.
 func current_action() -> StringName:
@@ -101,6 +101,11 @@ func _variant(base: StringName) -> StringName:
 
 ## Mirror toward a horizontal direction (art faces right). Tiny x is ignored
 ## so a target straight above/below never flickers the facing.
+func face_direction(direction: Vector2) -> void:
+	if direction.length_squared() > 0.001:
+		_facing = direction
+		if not _directional: face(direction.x)
+
 func face(dir_x: float) -> void:
 	if absf(dir_x) > 0.5:
 		flip_h = (dir_x < 0.0) != art_faces_left

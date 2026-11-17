@@ -457,7 +457,7 @@ func _steer(delta: float) -> void:
 	for e: Enemy in get_tree().get_nodes_in_group(&"enemies"):
 		if not is_instance_valid(e):
 			continue
-		if e.hp <= 0: # living enemies only
+		if e.hp <= 0 or not HitContext.targetable(e): # living/exposed enemies only
 			continue
 		if _hit_bodies.has(e):
 			# #37: a body already pierced this projectile is spent - steering
@@ -522,7 +522,7 @@ func _on_body_entered(body: Node2D) -> void:
 func _resolve_body_hit(body: Node2D, context: HitContext) -> void:
 	if is_queued_for_deletion():
 		return # #216 review: a shot already spent (e.g. on a block) hits nothing more
-	if body == source:
+	if body == source or not HitContext.targetable(body):
 		return
 	if _lobs_over(body):
 		return # #443: a lobbed rock flies over low cover and the thrower's allies
