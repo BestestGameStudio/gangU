@@ -127,11 +127,6 @@ func _init() -> void:
 	_water.name = "Water"
 	_water.ground = self
 	add_child(_water)
-	var rock := OverworldCliffRock.new() ## #820: solid rock where the shader would leave void
-	rock.name = "CliffRock"
-	rock.ground = self
-	add_child(rock)
-	_rock = rock
 	_wildlife = OverworldWildlife.new()
 	_wildlife.name = "Wildlife"
 	_wildlife.ground = self
@@ -677,7 +672,6 @@ var _cliff_rim := PackedVector2Array()
 ## collide at the trunk like trees; driftwood lies flat, no collision.
 var beach_decor: Array[Dictionary] = []
 var _water: OverworldWater
-var _rock: OverworldCliffRock
 var _wildlife: OverworldWildlife
 const PALM_SPRITES := 2
 const DRIFTWOOD_SPRITES := 2
@@ -692,13 +686,14 @@ var _desert_noise: FastNoiseLite
 ## toward the sides and the north, where grass meets the ocean directly.
 const CLIFF_FRONT_FROM := 0.15 ## sin(angle) below which there is no cliff
 const CLIFF_FRONT_FULL := 0.55 ## sin(angle) at which the band is full width
+const CLIFF_FRONT_WIDTH := 32.0 ## just the brown face, then water up to its foot
 func _front_rim() -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in OUTLINE_POINTS:
 		var a := TAU * i / OUTLINE_POINTS
 		var wob := 1.0 + 0.027 * (sin(3.0 * a + 1.0) + 0.7 * sin(5.0 * a + 2.0) + 0.5 * sin(9.0 * a))
 		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
-		var d := CLIFF_BAND * smoothstep(CLIFF_FRONT_FROM, CLIFF_FRONT_FULL, sin(a))
+		var d := CLIFF_FRONT_WIDTH * smoothstep(CLIFF_FRONT_FROM, CLIFF_FRONT_FULL, sin(a))
 		pts.append(CENTER + Vector2(cos(a) * (RADII.x * wob + d), sin(a) * (ry * wob + d)))
 	return pts
 
