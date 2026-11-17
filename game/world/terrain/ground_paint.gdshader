@@ -32,6 +32,7 @@ const vec3 STONE_P[6] = vec3[6](vec3(38.0, 42.0, 53.0), vec3(59.0, 65.0, 82.0), 
 const vec3 COBBLE_P[5] = vec3[5](vec3(70.0, 64.0, 60.0), vec3(92.0, 86.0, 80.0), vec3(114.0, 107.0, 98.0), vec3(136.0, 129.0, 118.0), vec3(160.0, 152.0, 140.0));
 const vec3 CLIFF_P[6] = vec3[6](vec3(37.0, 28.0, 27.0), vec3(53.0, 40.0, 38.0), vec3(74.0, 55.0, 50.0), vec3(94.0, 71.0, 64.0), vec3(117.0, 90.0, 78.0), vec3(142.0, 112.0, 95.0));
 const vec3 VOID_C = vec3(9.0, 11.0, 10.0);
+const vec3 ROCK_C = vec3(88.0, 82.0, 88.0); // flat rock under the cliff face (#820), same as OverworldCliffRock
 
 varying vec2 world;
 
@@ -221,7 +222,7 @@ void fragment() {
 			}
 			c = CLIFF_P[k] * mix(1.0, 0.45, depth / 44.0);
 		} else {
-			c = VOID_C;
+			c = ROCK_C;
 		}
 	} else {
 		c = paint(top, w, tone);
