@@ -1,0 +1,38 @@
+[gd_resource type="SpriteFrames" load_steps=10 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/stun_halo.png" id="1_sheet"]
+
+[sub_resource type="AtlasTexture" id="Atlas_0"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_1"]
+atlas = ExtResource("1_sheet")
+region = Rect2(64, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_2"]
+atlas = ExtResource("1_sheet")
+region = Rect2(128, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_3"]
+atlas = ExtResource("1_sheet")
+region = Rect2(192, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_4"]
+atlas = ExtResource("1_sheet")
+region = Rect2(256, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_5"]
+atlas = ExtResource("1_sheet")
+region = Rect2(320, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_6"]
+atlas = ExtResource("1_sheet")
+region = Rect2(384, 0, 64, 64)
+
+[sub_resource type="AtlasTexture" id="Atlas_7"]
+atlas = ExtResource("1_sheet")
+region = Rect2(448, 0, 64, 64)
+
+[resource]
+animations = [{"frames": [{"duration": 0.75, "texture": SubResource("Atlas_0")}, {"duration": 0.75, "texture": SubResource("Atlas_1")}, {"duration": 0.75, "texture": SubResource("Atlas_2")}, {"duration": 0.75, "texture": SubResource("Atlas_3")}, {"duration": 0.75, "texture": SubResource("Atlas_4")}, {"duration": 0.75, "texture": SubResource("Atlas_5")}, {"duration": 0.75, "texture": SubResource("Atlas_6")}, {"duration": 0.75, "texture": SubResource("Atlas_7")}], "loop": true, "name": &"stun", "speed": 10.0}]

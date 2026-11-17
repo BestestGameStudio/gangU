@@ -18,7 +18,8 @@ const STING_WINDUP := 0.36
 ## Pincer first pose100ms + held pose420ms = 520ms to impact.
 const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
-const MISS_STUN_TIME := 0.5
+const MISS_STUN_TIME := 1.0
+const STINGER_STUN_BONUS := 2.0
 var state: State = State.BURIED
 var _time := 0.0
 var _far := 0.0
@@ -27,6 +28,8 @@ var _pincer_cd := 0.0
 var _aim := Vector2.DOWN
 var _remaining := 0.0
 var _landed := false
+var _miss_duration := MISS_STUN_TIME
+var _tip_extended := false
 var _path := TerrainPath.new()
 
 func _enter(e: EnemyScorpion, next: State) -> void:
@@ -52,6 +55,8 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.sprite.set_frame_and_progress(2,0.0)
 			e.sprite.pause()
 		State.MISS_STUN:
+			_miss_duration = MISS_STUN_TIME
+			_tip_extended = false
 			e.play_action(&"attack", true)
 			e.sprite.set_frame_and_progress(2,0.0)
 			e.sprite.pause()
@@ -115,7 +120,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			if _remaining <= 0.0 or _time >= dash_distance/dash_speed:
 				_enter(e,State.RECOVER if _landed else State.MISS_STUN)
 		State.MISS_STUN:
-			if _time >= MISS_STUN_TIME: _enter(e,State.CHASE)
+			if _time >= _miss_duration: _enter(e,State.CHASE)
 		State.RECOVER:
 			if _time >= 0.36: _enter(e,State.CHASE)
 		State.CHASE:
@@ -149,3 +154,12 @@ func _move(e: EnemyScorpion, delta: float, budget: float) -> void:
 	e.velocity = _aim*step/maxf(delta,0.000001)
 	e.terrain_move_and_slide()
 	_remaining = maxf(0.0,_remaining-step)
+
+func is_stunned() -> bool:
+	return state == State.MISS_STUN
+
+## Called only after an accepted direct tip hit, never from modifier query.
+func extend_stinger_stun() -> void:
+	if state == State.MISS_STUN and not _tip_extended:
+		_tip_extended = true
+		_miss_duration += STINGER_STUN_BONUS

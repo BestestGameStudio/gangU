@@ -86,6 +86,9 @@ func _ready() -> void:
 		push_error("Enemy '%s' (%s) has no EnemyDefinition; every enemy scene must carry one." % [name, scene_file_path])
 	hp = max_hp
 	damage_rng.randomize()
+	var halo := EnemyStunHalo.new()
+	halo.name = "StunHalo"
+	add_child(halo)
 	add_to_group("enemies")
 	# #325: note the encounter in the cross-run hub bestiary (keyed by scene).
 	Bestiary.record_enemy(self)
@@ -140,7 +143,7 @@ const CombatEffects = preload("res://game/combat/combat_effects.gd")
 
 ## Calculated hits already include receiver modifiers. Separate from a raw
 ## unlocated damage request so opt-in enemies never reduce a rolled hit twice.
-func apply_calculated_damage(amount: int, crit_tier: int = 0) -> void:
+func apply_calculated_damage(amount: int, crit_tier: int = 0, _context: HitContext = null) -> void:
 	apply_damage(amount, crit_tier)
 
 ## crit_tier (#208) only colors the damage number; HP math ignores it.
@@ -341,6 +344,19 @@ func submit_external_motion(destination: Vector2, delta: float) -> void:
 var stun_left := 0.0
 var hook_taunt_target: Node2D = null
 var hook_taunt_left := 0.0
+
+## Place the orbit above the actual opaque sprite bounds, not the cell edge.
+func stun_halo_position() -> Vector2:
+	if sprite == null or sprite.sprite_frames == null: return Vector2(0,-24)
+	var texture := sprite.sprite_frames.get_frame_texture(sprite.animation,sprite.frame)
+	if texture == null: return Vector2(0,-24)
+	var top := float(texture.get_image().get_used_rect().position.y)
+	if sprite.centered: top -= texture.get_height()/2.0
+	return sprite.position + Vector2(0,(top+sprite.offset.y)*sprite.scale.y+8)
+
+## Shared visual-status query; behavior clocks stay with their owner.
+func is_stunned() -> bool:
+	return hp > 0 and (stun_left > 0.0 or (_behavior != null and _behavior.is_stunned()))
 
 func stun(seconds: float) -> void:
 	stun_left = maxf(stun_left, seconds)

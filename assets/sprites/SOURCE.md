@@ -644,3 +644,12 @@ Six frames at 50ms for each emerge/bury direction (0.30s), eight directions,
 non-looping. Atlas 512x2496: original rows 0-26 are RGBA-identical; emerge
 27-32, bury 33-38. Repack with `pack_scorpion_spriteu.py`. Final emerge
 matches idle; final bury is a mound, to be hidden by gameplay afterward.
+
+## Generic stun halo (#857)
+
+Original script-generated SpriteU art approved by Daniel November 17, 2026.
+`tools/sprites/generate_stun_halo.py` authors the JSON source
+`tools/sprites/specs/stun_halo.spriteu.json`; `pack_stun_halo_spriteu.py`
+exports the transparent 512x64 atlas and `stun_halo_frames.tres`. Eight
+64x64 frames, 75ms each, looping `stun` animation, no directional variants.
+Ring center (32,14); scorpion node offset (0,-16). See docs/evidence/stun_halo.md.

@@ -557,7 +557,7 @@ func _resolve_body_hit(body: Node2D, context: HitContext) -> void:
 		if body.has_method(&"apply_damage_from"):
 			body.call(&"apply_damage_from", result.amount, self, result.crit_tier)
 		elif body is Enemy:
-			(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier)
+			(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier, context)
 		else:
 			body.call(&"apply_damage", result.amount)
 		OnHit.end(receipt, body)

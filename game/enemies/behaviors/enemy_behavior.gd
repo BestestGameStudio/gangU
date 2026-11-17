@@ -31,3 +31,8 @@ func debug_state_text() -> String:
 	if has_method("state_name"):
 		return call("state_name")
 	return ""
+
+## Visual status only. A behavior-owned stun opts in without naming states
+## in Enemy or changing the behavior's own timer/movement contract.
+func is_stunned() -> bool:
+	return false

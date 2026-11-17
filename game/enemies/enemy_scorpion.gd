@@ -13,6 +13,7 @@ var _body_shape: CollisionShape2D
 var _trail: Array[Vector2] = []
 var _trail_clock := 0.0
 var _pose_pixels: Dictionary = {}
+var _pre_stun_pose: Dictionary = {}
 
 func _ready() -> void:
 	super._ready()
@@ -23,6 +24,9 @@ func _ready() -> void:
 	sprite.frame_changed.connect(_sync_tip_shape)
 	sprite.animation_changed.connect(_sync_tip_shape)
 	set_buried(true)
+
+func stun_halo_position() -> Vector2:
+	return Vector2(0,-16)
 
 func is_combat_targetable() -> bool:
 	return not buried and hp > 0
@@ -53,8 +57,12 @@ func apply_damage(amount: int, crit_tier: int = 0) -> void:
 	var result := DamageCalc.compute(float(amount),null,damage_modifiers,damage_rng)
 	super.apply_damage(result.amount,crit_tier)
 
-func apply_calculated_damage(amount: int, crit_tier: int = 0) -> void:
-	if not buried: super.apply_damage(amount,crit_tier)
+func apply_calculated_damage(amount: int, crit_tier: int = 0, hit: HitContext = null) -> void:
+	if buried or hp <= 0: return
+	var tip_hit := hit != null and hit.shape != HitContext.Shape.AREA and stinger_exposed() and hit.overlaps_circle(stinger_tip(),weakspot_radius)
+	super.apply_damage(amount,crit_tier)
+	if tip_hit and hp > 0 and _behavior is EnemyBehaviorScorpion:
+		(_behavior as EnemyBehaviorScorpion).extend_stinger_stun()
 
 func set_frozen(frozen: bool) -> void:
 	super.set_frozen(frozen)
@@ -137,11 +145,46 @@ func _sync_tip_shape() -> void:
 	_tip_shape.set_deferred("disabled",not stinger_exposed())
 	if not buried: _tip_shape.position = to_local(stinger_tip())
 
+func _restore_stun_pose() -> void:
+	if _pre_stun_pose.is_empty() or sprite == null: return
+	sprite._action = _pre_stun_pose.action
+	sprite._hold = _pre_stun_pose.hold
+	sprite.animation = _pre_stun_pose.animation
+	sprite.set_frame_and_progress(_pre_stun_pose.frame,_pre_stun_pose.progress)
+	if _pre_stun_pose.playing: sprite.play()
+	else: sprite.pause()
+	_pre_stun_pose.clear()
+
+func _hold_grounded_stinger() -> void:
+	if sprite == null: return
+	if not is_stunned():
+		_restore_stun_pose()
+		return
+	if sprite.current_action() != &"attack" or sprite.frame != 2:
+		play_action(&"attack",true)
+		sprite.set_frame_and_progress(2,0.0)
+	sprite.pause()
+
+func stun(seconds: float) -> void:
+	if seconds > 0.0 and stun_left <= 0.0 and sprite != null:
+		_pre_stun_pose = {"action":sprite.current_action(),"hold":sprite._hold,
+			"animation":sprite.animation,"frame":sprite.frame,
+			"progress":sprite.frame_progress,"playing":sprite.is_playing()}
+	super.stun(seconds)
+	_hold_grounded_stinger()
+	_sync_tip_shape()
+
 func _physics_process(delta: float) -> void:
+	# Restore before the first resumed AI step, so its new action wins.
+	if not freeze.is_frozen() and stun_left > 0.0 and stun_left <= delta:
+		_restore_stun_pose()
+	else:
+		_hold_grounded_stinger()
 	super._physics_process(delta)
 	_sync_tip_shape()
 
 func _process(delta: float) -> void:
+	_hold_grounded_stinger()
 	super._process(delta)
 	_sync_tip_shape()
 	if freeze.is_frozen(): return
