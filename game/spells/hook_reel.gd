@@ -1,5 +1,6 @@
 class_name HookReel
 extends Node2D
+signal reached_target
 ## Owns one enemy until arrival, obstruction timeout, death or scene exit.
 var enemy: Enemy
 var target: Node2D
@@ -84,6 +85,7 @@ func _arrive() -> void:
  enemy.velocity = Vector2.ZERO
  enemy.reel_force_velocity = Vector2.ZERO
  if spell.hook_arrival_stun > 0.0: enemy.stun(spell.hook_arrival_stun)
+ reached_target.emit()
  queue_free()
 
 func _draw() -> void:

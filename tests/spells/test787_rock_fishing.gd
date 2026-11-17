@@ -32,7 +32,7 @@ func run():
  check(pair.lure.global_position==enemy.global_position,"caught lure follows reeled enemy")
  reel.set_physics_process(false);enemy.global_position=pair.anchor.global_position;reel._physics_process(0.001)
  pair._physics_process(0.001)
- check(pair.is_queued_for_deletion(),"arrival removes anchor and lure pair")
+ check(not pair.is_queued_for_deletion() and pair.returning and pair.recasts_used==1,"successful arrival starts first automatic lure return")
  # The oldest consumed pair remains the elected emitter while another lure waits.
  var oldest:=pairs[1]
  var waiting:=pairs[2]
