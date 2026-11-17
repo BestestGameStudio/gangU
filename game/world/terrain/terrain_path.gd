@@ -119,20 +119,76 @@ func _flags(map: TerrainMap, cell: Vector2i) -> int:
 
 ## A cell no mover can enter: BLOCKING and not swimmable, or FALLING.
 func _hard_obstacle(map: TerrainMap, cell: Vector2i) -> bool:
-	return map.trunk_nav_blocked(cell) or map.is_hard_obstacle_cell(cell)
+	return _navigation_flags(map, cell) & _NAV_HARD != 0
 
 ## A cell THIS mover may be routed through (can_swim-aware). FALLING tiles
 ## are never swimmable (TerrainTypes.apply_movement), so this is exactly
 ## walkable-or-swimmable.
 func _passable(map: TerrainMap, cell: Vector2i, can_swim: bool) -> bool:
-	return not map.trunk_nav_blocked(cell) and map.can_enter_cell(cell, can_swim)
+	return _navigation_flags(map, cell) & (_NAV_SWIM if can_swim else _NAV_WALK) != 0
+
+## Cell queries are pure for a TerrainMap navigation revision. Share a bounded
+## snapshot between movers, without retaining the map or changing search order.
+## Switching maps or any cell/palette/trunk write invalidates the whole snapshot.
+const _NAV_WALK := 1
+const _NAV_SWIM := 2
+const _NAV_HARD := 4
+const _NAV_CACHE_LIMIT := 16384
+static var _nav_map: WeakRef
+static var _nav_revision := -1
+static var _nav_cells: Dictionary[Vector2i, int] = {}
+
+func _navigation_flags(map: TerrainMap, cell: Vector2i) -> int:
+	if _nav_map == null or _nav_map.get_ref() != map or _nav_revision != map.revision:
+		_nav_cells.clear()
+		_nav_map = weakref(map)
+		_nav_revision = map.revision
+	var cached: int = _nav_cells.get(cell, -1)
+	if cached >= 0:
+		return cached
+	var flags := _NAV_HARD
+	if not map.trunk_nav_blocked(cell):
+		flags = 0
+		if map.can_enter_cell(cell, false): flags |= _NAV_WALK
+		if map.can_enter_cell(cell, true): flags |= _NAV_SWIM
+		if map.is_hard_obstacle_cell(cell): flags |= _NAV_HARD
+	if _nav_cells.size() >= _NAV_CACHE_LIMIT:
+		_nav_cells.clear()
+	_nav_cells[cell] = flags
+	return flags
 
 ## Bounded 4-dir A* over the walkability grid (4-dir: no diagonal corner
 ## cutting between blocked cells). Returns the cell path EXCLUDING the start
 ## cell, ending at the goal cell or the reachable walkable cell nearest to it
 ## (the target may hug a wall); empty when nothing reachable improves on the
 ## start cell.
+# One exact search result per mover, including unreachable/empty results.
+# A* below depends only on these cells, swim mode and the map's navigation
+# revision. Keep the existing replan clock and path ordering unchanged.
+var _search_map: WeakRef
+var _search_revision := -1
+var _search_start := Vector2i.ZERO
+var _search_goal := Vector2i.ZERO
+var _search_swim := false
+var _search_result: Array[Vector2i] = []
+var _search_cache_hits := 0
+
 func _find_path(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = false) -> Array[Vector2i]:
+	var start := map.world_to_cell(from)
+	var goal := map.world_to_cell(to)
+	if _search_map != null and _search_map.get_ref() == map and _search_revision == map.revision and _search_start == start and _search_goal == goal and _search_swim == can_swim:
+		_search_cache_hits += 1
+		return _search_result.duplicate()
+	var result := _find_path_uncached(map, from, to, can_swim)
+	_search_map = weakref(map)
+	_search_revision = map.revision
+	_search_start = start
+	_search_goal = goal
+	_search_swim = can_swim
+	_search_result = result.duplicate()
+	return result
+
+func _find_path_uncached(map: TerrainMap, from: Vector2, to: Vector2, can_swim: bool = false) -> Array[Vector2i]:
 	var start := map.world_to_cell(from)
 	var goal := map.world_to_cell(to)
 	if start == goal:
