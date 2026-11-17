@@ -55,3 +55,23 @@ an interactive travel qualification.
   rule; the implementation does not round the intermediate value.
 - Native test/demo only. Browser play, obstacle-rich chase/dash and external
   displacement qualification remain unverified; no claim of those checks.
+
+## Review correction: rendered-pose geometry
+
+The revised tip projection reads the actual animation direction suffix and
+frame, never player aim. Transition projection includes the source rig's
+base gait sway, added tail sway, lateral shake, vertical drop and occlusion.
+Sand-only frames have no exposed tip. The actual shipped frame pixel gates
+sand-covered/invisible projected tips; results cache once per pose. Sprite
+frame/animation changes synchronize the collider as well as physics/render
+updates. No art changed.
+
+`pose-proof.png` is native Godot rendering of emerge/bury SE and walk NW,
+all with aim fixed RIGHT. Red circles show the actual12px weak-spot geometry;
+there is no circle on sand-only poses. The scratch driver sets individual
+frames for inspection; it is not an interactive terrain navigation demo.
+The existing core harness checks all272source poses across seven actions
+and eight directions against expected coordinates independently captured
+from the committed Python pixel rig, plus actual-frame occlusion gates.
+Revised production source full suite63/63PASS; native demo rerecorded after
+the geometry correction. Browser/obstacle-rich play remains unverified.
