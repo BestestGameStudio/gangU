@@ -82,3 +82,11 @@ player, flat fixture. No forced enemy states/timer stepping. Native screenshots
 of initial and later windups inspected after correcting ground draw order; lane
 renders over the floor and under enemy/player. No browser, obstacle-rich or
 knockback qualification. Video stays outside the repository per showcase guidance.
+
+Reproduction: generator/packer byte-match all committed PNGs/JSON. Native shader
+render at248x48, progress0.6 compared against Python render_lane:11,904 alpha
+pixels identical, max alpha error0. Transparent viewport RGB is premultiplied as
+expected; opaque scene screenshots verify the displayed constant-red composition.
+Full native Godot4.5.1 core suite63/63PASS on c427819. The added geometry coverage
+extends the existing enemy harness, guarding state visibility and all8directional
+future-tip anchors rather than adding a per-issue test file.
