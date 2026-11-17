@@ -517,6 +517,9 @@ func travel_fraction() -> float:
 	return clampf(_traveled / spell.range, 0.0, 1.0) if spell != null and spell.range > 0.0 else 0.0
 
 func _on_body_entered(body: Node2D) -> void:
+	_resolve_body_hit(body, HitContext.projectile(global_position, global_position, spell.radius))
+
+func _resolve_body_hit(body: Node2D, context: HitContext) -> void:
 	if is_queued_for_deletion():
 		return # #216 review: a shot already spent (e.g. on a block) hits nothing more
 	if body == source:
@@ -540,7 +543,7 @@ func _on_body_entered(body: Node2D) -> void:
 			return
 	FireballAudio.impact(self, spell) # #584: after friendly/source/re-hit exclusions.
 	if body.has_method(&"apply_damage"):
-		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, body.get(&"damage_modifiers") as DamageModifiers, _attacker_rng)
+		var result := DamageCalc.compute(spell.damage, _attacker_modifiers, HitContext.receiver_modifiers(body, context), _attacker_rng)
 		# #214: bodies with a source gate (destroyable containers) receive the
 		# projectile for caller-identity checks; every other receiver keeps the
 		# legacy call unchanged (window ACK 2026-11-08: additive branch only,
@@ -717,7 +720,8 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 			var b: Node2D = e.body
 			if not is_instance_valid(b) or not _can_hit(b):
 				continue
-			_on_body_entered(b)
+			# Only geometry up to first contact, never the path behind the body.
+			_resolve_body_hit(b, HitContext.projectile(from, from + motion * float(e.t), spell.radius))
 		elif e.has("blocker"):
 			# #407/#433: stop at the cover edge (tree canopy, wall face), not past it.
 			global_position = from + motion * float(e.t)

@@ -124,7 +124,7 @@ static func _is_behavior_script(script: Script) -> bool:
 ## (Player, Summon, DefenseCore): it needs damage_modifiers and
 ## apply_damage(amount). Returns the reported event, or null when refused.
 func deal_hit(target, base: int, delivery: StringName) -> HitEvent:
-	var hit := DamageCalc.compute(base, damage_modifiers, target.damage_modifiers, damage_rng)
+	var hit := DamageCalc.compute(base, damage_modifiers, HitContext.receiver_modifiers(target, HitContext.contact(global_position)), damage_rng)
 	var receipt := OnHit.begin(target)
 	target.apply_damage(hit.amount)
 	OnHit.end(receipt, target)
