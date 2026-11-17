@@ -12,12 +12,14 @@ extends RefCounted
 ## tiles, tile 1 = the base; they swap in for a full tile at VARIANT_CHANCE.
 ## Everything here is deterministic (hashed, no RNG).
 
-enum T { GRASS, DIRT, SAND, SANDSTONE, STONE, CLIFF, COBBLE }
+enum T { GRASS, DIRT, SAND, SANDSTONE, STONE, CLIFF, COBBLE, WATER }
 
 const CELL := 64
 const DIR := "res://assets/sprites/terrain/"
 const VARIANT_CHANCE := 0.35
-## [foreground, background, sheet name]
+## [foreground, background, sheet name, xor15]. Optional 4th element: when
+## true the sheet's mask bits are the BACKGROUND corners (the sheet is
+## authored background_on_foreground) and the computed mask is flipped.
 const PAIRS: Array = [
 	[T.GRASS, T.DIRT, "dualgrid_grass_on_dirt"],
 	[T.GRASS, T.SAND, "dualgrid_grass_on_sand"],
@@ -26,12 +28,31 @@ const PAIRS: Array = [
 	[T.STONE, T.DIRT, "dualgrid_stonebrick_on_dirt"],
 	[T.COBBLE, T.GRASS, "dualgrid_cobble_on_grass"],
 	[T.COBBLE, T.DIRT, "dualgrid_cobble_on_dirt"],
-	[T.GRASS, T.CLIFF, "dualgrid_cliffedge_on_void"],
+	# #811: the grass->cliff rim used to be cliffedge_on_void (rocky edge,
+	# then black). The widened cliff band draws real rock now, so the rim
+	# uses the cliff_on_grass sheet (flipped: its bits are cliff corners).
+	[T.GRASS, T.CLIFF, "dualgrid_cliff_on_grass", true],
 	[T.CLIFF, T.DIRT, "dualgrid_cliff_on_dirt"],
 	[T.CLIFF, T.SAND, "dualgrid_cliff_on_sand"],
 	[T.CLIFF, T.STONE, "dualgrid_cliff_on_stonebrick"],
 	[T.CLIFF, T.SANDSTONE, "dualgrid_cliff_on_sandstone"],
+	[T.SAND, T.DIRT, "dualgrid_sand_on_dirt"],
+	# #811: ocean at the world edge. Water pairs sit last so ties keep the
+	# older sheets' behaviour; the lattice never lets water touch grass.
+	[T.WATER, T.SAND, "dualgrid_water_on_sand"],
+	[T.WATER, T.CLIFF, "dualgrid_water_on_cliff"],
+	[T.WATER, T.GRASS, "dualgrid_water_on_grass"],
+	[T.WATER, T.DIRT, "dualgrid_water_on_dirt"],
 ]
+## Animated sheets: 256x256 frames stacked vertically, one per loop frame.
+## `tile`/`_full` shift the source rect down by frame * 256 for these.
+const ANIMATED := {
+	"dualgrid_water_on_sand": 5,
+	"dualgrid_water_on_cliff": 5,
+	"dualgrid_water_on_grass": 5,
+	"dualgrid_water_on_dirt": 5,
+}
+const ANIM_FRAME_H := 256
 const VARIANT_NAMES := {
 	T.GRASS: "dualgrid_variants_grass",
 	T.DIRT: "dualgrid_variants_dirt",
@@ -64,7 +85,7 @@ static func _hash01(x: int, y: int, salt: int) -> float:
 ## Texture + source rect for the tile at (i, j) whose corner types are
 ## [tl, tr, br, bl]. Returns {"tex": Texture2D, "src": Rect2}, or {} when no
 ## sheet covers the terrain.
-static func tile(i: int, j: int, corners: Array) -> Dictionary:
+static func tile(i: int, j: int, corners: Array, frame: int = 0) -> Dictionary:
 	var best := -1
 	var best_cover := -1
 	var best_mask := 0
@@ -85,6 +106,8 @@ static func tile(i: int, j: int, corners: Array) -> Dictionary:
 			best = p
 			best_cover = cover
 			best_mask = mask
+	if best >= 0 and PAIRS[best].size() > 3 and PAIRS[best][3]:
+		best_mask ^= 15
 	if best < 0 or best_cover == 0:
 		return {}
 	var uniform := true
@@ -92,23 +115,40 @@ static func tile(i: int, j: int, corners: Array) -> Dictionary:
 		if corners[k] != corners[k + 1]:
 			uniform = false
 	if uniform:
-		return _full(i, j, corners[0])
+		return _full(i, j, corners[0], frame)
 	var tex := _tex(PAIRS[best][2])
 	if tex == null:
 		return {}
-	return {"tex": tex, "src": Rect2(Vector2(best_mask % 4, best_mask / 4) * CELL, Vector2(CELL, CELL))}
+	var src := Rect2(Vector2(best_mask % 4, best_mask / 4) * CELL, Vector2(CELL, CELL))
+	if ANIMATED.has(PAIRS[best][2]):
+		src.position.y += (frame % int(ANIMATED[PAIRS[best][2]])) * ANIM_FRAME_H
+	return {"tex": tex, "src": src}
 
-static func _full(i: int, j: int, t: int) -> Dictionary:
+static func _full(i: int, j: int, t: int, frame: int = 0) -> Dictionary:
 	if _hash01(i, j, 91) < VARIANT_CHANCE and VARIANT_NAMES.has(t):
 		var strip := _tex(VARIANT_NAMES[t])
 		if strip != null:
 			var v := 1 + int(_hash01(i, j, 92) * 7.0) % 7
 			return {"tex": strip, "src": Rect2(Vector2(v, 0) * CELL, Vector2(CELL, CELL))}
-	for p in PAIRS.size():
-		if PAIRS[p][0] == t or PAIRS[p][1] == t:
+	# Foreground sheets first: a uniform tile should show that terrain's own
+	# full art (mask 15), not another sheet's all-background cell. #811:
+	# this is what turns the old all-CLIFF band from void (cliffedge's
+	# background) into drawn cliff wall that runs out to the ocean.
+	for fg_first in [true, false]:
+		for p in PAIRS.size():
+			if fg_first:
+				if PAIRS[p][0] != t:
+					continue
+			elif PAIRS[p][0] == t or PAIRS[p][1] != t:
+				continue
 			var tex := _tex(PAIRS[p][2])
 			if tex == null:
 				return {}
 			var mask := 15 if PAIRS[p][0] == t else 0
-			return {"tex": tex, "src": Rect2(Vector2(mask % 4, mask / 4) * CELL, Vector2(CELL, CELL))}
+			if PAIRS[p].size() > 3 and PAIRS[p][3]:
+				mask ^= 15
+			var src := Rect2(Vector2(mask % 4, mask / 4) * CELL, Vector2(CELL, CELL))
+			if ANIMATED.has(PAIRS[p][2]):
+				src.position.y += (frame % int(ANIMATED[PAIRS[p][2]])) * ANIM_FRAME_H
+			return {"tex": tex, "src": src}
 	return {}
