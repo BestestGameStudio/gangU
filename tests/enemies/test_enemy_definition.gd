@@ -281,7 +281,7 @@ func _test_scorpion() -> void:
 	_check(b.sting_windup_duration() == b.STING_WINDUP,"later stings retain normal windup")
 	p.position = Vector2(0,500)
 	for i in 21: b.physics_step(e,p,1.0/60.0)
-	_check(b.state == b.State.PINCER_WINDUP,"charge -> mandatory pincer follow-up")
+	_check(b.state in [b.State.PINCER_STRIKE,b.State.PINCER_RECOVER],"charge -> immediate pincer follow-up")
 	b._enter(e,b.State.MISS_STUN)
 	_check(e.sprite.frame == 2 and not e.sprite.is_playing(),"miss holds forward strike pose")
 	var tip := e.stinger_tip()
@@ -289,8 +289,8 @@ func _test_scorpion() -> void:
 	var weak := HitContext.projectile(tip,tip,1)
 	var aoe := HitContext.area(e.global_position,1)
 	var rng := RandomNumberGenerator.new()
-	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(shell),rng).amount in [19,20],"shell reduces damage80percent")
-	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(weak),rng).amount == 100,"actual tip bypasses shell")
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(shell),rng).amount == 100,"grounded body loses shell reduction")
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(weak),rng).amount == 100,"grounded shell drop is not location-specific")
 	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(aoe),rng).amount == 100,"all AoE bypasses shell")
 	var f := e.sprite.frame
 	e.apply_calculated_damage(1)
@@ -305,7 +305,7 @@ func _test_scorpion() -> void:
 	var stationary_position := e.position
 	b.physics_step(e,p,0.36)
 	b.physics_step(e,p,0.01)
-	_check(e.position == stationary_position,"sting never moves the body")
+	_check(e.position == stationary_position,"point-blank hop never travels through player")
 	b._enter(e,b.State.PINCER_WINDUP)
 	b.physics_step(e,p,0.52)
 	_check(b.state == b.State.PINCER_STRIKE,"pincer impact at520ms")
@@ -344,7 +344,6 @@ func _test_scorpion() -> void:
 	e.play_action(&"attack",true)
 	e.sprite.set_frame_and_progress(2,0.0)
 	e.sprite.pause()
-	e.get_node("StingerShape").position = e.to_local(e.stinger_tip())
 	e.hp = 100
 	await physics_frame
 	await physics_frame
@@ -359,7 +358,7 @@ func _test_scorpion() -> void:
 	var tip_now := e.stinger_tip()
 	shot.global_position = tip_now + Vector2(0,40)
 	shot._sweep_segment(tip_now-Vector2(0,40),Vector2(0,80))
-	_check(e.hp == 90,"scorpion: tip-only actual physics hit deals unreduced damage")
+	_check(e.hp == 100,"scorpion: removed tip collider does not receive tip-only projectile")
 	# Rendered suffix overrides aim during a terrain-path detour. Coordinates
 	# below were independently captured from the committed Python pixel rig.
 	e.facing = Vector2.RIGHT
@@ -428,38 +427,30 @@ func _test_scorpion() -> void:
 	_check_scorpion_pose(e,&"bury_w",[[60,60],[60,58],[60,64],[60,75],[60,86],[-1,-1]])
 	_check_scorpion_pose(e,&"bury_sw",[[70,59],[68,58],[70,63],[72,73],[72,84],[-1,-1]])
 	e.face_player(Vector2.RIGHT)
-	# The modifier query never extends a timer. Only the first accepted
-	# direct tip application extends this stun, preserving elapsed time.
+	# Grounded body vulnerability replaces tip targeting; no extension bonus.
 	b._enter(e,b.State.MISS_STUN)
-	_check(e.is_stunned(),"stun: behavior opts into generic status")
+	_check(e.is_stunned() and e.stinger_grounded(),"stun: grounded miss status")
 	var halo := e.get_node("StunHalo") as EnemyStunHalo
 	halo._process(0.0)
-	_check(halo.visible and halo.is_playing() and halo.position == e.stun_halo_position(),"stun: behavior shows looping halo at scorpion anchor")
+	_check(halo.visible and halo.is_playing() and halo.position == e.stun_halo_position(),"stun: grounded miss shows halo")
 	b.physics_step(e,p,0.4)
-	var before_hit := b._time
-	var tip_hit := HitContext.projectile(e.stinger_tip(),e.stinger_tip(),1.0)
-	e.modifiers_for_hit(tip_hit)
-	_check(b._miss_duration == 1.0,"stun: modifier query has no timer side effect")
-	e.apply_calculated_damage(1,0,HitContext.area(e.position,100.0))
-	_check(b._miss_duration == 1.0,"stun: AoE full damage does not trigger direct-tip bonus")
-	e.apply_calculated_damage(1,0,HitContext.projectile(e.position-Vector2(200,0),e.position-Vector2(200,0),1.0))
-	_check(b._miss_duration == 1.0,"stun: shell hit does not extend")
-	e.apply_calculated_damage(1,0,tip_hit)
-	_check(b._miss_duration == 3.0 and b._time == before_hit,"stun: first tip adds2s without resetting elapsed time")
-	e.apply_calculated_damage(1,0,tip_hit)
-	_check(b._miss_duration == 3.0,"stun: repeated tip cannot extend again")
-	b.physics_step(e,p,2.59)
-	_check(e.is_stunned(),"stun: extended miss remains before3s")
+	var body_hit := HitContext.projectile(e.position,e.position,1.0)
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(body_hit),e.damage_rng).amount == 100,"armor: grounded BODY hit unreduced")
+	var hp_grounded := e.hp
+	e.apply_damage(10)
+	_check(e.hp == hp_grounded-10,"armor: raw body damage also loses shell while grounded")
+	e.apply_calculated_damage(1,0,body_hit)
+	e.apply_calculated_damage(1,0,body_hit)
+	_check(b._miss_duration == 1.0 and b._time == 0.4,"stun: repeated body hits cannot extend flat1s miss")
+	b.physics_step(e,p,0.59)
+	_check(e.is_stunned(),"stun: miss remains before1s")
 	b.physics_step(e,p,0.02)
-	_check(not e.is_stunned(),"stun: extended miss ends at3s")
+	_check(not e.is_stunned(),"stun: miss ends after1s despite hits")
 	halo._process(0.0)
-	_check(not halo.visible and not halo.is_playing(),"stun: halo stops immediately on real stun end")
-	b._enter(e,b.State.MISS_STUN)
-	e.apply_calculated_damage(1,0,tip_hit)
-	_check(b._miss_duration == 3.0,"stun: bonus re-arms next miss")
-	b._enter(e,b.State.MISS_STUN)
-	e.apply_calculated_damage(0,0,tip_hit)
-	_check(b._miss_duration == 3.0,"stun: accepted zero roll still lands per OnHit contract")
+	_check(not halo.visible and not halo.is_playing(),"stun: halo stops on expiry")
+	b._enter(e,b.State.RECOVER)
+	_check(not e.stinger_grounded() and DamageCalc.compute(100,null,e.modifiers_for_hit(body_hit),e.damage_rng).amount in [19,20],"armor: lifting recovery regains shell")
+	_check(DamageCalc.compute(100,null,e.modifiers_for_hit(HitContext.area(e.position,1)),e.damage_rng).amount == 100,"armor: AoE still bypasses raised shell")
 	b._enter(e,b.State.CHASE)
 	e.play_action(&"attack",true)
 	e.sprite.set_frame_and_progress(0,0.0)
@@ -495,7 +486,7 @@ func _test_scorpion() -> void:
 	b._enter(e,b.State.CHARGE)
 	for i in 20:
 		if b.state == b.State.CHARGE: b.physics_step(e,p,1.0/60.0)
-	_check(is_equal_approx(e.position.x,80.0) and b.state == b.State.PINCER_WINDUP,"charge: actual travel matches clipped warning then pincer")
+	_check(is_equal_approx(e.position.x,80.0) and b.state == b.State.PINCER_STRIKE,"charge: actual travel matches clipped warning then pincer")
 	e.movement_constraint = Callable()
 	e.position = Vector2.ZERO
 	var wall := StaticBody2D.new()
@@ -507,7 +498,6 @@ func _test_scorpion() -> void:
 	wall.add_child(shape)
 	area.add_child(wall)
 	b._enter(e,b.State.CHARGE_WINDUP)
-	e._sync_tip_shape()
 	await physics_frame
 	await physics_frame
 	var wall_length: float = e.charge_warning().length-48.0
@@ -530,25 +520,14 @@ func _test_scorpion() -> void:
 	_check(terrain_length < 128.0 and absf(e.position.x-terrain_length)<0.1,"charge: terrain endpoint matches warning, never slides")
 	e.terrain = null
 	map.free()
-	# Literal stunned-only tail weakspot, body and AoE policy stay separate.
+	# Scene now has only body collision; grounded armor applies everywhere.
+	_check(not e.has_node("StingerShape"),"armor: separate tip collider removed")
 	b._enter(e,b.State.STING_STRIKE)
 	e.face_player(Vector2.RIGHT)
 	e.play_action(&"attack",true)
 	e.sprite.set_frame_and_progress(2,0)
 	e.sprite.pause()
-	e._sync_tip_shape()
-	await physics_frame
-	_check(not e.stinger_damageable() and e.get_node("StingerShape").disabled,"tip: collider disabled outside stun")
-	var closed_tip := HitContext.projectile(e.stinger_tip(),e.stinger_tip(),1.0)
-	var hp_closed := e.hp
-	e.apply_calculated_damage(10,0,closed_tip)
-	_check(e.hp == hp_closed,"tip: retained tip-only context rejected outside stun")
-	e.apply_calculated_damage(1,0,HitContext.projectile(e.global_position,e.global_position,1.0))
-	_check(e.hp == hp_closed-1,"tip: body damage remains accepted")
-	b._enter(e,b.State.MISS_STUN)
-	e._sync_tip_shape()
-	await physics_frame
-	_check(e.stinger_damageable() and not e.get_node("StingerShape").disabled,"tip: collider enabled during miss stun")
+	_check(e.stinger_grounded(),"armor: actual strike pose drops shell before stun")
 	p.set_invulnerable(false)
 	p.position = e.stinger_tip()
 	b._aim = Vector2.RIGHT
@@ -575,25 +554,25 @@ func _test_scorpion() -> void:
 	reel.set_physics_process(false)
 	var held_before := e.position
 	e._physics_process(1.0/60.0)
-	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(600,0)),"charge reel: Enemy step submits600 propulsion without moving")
-	var expected_velocity := Enemy.force_step(Vector2(600,0),Vector2.ZERO,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(900,0)),"charge reel: Enemy step submits900 propulsion without moving")
+	var expected_velocity := Enemy.force_step(Vector2(900,0),Vector2.ZERO,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
 	reel._physics_process(1.0/60.0)
 	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0),"charge reel: actual HookReel performs sole force-integrated move")
-	_check(e.position.x > held_before.x and e.position.x < held_before.x+10.0,"charge reel: opposing pull slows rather than double-moves charge")
+	_check(e.position.x > held_before.x and e.position.x < held_before.x+15.0,"charge reel: opposing pull slows rather than double-moves charge")
 	_check(HookPullStack.contains(e,reel) and b.state == b.State.CHARGE,"charge reel: movement preserves ownership and charge state")
 	# Perpendicular force also changes the one resolved step, not a flat slow.
 	p.position = e.position+Vector2(0,-500)
 	e.reel_force_velocity = Vector2.ZERO
 	held_before = e.position
 	e._physics_process(1.0/60.0)
-	expected_velocity = Enemy.force_step(Vector2(600,0),Vector2.ZERO,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	expected_velocity = Enemy.force_step(Vector2(900,0),Vector2.ZERO,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
 	_check(e.position == held_before,"charge reel: perpendicular pull still samples without displacement")
 	reel._physics_process(1.0/60.0)
 	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0) and e.position.y < held_before.y,"charge reel: actual pull deflects through force resolver")
 	# Charge propulsion ends on its own budget even if a pull cancels progress.
 	for i in 25:
 		if b.state == b.State.CHARGE: e._physics_process(1.0/60.0)
-	_check(b.state == b.State.PINCER_WINDUP,"charge reel: finite submitted budget still reaches pincer")
+	_check(b.state == b.State.PINCER_STRIKE,"charge reel: finite submitted budget still reaches immediate pincer")
 	reel.free()
 	# Opening at close range obeys the same stationary selection as chase.
 	e.position = Vector2.ZERO
@@ -603,6 +582,56 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,0.01)
 	b.physics_step(e,p,0.30)
 	_check(b.state == b.State.STING_WINDUP,"opening: close player selects stationary sting, not body charge")
+	# Recheck range at charge launch, even after initial long-range selection.
+	b._aim = Vector2.RIGHT
+	b._enter(e,b.State.CHARGE_WINDUP)
+	b.physics_step(e,p,0.36)
+	_check(b.state == b.State.STING_WINDUP and e.charge_warning().is_empty(),"charge: close player at launch cancels charge for sting")
+	# A70px target produces an18px toward hop to the52px spacing point.
+	e.position = Vector2.ZERO
+	p.position = Vector2(70,0)
+	b._enter(e,b.State.STING_WINDUP)
+	b.physics_step(e,p,0.36)
+	_check(b.state == b.State.STING_HOP and not e.stinger_grounded(),"hop: windup enters raised-tail hop, not early strike")
+	b.physics_step(e,p,0.05)
+	_check(e.position.is_equal_approx(Vector2(16,0)) and e.sprite.position.y < -31.9,"hop: half-time quick16px ground travel and12px visual arc")
+	e.set_frozen(true)
+	var hop_clock := b._time
+	e._physics_process(0.2)
+	_check(b._time == hop_clock and e.sprite.position.y < -31.9,"hop: freeze holds both clock and visual altitude")
+	e.set_frozen(false)
+	b.physics_step(e,p,0.05)
+	_check(b.state == b.State.STING_STRIKE and e.position.is_equal_approx(Vector2(18,0)) and e.sprite.position.y == -20,"hop: lands short after0.1s then grounded strike")
+	# A retreat during tell cannot turn hop into a long-range lunge.
+	e.position = Vector2.ZERO
+	p.position = Vector2(150,0)
+	b._enter(e,b.State.STING_WINDUP)
+	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.1)
+	_check(e.position.is_equal_approx(Vector2(32,0)),"hop: retreating target caps total ground travel32")
+	# Constraints clip the hop too; no wall slide or forbidden movement.
+	e.position = Vector2.ZERO
+	e.movement_constraint = func(point: Vector2) -> Vector2: return Vector2(minf(point.x,8.0),point.y)
+	p.position = Vector2(70,0)
+	b._enter(e,b.State.STING_WINDUP)
+	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.1)
+	_check(e.position.is_equal_approx(Vector2(8,0)) and b.state == b.State.STING_STRIKE,"hop: constraint clips travel without delaying impact")
+	e.movement_constraint = Callable()
+	# A real reel remains sole mover during the new hop as well.
+	e.position = Vector2.ZERO
+	p.position = Vector2(70,0)
+	b._enter(e,b.State.STING_WINDUP)
+	b.physics_step(e,p,0.36)
+	reel = HookReel.begin(area,e,p,hook)
+	reel.set_physics_process(false)
+	held_before = e.position
+	e._physics_process(1.0/60.0)
+	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(320,0)),"hop reel: samples ground drive without moving")
+	expected_velocity = Enemy.force_step(Vector2(320,0),e.reel_force_velocity,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	reel._physics_process(1.0/60.0)
+	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0),"hop reel: real HookReel performs sole integrated move")
+	reel.free()
 	area.free()
 
 func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array) -> void:
@@ -614,6 +643,8 @@ func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array
 		if expected.x < 0:
 			_check(not e.stinger_exposed(),"scorpion: sand-only pose has no exposed weakspot " + String(animation))
 			continue
+		if String(animation).begins_with("attack_"):
+			_check(e.stinger_grounded() == (k == 2),"armor: grounded mapping follows attack frame2 in every octant")
 		var actual := e.sprite.to_local(e.stinger_tip())+Vector2(64,64)
 		_check(actual == expected,"scorpion: rendered tip follows source pose %s:%d" % [animation,k])
 		var image := e.sprite.sprite_frames.get_frame_texture(animation,k).get_image()
