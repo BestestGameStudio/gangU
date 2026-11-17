@@ -43,7 +43,7 @@ func set_buried(value: bool) -> void:
 	if shadow != null: shadow.visible = not value
 
 func modifiers_for_hit(hit: HitContext) -> DamageModifiers:
-	var bypass := (aoe_bypasses_shell and hit.shape == HitContext.Shape.AREA) or (stinger_exposed() and hit.overlaps_circle(stinger_tip(), weakspot_radius))
+	var bypass := (aoe_bypasses_shell and hit.shape == HitContext.Shape.AREA) or (stinger_damageable() and hit.overlaps_circle(stinger_tip(), weakspot_radius))
 	if not bypass:
 		return damage_modifiers
 	var out := DamageModifiers.new()
@@ -59,7 +59,10 @@ func apply_damage(amount: int, crit_tier: int = 0) -> void:
 
 func apply_calculated_damage(amount: int, crit_tier: int = 0, hit: HitContext = null) -> void:
 	if buried or hp <= 0: return
-	var tip_hit := hit != null and hit.shape != HitContext.Shape.AREA and stinger_exposed() and hit.overlaps_circle(stinger_tip(),weakspot_radius)
+	# Disabled tip-only hits cannot be laundered through a retained context.
+	if hit != null and hit.shape in [HitContext.Shape.PROJECTILE,HitContext.Shape.CONTACT] and not is_stunned():
+		if hit.overlaps_circle(stinger_tip(),weakspot_radius) and not hit.overlaps_circle(global_position,23.4): return
+	var tip_hit := hit != null and hit.shape != HitContext.Shape.AREA and stinger_damageable() and hit.overlaps_circle(stinger_tip(),weakspot_radius)
 	super.apply_damage(amount,crit_tier)
 	if tip_hit and hp > 0 and _behavior is EnemyBehaviorScorpion:
 		(_behavior as EnemyBehaviorScorpion).extend_stinger_stun()
@@ -68,7 +71,7 @@ func set_frozen(frozen: bool) -> void:
 	super.set_frozen(frozen)
 	if not freeze.is_frozen() and _behavior is EnemyBehaviorScorpion:
 		var state := (_behavior as EnemyBehaviorScorpion).state
-		if state in [EnemyBehaviorScorpion.State.MISS_STUN,EnemyBehaviorScorpion.State.STING_DASH]:
+		if state in [EnemyBehaviorScorpion.State.MISS_STUN,EnemyBehaviorScorpion.State.STING_STRIKE]:
 			sprite.set_frame_and_progress(2,0.0)
 			sprite.pause()
 
@@ -91,6 +94,9 @@ func _tip_pixel_for(animation: StringName, frame: int) -> Vector2:
 	var pose := _tip_pose(animation,frame)
 	return Vector2(pose.x,pose.y) if pose.x >= 0.0 else Vector2(INF,INF)
 
+func stinger_damageable() -> bool:
+	return is_stunned() and stinger_exposed()
+
 func stinger_exposed() -> bool:
 	return not buried and sprite != null and _tip_pose(sprite.animation,sprite.frame).z > 0.0
 
@@ -100,7 +106,7 @@ func stinger_tip() -> Vector2:
 
 func _sync_tip_shape() -> void:
 	if _tip_shape == null: return
-	_tip_shape.set_deferred("disabled",not stinger_exposed())
+	_tip_shape.set_deferred("disabled",not stinger_damageable())
 	if not buried: _tip_shape.position = to_local(stinger_tip())
 
 func _restore_stun_pose() -> void:
@@ -163,14 +169,31 @@ func _draw() -> void:
 		draw_circle(p, 3.0+4.0*a, Color(0.73,0.59,0.37,0.5*a))
 		draw_line(p+Vector2(-7,2),p+Vector2(7,2),Color(0.92,0.8,0.56,0.65*a),2.0)
 
-## Warning covers the future grounded-tip sweep plus the existing24px
-## target proximity, not a body-centered guess or the raised windup tip.
-## Consumer is visual-only; locked aim and damage geometry remain unchanged.
+## Straight charge planner uses the same center path as execution, clipped
+## by terrain, world constraints and actual physics body sweeps. No wall slide.
+func charge_travel(direction: Vector2, maximum: float) -> float:
+	var length := maxf(0.0,maximum)
+	var end := TerrainMotion.clamp_displacement(terrain,global_position,global_position+direction*length,can_swim)
+	length = minf(length,maxf(0.0,(end-global_position).dot(direction)))
+	# Constraints can have non-rectangular boundaries. Stop at first invalid
+	# center rather than jumping through a forbidden gap to a valid endpoint.
+	for i in range(1,ceili(length)+1):
+		var d := minf(float(i),length)
+		var point := global_position+direction*d
+		if not constrain_movement(point).is_equal_approx(point):
+			length = maxf(0.0,d-1.0)
+			break
+	var collision := KinematicCollision2D.new()
+	if length > 0.001 and test_move(global_transform,direction*length,collision):
+		length = minf(length,maxf(0.0,collision.get_travel().dot(direction)))
+	return length
+
+## The body charge's24px swept hit envelope, not the unrelated tail-tip pose.
 func charge_warning() -> Dictionary:
 	if buried or hp <= 0 or is_stunned() or not _behavior is EnemyBehaviorScorpion: return {}
 	var b := _behavior as EnemyBehaviorScorpion
-	if b.state != EnemyBehaviorScorpion.State.STING_WINDUP: return {}
-	var tip := sprite.to_global(_tip_pixel_for(sprite._variant(&"attack"),2)-Vector2(64,64))
-	return {"origin":tip-b._aim*24.0,"direction":b._aim,
-		"length":b.dash_distance+48.0,"width":48.0,
+	if b.state != EnemyBehaviorScorpion.State.CHARGE_WINDUP: return {}
+	var reach := charge_travel(b._aim,b.dash_distance)
+	return {"origin":global_position-b._aim*24.0,"direction":b._aim,
+		"length":reach+48.0,"width":48.0,
 		"progress":clampf(b._time/b.sting_windup_duration(),0.0,1.0)}

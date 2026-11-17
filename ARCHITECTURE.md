@@ -168,18 +168,33 @@ The eastern overworld clearing at `(2100, 400)` holds twelve stationary statues 
 Four run-persistent scorpions spawn on sampled sand 160-320px outside the
 Sunbound Sanctum barrier, through a scene-owned AreaSpawnData carrier and the
 existing EnemySpawner. No respawn or healing on rehide, normal mob drops.
-Confirmed initial tuning:100HP,80% shell reduction,100px/s walking, weight2;
-12px stinger-tip weak spot, all landed area hits bypass shell. Unlocated raw
-damage remains armored. Shell calculation follows existing DamageCalc
-float/truncation semantics. Calculated damage has a separate Enemy entry
-that delegates to the same HP mutation, preventing double armor.
+Current tuning (Daniel November17):500HP,80% shell reduction,100px/s walking,
+weight2;12px stinger-tip weak spot. The tip-only collider and armor bypass are
+active only while stunned and visibly exposed. Body hits remain armored; all
+landed area hits bypass shell. Unlocated raw damage remains armored. Shell
+calculation follows existing DamageCalc float/truncation semantics. Calculated
+damage delegates to the same HP mutation, preventing double armor.
 
-Type-local states own buried/rush/emerge/sting/miss/fighting/pincer/bury.
+Type-local states own buried/rush/emerge/body-charge/sting/miss/chase/pincer/bury.
 Underground has no targeting, projectile collision, contact attack or accepted
-HP damage. Named states feed F2. Initial rush has a sand trail; 0.30s emerge
-then locked360ms sting tell,600px/s up to200px. Miss (including i-frames)
-holds the actual forward-tip pose for0.5s. Freeze pauses the behavior clock
-and thaw preserves that pose. Pincer impact follows100ms first pose plus420ms
-hold; next impact after the full520ms tell. Attack gaps are measured from
-attack start, not recovery end. Shared rendering and targetability hooks
-leave ordinary enemies unchanged. No lighting or audio changes.
+HP damage. Named states feed F2. Initial harmless rush has a sand trail and
+stops within180px;0.30s emerge then initial180ms charge tell (later360ms), or a stationary sting when the
+player is already within70px.
+Body charge travels up to200px at600px/s with a24px swept hit radius and25damage,
+then always follows with pincer. Its body-centered warning covers reachable
+travel plus24px at each end, sharing physics/terrain/constraint clipping with
+execution, without wall sliding. While externally reeled, charge submits
+self-propulsion to the existing force resolver; the reel/stack remains the
+sole mover and the charge spends its own finite propulsion budget. At close range (within70px), a stationary
+25damage tail strike replaces the charge; the actual extended tip must hit.
+Charge selection outside close range uses the existing300px wake range.
+Pincer deals15 within50px after100ms first pose plus420ms held tell.
+Attack gaps count from attack start, not recovery end.
+
+A missed stationary sting (including refused i-frame hits) holds the forward
+stinger grounded for1s. The first accepted direct tip hit during that miss adds
+2s once; later hits cannot stack. Generic stun also grounds/exposes the tip but
+does not gain the miss-only bonus. Freeze pauses clocks; thaw preserves the
+held pose. Native128px directional art at scale1 uses generated per-frame
+geometry for the visible tip and halo placement. Shared rendering and targeting
+hooks leave ordinary enemies unchanged. No lighting or audio changes.
