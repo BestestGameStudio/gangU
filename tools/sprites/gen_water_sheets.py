@@ -30,6 +30,9 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 TERRAIN = os.path.join(ROOT, "assets", "sprites", "terrain")
 
 
+ROCK_BASE = (88, 82, 88)
+
+
 def load(name):
     return np.asarray(Image.open(os.path.join(TERRAIN, name)).convert("RGB")).astype(np.int16)
 
@@ -110,6 +113,12 @@ def gen_sheet(src_name, out_name, land_kind):
             stack.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
         keep = ~water
         water = ~keep
+        if land_kind == "cliff":
+            # #820 (Mitra: simplify the rock like the other textures): the
+            # land side of a cliff shore tile is one flat rock colour; the
+            # engine adds the sparse hints in world space so nothing repeats.
+            cell = cell.copy()
+            cell[keep] = ROCK_BASE
         if not water.any():
             for f in range(FRAMES):
                 out[f * 256 + oy:f * 256 + oy + CELL, ox:ox + CELL] = cell.astype(np.uint8)
