@@ -335,6 +335,33 @@ func build_from(area: Node) -> void:
 func covers(p: Vector2) -> bool:
 	return Geometry2D.is_point_in_polygon(p, outline)
 
+## #834: flat map colour for the 64 px cell at `cell` (the M map), taken from
+## the same lattice the ground shader paints, so the map matches the world.
+## Majority of the four lattice corners around the cell; ties keep the first.
+const MAP_COLORS := {
+	DualGrid.T.GRASS: Color8(66, 118, 58),
+	DualGrid.T.DIRT: Color8(119, 98, 70),
+	DualGrid.T.SAND: Color8(214, 182, 122),
+	DualGrid.T.SANDSTONE: Color8(219, 180, 128),
+	DualGrid.T.STONE: Color8(95, 104, 126),
+	DualGrid.T.CLIFF: Color8(94, 71, 64),
+	DualGrid.T.COBBLE: Color8(114, 107, 98),
+	DualGrid.T.WATER: Color8(38, 88, 124),
+}
+
+func map_color(cell: Vector2i) -> Color:
+	var types: Array[int] = [
+		_lattice_type(cell.x, cell.y), _lattice_type(cell.x + 1, cell.y),
+		_lattice_type(cell.x, cell.y + 1), _lattice_type(cell.x + 1, cell.y + 1)]
+	var best: int = types[0]
+	var best_n := 0
+	for t in types:
+		var n := types.count(t)
+		if n > best_n:
+			best = t
+			best_n = n
+	return MAP_COLORS.get(best, WorldMap.FALLBACK_GROUND)
+
 ## Distance from p to the nearest road centreline.
 func road_distance(p: Vector2) -> float:
 	var best := INF
