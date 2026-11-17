@@ -471,8 +471,8 @@ func _test_scorpion() -> void:
 	e.stun_left = 0.0
 	e._hold_grounded_stinger()
 	_check(e.sprite.frame == 0,"stun: generic hold releases original pose after expiry")
-	# Telegraph is state-owned and predicts the grounded-tip sweep, not
-	# the raised windup pose. Geometry remains aligned in every octant.
+	# Telegraph is state-owned and predicts the body charge sweep, not
+	# the unrelated tail-tip pose. Geometry stays aligned in every octant.
 	b._enter(e,b.State.EMERGE)
 	_check(e.charge_warning().is_empty(),"scorpion: emerge alone has no dash warning")
 	for direction in [Vector2.RIGHT,Vector2(1,1).normalized(),Vector2.DOWN,Vector2(-1,1).normalized(),Vector2.LEFT,Vector2(-1,-1).normalized(),Vector2.UP,Vector2(1,-1).normalized()]:
@@ -558,7 +558,7 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,0.01)
 	_check(e.position == before_strike and p.hp == before_hp-25,"sting: close stationary tip deals25 without charge movement")
 	# Player i-frames refuse the sting and lead to miss, not success.
-	p.position = e.position+Vector2(100,0)
+	p.position = e.stinger_tip()
 	p.set_invulnerable(true)
 	b._aim = Vector2.RIGHT
 	b._enter(e,b.State.STING_STRIKE)

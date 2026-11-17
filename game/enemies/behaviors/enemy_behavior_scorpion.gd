@@ -17,7 +17,7 @@ enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, S
 @export var transition_time := 0.30
 const STING_WINDUP := 0.36
 ## Initial-only fast reaction window, after the full0.30s emerge.
-const INITIAL_STING_WINDUP := 0.18
+const INITIAL_CHARGE_WINDUP := 0.18
 ## Pincer first pose100ms + held pose420ms = 520ms to impact.
 const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
@@ -34,7 +34,7 @@ var _landed := false
 var _miss_duration := MISS_STUN_TIME
 var _tip_extended := false
 var _path := TerrainPath.new()
-var _initial_sting := false
+var _initial_charge := false
 var _charge_cd := 0.0
 var _charge_length := 0.0
 const CHARGE_HIT_RADIUS := 24.0
@@ -53,19 +53,19 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			_charge_length = e.charge_travel(_aim,dash_distance)
 			e.play_action(&"walk",true)
 		State.CHARGE:
-			_initial_sting = false
+			_initial_charge = false
 			_remaining = _charge_length
 			_landed = false
 			_charge_cd = sting_gap
 			e.play_action(&"walk",true)
 		State.EMERGE:
-			_initial_sting = true
+			_initial_charge = true
 			e.set_buried(false)
 			e.play_action(&"emerge", true)
 		State.STING_WINDUP:
 			e.play_action(&"attack", true)
 		State.STING_STRIKE:
-			_initial_sting = false
+			_initial_charge = false
 			_landed = false
 			_sting_cd = sting_gap
 			e.play_action(&"attack", true)
@@ -116,7 +116,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 				e.face_player(_aim)
 				_enter(e,State.BURROW_RUSH)
 		State.BURROW_RUSH:
-			# Rush toward locked player position, leaving room for the sting tell.
+			# Rush toward locked player position, leaving room for the body charge tell.
 			if not alive or distance <= 180.0 or _remaining <= 0.0:
 				if alive: _aim = off.normalized()
 				e.face_player(_aim)
@@ -204,4 +204,4 @@ func extend_stinger_stun() -> void:
 		_miss_duration += STINGER_STUN_BONUS
 
 func sting_windup_duration() -> float:
-	return INITIAL_STING_WINDUP if _initial_sting else STING_WINDUP
+	return INITIAL_CHARGE_WINDUP if _initial_charge else STING_WINDUP
