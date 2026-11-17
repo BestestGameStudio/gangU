@@ -24,6 +24,7 @@ var current_area: Node = null
 var _run_overworld: Node2D
 var regions: Array[OverworldRegion] = []
 var _parked_collisions: Dictionary = {}
+var _parked_layers: Dictionary = {}
 var activation: RegionActivation
 
 func region_for(id: StringName) -> OverworldRegion:
@@ -422,4 +423,13 @@ func _set_overworld_layers(enabled: bool) -> void:
 	if not is_instance_valid(_run_overworld):
 		return
 	for node in _run_overworld.find_children("*", "CanvasLayer", true, false):
-		(node as CanvasLayer).visible = enabled
+		var layer := node as CanvasLayer
+		var id := layer.get_instance_id()
+		if not enabled:
+			if not _parked_layers.has(id):
+				_parked_layers[id] = layer.visible
+			layer.hide()
+		elif _parked_layers.has(id):
+			layer.visible = _parked_layers[id]
+	if enabled:
+		_parked_layers.clear()
