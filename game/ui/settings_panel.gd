@@ -18,10 +18,19 @@ const SETTINGS_PATH := "user://settings.cfg"
 const SECTION := "audio"
 const KEY_MASTER := "master_volume"
 const DEFAULT_MASTER := 1.0
+const DISPLAY_SECTION := "display"
+const KEY_SHOW_FPS := "show_fps"
 
 ## Overridable so the test harness never touches the real settings file.
 var settings_path := SETTINGS_PATH
 var master_volume := DEFAULT_MASTER
+## #826: small FPS readout in the top-right corner, off by default.
+var show_fps := false
+
+var _fps_layer: CanvasLayer
+var _fps_label: Label
+var _fps_check: CheckBox
+var _fps_accum := 0.0
 
 var _backdrop: PanelContainer
 var _slider: HSlider
@@ -35,8 +44,60 @@ func _ready() -> void:
 	master_volume = load_master_volume(settings_path)
 	apply_master_volume(master_volume)
 	KeyBindings.load_saved(settings_path)
+	show_fps = load_show_fps(settings_path)
 	_build_ui()
+	_build_fps_label()
+	apply_show_fps()
 	close()
+
+static func load_show_fps(path: String = SETTINGS_PATH) -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(path) != OK:
+		return false
+	return bool(cfg.get_value(DISPLAY_SECTION, KEY_SHOW_FPS, false))
+
+static func save_show_fps(on: bool, path: String = SETTINGS_PATH) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(path) # keep any other keys; a missing file is fine
+	cfg.set_value(DISPLAY_SECTION, KEY_SHOW_FPS, on)
+	cfg.save(path)
+
+func set_show_fps(on: bool) -> void:
+	show_fps = on
+	save_show_fps(on, settings_path)
+	if _fps_check != null and _fps_check.button_pressed != on:
+		_fps_check.set_pressed_no_signal(on)
+	apply_show_fps()
+
+func apply_show_fps() -> void:
+	if _fps_layer != null:
+		_fps_layer.visible = show_fps
+	set_process(show_fps)
+	_fps_accum = 1.0 # refresh the number on the next frame
+
+func _process(delta: float) -> void:
+	_fps_accum += delta
+	if _fps_accum >= 0.5 and _fps_label != null:
+		_fps_accum = 0.0
+		_fps_label.text = "FPS %d" % int(Engine.get_frames_per_second())
+
+func _build_fps_label() -> void:
+	_fps_layer = CanvasLayer.new()
+	_fps_layer.name = "FpsLayer"
+	_fps_layer.layer = 99
+	add_child(_fps_layer)
+	_fps_label = Label.new()
+	_fps_label.name = "FpsLabel"
+	_fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fps_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_fps_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_fps_label.position = Vector2(-12, 44) ## below the area name
+	_fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_fps_label.add_theme_font_size_override("font_size", 18)
+	_fps_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	_fps_label.add_theme_constant_override("shadow_offset_x", 2)
+	_fps_label.add_theme_constant_override("shadow_offset_y", 2)
+	_fps_layer.add_child(_fps_label)
 
 ## Linear 0..1 -> Master bus. 0 mutes rather than going to -inf dB.
 static func apply_master_volume(v: float) -> void:
@@ -167,6 +228,14 @@ func _build_ui() -> void:
 	_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(_value_label)
 	_refresh_label()
+
+	_fps_check = CheckBox.new()
+	_fps_check.name = "ShowFps"
+	_fps_check.text = "Show FPS counter"
+	_fps_check.focus_mode = Control.FOCUS_NONE
+	_fps_check.set_pressed_no_signal(show_fps)
+	_fps_check.toggled.connect(set_show_fps)
+	box.add_child(_fps_check)
 
 	_build_bindings(box)
 
