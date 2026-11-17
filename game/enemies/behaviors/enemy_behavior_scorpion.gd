@@ -1,14 +1,14 @@
 class_name EnemyBehaviorScorpion
 extends EnemyBehavior
 ## #855: explicit clocks, aim lock, no contact attacks outside strike windows.
-enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_STRIKE, MISS_STUN, RECOVER, CHASE, PINCER_WINDUP, PINCER_STRIKE, PINCER_RECOVER, BURY }
+enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_HOP, STING_STRIKE, MISS_STUN, RECOVER, CHASE, PINCER_WINDUP, PINCER_STRIKE, PINCER_RECOVER, BURY }
 @export var wake_range := 300.0
 @export var pincer_range := 50.0
 @export var sting_range := 70.0
 @export var charge_range := 300.0
 @export var hide_range := 650.0
 @export var hide_delay := 2.0
-@export var dash_speed := 600.0
+@export var dash_speed := 900.0
 @export var dash_distance := 200.0
 @export var sting_damage := 25
 @export var sting_gap := 1.5
@@ -22,7 +22,9 @@ const INITIAL_CHARGE_WINDUP := 0.18
 const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
 const MISS_STUN_TIME := 1.0
-const STINGER_STUN_BONUS := 2.0
+const HOP_TIME := 0.10
+const HOP_DISTANCE := 32.0
+const HOP_STOP_DISTANCE := 52.0
 var state: State = State.BURIED
 var _time := 0.0
 var _far := 0.0
@@ -32,7 +34,6 @@ var _aim := Vector2.DOWN
 var _remaining := 0.0
 var _landed := false
 var _miss_duration := MISS_STUN_TIME
-var _tip_extended := false
 var _path := TerrainPath.new()
 var _initial_charge := false
 var _charge_cd := 0.0
@@ -44,6 +45,7 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 	_time = 0.0
 	e.velocity = Vector2.ZERO
 	e.clear_action()
+	e.set_hop_height(0.0)
 	match state:
 		State.BURIED: e.set_buried(true)
 		State.BURROW_RUSH:
@@ -51,19 +53,29 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			_remaining = dash_distance
 		State.CHARGE_WINDUP:
 			_charge_length = e.charge_travel(_aim,dash_distance)
-			e.play_action(&"walk",true)
+			e.play_action(&"pincer",true)
+			e.sprite.set_frame_and_progress(1,0.0)
+			e.sprite.pause()
 		State.CHARGE:
 			_initial_charge = false
 			_remaining = _charge_length
 			_landed = false
 			_charge_cd = sting_gap
-			e.play_action(&"walk",true)
+			e.play_action(&"pincer",true)
+			e.sprite.set_frame_and_progress(1,0.0)
+			e.sprite.pause()
 		State.EMERGE:
 			_initial_charge = true
 			e.set_buried(false)
 			e.play_action(&"emerge", true)
 		State.STING_WINDUP:
+			_initial_charge = false
 			e.play_action(&"attack", true)
+			e.sprite.pause()
+		State.STING_HOP:
+			e.play_action(&"attack",true)
+			e.sprite.set_frame_and_progress(1,0.0)
+			e.sprite.pause()
 		State.STING_STRIKE:
 			_initial_charge = false
 			_landed = false
@@ -73,7 +85,6 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.sprite.pause()
 		State.MISS_STUN:
 			_miss_duration = MISS_STUN_TIME
-			_tip_extended = false
 			e.play_action(&"attack", true)
 			e.sprite.set_frame_and_progress(2,0.0)
 			e.sprite.pause()
@@ -84,6 +95,7 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			_pincer_cd = pincer_gap
 			e.play_action(&"pincer", true)
 		State.PINCER_STRIKE:
+			_pincer_cd = pincer_gap
 			_landed = false
 			e.play_action(&"pincer", true)
 			e.sprite.set_frame_and_progress(2,0.0)
@@ -134,7 +146,14 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 					_enter(e,State.CHARGE_WINDUP)
 		State.CHARGE_WINDUP:
 			_charge_length = e.charge_travel(_aim,dash_distance)
-			if _time >= sting_windup_duration(): _enter(e,State.CHARGE)
+			if _time >= sting_windup_duration():
+				if alive and distance <= sting_range:
+					_aim = off.normalized()
+					e.face_player(_aim)
+					_enter(e,State.STING_WINDUP)
+				elif alive:
+					_enter(e,State.CHARGE)
+				else: _enter(e,State.CHASE)
 		State.CHARGE:
 			var before := e.global_position
 			var step := minf(dash_speed*delta,_remaining)
@@ -159,9 +178,27 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 				if alive:
 					_aim = (player.global_position-e.global_position).normalized()
 					e.face_player(_aim)
-				_enter(e,State.PINCER_WINDUP)
+				_enter(e,State.PINCER_STRIKE)
 		State.STING_WINDUP:
-			if _time >= sting_windup_duration(): _enter(e,State.STING_STRIKE)
+			if _time >= 0.1:
+				e.sprite.set_frame_and_progress(1,0.0)
+			if _time >= STING_WINDUP:
+				# Toward-only spacing hop, never pass through a close player.
+				if alive:
+					_aim = off.normalized()
+					e.face_player(_aim)
+				_remaining = minf(HOP_DISTANCE,maxf(0.0,distance-HOP_STOP_DISTANCE)) if alive else 0.0
+				_enter(e,State.STING_HOP)
+		State.STING_HOP:
+			var budget := minf(HOP_DISTANCE/HOP_TIME*delta,_remaining)
+			var allowed := e.charge_travel(_aim,budget)
+			if is_instance_valid(e.displacement_owner):
+				e.submit_external_motion(e.global_position+_aim*allowed,delta)
+			elif allowed > 0.001:
+				e.move_and_collide(_aim*allowed)
+			_remaining = maxf(0.0,_remaining-allowed)
+			if _time+0.000001 >= HOP_TIME: _enter(e,State.STING_STRIKE)
+			else: e.set_hop_height(12.0*sin(PI*clampf(_time/HOP_TIME,0.0,1.0)))
 		State.STING_STRIKE:
 			# Stationary tail strike, independent of the body charge.
 			if alive and not _landed and distance <= sting_range:
@@ -210,12 +247,6 @@ func _move(e: EnemyScorpion, delta: float, budget: float) -> void:
 
 func is_stunned() -> bool:
 	return state == State.MISS_STUN
-
-## Called only after an accepted direct tip hit, never from modifier query.
-func extend_stinger_stun() -> void:
-	if state == State.MISS_STUN and not _tip_extended:
-		_tip_extended = true
-		_miss_duration += STINGER_STUN_BONUS
 
 func sting_windup_duration() -> float:
 	return INITIAL_CHARGE_WINDUP if _initial_charge else STING_WINDUP

@@ -2,26 +2,22 @@ class_name EnemyScorpion
 extends Enemy
 ## #855: type-local concealment, shell query and pose-matched stinger geometry.
 @export var shell_reduction := 0.8
-@export var weakspot_radius := 12.0
 ## Isolated policy: all landed area hits bypass the shell.
 @export var aoe_bypasses_shell := true
 var buried := true
 var facing := Vector2.DOWN
 var _shell: DamageModifier
-var _tip_shape: CollisionShape2D
 var _body_shape: CollisionShape2D
 var _trail: Array[Vector2] = []
 var _trail_clock := 0.0
 var _pre_stun_pose: Dictionary = {}
+var _hop_height := 0.0
 
 func _ready() -> void:
 	super._ready()
 	_shell = DamageModifier.reduction(shell_reduction)
 	damage_modifiers.add(_shell)
 	_body_shape = get_node("CollisionShape2D")
-	_tip_shape = get_node("StingerShape")
-	sprite.frame_changed.connect(_sync_tip_shape)
-	sprite.animation_changed.connect(_sync_tip_shape)
 	set_buried(true)
 
 func stun_halo_position() -> Vector2:
@@ -35,37 +31,37 @@ func set_buried(value: bool) -> void:
 	buried = value
 	if _body_shape != null:
 		_body_shape.set_deferred("disabled", value)
-	if _tip_shape != null:
-		_tip_shape.set_deferred("disabled", value)
 	if sprite != null:
 		sprite.visible = not value
 	var shadow := get_node_or_null("Shadow") as CanvasItem
 	if shadow != null: shadow.visible = not value
 
-func modifiers_for_hit(hit: HitContext) -> DamageModifiers:
-	var bypass := (aoe_bypasses_shell and hit.shape == HitContext.Shape.AREA) or (stinger_damageable() and hit.overlaps_circle(stinger_tip(), weakspot_radius))
-	if not bypass:
-		return damage_modifiers
+## Only the fully extended attack frame is grounded, in every octant.
+## This includes strike/miss/generic stun, not the lifting recovery frame.
+func stinger_grounded() -> bool:
+	return stinger_exposed() and sprite.animation.begins_with("attack_") and sprite.frame == 2
+
+func _without_shell() -> DamageModifiers:
 	var out := DamageModifiers.new()
 	for m in damage_modifiers.items():
 		if m != _shell: out.add(m)
 	return out
 
+func modifiers_for_hit(hit: HitContext) -> DamageModifiers:
+	if stinger_grounded() or (aoe_bypasses_shell and hit.shape == HitContext.Shape.AREA):
+		return _without_shell()
+	return damage_modifiers
+
 func apply_damage(amount: int, crit_tier: int = 0) -> void:
-	if buried: return # no mutation/receipt for an underground hit
-	# Raw/unlocated calls (including a future DoT) never guess a weak spot.
-	var result := DamageCalc.compute(float(amount),null,damage_modifiers,damage_rng)
+	if buried: return
+	# Grounding drops shell for the whole body, including raw damage paths.
+	var mods := _without_shell() if stinger_grounded() else damage_modifiers
+	var result := DamageCalc.compute(float(amount),null,mods,damage_rng)
 	super.apply_damage(result.amount,crit_tier)
 
-func apply_calculated_damage(amount: int, crit_tier: int = 0, hit: HitContext = null) -> void:
+func apply_calculated_damage(amount: int, crit_tier: int = 0, _hit: HitContext = null) -> void:
 	if buried or hp <= 0: return
-	# Disabled tip-only hits cannot be laundered through a retained context.
-	if hit != null and hit.shape in [HitContext.Shape.PROJECTILE,HitContext.Shape.CONTACT] and not is_stunned():
-		if hit.overlaps_circle(stinger_tip(),weakspot_radius) and not hit.overlaps_circle(global_position,23.4): return
-	var tip_hit := hit != null and hit.shape != HitContext.Shape.AREA and stinger_damageable() and hit.overlaps_circle(stinger_tip(),weakspot_radius)
 	super.apply_damage(amount,crit_tier)
-	if tip_hit and hp > 0 and _behavior is EnemyBehaviorScorpion:
-		(_behavior as EnemyBehaviorScorpion).extend_stinger_stun()
 
 func set_frozen(frozen: bool) -> void:
 	super.set_frozen(frozen)
@@ -94,20 +90,12 @@ func _tip_pixel_for(animation: StringName, frame: int) -> Vector2:
 	var pose := _tip_pose(animation,frame)
 	return Vector2(pose.x,pose.y) if pose.x >= 0.0 else Vector2(INF,INF)
 
-func stinger_damageable() -> bool:
-	return is_stunned() and stinger_exposed()
-
 func stinger_exposed() -> bool:
 	return not buried and sprite != null and _tip_pose(sprite.animation,sprite.frame).z > 0.0
 
 func stinger_tip() -> Vector2:
 	var pixel := _tip_pixel() if sprite != null else Vector2(INF,INF)
 	return sprite.to_global(pixel-Vector2(64,64)) if pixel.is_finite() else global_position
-
-func _sync_tip_shape() -> void:
-	if _tip_shape == null: return
-	_tip_shape.set_deferred("disabled",not stinger_damageable())
-	if not buried: _tip_shape.position = to_local(stinger_tip())
 
 func _restore_stun_pose() -> void:
 	if _pre_stun_pose.is_empty() or sprite == null: return
@@ -135,8 +123,8 @@ func stun(seconds: float) -> void:
 			"animation":sprite.animation,"frame":sprite.frame,
 			"progress":sprite.frame_progress,"playing":sprite.is_playing()}
 	super.stun(seconds)
+	set_hop_height(0.0)
 	_hold_grounded_stinger()
-	_sync_tip_shape()
 
 func _physics_process(delta: float) -> void:
 	# Restore before the first resumed AI step, so its new action wins.
@@ -145,12 +133,14 @@ func _physics_process(delta: float) -> void:
 	else:
 		_hold_grounded_stinger()
 	super._physics_process(delta)
-	_sync_tip_shape()
+
+func set_hop_height(height: float) -> void:
+	_hop_height = height
+	if sprite != null: sprite.position.y = -20.0-height
 
 func _process(delta: float) -> void:
 	_hold_grounded_stinger()
 	super._process(delta)
-	_sync_tip_shape()
 	if freeze.is_frozen(): return
 	if _behavior is EnemyBehaviorScorpion and (_behavior as EnemyBehaviorScorpion).state == EnemyBehaviorScorpion.State.BURROW_RUSH:
 		_trail_clock += delta

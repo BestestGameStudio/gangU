@@ -168,33 +168,39 @@ The eastern overworld clearing at `(2100, 400)` holds twelve stationary statues 
 Four run-persistent scorpions spawn on sampled sand 160-320px outside the
 Sunbound Sanctum barrier, through a scene-owned AreaSpawnData carrier and the
 existing EnemySpawner. No respawn or healing on rehide, normal mob drops.
-Current tuning (Daniel November17):500HP,80% shell reduction,100px/s walking,
-weight2;12px stinger-tip weak spot. The tip-only collider and armor bypass are
-active only while stunned and visibly exposed. Body hits remain armored; all
-landed area hits bypass shell. Unlocated raw damage remains armored. Shell
-calculation follows existing DamageCalc float/truncation semantics. Calculated
-damage delegates to the same HP mutation, preventing double armor.
+Current tuning (Daniel November17):500HP,80% raised-tail shell reduction,
+100px/s walking, weight2. There is only the23.4px body collider; the separate
+stinger-tip damage collider is removed. The fully extended grounded tail
+(attack frame2 in every direction) removes shell reduction from all body
+hits, including raw damage. Raising and lifting recovery poses regain shell.
+All landed area hits still bypass shell. Calculated damage delegates to the
+same HP mutation without double armor.
 
-Type-local states own buried/rush/emerge/body-charge/sting/miss/chase/pincer/bury.
-Underground has no targeting, projectile collision, contact attack or accepted
-HP damage. Named states feed F2. Initial harmless rush has a sand trail and
-stops within180px;0.30s emerge then initial180ms charge tell (later360ms), or a stationary sting when the
-player is already within70px.
-Body charge travels up to200px at600px/s with a24px swept hit radius and25damage,
-then always follows with pincer. Its body-centered warning covers reachable
-travel plus24px at each end, sharing physics/terrain/constraint clipping with
-execution, without wall sliding. While externally reeled, charge submits
-self-propulsion to the existing force resolver; the reel/stack remains the
-sole mover and the charge spends its own finite propulsion budget. At close range (within70px), a stationary
-25damage tail strike replaces the charge; the actual extended tip must hit.
-Charge selection outside close range uses the existing300px wake range.
-Pincer deals15 within50px after100ms first pose plus420ms held tell.
-Attack gaps count from attack start, not recovery end.
+Type-local states own buried/rush/emerge/body-charge/sting-hop/miss/chase/
+pincer/bury. Underground has no targeting, collision, contact attack or
+accepted HP damage. Named states feed F2. Harmless initial rush has a sand
+trail and stops within180px;0.30s emerge then initial180ms charge tell (later
+360ms), or close sting if player is within70px. Charge launches only outside
+70px, rechecked at the end of load-up. It travels up to200px at900px/s with
+24px swept hit radius and25damage. Pincers prepare during charge load-up;
+charge goes straight into15damage pincer strike, no endpoint windup pause.
+Standalone pincer retains its520ms tell and50px reach. Attack gaps count
+from attack start, not recovery end.
 
-A missed stationary sting (including refused i-frame hits) holds the forward
-stinger grounded for1s. The first accepted direct tip hit during that miss adds
-2s once; later hits cannot stack. Generic stun also grounds/exposes the tip but
-does not gain the miss-only bonus. Freeze pauses clocks; thaw preserves the
-held pose. Native128px directional art at scale1 uses generated per-frame
-geometry for the visible tip and halo placement. Shared rendering and targeting
-hooks leave ordinary enemies unchanged. No lighting or audio changes.
+Body-centered charge warning covers reachable travel plus24px at each end,
+sharing straight physics/terrain/constraint clipping with execution, no wall
+sliding. External reels/stacks remain sole movers: charge and hop submit
+self-propulsion to the existing force resolver and spend finite own budgets,
+not net pulled distance.
+
+Close sting has a360ms raised-tail load-up then a0.10s quick ground-plane hop
+toward the player, up to32px, stopping at52px spacing rather than crossing a
+close player. Point-blank has a visual-only hop; no backward hop was approved.
+A12px visual arc lifts the sprite, not the collision body or shadow. Hop uses
+the same straight clipping helper. Landing triggers stationary25damage sting
+at the actual rendered tip, within70px of the body. Point-blank can still
+miss the extended tip. A missed sting (including i-frames) holds the grounded
+pose with halo for a flat1s; the former direct-tip +2s extension is removed.
+Generic stun also grounds tail and drops body armor. Freeze holds clocks and
+hop altitude. Native128px directional art at scale1 and generated per-frame
+geometry remain unchanged. No lighting or audio changes.
