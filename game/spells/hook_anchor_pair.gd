@@ -16,6 +16,9 @@ const NOTES := preload("res://assets/spells/hook_shot/music_notes.png")
 var caught_enemy: Enemy = null
 var active_reel: HookReel = null
 var consumed := false
+var lure_cast_position := Vector2.ZERO
+var recasts_used := 0
+var returning := false
 
 static func place(parent: Node, player: Player, s: Spell, anchor_at: Vector2, lure_at: Vector2) -> HookAnchorPair:
  var peers: Array[HookAnchorPair] = []
@@ -26,6 +29,7 @@ static func place(parent: Node, player: Player, s: Spell, anchor_at: Vector2, lu
  pair.anchor=Node2D.new();pair.lure=Node2D.new()
  pair.add_child(pair.anchor);pair.add_child(pair.lure)
  parent.add_child(pair);pair.anchor.global_position=anchor_at;pair.lure.global_position=lure_at
+ pair.lure_cast_position=lure_at
  return pair
 
 func _ready() -> void:
@@ -35,6 +39,11 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
  if not is_instance_valid(owner_player) or owner_player.hp<=0 or not owner_player.is_inside_tree():queue_free();return
  _tick_emitter(delta)
+ if returning:
+  lure.global_position=lure.global_position.move_toward(lure_cast_position,maxf(spell.projectile_speed,1.0)*delta)
+  if lure.global_position.is_equal_approx(lure_cast_position):
+   returning=false;taunt_left=0.0
+  queue_redraw();return
  if consumed:
   if not is_instance_valid(active_reel) or active_reel.is_queued_for_deletion() or not is_instance_valid(caught_enemy):
    queue_free();return
@@ -53,9 +62,21 @@ func _physics_process(delta: float) -> void:
    var reel := HookReel.begin(get_parent(),enemy,anchor,spell)
    if reel != null:
     consumed=true;caught_enemy=enemy;active_reel=reel
+    reel.reached_target.connect(_on_reel_arrived,CONNECT_ONE_SHOT)
     lure.global_position=enemy.global_position
     break
 
+ queue_redraw()
+
+func _on_reel_arrived() -> void:
+ if is_queued_for_deletion():return
+ if recasts_used>=maxi(0,spell.hook_lure_recasts):
+  queue_free();return
+ # Snapshot the landed position before releasing the enemy reference. The same
+ # anchor stays fixed; only this pair's lure flies back to its original cast.
+ if is_instance_valid(caught_enemy):lure.global_position=caught_enemy.global_position
+ recasts_used+=1;returning=true;consumed=false
+ caught_enemy=null;active_reel=null
  queue_redraw()
 
 func _tick_emitter(delta: float) -> void:
@@ -81,6 +102,9 @@ func _draw() -> void:
   draw_texture_rect_region(NOTES,Rect2(point,Vector2(8,12)),Rect2(frame*8,0,8,12))
 
 func _exit_tree() -> void:
+ if is_instance_valid(active_reel):
+  if is_instance_valid(caught_enemy):HookPullStack.detach(caught_enemy,active_reel)
+  active_reel.queue_free()
  if not is_inside_tree():return
  for node in get_tree().get_nodes_in_group("enemies"):
   if node.hook_taunt_target==lure:node.hook_taunt_target=null;node.hook_taunt_left=0.0

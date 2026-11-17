@@ -21,5 +21,6 @@ hook_magnet_radius = 120.0
 hook_arrival_stun = 1.5
 hook_anchor_mode = true
 hook_pair_cap = 3
+hook_lure_recasts = 4
 hook_taunt_radius = 180.0
 hook_taunt_interval = 5.0
