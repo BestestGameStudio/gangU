@@ -1,0 +1,30 @@
+[
+  {
+    "draw_calls_median": 33.0,
+    "godot_process_median_ms": 198.741,
+    "label": "gate:all_lights",
+    "wall_frame_max_ms": 198.92,
+    "wall_frame_median_ms": 189.075
+  },
+  {
+    "draw_calls_median": 33.0,
+    "godot_process_median_ms": 207.652,
+    "label": "gate:offscreen_lights_disabled",
+    "wall_frame_max_ms": 207.822,
+    "wall_frame_median_ms": 189.113
+  },
+  {
+    "draw_calls_median": 138.0,
+    "godot_process_median_ms": 364.161,
+    "label": "arena:all_lights",
+    "wall_frame_max_ms": 379.478,
+    "wall_frame_median_ms": 359.409
+  },
+  {
+    "draw_calls_median": 138.0,
+    "godot_process_median_ms": 358.447,
+    "label": "arena:offscreen_lights_disabled",
+    "wall_frame_max_ms": 374.738,
+    "wall_frame_median_ms": 356.665
+  }
+]
