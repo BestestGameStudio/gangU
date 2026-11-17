@@ -4,7 +4,7 @@ extends EnemyBehavior
 enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_HOP, STING_STRIKE, MISS_STUN, RECOVER, CHASE, PINCER_WINDUP, PINCER_STRIKE, PINCER_RECOVER, BURY }
 @export var wake_range := 300.0
 @export var pincer_range := 50.0
-@export var sting_range := 70.0
+@export var sting_range := 110.0
 @export var charge_range := 300.0
 @export var hide_range := 650.0
 @export var hide_delay := 2.0
@@ -22,8 +22,9 @@ const INITIAL_CHARGE_WINDUP := 0.18
 const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
 const MISS_STUN_TIME := 1.0
+const MISS_HIT_BONUS := 2.0
 const HOP_TIME := 0.10
-const HOP_DISTANCE := 32.0
+const HOP_DISTANCE := 60.0
 const HOP_STOP_DISTANCE := 52.0
 var state: State = State.BURIED
 var _time := 0.0
@@ -34,6 +35,7 @@ var _aim := Vector2.DOWN
 var _remaining := 0.0
 var _landed := false
 var _miss_duration := MISS_STUN_TIME
+var _miss_extended := false
 var _path := TerrainPath.new()
 var _initial_charge := false
 var _charge_cd := 0.0
@@ -85,6 +87,7 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.sprite.pause()
 		State.MISS_STUN:
 			_miss_duration = MISS_STUN_TIME
+			_miss_extended = false
 			e.play_action(&"attack", true)
 			e.sprite.set_frame_and_progress(2,0.0)
 			e.sprite.pause()
@@ -247,6 +250,12 @@ func _move(e: EnemyScorpion, delta: float, budget: float) -> void:
 
 func is_stunned() -> bool:
 	return state == State.MISS_STUN
+
+## Called from an accepted Player OnHit event, never from modifier queries.
+func extend_miss_stun() -> void:
+	if state == State.MISS_STUN and not _miss_extended:
+		_miss_extended = true
+		_miss_duration += MISS_HIT_BONUS
 
 func sting_windup_duration() -> float:
 	return INITIAL_CHARGE_WINDUP if _initial_charge else STING_WINDUP
