@@ -80,12 +80,15 @@ func face_player(direction: Vector2) -> void:
 ## Geometry follows the rendered suffix/frame, not player aim. Transition
 ## coordinates reproduce the same anatomy/drop/shake as the SpriteU generator.
 func _tip_pixel() -> Vector2:
-	var name := String(sprite.animation)
+	return _tip_pixel_for(sprite.animation,sprite.frame)
+
+func _tip_pixel_for(animation: StringName, frame: int) -> Vector2:
+	var name := String(animation)
 	var anim := name.get_slice("_",0)
 	var suffix := name.get_slice("_",1)
 	var di := ["s","se","e","ne","n","nw","w","sw"].find(suffix)
 	if di < 0: return Vector2(INF,INF)
-	var k := sprite.frame
+	var k := frame
 	var transition := anim == "emerge" or anim == "bury"
 	var transition_phase := 5-k if anim == "bury" else k
 	if transition:
@@ -93,7 +96,7 @@ func _tip_pixel() -> Vector2:
 		if transition_phase == 5:
 			anim = "idle"
 			k = 0
-	var count := sprite.sprite_frames.get_frame_count(sprite.animation)
+	var count := sprite.sprite_frames.get_frame_count(animation)
 	var phase := float(k)/maxf(count,1)*TAU
 	var sway := sin(phase)*(0.6 if anim == "idle" else 0.8 if anim == "walk" else 0.0)
 	var shake := 0.0
@@ -204,3 +207,15 @@ func _draw() -> void:
 		var a := float(i+1)/float(_trail.size())
 		draw_circle(p, 3.0+4.0*a, Color(0.73,0.59,0.37,0.5*a))
 		draw_line(p+Vector2(-7,2),p+Vector2(7,2),Color(0.92,0.8,0.56,0.65*a),2.0)
+
+## Warning covers the future grounded-tip sweep plus the existing24px
+## target proximity, not a body-centered guess or the raised windup tip.
+## Consumer is visual-only; locked aim and damage geometry remain unchanged.
+func charge_warning() -> Dictionary:
+	if buried or hp <= 0 or not _behavior is EnemyBehaviorScorpion: return {}
+	var b := _behavior as EnemyBehaviorScorpion
+	if b.state != EnemyBehaviorScorpion.State.STING_WINDUP: return {}
+	var tip := sprite.to_global(_tip_pixel_for(sprite._variant(&"attack"),2)-Vector2(32,32))
+	return {"origin":tip-b._aim*24.0,"direction":b._aim,
+		"length":b.dash_distance+48.0,"width":48.0,
+		"progress":clampf(b._time/b.sting_windup_duration(),0.0,1.0)}

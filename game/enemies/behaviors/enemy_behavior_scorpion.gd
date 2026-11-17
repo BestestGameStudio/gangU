@@ -15,6 +15,8 @@ enum State { BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_DASH, MISS_STUN, R
 @export var pincer_gap := 1.0
 @export var transition_time := 0.30
 const STING_WINDUP := 0.36
+## Separate first attack timing; owner-selected faster value pending.
+const INITIAL_STING_WINDUP := 0.36
 ## Pincer first pose100ms + held pose420ms = 520ms to impact.
 const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
@@ -31,6 +33,7 @@ var _landed := false
 var _miss_duration := MISS_STUN_TIME
 var _tip_extended := false
 var _path := TerrainPath.new()
+var _initial_sting := false
 
 func _enter(e: EnemyScorpion, next: State) -> void:
 	state = next
@@ -43,11 +46,13 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.set_buried(true)
 			_remaining = dash_distance
 		State.EMERGE:
+			_initial_sting = true
 			e.set_buried(false)
 			e.play_action(&"emerge", true)
 		State.STING_WINDUP:
 			e.play_action(&"attack", true)
 		State.STING_DASH:
+			_initial_sting = false
 			_remaining = dash_distance
 			_landed = false
 			_sting_cd = sting_gap
@@ -109,7 +114,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			if _time >= transition_time:
 				_enter(e,State.STING_WINDUP)
 		State.STING_WINDUP:
-			if _time >= STING_WINDUP: _enter(e,State.STING_DASH)
+			if _time >= sting_windup_duration(): _enter(e,State.STING_DASH)
 		State.STING_DASH:
 			var before := e.stinger_tip()
 			_move(e,delta,_remaining)
@@ -163,3 +168,6 @@ func extend_stinger_stun() -> void:
 	if state == State.MISS_STUN and not _tip_extended:
 		_tip_extended = true
 		_miss_duration += STINGER_STUN_BONUS
+
+func sting_windup_duration() -> float:
+	return INITIAL_STING_WINDUP if _initial_sting else STING_WINDUP
