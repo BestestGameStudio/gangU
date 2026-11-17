@@ -14,10 +14,9 @@ class_name OverworldGround
 ## computed (`roads`, `road_distance`) because decor placement keeps trees
 ## and rocks off them - dropping that would move trees and change collision
 ## and routes. The arrival clearing and the pad under each gate stay.
-## Terrain art pass: the field is drawn from the TerrainArt grass tiles
-## (hashed variant per 64 px cell, meadow inside the old darker/lighter
-## patches) and each tree crown is a TerrainArt tree sprite sized to its
-## collision circle. Layout, collision and blockers are unchanged.
+## Painted look: the field is one shader quad (ground_paint.gdshader) over
+## the baked lattice types, and trees, rocks and ground clutter are
+## TerrainPieces. Layout, collision and blockers are unchanged.
 
 const CENTER := Vector2(576, -150)
 ## #436 (Daniel, 2026-11-09: "expand the overworld map" - the world itself,
@@ -235,9 +234,6 @@ func build_from(area: Node) -> void:
 	var desert := area.get_node_or_null("DesertStatueArena")
 	if desert != null:
 		desert.shape_decor(self)
-	var sample := area.get_node_or_null("LandscapeSample") as LandscapeSample
-	if sample != null:
-		sample.shape_decor(self)
 	_plant_tree_collision(area)
 	_plant_border_collision(area)
 	_build_tall_grass()
@@ -322,9 +318,6 @@ func _plant_tree_collision(area: Node) -> void:
 	var trunks: Array[Rect2] = []
 	for d in decor:
 		if d["kind"] == "tree": trunks.append(tree_trunk_rect(d))
-	var sample := area.get_node_or_null("LandscapeSample") as LandscapeSample
-	if sample != null:
-		sample.plant(map, cells, trunks) # painted cliff/pond/pillars + its trees' trunks
 	map.set_trunk_blockers(trunks)
 	var village := area.get_node_or_null("AbandonedVillage") as AbandonedVillage
 	if village != null:
@@ -341,7 +334,7 @@ func tree_trunk_rect(d: Dictionary) -> Rect2:
 ## (deterministic, no RNG). Density follows low-frequency noise, so tufts
 ## and flowers gather in meadows and thin out between them. Kept off
 ## non-grass ground (pebbles also allowed on dirt), the arrival clearing,
-## the village, the desert arena and the painted landscape.
+## the village and the desert arena.
 func _build_scatter(area: Node) -> void:
 	scatter.clear()
 	_clump_noise = FastNoiseLite.new()
@@ -350,7 +343,6 @@ func _build_scatter(area: Node) -> void:
 	var inner := _blob(-40.0)
 	var village := area.get_node_or_null("AbandonedVillage") as Node2D if area != null else null
 	var desert := area.get_node_or_null("DesertStatueArena") as DesertStatueArena if area != null else null
-	var sample := area.get_node_or_null("LandscapeSample") as LandscapeSample if area != null else null
 	var gx_n := int(ceil(RADII.x / SCATTER_STEP)) + 1
 	var gy_n := int(ceil(RADII.y / SCATTER_STEP)) + 1
 	var gy_s := int(ceil((RADII.y + SOUTH_EXTEND) / SCATTER_STEP)) + 1
@@ -376,8 +368,6 @@ func _build_scatter(area: Node) -> void:
 			if village != null and at.distance_to(village.position) < 470.0:
 				continue
 			if desert != null and desert.contains_footprint(at, 48.0):
-				continue
-			if sample != null and sample.contains_footprint(at, 0.0):
 				continue
 			var ground := _lattice_type(roundi(at.x / 64.0), roundi(at.y / 64.0))
 			if ground != DualGrid.T.GRASS and not (kind == TerrainPieces.Kind.PEBBLES and ground == DualGrid.T.DIRT):
@@ -407,9 +397,6 @@ func _build_tall_grass() -> void:
 				continue
 			var desert := get_parent().get_node_or_null("DesertStatueArena") as DesertStatueArena
 			if desert != null and desert.contains_footprint(at,r+140.0):
-				continue
-			var sample := get_parent().get_node_or_null("LandscapeSample") as LandscapeSample
-			if sample != null and sample.contains_footprint(at, r):
 				continue
 			if at.distance_to(spawn) < GRASS_CLEAR + r:
 				continue
@@ -616,10 +603,6 @@ func _compute_lattice_type(p: Vector2) -> int:
 		if d < r * 1.08 * wob:
 			return DualGrid.T.SAND
 		desert_near = d < r * 1.08 * wob + 220.0
-	# The painted landscape feathers into plain grass: no dirt pads under it.
-	var sample := parent.get_node_or_null("LandscapeSample") as LandscapeSample if parent != null else null
-	if sample != null and sample.contains_footprint(p, 64.0):
-		return DualGrid.T.GRASS
 	# Arrival clearing and the pad under every gate.
 	if p.distance_to(spawn) <= ARRIVAL_STONE_R:
 		return DualGrid.T.STONE

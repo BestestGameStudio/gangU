@@ -16,8 +16,6 @@ const FOOT := Vector2(24, 56)
 const VARIANTS := 8
 ## World px per art px (the same pixel size as the landscape sample).
 const ART_SCALE := 2.0
-## Kinds whose TOP layer is empty, so canopy passes can skip them.
-const GROUND_ONLY: Array[int] = [Kind.BOULDER, Kind.TUFTS, Kind.FLOWERS, Kind.PEBBLES]
 ## #771 trunk rule: collision is a small box at the trunk base, never the crown.
 const TRUNK_SIZE := Vector2(8, 6)
 
@@ -35,8 +33,8 @@ static func dest(foot: Vector2, flip := false) -> Rect2:
 		r.size.x = -size.x
 	return r
 
-static func draw(ci: CanvasItem, top: bool, kind: int, variant: int, foot: Vector2, flip := false, tint := Color.WHITE) -> void:
-	ci.draw_texture_rect_region(TOP if top else BASE, dest(foot, flip), src(kind, variant), tint)
+static func draw(ci: CanvasItem, top: bool, kind: int, variant: int, foot: Vector2, flip := false) -> void:
+	ci.draw_texture_rect_region(TOP if top else BASE, dest(foot, flip), src(kind, variant))
 
 static func trunk_rect(foot: Vector2) -> Rect2:
 	return Rect2(foot - Vector2(TRUNK_SIZE.x * 0.5, TRUNK_SIZE.y), TRUNK_SIZE)
