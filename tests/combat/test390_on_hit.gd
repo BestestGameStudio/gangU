@@ -521,7 +521,7 @@ func _check_hit_context() -> void:
 	splash.damage = 7.9
 	var water := WaterSplash.spawn(_area, splash, _player, point, point)
 	water._land()
-	_check(e.contexts.size() == 1 and e.contexts[0].shape == HitContext.Shape.AREA and e.contexts[0].origin == point and e.contexts[0].radius == splash.splash_radius, "context: actual splash landing carries center and radius")
+	_check(e.contexts.size() == 1 and e.contexts[0].shape == HitContext.Shape.AREA and e.contexts[0].origin == point and e.contexts[0].radius == splash.splash_radius and e.contexts[0].kind == &"splash", "context: actual splash landing carries center and radius")
 	await _clear_area()
 
 	e = _context_enemy(point)
@@ -533,7 +533,7 @@ func _check_hit_context() -> void:
 	bubble.shield_tick = 0.5
 	var shield := WaterShield.spawn(_player, bubble)
 	shield._damage_contacts(0.0)
-	_check(e.contexts.size() == 1 and e.contexts[0].shape == HitContext.Shape.AREA and e.contexts[0].origin == _player.global_position and e.contexts[0].radius == shield.radius + WaterShield.CONTACT_PAD, "context: shield supplies own radius, not splash radius")
+	_check(e.contexts.size() == 1 and e.contexts[0].shape == HitContext.Shape.AREA and e.contexts[0].origin == _player.global_position and e.contexts[0].radius == shield.radius + WaterShield.CONTACT_PAD and e.contexts[0].kind == &"shield", "context: shield supplies own radius, not splash radius")
 	await _clear_area()
 
 	e = _context_enemy(point)
@@ -544,8 +544,8 @@ func _check_hit_context() -> void:
 	hammer.hammer_shockwave_damage = 7.9
 	var h := StoneHammer.spawn(_area, hammer, _player, null, point)
 	h._land()
-	_check(e.contexts.size() == 1 and e.contexts[0].radius == h.radius + StoneHammer.HIT_PAD and e.contexts[0].origin == point, "context: hammer slam supplies actual area")
-	_check(far.contexts.size() == 1 and far.contexts[0].shape == HitContext.Shape.AREA and far.contexts[0].radius == h.shockwave_radius() + StoneHammer.HIT_PAD, "context: shockwave supplies its distinct area")
+	_check(e.contexts.size() == 1 and e.contexts[0].radius == h.radius + StoneHammer.HIT_PAD and e.contexts[0].origin == point and e.contexts[0].kind == &"hammer_slam", "context: hammer slam supplies actual area")
+	_check(far.contexts.size() == 1 and far.contexts[0].shape == HitContext.Shape.AREA and far.contexts[0].radius == h.shockwave_radius() + StoneHammer.HIT_PAD and far.contexts[0].kind == &"hammer_shockwave", "context: shockwave supplies its distinct area")
 	await _clear_area()
 
 	e = _context_enemy(point)

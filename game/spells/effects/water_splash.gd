@@ -122,14 +122,14 @@ func _land() -> void:
 		if hp == null or int(hp) <= 0:
 			continue
 		if (e as Node2D).global_position.distance_to(target) <= spell.splash_radius:
-			deal_damage(e, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius))
+			deal_damage(e, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius, &"splash"))
 			hits += 1
 	# #420: barricades take any player-sourced damage, splash included. Not
 	# counted in `hits` (enemy hits only, as before).
 	if Barricade.is_player_side(OnHit.live(source)):
 		for b in get_tree().get_nodes_in_group(&"barricades"):
 			if is_instance_valid(b) and (b as Node2D).global_position.distance_to(target) <= spell.splash_radius:
-				deal_damage(b, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius))
+				deal_damage(b, spell, source, OnHit.DELIVERY_SPLASH, HitContext.area(target, spell.splash_radius, &"splash"))
 	landed.emit(target, hits)
 	queue_redraw()
 

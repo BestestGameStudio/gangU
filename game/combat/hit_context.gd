@@ -5,6 +5,9 @@ extends RefCounted
 ## not change hit selection, acceptance, source gates or HP mutation.
 enum Shape { UNLOCATED, PROJECTILE, AREA, CONTACT }
 var shape: Shape = Shape.UNLOCATED
+## Caller identity is separate from shape and OnHit delivery (both hammer
+## areas report MELEE; shield reports CONTACT but is geometrically an area).
+var kind: StringName = &"unlocated"
 var origin := Vector2.ZERO
 var end := Vector2.ZERO
 var radius := 0.0
@@ -12,14 +15,16 @@ var radius := 0.0
 static func projectile(from: Vector2, to: Vector2, hit_radius: float) -> HitContext:
 	var c := HitContext.new()
 	c.shape = Shape.PROJECTILE
+	c.kind = &"projectile"
 	c.origin = from
 	c.end = to
 	c.radius = maxf(hit_radius, 0.0)
 	return c
 
-static func area(center: Vector2, hit_radius: float) -> HitContext:
+static func area(center: Vector2, hit_radius: float, caller: StringName = &"area") -> HitContext:
 	var c := HitContext.new()
 	c.shape = Shape.AREA
+	c.kind = caller
 	c.origin = center
 	c.end = center
 	c.radius = maxf(hit_radius, 0.0)
@@ -28,6 +33,7 @@ static func area(center: Vector2, hit_radius: float) -> HitContext:
 static func contact(at: Vector2) -> HitContext:
 	var c := HitContext.new()
 	c.shape = Shape.CONTACT
+	c.kind = &"contact"
 	c.origin = at
 	c.end = at
 	return c
