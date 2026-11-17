@@ -58,7 +58,7 @@ func run():
  var region:=Node2D.new();area.add_child(region)
  var arena:=DesertStatueArena.new();region.add_child(arena);arena.set_physics_process(false);arena.start_encounter();arena._enter_phase_two()
  var boss=arena.possessed;boss.set_physics_process(false)
- check(boss.weight==4 and arena.statues.all(func(statue):return statue.weight==4),'Sand General generated mass4')
+ check(boss.weight==6 and arena.statues.all(func(statue):return statue.weight==6),'Sand General generated mass6')
  var rock=load('res://data/spells/hook_shot_rock.tres')
  var pair=HookAnchorPair.place(region,player,rock.alternate_spell,boss.global_position+Vector2(-250,0),boss.global_position);pair.set_physics_process(false);pair._physics_process(0.016);pair.active_reel.set_physics_process(false)
  var other=HookReel.begin(region,boss,player,spell);other.set_physics_process(false)
