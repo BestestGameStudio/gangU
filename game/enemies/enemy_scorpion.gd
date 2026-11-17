@@ -212,7 +212,7 @@ func _draw() -> void:
 ## target proximity, not a body-centered guess or the raised windup tip.
 ## Consumer is visual-only; locked aim and damage geometry remain unchanged.
 func charge_warning() -> Dictionary:
-	if buried or hp <= 0 or not _behavior is EnemyBehaviorScorpion: return {}
+	if buried or hp <= 0 or is_stunned() or not _behavior is EnemyBehaviorScorpion: return {}
 	var b := _behavior as EnemyBehaviorScorpion
 	if b.state != EnemyBehaviorScorpion.State.STING_WINDUP: return {}
 	var tip := sprite.to_global(_tip_pixel_for(sprite._variant(&"attack"),2)-Vector2(32,32))
