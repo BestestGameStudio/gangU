@@ -4,7 +4,7 @@
 [ext_resource type="Resource" path="res://data/rewards/demo_table.tres" id="3"]
 [resource]
 script = ExtResource("1")
-max_hp = 100
+max_hp = 500
 speed = 100.0
 weight = 2.0
 contact_damage = 0

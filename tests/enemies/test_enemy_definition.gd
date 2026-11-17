@@ -264,24 +264,25 @@ func _test_scorpion() -> void:
 	e.set_physics_process(false)
 	await process_frame
 	var b := e._behavior as EnemyBehaviorScorpion
-	_check(b != null and e.hp == 100 and e.buried,"definition + initial buried state")
+	_check(b != null and e.hp == 500 and e.buried,"definition + initial buried state")
 	e.apply_damage(99)
-	_check(e.hp == 100 and not HitContext.targetable(e),"hidden refuses damage and targeting")
+	_check(e.hp == 500 and not HitContext.targetable(e),"hidden refuses damage and targeting")
 	b.physics_step(e,p,0.01)
 	_check(b.state == b.State.BURROW_RUSH,"nearby player triggers rush")
 	p.position = Vector2(100,0)
 	b.physics_step(e,p,0.01)
 	_check(b.state == b.State.EMERGE and not e.buried,"rush reaches sting range and emerges")
 	b.physics_step(e,p,0.30)
-	_check(b.state == b.State.STING_WINDUP,"300ms emerge -> sting tell")
+	_check(b.state == b.State.CHARGE_WINDUP,"300ms emerge -> charge tell")
 	b.physics_step(e,p,0.17)
-	_check(b.state == b.State.STING_WINDUP,"initial tell remains before fast deadline")
+	_check(b.state == b.State.CHARGE_WINDUP,"initial tell remains before fast deadline")
 	b.physics_step(e,p,0.01)
-	_check(b.state == b.State.STING_DASH,"initial fast locked tell -> dash")
+	_check(b.state == b.State.CHARGE,"initial fast locked tell -> body charge")
 	_check(b.sting_windup_duration() == b.STING_WINDUP,"later stings retain normal windup")
 	p.position = Vector2(0,500)
 	for i in 21: b.physics_step(e,p,1.0/60.0)
-	_check(b.state == b.State.MISS_STUN,"miss -> stun")
+	_check(b.state == b.State.PINCER_WINDUP,"charge -> mandatory pincer follow-up")
+	b._enter(e,b.State.MISS_STUN)
 	_check(e.sprite.frame == 2 and not e.sprite.is_playing(),"miss holds forward strike pose")
 	var tip := e.stinger_tip()
 	var shell := HitContext.projectile(e.global_position+Vector2(-100,0),e.global_position+Vector2(-100,0),1)
@@ -300,7 +301,12 @@ func _test_scorpion() -> void:
 	_check(b.state == b.State.CHASE,"stun ends at1s")
 	p.position = e.position+Vector2(20,0)
 	b.physics_step(e,p,0.01)
-	_check(b.state == b.State.PINCER_WINDUP,"close -> pincer")
+	_check(b.state == b.State.STING_WINDUP,"close -> stationary sting")
+	var stationary_position := e.position
+	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.01)
+	_check(e.position == stationary_position,"sting never moves the body")
+	b._enter(e,b.State.PINCER_WINDUP)
 	b.physics_step(e,p,0.52)
 	_check(b.state == b.State.PINCER_STRIKE,"pincer impact at520ms")
 	p.set_invulnerable(false)
@@ -313,7 +319,7 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,2.0)
 	_check(b.state == b.State.BURY,"out of range2s -> bury")
 	b.physics_step(e,p,0.30)
-	_check(b.state == b.State.BURIED and e.hp == 99,"bury hides without healing")
+	_check(b.state == b.State.BURIED and e.hp == 499,"bury hides without healing")
 
 	# Computed shell damage is never reduced twice; raw unlocated damage is.
 	e.set_buried(false)
@@ -333,7 +339,7 @@ func _test_scorpion() -> void:
 	e.set_frozen(false)
 	_check(e.sprite.frame == 2 and not e.sprite.is_playing(),"scorpion: thaw preserves held forward stinger")
 	# Real projectile path reaches tip-only geometry outside the body circle.
-	b._enter(e,b.State.CHASE)
+	b._enter(e,b.State.MISS_STUN)
 	e.face_player(Vector2.RIGHT)
 	e.play_action(&"attack",true)
 	e.sprite.set_frame_and_progress(2,0.0)
@@ -472,18 +478,90 @@ func _test_scorpion() -> void:
 	for direction in [Vector2.RIGHT,Vector2(1,1).normalized(),Vector2.DOWN,Vector2(-1,1).normalized(),Vector2.LEFT,Vector2(-1,-1).normalized(),Vector2.UP,Vector2(1,-1).normalized()]:
 		e.face_player(direction)
 		b._aim = direction
-		b._enter(e,b.State.STING_WINDUP)
+		b._enter(e,b.State.CHARGE_WINDUP)
 		var warning := e.charge_warning()
 		_check(warning.direction == direction and warning.length == b.dash_distance+48.0 and warning.width == 48.0,"scorpion: warning uses actual dash sweep dimensions")
 		e.sprite.set_frame_and_progress(2,0.0)
-		_check(warning.origin.is_equal_approx(e.stinger_tip()-direction*24.0),"scorpion: warning predicts future grounded tip")
+		_check(warning.origin.is_equal_approx(e.global_position-direction*24.0),"scorpion: warning tracks body charge envelope")
 		b._enter(e,b.State.MISS_STUN)
 		_check(e.charge_warning().is_empty(),"scorpion: warning clears outside windup")
+	# The warning and charge execution share one clipped center path.
+	e.position = Vector2.ZERO
+	e.movement_constraint = func(point: Vector2) -> Vector2: return Vector2(minf(point.x,80.0),point.y)
+	b._aim = Vector2.RIGHT
+	b._enter(e,b.State.CHARGE_WINDUP)
+	var constrained := e.charge_warning()
+	_check(constrained.length == 128.0,"charge: warning clipped to constraint80 plus48caps")
+	b._enter(e,b.State.CHARGE)
+	for i in 20:
+		if b.state == b.State.CHARGE: b.physics_step(e,p,1.0/60.0)
+	_check(is_equal_approx(e.position.x,80.0) and b.state == b.State.PINCER_WINDUP,"charge: actual travel matches clipped warning then pincer")
+	e.movement_constraint = Callable()
+	e.position = Vector2.ZERO
+	var wall := StaticBody2D.new()
+	wall.position = Vector2(100,0)
+	var shape := CollisionShape2D.new()
+	var box := RectangleShape2D.new()
+	box.size = Vector2(10,300)
+	shape.shape = box
+	wall.add_child(shape)
+	area.add_child(wall)
+	b._enter(e,b.State.CHARGE_WINDUP)
+	e._sync_tip_shape()
+	await physics_frame
+	await physics_frame
+	var wall_length: float = e.charge_warning().length-48.0
+	_check(wall_length > 70.0 and wall_length < 72.0,"charge: body sweep clips lane at physical wall")
+	b._enter(e,b.State.CHARGE)
+	for i in 20:
+		if b.state == b.State.CHARGE: b.physics_step(e,p,1.0/60.0)
+	_check(absf(e.position.x-wall_length)<0.1,"charge: physical wall execution matches warning")
+	wall.free()
+	e.position = Vector2.ZERO
+	var map := TerrainMap.new()
+	area.add_child(map)
+	map.set_cell(Vector2i(2,0),TerrainTypes.MOUNTAIN)
+	e.terrain = map
+	b._enter(e,b.State.CHARGE_WINDUP)
+	var terrain_length: float = e.charge_warning().length-48.0
+	b._enter(e,b.State.CHARGE)
+	for i in 30:
+		if b.state == b.State.CHARGE: b.physics_step(e,p,1.0/60.0)
+	_check(terrain_length < 128.0 and absf(e.position.x-terrain_length)<0.1,"charge: terrain endpoint matches warning, never slides")
+	e.terrain = null
+	map.free()
+	# Literal stunned-only tail weakspot, body and AoE policy stay separate.
+	b._enter(e,b.State.STING_STRIKE)
+	e.face_player(Vector2.RIGHT)
+	e.play_action(&"attack",true)
+	e.sprite.set_frame_and_progress(2,0)
+	e.sprite.pause()
+	e._sync_tip_shape()
+	await physics_frame
+	_check(not e.stinger_damageable() and e.get_node("StingerShape").disabled,"tip: collider disabled outside stun")
+	var closed_tip := HitContext.projectile(e.stinger_tip(),e.stinger_tip(),1.0)
+	var hp_closed := e.hp
+	e.apply_calculated_damage(10,0,closed_tip)
+	_check(e.hp == hp_closed,"tip: retained tip-only context rejected outside stun")
+	e.apply_calculated_damage(1,0,HitContext.projectile(e.global_position,e.global_position,1.0))
+	_check(e.hp == hp_closed-1,"tip: body damage remains accepted")
+	b._enter(e,b.State.MISS_STUN)
+	e._sync_tip_shape()
+	await physics_frame
+	_check(e.stinger_damageable() and not e.get_node("StingerShape").disabled,"tip: collider enabled during miss stun")
+	p.set_invulnerable(false)
+	p.position = e.stinger_tip()
+	b._aim = Vector2.RIGHT
+	b._enter(e,b.State.STING_STRIKE)
+	var before_strike := e.position
+	var before_hp := p.hp
+	b.physics_step(e,p,0.01)
+	_check(e.position == before_strike and p.hp == before_hp-25,"sting: close stationary tip deals25 without charge movement")
 	# Player i-frames refuse the sting and lead to miss, not success.
 	p.position = e.position+Vector2(100,0)
 	p.set_invulnerable(true)
 	b._aim = Vector2.RIGHT
-	b._enter(e,b.State.STING_DASH)
+	b._enter(e,b.State.STING_STRIKE)
 	for i in 21: b.physics_step(e,p,1.0/60.0)
 	_check(b.state == b.State.MISS_STUN,"scorpion: i-frames count as sting miss")
 	area.free()
