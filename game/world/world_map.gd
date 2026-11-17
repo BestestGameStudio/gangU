@@ -100,6 +100,11 @@ func cell_color(id: StringName, cell: Vector2i) -> Color:
 static func terrain_color(t: TerrainMap, cell: Vector2i) -> Color:
 	if t == null or not is_instance_valid(t):
 		return FALLBACK_GROUND
+	# #834: the overworld is painted by its Ground node, not by TerrainMap
+	# tiles, so its map colours come from the same lattice the shader uses.
+	var ground := t.get_parent().get_node_or_null("Ground") if t.get_parent() != null else null
+	if ground != null and ground.has_method("map_color"):
+		return ground.map_color(cell)
 	var type := t.tile_type_at(cell_center(cell))
 	var tile: TerrainTile = t.palette.tile(type) if t.palette != null else null
 	return tile.color if tile != null else TerrainSeason.color(t.season, type)
