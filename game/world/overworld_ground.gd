@@ -536,13 +536,19 @@ func _grass_rect(cell: Vector2i) -> Rect2:
 
 const GRASS_SPRITES := 5
 const GRASS_SPRITE_SIZE := 48.0
-static var _grass_textures: Array[Texture2D] = []
+## Runtime 240x48 atlas of the five blade textures: one shared texture lets
+## the back-to-front blades batch into a single draw call instead of one
+## texture switch per blade. Same source art, same texels, same draw order.
+static var _grass_atlas: Texture2D = null
 
-static func _grass_texture(k: int) -> Texture2D:
-	if _grass_textures.is_empty():
+static func _grass_atlas_texture() -> Texture2D:
+	if _grass_atlas == null:
+		var img := Image.create(int(GRASS_SPRITE_SIZE) * GRASS_SPRITES, int(GRASS_SPRITE_SIZE), false, Image.FORMAT_RGBA8)
 		for n in GRASS_SPRITES:
-			_grass_textures.append(load("res://assets/sprites/terrain/tallgrass_%d.png" % (n + 1)) as Texture2D)
-	return _grass_textures[k]
+			var src := (load("res://assets/sprites/terrain/tallgrass_%d.png" % (n + 1)) as Texture2D).get_image()
+			img.blit_rect(src, Rect2i(Vector2i.ZERO, src.get_size()), Vector2i(int(GRASS_SPRITE_SIZE) * n, 0))
+		_grass_atlas = ImageTexture.create_from_image(img)
+	return _grass_atlas
 
 ## Tall grass is placed sprites now: no floor mat, the ground tile shows
 ## between the tufts (kept so the old draw hook still exists for callers).
@@ -559,7 +565,7 @@ func _draw_grass_top() -> void:
 			var k := int(_hash01(cell.x, cell.y, 50 + n) * GRASS_SPRITES) % GRASS_SPRITES
 			var jitter := Vector2(_hash01(cell.x, cell.y, 53 + n) - 0.5, _hash01(cell.x, cell.y, 56 + n) - 0.5) * 22.0
 			var base := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * (0.4 + 0.5 * n)) + jitter
-			_grass_top.draw_texture(_grass_texture(k), base - Vector2(GRASS_SPRITE_SIZE * 0.5, GRASS_SPRITE_SIZE - 4.0))
+			_grass_top.draw_texture_rect_region(_grass_atlas_texture(), Rect2(base - Vector2(GRASS_SPRITE_SIZE * 0.5, GRASS_SPRITE_SIZE - 4.0), Vector2(GRASS_SPRITE_SIZE, GRASS_SPRITE_SIZE)), Rect2(GRASS_SPRITE_SIZE * k, 0, GRASS_SPRITE_SIZE, GRASS_SPRITE_SIZE))
 
 ## Harness introspection: the node that draws the blades over characters.
 func grass_top() -> Node2D:
