@@ -3,6 +3,7 @@ extends Node
 ## Browser-only progression persistence. Every load starts safely in the hub.
 ## No player position, HP, enemies, projectiles or fight state is serialized.
 const KEY := "gangu.run.v1"
+const REJECTED_KEY := KEY+".rejected"
 const VERSION := 1
 const MAX_BYTES := 4000000
 var main: Node
@@ -13,6 +14,8 @@ var _callback: JavaScriptObject
 var _label: Label
 var enabled := false
 var _sand_defeated := false
+var _rejected := ""
+var _recovery: VBoxContainer
 
 func start(host: Node) -> void:
  main=host;enabled=OS.has_feature("web")
@@ -26,7 +29,9 @@ func start(host: Node) -> void:
  if raw=="storage-unavailable":_set_status("Browser saving unavailable (storage blocked)")
  elif not raw.is_empty():
   var state:=decode(raw)
-  if state.is_empty():_set_status("Save unreadable or incompatible; started safely")
+  if state.is_empty():
+   _rejected=raw
+   _show_recovery(decode_error(raw))
   else:
    _restoring=true
    restore(state)
@@ -65,7 +70,7 @@ func _set_status(text:String) -> void:
  if _label!=null:_label.text=text
 
 func save_now() -> bool:
- if not enabled or _restoring or main.get_node("Player").hp<=0:return false
+ if not enabled or _restoring or not _rejected.is_empty() or main.get_node("Player").hp<=0:return false
  var state:=capture(main)
  state.run["sand_defeated"]=_sand_defeated or _sand_won(main)
  return _write(state)
@@ -77,6 +82,7 @@ func save_death() -> void:
  _write(state)
 
 func _write(state:Dictionary) -> bool:
+ if not _rejected.is_empty():return false
  var text:=encode(state)
  if text.length()>MAX_BYTES:
   _set_status("Local save too large; previous save kept");return false
@@ -89,17 +95,43 @@ static func encode(state:Dictionary) -> String:
  var payload:=Marshalls.raw_to_base64(var_to_bytes(pack_value(state)))
  return JSON.stringify({"version":VERSION,"payload":payload,"sha256":payload.sha256_text()})
 
-static func decode(text:String) -> Dictionary:
- if text.length()>MAX_BYTES:return {}
+static func decode_error(text:String) -> String:
+ if text.length()>MAX_BYTES:return "save exceeds size limit"
  var parser:=JSON.new()
- if parser.parse(text)!=OK:return {}
+ if parser.parse(text)!=OK:return "invalid save JSON"
  var envelope=parser.data
- if not envelope is Dictionary or envelope.get("version")!=VERSION or not envelope.get("payload") is String:return {}
- if envelope.get("sha256")!=envelope.payload.sha256_text():return {}
- var raw=bytes_to_var(Marshalls.base64_to_raw(envelope.payload))
- var value=unpack_value(raw)
- if not valid_state(value):return {}
- return value
+ if not envelope is Dictionary:return "invalid envelope"
+ if envelope.get("version")!=VERSION:return "unsupported save version"
+ if not envelope.get("payload") is String:return "missing payload"
+ if envelope.get("sha256")!=envelope.payload.sha256_text():return "checksum mismatch"
+ var value=unpack_value(bytes_to_var(Marshalls.base64_to_raw(envelope.payload)))
+ if not valid_state(value):return "missing resource or invalid progression data"
+ return ""
+
+static func decode(text:String) -> Dictionary:
+ if not decode_error(text).is_empty():return {}
+ return unpack_value(bytes_to_var(Marshalls.base64_to_raw(JSON.parse_string(text).payload)))
+
+func _show_recovery(reason:String) -> void:
+ _set_status("Save unreadable ("+reason+"). Original kept; saving paused.")
+ _recovery=VBoxContainer.new();_recovery.position=Vector2(16,176)
+ _label.get_parent().add_child(_recovery)
+ var help:=Label.new();help.text="Download your save before starting over. Do not clear site data.";_recovery.add_child(help)
+ var download:=Button.new();download.text="Download original save";_recovery.add_child(download)
+ download.pressed.connect(func():JavaScriptBridge.download_buffer(_rejected.to_utf8_buffer(),"gangu-save-recovery.json","application/json"))
+ var reset:=Button.new();reset.text="Start a new save...";_recovery.add_child(reset)
+ var confirm:=ConfirmationDialog.new();confirm.dialog_text="Replace this unreadable save with your current new progress?\nA recovery copy will be kept in this browser.";confirm.ok_button_text="Keep backup and start new";add_child(confirm)
+ reset.pressed.connect(func():confirm.popup_centered())
+ confirm.confirmed.connect(_start_new_save)
+
+func _start_new_save() -> void:
+ # Never replace either the original or an older backup if backup creation fails.
+ var code:="(()=>{try{if(localStorage.getItem('"+REJECTED_KEY+"')!==null)return false;localStorage.setItem('"+REJECTED_KEY+"',"+JSON.stringify(_rejected)+");return true}catch(e){return false}})()"
+ if not JavaScriptBridge.eval(code):
+  _set_status("Saving paused: backup exists or storage blocked. Download original before clearing it.");return
+ _rejected="";_recovery.queue_free()
+ _set_status("New save started. Previous save kept in browser recovery backup.")
+ save_now()
 
 static func valid_state(state:Variant) -> bool:
  if not state is Dictionary or not state.get("progression") is Dictionary or not state.get("run") is Dictionary:return false
@@ -162,7 +194,12 @@ static func unpack_value(value:Variant,depth:int=0) -> Variant:
  if value is Dictionary:
   if value.has("@resource"):
    var path:String=str(value["@resource"])
-   if not path.begins_with("res://data/") or ".." in path or not path.split("::")[0].ends_with(".tres") or not ResourceLoader.exists(path):return null
+   var parent_path:=path.split("::")[0]
+   if not path.begins_with("res://data/") or ".." in path or not parent_path.ends_with(".tres") or not ResourceLoader.exists(parent_path):return null
+   # Embedded reward/shop resources are cached only after their owner loads.
+   # On a cold browser start exists(owner::id) is false until then.
+   var owner=load(parent_path)
+   if owner==null:return null
    var resource=load(path)
    return resource if resource is Spell or resource is Consumable or resource is ShopEntry or resource is RewardEntry else null
   if value.has("@relic"):

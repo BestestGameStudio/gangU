@@ -1,0 +1,236 @@
+{
+  "fish_cold_refresh": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": false,
+    "hp": 100,
+    "paid": 0,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot.tres"
+    ],
+    "relics": 0,
+    "revives": 0,
+    "reward_paths": [
+      "res://data/rewards/fishy_hook_table.tres::hook"
+    ],
+    "slots": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot.tres",
+      ""
+    ],
+    "status": "Local progression restored",
+    "tokens": 0,
+    "wallet": 0
+  },
+  "every_spell_cold_refresh": [],
+  "refresh": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": true,
+    "hp": 100,
+    "paid": 4,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot_rock.tres"
+    ],
+    "relics": 1,
+    "revives": 2,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/hook_shot_rock.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Local progression restored",
+    "tokens": 3,
+    "wallet": 321
+  },
+  "beforeunload": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": true,
+    "hp": 100,
+    "paid": 4,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot_rock.tres"
+    ],
+    "relics": 1,
+    "revives": 2,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/hook_shot_rock.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Local progression restored",
+    "tokens": 3,
+    "wallet": 334
+  },
+  "hidden_and_reopen": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": true,
+    "hp": 100,
+    "paid": 4,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot_rock.tres"
+    ],
+    "relics": 1,
+    "revives": 2,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/hook_shot_rock.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Local progression restored",
+    "tokens": 3,
+    "wallet": 347
+  },
+  "quota": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": true,
+    "hp": 100,
+    "paid": 4,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot_rock.tres"
+    ],
+    "relics": 1,
+    "revives": 2,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/hook_shot_rock.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Local saving failed; browser storage full or blocked",
+    "tokens": 3,
+    "wallet": 354
+  },
+  "death_during_pause": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": false,
+    "hp": 100,
+    "paid": 0,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "res://data/spells/hook_shot_rock.tres"
+    ],
+    "relics": 1,
+    "revives": 0,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/hook_shot_rock.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Local progression restored",
+    "tokens": 3,
+    "wallet": 0
+  },
+  "corrupt": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": false,
+    "hp": 100,
+    "paid": 0,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres"
+    ],
+    "relics": 0,
+    "revives": 0,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Save unreadable (invalid save JSON). Original kept; saving paused.",
+    "tokens": 0,
+    "wallet": 0
+  },
+  "future": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": false,
+    "hp": 100,
+    "paid": 0,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres"
+    ],
+    "relics": 0,
+    "revives": 0,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Save unreadable (unsupported save version). Original kept; saving paused.",
+    "tokens": 0,
+    "wallet": 0
+  },
+  "blocked": {
+    "area": "Hub",
+    "cast_entries": 0,
+    "cleared": false,
+    "hp": 100,
+    "paid": 0,
+    "paths": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres"
+    ],
+    "relics": 0,
+    "revives": 0,
+    "reward_paths": [],
+    "slots": [
+      "res://data/spells/fire_ball.tres",
+      "res://data/spells/mana_shot.tres",
+      "res://data/spells/water_shot.tres",
+      "",
+      ""
+    ],
+    "status": "Local saving failed; browser storage full or blocked",
+    "tokens": 0,
+    "wallet": 0
+  }
+}
