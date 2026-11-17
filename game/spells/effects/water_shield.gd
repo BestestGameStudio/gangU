@@ -85,7 +85,7 @@ func _damage_contacts(delta: float) -> void:
 		if not is_instance_valid(e) or not (e is Node2D) or _hit_clock.has(e):
 			continue
 		var hp: Variant = e.get(&"hp")
-		if hp == null or int(hp) <= 0:
+		if hp == null or int(hp) <= 0 or not HitContext.targetable(e):
 			continue
 		if (e as Node2D).global_position.distance_to(global_position) <= reach:
 			_hit_clock[e] = spell.shield_tick
@@ -119,7 +119,7 @@ func end_shield(popped: bool) -> void:
 	_ending = true
 	if spell.shield_push_radius > 0.0 and spell.shield_push_force > 0.0:
 		for e: Enemy in get_tree().get_nodes_in_group(&"enemies"):
-			if not is_instance_valid(e):
+			if not is_instance_valid(e) or not HitContext.targetable(e):
 				continue
 			var off: Vector2 = e.global_position - global_position
 			if off.length() > spell.shield_push_radius:

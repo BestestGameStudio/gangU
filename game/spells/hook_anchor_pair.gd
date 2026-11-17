@@ -54,11 +54,11 @@ func _physics_process(delta: float) -> void:
   taunt_left=spell.hook_taunt_interval
   for node in get_tree().get_nodes_in_group("enemies"):
    var enemy:=node as Enemy
-   if enemy!=null and enemy.hp>0 and enemy.global_position.distance_to(lure.global_position)<=spell.hook_taunt_radius:
+   if enemy!=null and enemy.hp>0 and HitContext.targetable(enemy) and enemy.global_position.distance_to(lure.global_position)<=spell.hook_taunt_radius:
     enemy.hook_taunt_target=lure;enemy.hook_taunt_left=spell.hook_taunt_interval
  for node in get_tree().get_nodes_in_group("enemies"):
   var enemy:=node as Enemy
-  if enemy!=null and enemy.hp>0 and enemy.global_position.distance_to(lure.global_position)<=16.0:
+  if enemy!=null and enemy.hp>0 and HitContext.targetable(enemy) and enemy.global_position.distance_to(lure.global_position)<=16.0:
    var reel := HookReel.begin(get_parent(),enemy,anchor,spell)
    if reel != null:
     consumed=true;caught_enemy=enemy;active_reel=reel

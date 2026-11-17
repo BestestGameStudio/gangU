@@ -64,7 +64,7 @@ func physics_step(summon: Summon, player: Node2D, delta: float) -> void:
 			if _contact_timer <= 0.0:
 				var hit := DamageCalc.compute(def.contact_damage, summon.damage_modifiers, HitContext.receiver_modifiers(target, HitContext.contact(summon.global_position)), summon.damage_rng)
 				var receipt := OnHit.begin(target)
-				target.apply_damage(hit.amount, hit.crit_tier) # #208: tier colors the number
+				target.apply_calculated_damage(hit.amount, hit.crit_tier) # #208: tier colors the number
 				OnHit.end(receipt, target)
 				OnHit.report(summon, null, target, hit, OnHit.DELIVERY_CONTACT, receipt) # #390
 				_contact_timer = def.contact_cooldown
@@ -106,7 +106,7 @@ func _nearest_enemy(summon: Summon) -> Enemy:
 	var best_d := INF
 	for e in summon.get_tree().get_nodes_in_group("enemies"):
 		var enemy := e as Enemy
-		if enemy == null or enemy.hp <= 0:
+		if enemy == null or enemy.hp <= 0 or not HitContext.targetable(enemy):
 			continue
 		# #461: an enemy hidden in tall grass is not a target.
 		if not TallGrass.can_see(summon.terrain, summon.global_position, enemy.global_position):

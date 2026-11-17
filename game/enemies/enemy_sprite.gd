@@ -61,7 +61,7 @@ func _ready() -> void:
 	var body := get_parent()
 	if body != null and body.has_signal("health_changed"):
 		body.connect(&"health_changed", _on_health_changed)
-	play(&"idle")
+	play(_variant(&"idle"))
 
 ## Current one-shot / held action, or &"" while on locomotion.
 func current_action() -> StringName:
@@ -98,6 +98,12 @@ func _variant(base: StringName) -> StringName:
 	var octant := int(round(_facing.angle() / (PI / 4.0))) & 7
 	var name := StringName("%s_%s" % [base, DIR_SUFFIXES[octant]])
 	return name if sprite_frames.has_animation(name) else base
+
+## Explicit stationary facing for directional actors; no locomotion needed.
+func face_direction(direction: Vector2) -> void:
+	if direction.length_squared() > 0.001:
+		_facing = direction
+		if not _directional: face(direction.x)
 
 ## Mirror toward a horizontal direction (art faces right). Tiny x is ignored
 ## so a target straight above/below never flickers the facing.

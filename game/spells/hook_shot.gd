@@ -47,7 +47,7 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
   if is_queued_for_deletion(): return
 
 func _on_body_entered(body: Node2D) -> void:
- if _resolved or body == source: return
+ if _resolved or body == source or not HitContext.targetable(body): return
  if body is Enemy and spell.hook_magnet_radius > 0.0: return
  var count := 0
  if body is Enemy and HookReel.begin(get_parent(), body, source, spell) != null: count = 1
@@ -78,7 +78,7 @@ func _at_destination() -> void:
  if spell.hook_magnet_radius > 0.0:
   for node in get_tree().get_nodes_in_group("enemies"):
    var enemy := node as Enemy
-   if enemy == null or enemy.hp <= 0 or enemy.global_position.distance_to(destination) > spell.hook_magnet_radius: continue
+   if enemy == null or enemy.hp <= 0 or not HitContext.targetable(enemy) or enemy.global_position.distance_to(destination) > spell.hook_magnet_radius: continue
    candidates.append(enemy)
  var group := HookGroupReel.begin(get_parent(), candidates, source, spell)
  finish(group.enemies.size() if group != null else 0)

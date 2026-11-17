@@ -244,7 +244,7 @@ func _living_enemies() -> Array[Node]:
 		if not is_instance_valid(e) or not (e is Node2D) or e.is_queued_for_deletion():
 			continue
 		var hp: Variant = e.get(&"hp")
-		if hp == null or int(hp) <= 0:
+		if hp == null or int(hp) <= 0 or not HitContext.targetable(e):
 			continue
 		out.append(e)
 	return out
@@ -260,7 +260,7 @@ func _deal(body: Node, amount: float, mods: DamageModifiers, hit_radius: float, 
 	var result := DamageCalc.compute(amount, mods, HitContext.receiver_modifiers(body, HitContext.area(target, hit_radius, kind)), rng)
 	var receipt := OnHit.begin(body)
 	if body is Enemy:
-		(body as Enemy).apply_damage(result.amount, result.crit_tier)
+		(body as Enemy).apply_calculated_damage(result.amount, result.crit_tier)
 	else:
 		body.call(&"apply_damage", result.amount)
 	OnHit.end(receipt, body)
