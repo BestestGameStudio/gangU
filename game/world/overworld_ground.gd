@@ -536,13 +536,19 @@ func _grass_rect(cell: Vector2i) -> Rect2:
 
 const GRASS_SPRITES := 5
 const GRASS_SPRITE_SIZE := 48.0
-static var _grass_textures: Array[Texture2D] = []
+## Runtime 240x48 atlas of the five blade textures: one shared texture lets
+## the back-to-front blades batch into a single draw call instead of one
+## texture switch per blade. Same source art, same texels, same draw order.
+static var _grass_atlas: Texture2D = null
 
-static func _grass_texture(k: int) -> Texture2D:
-	if _grass_textures.is_empty():
+static func _grass_atlas_texture() -> Texture2D:
+	if _grass_atlas == null:
+		var img := Image.create(int(GRASS_SPRITE_SIZE) * GRASS_SPRITES, int(GRASS_SPRITE_SIZE), false, Image.FORMAT_RGBA8)
 		for n in GRASS_SPRITES:
-			_grass_textures.append(load("res://assets/sprites/terrain/tallgrass_%d.png" % (n + 1)) as Texture2D)
-	return _grass_textures[k]
+			var src := (load("res://assets/sprites/terrain/tallgrass_%d.png" % (n + 1)) as Texture2D).get_image()
+			img.blit_rect(src, Rect2i(Vector2i.ZERO, src.get_size()), Vector2i(int(GRASS_SPRITE_SIZE) * n, 0))
+		_grass_atlas = ImageTexture.create_from_image(img)
+	return _grass_atlas
 
 ## Tall grass is placed sprites now: no floor mat, the ground tile shows
 ## between the tufts (kept so the old draw hook still exists for callers).
@@ -559,7 +565,7 @@ func _draw_grass_top() -> void:
 			var k := int(_hash01(cell.x, cell.y, 50 + n) * GRASS_SPRITES) % GRASS_SPRITES
 			var jitter := Vector2(_hash01(cell.x, cell.y, 53 + n) - 0.5, _hash01(cell.x, cell.y, 56 + n) - 0.5) * 22.0
 			var base := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * (0.4 + 0.5 * n)) + jitter
-			_grass_top.draw_texture(_grass_texture(k), base - Vector2(GRASS_SPRITE_SIZE * 0.5, GRASS_SPRITE_SIZE - 4.0))
+			_grass_top.draw_texture_rect_region(_grass_atlas_texture(), Rect2(base - Vector2(GRASS_SPRITE_SIZE * 0.5, GRASS_SPRITE_SIZE - 4.0), Vector2(GRASS_SPRITE_SIZE, GRASS_SPRITE_SIZE)), Rect2(GRASS_SPRITE_SIZE * k, 0, GRASS_SPRITE_SIZE, GRASS_SPRITE_SIZE))
 
 ## Harness introspection: the node that draws the blades over characters.
 func grass_top() -> Node2D:
@@ -645,7 +651,14 @@ const ARRIVAL_STONE_R := 88.0
 const GATE_PAD_R := 76.0
 ## Cells past the outline that the border covers (drawn) and blocks (collision).
 const BORDER_DRAWN := 112.0
-const BORDER_BLOCKED := 192.0
+## #820 (Mitra: "we shouldn't be able to float"): the blocked band used to end
+## 192 past the outline, but the rock and water run ~290 past it, so the
+## strip beyond was walkable void. It now reaches past the whole cliff band
+## and the first stretch of ocean.
+const BORDER_BLOCKED := 640.0
+## #820 (Mitra: "the collider should sit on the edge of the water"): on the
+## south beach the block starts at the waterline, not at the outline.
+const BEACH_WALK_OUT := 112.0
 ## #811 (Mitra, 2026-11-16: "extend the cliff so the cliff wall shows from
 ## front-facing views, then blend into water ... the bottom becomes a beach
 ## so water is the barrier"): the world edge in lattice terms. North/east/
@@ -673,6 +686,23 @@ static var _driftwood_textures: Array[Texture2D] = []
 var _lattice_memo: Dictionary = {}
 var _desert_noise: FastNoiseLite
 
+## #820 (Mitra: "only put them where it would be visible from the front,
+## everywhere else can just be the water"): the cliff band is full width
+## only on the south-facing stretches of the edge and tapers to nothing
+## toward the sides and the north, where grass meets the ocean directly.
+const CLIFF_FRONT_FROM := 0.97 ## sin(angle) below which there is no cliff
+const CLIFF_FRONT_FULL := 0.99 ## sin(angle) at which the band is full width
+const CLIFF_FRONT_WIDTH := 32.0 ## just the brown face, then water up to its foot
+func _front_rim() -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in OUTLINE_POINTS:
+		var a := TAU * i / OUTLINE_POINTS
+		var wob := 1.0 + 0.027 * (sin(3.0 * a + 1.0) + 0.7 * sin(5.0 * a + 2.0) + 0.5 * sin(9.0 * a))
+		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
+		var d := CLIFF_FRONT_WIDTH * smoothstep(CLIFF_FRONT_FROM, CLIFF_FRONT_FULL, sin(a))
+		pts.append(CENTER + Vector2(cos(a) * (RADII.x * wob + d), sin(a) * (ry * wob + d)))
+	return pts
+
 ## Terrain type at a lattice point (world position = point * 64).
 func _lattice_type(x: int, y: int) -> int:
 	var key := Vector2i(x, y)
@@ -696,7 +726,7 @@ func _compute_lattice_type(p: Vector2) -> int:
 				_beach_outer = _blob(BEACH_OUT)
 			return DualGrid.T.SAND if Geometry2D.is_point_in_polygon(p, _beach_outer) else DualGrid.T.WATER
 		if _cliff_rim.is_empty():
-			_cliff_rim = _blob(CLIFF_BAND)
+			_cliff_rim = _front_rim()
 		return DualGrid.T.CLIFF if Geometry2D.is_point_in_polygon(p, _cliff_rim) else DualGrid.T.WATER
 	if _is_south(p):
 		if _beach_inner.is_empty():
@@ -850,6 +880,10 @@ func _build_ground_paint() -> void:
 				t = _lattice_type(p.x, p.y)
 				if t == DualGrid.T.WATER:
 					t = DualGrid.T.SAND ## sand under the animated water layer
+					for n in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+						if _lattice_type(p.x + n.x, p.y + n.y) == DualGrid.T.GRASS:
+							t = DualGrid.T.GRASS ## grass meets the water directly (north edge)
+							break
 			img.set_pixel(i, j, Color8(t, 0, 0))
 	var mat := _paint.material as ShaderMaterial
 	mat.set_shader_parameter("types", ImageTexture.create_from_image(img))
@@ -865,6 +899,7 @@ func _plant_border_collision(area: Node) -> void:
 	if map == null:
 		return
 	var band := _blob(BORDER_BLOCKED)
+	var beach_walk := _blob(BEACH_WALK_OUT)
 	var cells := {}
 	var lo := map.world_to_cell(CENTER - (RADII + Vector2(BORDER_BLOCKED, BORDER_BLOCKED)) * 1.1)
 	var hi := map.world_to_cell(CENTER + (RADII + Vector2(BORDER_BLOCKED, BORDER_BLOCKED + SOUTH_EXTEND)) * 1.1)
@@ -873,6 +908,8 @@ func _plant_border_collision(area: Node) -> void:
 			var at := map.cell_to_world(Vector2i(cx, cy))
 			if covers(at) or not Geometry2D.is_point_in_polygon(at, band):
 				continue
+			if _is_south(at) and Geometry2D.is_point_in_polygon(at, beach_walk):
+				continue ## sand between the outline and the waterline stays walkable
 			cells[Vector2i(cx, cy)] = TerrainTypes.OBSTACLE
 	map.set_cells(cells)
 
