@@ -151,6 +151,9 @@ func _swap(area: Node) -> void:
 		activation.update_now()
 	if travel:
 		travel.refresh()
+	var web_save := main_host.get_node_or_null("WebRunSave")
+	if web_save != null:
+		web_save.apply_world_progress(current_area)
 
 ## (#222) Dungeon modifiers: an area opts in with ONE "DungeonModifiers"
 ## child (DungeonModifierHost, SpawnData idiom). Bound LAST so the

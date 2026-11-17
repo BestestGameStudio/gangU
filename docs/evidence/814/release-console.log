@@ -1,0 +1,20 @@
+log: Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+log: OpenGL API OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium)) - Compatibility - Using Device: WebKit - WebKit WebGL
+log: Build configuration: Emscripten 4.0.10, single-threaded, no GDExtension support.
+log: gangU booted OK
+warning: [.WebGL-0x24b401e60a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+warning: [.WebGL-0x24b401e60a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+warning: [.WebGL-0x24b401e60a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+warning: [.WebGL-0x24b401e60a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+log: Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+log: OpenGL API OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium)) - Compatibility - Using Device: WebKit - WebKit WebGL
+log: Build configuration: Emscripten 4.0.10, single-threaded, no GDExtension support.
+log: gangU booted OK
+log: Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+log: OpenGL API OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium)) - Compatibility - Using Device: WebKit - WebKit WebGL
+log: Build configuration: Emscripten 4.0.10, single-threaded, no GDExtension support.
+log: gangU booted OK
+warning: [.WebGL-0x25b408031000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+warning: [.WebGL-0x25b408031000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+warning: [.WebGL-0x25b408031000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+warning: [.WebGL-0x25b408031000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)

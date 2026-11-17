@@ -1303,3 +1303,15 @@ func _release_airborne_anchors(victim: Enemy) -> void:
 				HookPullStack.detach(victim,pair.active_reel)
 				pair.active_reel.queue_free()
 			pair.queue_free()
+
+## Browser progression restore: the victory is recorded, not replayed. No
+## reward, combat actor, timer or in-flight attack is reconstructed.
+func restore_completed_progression() -> void:
+	_won = true
+	_reward_pending = false
+	state = State.DORMANT
+	_ui.hide()
+	set_physics_process(false)
+	for statue in statues:
+		if is_instance_valid(statue):statue.queue_free()
+	queue_redraw()
