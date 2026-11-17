@@ -168,7 +168,7 @@ static func spawn_corpse(src: EnemySprite, parent: Node) -> EnemySprite:
 	c.scale = src.global_scale
 	c.position = src.global_position
 	c.z_index = src.z_index
-	c.animation = &"death"
+	c.animation = src._variant(&"death")
 	c.add_to_group(&"enemy_corpses")
 	parent.call_deferred("add_child", c)
 	return c
