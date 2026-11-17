@@ -160,7 +160,7 @@ func _ready() -> void:
 		var definition := EnemyDefinition.new()
 		definition.max_hp = statue_max_hp
 		definition.speed = 0
-		definition.weight = 4.0
+		definition.weight = 6.0
 		statue.definition = definition
 		statue.hp = statue_max_hp
 		statue.terrain = get_parent().get_node_or_null("Terrain") as TerrainMap
