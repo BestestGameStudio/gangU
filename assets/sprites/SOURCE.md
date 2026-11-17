@@ -615,3 +615,7 @@ specks, waves and the tide are drawn procedurally. Not extracted from a board.
 
 - `terrain/dualgrid_water_on_cliff.png`: regenerated with `tools/sprites/gen_water_sheets.py`. The rock side of every cliff shore tile is now one flat colour (88,82,88) instead of cobble, to match the flat rock fill the engine draws in world space (`game/world/overworld_cliff_rock.gd`). Water side unchanged. Source of the rock tones: the cliff set it was derived from (`dualgrid_cliff_on_grass`).
 - `terrain/dualgrid_cliff_on_sand.png`: rock side flattened to the same (88,82,88) with `tools/sprites/gen_cliff_flat.py` (sand pixels untouched), so the rock/sand seam beside the beach has no cobble or dark wedge.
+
+## Pine shadow strays and tuft redraw (#838)
+
+- `terrain/terrain_pieces_base.png`: regenerated with `tools/sprites/draw_terrain_pieces.py`. Pine row (kind 1) variants 3-7 had 91 stray semi-transparent shadow pixels spilled from the tree shadow into the cell above, drawn as dark bars. The shadow is now clipped to its own cell. Tuft row (kind 5) redrawn as upright 1 px blades (no dark base row). All other rows are pixel-identical. Original art, no external reference pixels used.
