@@ -413,6 +413,12 @@ var _knockback := Vector2.ZERO
 ## move_and_slide, exactly as before. The behavior's own velocity is put
 ## back afterwards, so a behavior that sets it once per state (a lunge)
 ## never compounds a terrain speed multiplier frame after frame.
+func self_move_and_slide() -> void:
+	if _sampling_reel_propulsion:
+		reel_propulsion = velocity
+		return
+	move_and_slide()
+
 func terrain_move_and_slide() -> void:
 	if _sampling_reel_propulsion:
 		reel_propulsion = velocity

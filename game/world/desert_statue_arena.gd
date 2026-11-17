@@ -778,12 +778,22 @@ func _enter_phase_two() -> void:
 ## The sand general is arena-owned (like phase-one possession), so its HP
 ## remains the encounter HP and all attacks use the normal Player damage path.
 func _phase_two_step(delta: float) -> void:
+	# Rebase the attack's moving frame onto the actual actor after external pulls.
+	# Locked world-space aim stays fixed, but launch origins follow the actor.
+	if is_instance_valid(possessed):
+		var drift := possessed.position-_phase_two_boss_position
+		_phase_two_origin += drift
+		_phase_two_bash_start += drift
+		_phase_two_boss_position = possessed.position
 	var before := _phase_two_boss_position
 	_plan_phase_two_step(delta)
 	if is_instance_valid(possessed):
 		# Submit only this tick's planned displacement, not a teleport to a path.
 		var step := _phase_two_boss_position-before
-		possessed.submit_external_motion(possessed.global_position+step,delta)
+		if _phase_two_attack_index == 3 and general_height <= 0.0 and _phase_two_release_done:
+			possessed.reel_propulsion = Vector2.ZERO
+		else:
+			possessed.submit_external_motion(possessed.global_position+step,delta)
 
 func _plan_phase_two_step(delta: float) -> void:
 	_phase_two_impact_time = maxf(_phase_two_impact_time-delta, 0.0)
@@ -909,7 +919,11 @@ func _phase_two_execute(attack: int, t: float, _delta: float) -> void:
 				_phase_two_release_done = true
 				general_height = 0.0
 				_phase_two_boss_position = _phase_two_aim
-				_show_phase_two_impact(_phase_two_aim,SLAM_RADIUS,0.55)
+				# Landing is the jump's explicit world-space destination, not a
+				# planned delta added to an old reel offset. Reels resume next tick.
+				possessed.position = _phase_two_aim
+				possessed.reel_force_velocity = Vector2.ZERO
+				_show_phase_two_impact(possessed.position,SLAM_RADIUS,0.55)
 				if target_offset.distance_to(_phase_two_aim) < SLAM_RADIUS:
 					player.apply_damage(attack_damage+5)
 		4: # Shield-first lunge, aligned to the warned capsule.

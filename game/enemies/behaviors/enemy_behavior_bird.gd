@@ -125,13 +125,13 @@ func _step_circle(enemy: Enemy, player, alive: bool, delta: float) -> void:
 			enemy.velocity = enemy.velocity.normalized() * vmax
 	else:
 		enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide() # airborne: flies over terrain, no clamp
+	enemy.self_move_and_slide() # airborne: flies over terrain, no clamp
 	if alive and _redive_t <= 0.0 and _in_open_space(enemy, player):
 		state = TELEGRAPH
 		_timer = TELEGRAPH_TIME
 		_locked = player.global_position
 		enemy.velocity = Vector2.ZERO
-		enemy.move_and_slide()
+		enemy.self_move_and_slide()
 		var tele := _telegraph(enemy)
 		if tele != null:
 			tele.show_ring(DIVE_RADIUS, TELEGRAPH_TIME)
@@ -147,7 +147,7 @@ func _step_telegraph(enemy: Enemy, delta: float) -> void:
 	var vmax: float = enemy.speed * 4.0
 	if enemy.velocity.length() > vmax:
 		enemy.velocity = enemy.velocity.normalized() * vmax
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	_track_telegraph(enemy)
 	if _timer <= 0.0:
 		state = DIVE
@@ -161,14 +161,14 @@ func _step_dive(enemy: Enemy, player, alive: bool, delta: float) -> void:
 	_altitude = lerpf(ALT_MAX, 0.0, f)
 	var to := _locked - enemy.global_position
 	enemy.velocity = to / maxf(delta, 0.0001)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	if _timer > 0.0:
 		return
 	# Impact.
 	enemy.global_position = enemy.constrain_movement(_locked)
 	_altitude = 0.0
 	enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	_clear_telegraph(enemy)
 	_ensure_airborne(enemy, false)
 	enemy.play_action(&"landed", true)
@@ -183,7 +183,7 @@ func _step_dive(enemy: Enemy, player, alive: bool, delta: float) -> void:
 func _step_stunned(enemy: Enemy, delta: float) -> void:
 	# "extended stun bird cant move" - no drift, no takeoff until it ends.
 	enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	if enemy.hp < _stunned_hp:
 		# Hit during the landing stun: "the stun is extended to 4s" (each
 		# hit re-extends from that hit).
@@ -204,7 +204,7 @@ func _step_takeoff(enemy: Enemy, delta: float) -> void:
 	var f := 1.0 - clampf(_timer / TAKEOFF_TIME, 0.0, 1.0)
 	_altitude = lerpf(0.0, ALT_MAX, f)
 	enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	if _timer <= 0.0:
 		state = CIRCLE
 		_altitude = ALT_MAX
@@ -220,7 +220,7 @@ func _step_leave(enemy: Enemy, player, delta: float) -> void:
 		if from_player.length() > 1.0:
 			away = from_player.normalized()
 	enemy.velocity = away * enemy.speed * 3.0
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	_ensure_airborne(enemy, true)
 	if _altitude >= ALT_GONE:
 		var mgr := _manager(enemy)

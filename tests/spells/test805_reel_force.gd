@@ -28,6 +28,18 @@ func run():
  reel._physics_process(0.1)
  check(is_equal_approx(enemy.position.x,54),'general reel force slows actual charger600 to540')
  reel.queue_free();enemy.queue_free();await process_frame
+ # Exercise production behavior paths that previously called native movement.
+ for behavior_path in ['enemy_behavior_chase_contact','enemy_behavior_idle_chase','enemy_behavior_wolf','enemy_behavior_bird','enemy_behavior_fishy']:
+  var real_enemy=load('res://game/enemies/enemy.tscn').instantiate() as Enemy
+  area.add_child(real_enemy);real_enemy.set_physics_process(false);real_enemy.position=Vector2(100,100);real_enemy._behavior=load('res://game/enemies/behaviors/'+behavior_path+'.gd').new()
+  real_enemy._sampling_reel_propulsion=true
+  var before=real_enemy.position
+  real_enemy._behavior.physics_step(real_enemy,player,0.1)
+  real_enemy._sampling_reel_propulsion=false
+  check(real_enemy.position==before,'real behavior cannot move during sampling: '+behavior_path)
+  if behavior_path=='enemy_behavior_chase_contact':check(not real_enemy.reel_propulsion.is_zero_approx(),'real chase records nonzero propulsion')
+  real_enemy.queue_free()
+ await process_frame
  var region:=Node2D.new();area.add_child(region)
  var arena:=DesertStatueArena.new();region.add_child(arena);arena.set_physics_process(false);arena.start_encounter();arena._enter_phase_two()
  var boss=arena.possessed;boss.set_physics_process(false)
@@ -45,5 +57,17 @@ func run():
  check(HookPullStack.contains(boss,other),'jump preserves independent regular reel')
  stack._physics_process(0.016)
  check(not stack.reels.has(pair.active_reel),'jump detach removes only anchor contribution')
+ # Off-path actual position becomes next attack origin and spear launch frame.
+ boss.position=Vector2(123,45);arena._phase_two_boss_position=Vector2.ZERO
+ arena._phase_two_attack_index=0;arena._phase_two_attack_time=0;arena._phase_two_locked=false
+ arena._phase_two_step(0.001)
+ check(arena._phase_two_origin.is_equal_approx(boss.position),'next attack origin rebased to actual pulled actor')
+ var spear=arena._general_spear(arena._phase_two_origin+arena._phase_two_direction*45.0,arena._phase_two_direction,1,100,4)
+ check(spear.position.distance_to(boss.position)<=45.01,'next spear launches from actual actor frame')
+ arena._phase_two_attack_index=3;arena._phase_two_attack_time=arena.MOVE_WINDUP[3]+arena.MOVE_CUE[3]
+ arena._phase_two_locked=true;arena._phase_two_attack_done=true;arena._phase_two_release_done=false
+ arena._phase_two_aim=Vector2(-120,80)
+ arena._phase_two_step(0.001)
+ check(boss.position.is_equal_approx(arena._phase_two_aim),'off-path slam lands exactly at impact and damage center')
  area.queue_free();await process_frame
  print('[805] ',checks,' checks, ',failures,' failures');quit(1 if failures else 0)

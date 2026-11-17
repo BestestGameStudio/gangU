@@ -94,5 +94,5 @@ func _walk_to(enemy: Enemy, at: Vector2, speed: float, delta: float) -> bool:
 	# Never overshoot the point in one step (fast movers would orbit it).
 	var walk := Vector2.ZERO if arrived else to.normalized() * minf(speed, to.length() / maxf(delta, 0.0001))
 	enemy.velocity = _walk_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, walk, at, speed, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	return arrived

@@ -169,7 +169,7 @@ func _go_home(enemy: Enemy, delta: float) -> void:
 	var to := home - enemy.global_position
 	var want := Vector2.ZERO if to.length() <= 6.0 else to.normalized() * minf(enemy.speed, to.length() / maxf(delta, 0.0001))
 	enemy.velocity = _terrain_path.steer(enemy.terrain, enemy.global_position, enemy.velocity, want, home, enemy.speed, delta, enemy.can_swim)
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 
 # --- APPROACH ---------------------------------------------------------------
 
@@ -186,7 +186,7 @@ func _approach(enemy: Enemy, target: Player, delta: float) -> void:
 		enemy.velocity = TerrainMotion.resolve(enemy.terrain, enemy.global_position, enemy.velocity, want, delta, enemy.can_swim)
 	else:
 		enemy.velocity = Vector2.ZERO
-	enemy.move_and_slide()
+	enemy.self_move_and_slide()
 	if enemy.velocity.length() < 1.0 and enemy.sprite != null:
 		enemy.sprite.face(to.x)
 	# Up close the rod doubles as a club (plain contact hit).
