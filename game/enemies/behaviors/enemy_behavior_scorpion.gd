@@ -15,8 +15,8 @@ enum State { BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_DASH, MISS_STUN, R
 @export var pincer_gap := 1.0
 @export var transition_time := 0.30
 const STING_WINDUP := 0.36
-## Separate first attack timing; owner-selected faster value pending.
-const INITIAL_STING_WINDUP := 0.36
+## Initial-only fast reaction window, after the full0.30s emerge.
+const INITIAL_STING_WINDUP := 0.18
 ## Pincer first pose100ms + held pose420ms = 520ms to impact.
 const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
