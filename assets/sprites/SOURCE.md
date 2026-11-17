@@ -622,4 +622,4 @@ specks, waves and the tide are drawn procedurally. Not extracted from a board.
 
 ## Stone Hammer sprites (#839)
 
-- `stone_hammer.png`: 64x32 atlas drawn by `tools/sprites/gen_stone_hammer.py`: hammer head (15x9, drawn at 2x = the old 30x18 rectangle), 2x4 handle strip stretched along the swing, 32x32 radial crack star for the impact. Original pixel art in the style and palette of the existing sledgehammer spell icon and the old code colours; no external reference pixels used.
+- `stone_hammer.png`: 64x32 atlas, authored in SpriteU (`tools/gen_stone_hammer.py`, `sprites/stone-hammer.json`, `characters/stone-hammer.md`) and exported with `python3 -I tools/gen_stone_hammer.py --export DIR`. Hammer head (15x9, drawn at 2x = the old 30x18 rectangle), 2x4 handle strip stretched along the swing, 32x32 radial crack star for the impact. Original pixel art; CC0 references (OpenGameArt CC0 Hammer Icons, pixor.art war hammer) were looked at only, no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/13
