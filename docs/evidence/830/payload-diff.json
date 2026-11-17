@@ -1,0 +1,346 @@
+{
+  "removed": {
+    ".godot/imported/721-missing-no-chain.png-44ffcde5e8e21f91d96e3c1f3f26652b.ctex": {
+      "bytes": 52482,
+      "sha256": "f777d72bf95b57ed3585a16dbbdfae5cc5617683751a74977b173257717d0ce2"
+    },
+    ".godot/imported/721-missing-spells.png-c0c86ca6c82ba9ea1005377fb9cdd880.ctex": {
+      "bytes": 59860,
+      "sha256": "d5342ccb0c6a2788150de5d4597ced1c9e8c664987c4ce49f1d683f436da8407"
+    },
+    ".godot/imported/744-panel.png-9c1d957c8ac77ffbdcffe4c33db9142c.ctex": {
+      "bytes": 45864,
+      "sha256": "416c55431eac51297f5b8b6a16655e123f25da25f8916078da98538d900be953"
+    },
+    ".godot/imported/746-panel.png-ca851adcccb935e9c53129a8c7d0293d.ctex": {
+      "bytes": 40154,
+      "sha256": "9430238a8d6cb3cd8aa7c4257e1272443fb808449e9c3083abf543529973ae73"
+    },
+    ".godot/imported/748-panel.png-240457bd33587e97de11ed9afdd0acd9.ctex": {
+      "bytes": 46498,
+      "sha256": "c02bf5226f28e11673e747e29b1bccdfe4e0fd745dfbaffd22bd5d749c7cc84f"
+    },
+    ".godot/imported/750-convergence.png-26ffbb33b7a87a859fc096ce2d7863c7.ctex": {
+      "bytes": 78996,
+      "sha256": "c5b33dd7238bce883d8efbf64c986611a7c9dc79014bee845d658cbc8a722800"
+    },
+    ".godot/imported/752-panel.png-642daf47f3318461c58d25114a071647.ctex": {
+      "bytes": 39482,
+      "sha256": "042ac7682ddfee1b1605ac44684b586f2b764741f4e0714660140f0a621a5d41"
+    },
+    ".godot/imported/after.png-349fece732888c627c0109656e01ce72.ctex": {
+      "bytes": 64748,
+      "sha256": "5523097b6f29d6b12cc3ae65ae38f7268c795c7c73a25811879b43f4738eaec3"
+    },
+    ".godot/imported/all-applied.png-0bdb4a6647257557280d00a9bcb47e11.ctex": {
+      "bytes": 33630,
+      "sha256": "4ff9d4ae20967af3baac336c9bcf83290f353e3b26e8c8e470f4b5cf7eccf1d5"
+    },
+    ".godot/imported/all-applied.png-6d34987d72896865c2c87b03a32a01d0.ctex": {
+      "bytes": 46284,
+      "sha256": "0b832c42dbe149b0b103502cd5b406faa451baabf580356358de5edd464a94f2"
+    },
+    ".godot/imported/applied.png-1fb8e213a9ee64f6a11daae59c9879dd.ctex": {
+      "bytes": 40528,
+      "sha256": "5f96ef675ad403cdc69c94135c20539c27c0aeb511f7f303499629a05231a143"
+    },
+    ".godot/imported/before.png-f025df98ab62e75e3cdc918b9ddf7abc.ctex": {
+      "bytes": 64566,
+      "sha256": "cfa556485a1a809e6207d9571251f671dce1932375cb6b357fcafa130d02aa65"
+    },
+    ".godot/imported/catch-demo.png-61d157758f67d117585082f859aa6471.ctex": {
+      "bytes": 73208,
+      "sha256": "f1b82485bfef28a4b711ce1d3afcb27181e96580386e616584d8a9d6705dc8f6"
+    },
+    ".godot/imported/conflict.png-dbe73ce9d79558f9aeb903d21eebe585.ctex": {
+      "bytes": 45370,
+      "sha256": "0cbdc5e68c37e45a653a2c9d3da65bfea8cd28bfde7ec35781c46327a6ecf643"
+    },
+    ".godot/imported/corrupt-preserved.png-e792f28d94a4f119be67eee742bb7944.ctex": {
+      "bytes": 69684,
+      "sha256": "6fc7278ef3d6ea09e91088892c1d79cf169f48e7790c855883b7037b27a4edcc"
+    },
+    ".godot/imported/debug-collision.png-bf6b9ced623a135a48877a9e2c4d046b.ctex": {
+      "bytes": 54638,
+      "sha256": "0aa926ac8877534d3402da589d685855c6de4fd2ad21e2a629175461cefc6aff"
+    },
+    ".godot/imported/fish-restored.png-99b792e101ce58598de5b8881fc32e38.ctex": {
+      "bytes": 66370,
+      "sha256": "60270d11bb2978da30b837f30c68023d9f81a8bcfc19a8a37f77a5b49da7088c"
+    },
+    ".godot/imported/five-slot-hotbar.png-6aae91087e235c5b9df35697033e8d5f.ctex": {
+      "bytes": 67174,
+      "sha256": "10b46193731a2f0ca9acb31fb169e9d87114b62f670b278eedb5983a62e46af5"
+    },
+    ".godot/imported/hook-demo.png-6389ad7d3ac5b32fea478fc7f2afa85a.ctex": {
+      "bytes": 72870,
+      "sha256": "241a10233182a0b94e712399bc7e1c2fdebdf0d4a6a194cd269a4a7b7b2bccc9"
+    },
+    ".godot/imported/locked.png-14b9e13a808749d0fde50b078b98c74f.ctex": {
+      "bytes": 33606,
+      "sha256": "c72054b904c3dd8bf7a81f726c18b78f2fae66514ea7796dc4d69d5567a8ead6"
+    },
+    ".godot/imported/magnet-demo.png-98fc7de00ecf896677a963d359a5e1e9.ctex": {
+      "bytes": 73192,
+      "sha256": "e5085dc8bb32e288f981945c6fef7f770b574f77f5c9195e72cf0d3b5f2c82e4"
+    },
+    ".godot/imported/none-applied.png-60195f2cf99fe390d56bf5a779544ea1.ctex": {
+      "bytes": 33414,
+      "sha256": "35f9706ec3834268188a298e97abd8a26286781f55b7d38ed483229bae27faaa"
+    },
+    ".godot/imported/none-applied.png-6513a246e07619e3d255d377c2dc6b72.ctex": {
+      "bytes": 31854,
+      "sha256": "5b8578c9591121e6a169a775fed4081e43c67bbef2d438613758de6e5f458f4e"
+    },
+    ".godot/imported/one-applied.png-5da1d560838b0ac3aac6d5d668f38148.ctex": {
+      "bytes": 45060,
+      "sha256": "63c678374314c0477a858ab17fb2d636add54f685c532ea375ca54e5493e46d8"
+    },
+    ".godot/imported/opposite.png-3e01404582b6652985076808bfc49cad.ctex": {
+      "bytes": 69352,
+      "sha256": "fa650f845926e233ec359ce86d947dfb18a5777baae0a8b8caec14437d319f70"
+    },
+    ".godot/imported/reel-stop.png-861990122a9e3bf1766fe37f15509101.ctex": {
+      "bytes": 68590,
+      "sha256": "e72ef2235473d13f65935acfe30fdc2c8c0f04a9884e5292b8819d297e30fe4b"
+    },
+    ".godot/imported/repeat-passes.png-c29728ab986920b4f5cde9f732fc61ac.ctex": {
+      "bytes": 3706,
+      "sha256": "3d2a3e7b23d64a8c7cd33b03dee702095e799b1ba2d55b1d74bda0c03d13e07f"
+    },
+    ".godot/imported/repeated-redirect.png-bfee013cd8a59ba93506d3d92a77d3d4.ctex": {
+      "bytes": 65920,
+      "sha256": "88ce23aeb3419eaadbc1cc92e4cda865ede4162c2818d8521bba927c80927596"
+    },
+    ".godot/imported/restored.png-05181882042f6db8c78b433f117f69de.ctex": {
+      "bytes": 66360,
+      "sha256": "0358e90c83a9db23094cacd3a00ec4c1c0dac1e317f4a0293f440a1f7c326c5c"
+    },
+    ".godot/imported/return.png-227ebd3a0999dceb0999a0120e801820.ctex": {
+      "bytes": 101260,
+      "sha256": "33d27c1dc6fe0e3a6a74b259fe8dd65a3606ca0a8de3d364438e63c1ff31a783"
+    },
+    ".godot/imported/rock-demo.png-9be7a762d8784f3538d51adcb5f8e8b4.ctex": {
+      "bytes": 72078,
+      "sha256": "bf7c9f8c5ff8282e36507cb18990b8ae4e398bd85a9b623e0a1b1cc7f758a5a1"
+    },
+    ".godot/imported/rock-fishing.png-81502c90a0533f3145ea17087f057023.ctex": {
+      "bytes": 70424,
+      "sha256": "85725d3c35ae0bf6c16ee9e201ed69f63229d7524002c920646f6aac94fc3475"
+    },
+    ".godot/imported/settings.png-e554a0a1f25847c72e3b9866fee4a029.ctex": {
+      "bytes": 44988,
+      "sha256": "57bedf797441f9eb28a568e2f11f6d3fc8becadbaa5c0780c93f478caa48e174"
+    },
+    ".godot/imported/spirit-filling.png-560f9d7ffc799a335f74ddeb34071ecd.ctex": {
+      "bytes": 65912,
+      "sha256": "dbfb6f78efbcc426387f5ff2f54f40f70c1075d687a9949a478e5d13cddbd77e"
+    },
+    ".godot/imported/spirit-ready.png-21e3ebf7260abc09cd756cba62b6b3be.ctex": {
+      "bytes": 66088,
+      "sha256": "3cb9a4407c2e9b06e2a399982817b489358794f054f459954b2338a78f977720"
+    },
+    ".godot/imported/stacked-force.png-85a94d4f9b1a3aa80e779282e15226a3.ctex": {
+      "bytes": 57480,
+      "sha256": "abe2a44917bffb2b0d941e6418168f2de37588fdc7d7b561b10fe87bbca870d1"
+    },
+    ".godot/imported/storage-blocked.png-eb9153855233b7d73b4fab1e5f80cb21.ctex": {
+      "bytes": 85416,
+      "sha256": "4c10f1bac0d0052763d05cc0790f2c9afb604c843c0a5937f5e189cc04a370da"
+    },
+    ".godot/imported/suncrest-half-hp.png-59bfae1b9a950a6eb72a25d89b3553ee.ctex": {
+      "bytes": 68244,
+      "sha256": "e3ab1d9c762d88012aa8fab7e825a8ab61ca75317cb556a103a4d52f853b59d1"
+    },
+    ".godot/imported/track-cleanup.png-96c9b4a4e3e020fe2b4e31824f8ff465.ctex": {
+      "bytes": 64240,
+      "sha256": "555e473e251a7aeb3313dd6db2793868e0c65b3b9f2485f9e1a275921ae9bd05"
+    },
+    ".godot/imported/trunk-zoom.png-5254be8c50be45477458614c09daf74b.ctex": {
+      "bytes": 9104,
+      "sha256": "b8d1dfeca90cf3da508a091821b0048ecf5d0898aca33e6ec8cecee224063456"
+    },
+    ".godot/imported/water-shot-faster.png-066e6fe5ac67914a2bc5ba70e6b5677b.ctex": {
+      "bytes": 68646,
+      "sha256": "93c2b6b92ab61359a0a5f3d240954a57820834e40e32cdd9aadda20de5e05e59"
+    },
+    "docs/evidence/721/721-missing-no-chain.png.import": {
+      "bytes": 209,
+      "sha256": "a96eaddd82b10f1b8c7a8eac1050d3084d9324ad296ecdac4613c4f5edc709b8"
+    },
+    "docs/evidence/721/721-missing-spells.png.import": {
+      "bytes": 207,
+      "sha256": "74863cee72b314a1b3989e4d477b0a82da06278eeeef44ecad9eaa198e409c37"
+    },
+    "docs/evidence/742/744-panel.png.import": {
+      "bytes": 198,
+      "sha256": "d7ba87f8d3343d33050fd3ca60b23b22d2b9c45d4c10779a024ca367d483c917"
+    },
+    "docs/evidence/745/746-panel.png.import": {
+      "bytes": 197,
+      "sha256": "7ab7dfbeb41e656abacb14a448eaca55391e400e170aa3ef82790fd8420a9433"
+    },
+    "docs/evidence/747/748-panel.png.import": {
+      "bytes": 198,
+      "sha256": "8b7ba70b6147af4d5fe8ff37bc02f1993813551f859db7c1b3119e5107eb0f98"
+    },
+    "docs/evidence/749/750-convergence.png.import": {
+      "bytes": 204,
+      "sha256": "3949ad77df083852a8f9a3b2355c7c5656418414f4a74edcbaebfb453611c19d"
+    },
+    "docs/evidence/751/752-panel.png.import": {
+      "bytes": 198,
+      "sha256": "f3c0a89a760380f2a372876a34b36ae3d4ceb2902743d68ee34f68d46791c56b"
+    },
+    "docs/evidence/753/suncrest-half-hp.png.import": {
+      "bytes": 204,
+      "sha256": "49e99689450200ac578a46bbdfe270fe91881c03d84d55faaebbf1f5a1688483"
+    },
+    "docs/evidence/755/five-slot-hotbar.png.import": {
+      "bytes": 204,
+      "sha256": "d09b8c9345155ae9cc47f2c2d8a773d02732413d2196adcddd327505a72d0b7a"
+    },
+    "docs/evidence/757/spirit-filling.png.import": {
+      "bytes": 203,
+      "sha256": "7ed33382b92fa8c05fb12bfff387abb7ff7bcc5f5b80a36b8b6f3633d3fc37e1"
+    },
+    "docs/evidence/757/spirit-ready.png.import": {
+      "bytes": 201,
+      "sha256": "2af0b507c2a37af3d48e6c891a82c1c8e555a25e68dac27f06ce09979c0288b4"
+    },
+    "docs/evidence/759/water-shot-faster.png.import": {
+      "bytes": 205,
+      "sha256": "d7963ed262d4e10c27b30d80f1a61ed66eace0d8b2bd6b110b3339909be27d79"
+    },
+    "docs/evidence/761/track-cleanup.png.import": {
+      "bytes": 202,
+      "sha256": "66429ff432875d4c68cc76022874f30d368ef3c572ab8c226f221e5567ffc74d"
+    },
+    "docs/evidence/763/applied.png.import": {
+      "bytes": 195,
+      "sha256": "9e2219abe50b7eb35ce70799022dca9c58670403caf9b74c32473d4ba04a7181"
+    },
+    "docs/evidence/763/locked.png.import": {
+      "bytes": 195,
+      "sha256": "4cc14cf40c28797ace88ba604338b9f0e162cf15b692b8d0be716ebeda44e6d0"
+    },
+    "docs/evidence/765/all-applied.png.import": {
+      "bytes": 199,
+      "sha256": "ca9455460e0df8e4cdd081d46c3c65117e9615f28421327224f36079d9568af0"
+    },
+    "docs/evidence/765/none-applied.png.import": {
+      "bytes": 201,
+      "sha256": "b685562be8cd2bc73fce747992dfe9ff16fd5e04966b97833840b11443262d6e"
+    },
+    "docs/evidence/765/one-applied.png.import": {
+      "bytes": 200,
+      "sha256": "729cf7e705e72fbdf5d8d1d5103dd638958644c08b16b9f9496b735a1443a908"
+    },
+    "docs/evidence/767/conflict.png.import": {
+      "bytes": 197,
+      "sha256": "91b82a9eafb7365fefbd5ef61ea1f965d3cf57ac44eabe325fdad6ed84156cdd"
+    },
+    "docs/evidence/767/settings.png.import": {
+      "bytes": 196,
+      "sha256": "76c85f634b355d6f3ae68e1d28fc6f42687a3d8c6364ae2db8cd4e764271b396"
+    },
+    "docs/evidence/769/after.png.import": {
+      "bytes": 194,
+      "sha256": "ef2aff39965b4ba6740d13f4a0660c409068590db97224d7f0c74916cfb248a7"
+    },
+    "docs/evidence/769/before.png.import": {
+      "bytes": 194,
+      "sha256": "458cd40fbb010f54b698064acdf47066a4d53ff719fb79ea5f506b42d73fa4d2"
+    },
+    "docs/evidence/771/debug-collision.png.import": {
+      "bytes": 203,
+      "sha256": "c8bfa98345ecaa4c00e9a1ca30e70023cb0ccde55b1038328c6ac8d1f6809f5e"
+    },
+    "docs/evidence/771/trunk-zoom.png.import": {
+      "bytes": 199,
+      "sha256": "5ea356161a29e75abe1c0adf0a54f09184b68beefd46b3c1044bd6bf9f451541"
+    },
+    "docs/evidence/773/repeated-redirect.png.import": {
+      "bytes": 206,
+      "sha256": "ee0395715dd2dd402e45d57eae61ed90d8ab7ca628e16425f3fb9cc2762d068e"
+    },
+    "docs/evidence/781/hook-demo.png.import": {
+      "bytes": 198,
+      "sha256": "bc87556c32fa3011311085f58e038c706a3091ef48919d3e51b35e43ca28d4c8"
+    },
+    "docs/evidence/783/magnet-demo.png.import": {
+      "bytes": 200,
+      "sha256": "e23bf7502f8ab714822d8dcfe8d81d6c4ac3e6a821e6ec812c6414edb30b76cc"
+    },
+    "docs/evidence/785/catch-demo.png.import": {
+      "bytes": 198,
+      "sha256": "cbb08b5ef4d385e32ec251cbf2f4f2f901121fee77feff4285f4792136841d8f"
+    },
+    "docs/evidence/787/rock-demo.png.import": {
+      "bytes": 198,
+      "sha256": "883979712c6273ff1e123f49c86ff0d5a2c63501bc238c62624ffe64aeb2ce97"
+    },
+    "docs/evidence/789/rock-fishing.png.import": {
+      "bytes": 201,
+      "sha256": "020afe48a429d043d1449572fa33a693d8334352a4f4986a4760ef197136134d"
+    },
+    "docs/evidence/793/repeat-passes.png.import": {
+      "bytes": 202,
+      "sha256": "699833bbd2358b3f9a575b7fbf0db003cc94d04357171901f978a62eea497232"
+    },
+    "docs/evidence/797/all-applied.png.import": {
+      "bytes": 199,
+      "sha256": "dbe8676364a76a60e8cd3debf4337900663eebac49d2cf2e681fc3c507baed3f"
+    },
+    "docs/evidence/797/none-applied.png.import": {
+      "bytes": 200,
+      "sha256": "1e9d4caf3cf4eec609575d3727f3002833899a961aed8fb0ac4ea7d97945d6c8"
+    },
+    "docs/evidence/799/reel-stop.png.import": {
+      "bytes": 197,
+      "sha256": "83b0735006ef138ad63647720c340c6269f73a53ddf97b5604ccb64a4eb5bfc3"
+    },
+    "docs/evidence/803/opposite.png.import": {
+      "bytes": 197,
+      "sha256": "5f6e1d48907383a6c5d72740295f090b9e531e595b06f17a663d70be7f71cefb"
+    },
+    "docs/evidence/805/stacked-force.png.import": {
+      "bytes": 202,
+      "sha256": "791cfc23ce3c88845e0149a1aa7a3c52e58fe91acbfce209f8164b75a73db7a7"
+    },
+    "docs/evidence/809/return.png.import": {
+      "bytes": 195,
+      "sha256": "49a00133903c94af3847335e6e3cdd6d04a3a6049c20493d2a59d7a0c4f00ffd"
+    },
+    "docs/evidence/814/browser-results.json": {
+      "bytes": 3116,
+      "sha256": "a71ca2907abb153bfe8e8102ea98b21d8478b5b2eaf121c40cfba2f4175c5291"
+    },
+    "docs/evidence/814/restored.png.import": {
+      "bytes": 196,
+      "sha256": "a042a0926fff8f0adc4fda6a4091b7f9ca6746a8cff4116f1150ebe4be08d433"
+    },
+    "docs/evidence/814/storage-blocked.png.import": {
+      "bytes": 204,
+      "sha256": "a85e1295bec7524e9a67c9b43d72243ee5da5b529ea0b0bd6a9155af74b0b3b0"
+    },
+    "docs/evidence/818/corrupt-preserved.png.import": {
+      "bytes": 206,
+      "sha256": "1bdb8c09ef85b784e494914f7577dc15f014f5c89f566827ad208a65a355fd0d"
+    },
+    "docs/evidence/818/fish-restored.png.import": {
+      "bytes": 201,
+      "sha256": "99bdda7c250a0cd9ed7b060fd78aac7e1412dea48eda63ef8ec6bc107936f5d7"
+    },
+    "docs/evidence/818/recovery-results.json": {
+      "bytes": 5700,
+      "sha256": "bd239729227ab99f34890a175d52f23decdfc57e814d11587f749ace7c8c8c6e"
+    },
+    "docs/evidence/818/spell-matrix.json": {
+      "bytes": 1825,
+      "sha256": "baba24ffe3c0d69d295800463e25c3e553ede899cfef74b7b05e9c4e90714211"
+    }
+  },
+  "changed": [],
+  "added": []
+}
