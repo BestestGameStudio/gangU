@@ -40,6 +40,21 @@ func run():
   if behavior_path=='enemy_behavior_chase_contact':check(not real_enemy.reel_propulsion.is_zero_approx(),'real chase records nonzero propulsion')
   real_enemy.queue_free()
  await process_frame
+ # A hooked bird reaching a later DIVE landing cannot teleport through pulls.
+ var bird=load('res://game/enemies/enemy_bird.tscn').instantiate() as Enemy
+ area.add_child(bird);bird.set_physics_process(false);bird.position=Vector2(200,100)
+ var behavior:=bird._behavior as EnemyBehaviorBird
+ behavior.state=EnemyBehaviorBird.DIVE;behavior._timer=0.001;behavior._locked=Vector2(500,100)
+ var bird_reel=HookReel.begin(area,bird,player,spell);bird_reel.set_physics_process(false)
+ var bird_before=bird.position
+ bird._physics_process(0.016)
+ check(behavior.state==EnemyBehaviorBird.STUNNED,'held bird completes real dive state transition')
+ check(bird.position==bird_before,'held dive landing does not teleport during sampling')
+ check(not bird.reel_propulsion.is_zero_approx() and bird.reel_propulsion.x>0,'landing preserves desired dive motion instead of overwriting zero')
+ bird_reel._physics_process(0.016)
+ check(bird.position.distance_to(bird_before)<=2400*0.016+0.01,'held landing moves only through capped force resolver')
+ check(HookPullStack.contains(bird,bird_reel),'bird landing does not steal or release reel ownership')
+ bird.queue_free();bird_reel.queue_free();await process_frame
  var region:=Node2D.new();area.add_child(region)
  var arena:=DesertStatueArena.new();region.add_child(arena);arena.set_physics_process(false);arena.start_encounter();arena._enter_phase_two()
  var boss=arena.possessed;boss.set_physics_process(false)

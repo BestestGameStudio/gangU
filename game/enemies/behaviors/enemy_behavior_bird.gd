@@ -165,14 +165,17 @@ func _step_dive(enemy: Enemy, player, alive: bool, delta: float) -> void:
 	if _timer > 0.0:
 		return
 	# Impact.
-	enemy.global_position = enemy.constrain_movement(_locked)
+	# Landing is desired motion while held, never a teleport past the reel.
+	# Keep this tick's captured dive propulsion for the sole force resolver.
+	enemy.submit_external_motion(enemy.constrain_movement(_locked),delta)
 	_altitude = 0.0
-	enemy.velocity = Vector2.ZERO
-	enemy.self_move_and_slide()
+	if not is_instance_valid(enemy.displacement_owner):
+		enemy.velocity = Vector2.ZERO
+		enemy.self_move_and_slide()
 	_clear_telegraph(enemy)
 	_ensure_airborne(enemy, false)
 	enemy.play_action(&"landed", true)
-	if alive and player.global_position.distance_to(_locked) <= DIVE_RADIUS:
+	if alive and player.global_position.distance_to(enemy.global_position) <= DIVE_RADIUS:
 		enemy.deal_hit(player, enemy.contact_damage, OnHit.DELIVERY_CONTACT)
 		if player.has_method(&"apply_stun"):
 			player.apply_stun(PLAYER_STUN)
