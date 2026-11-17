@@ -188,6 +188,9 @@ static func capture(host:Node) -> Dictionary:
  var p:Player=host.get_node("Player")
  var caster:SpellCaster=p.get_node("SpellCaster")
  var loader:AreaLoader=host.area_loader
+ # Active map colors otherwise remain live-only until the player leaves.
+ var map:WorldMap=host.get_node("WorldMap")
+ map._snapshot_colors(map.area_id,map.terrain)
  return {"progression":{"unlocked":caster.get_unlocked(),
   "spells":caster.spells.duplicate(),
   "slots":caster.get_slots(),
