@@ -73,6 +73,9 @@ def frame(di,body,phase,bury=False):
   pixel(g,x,y+(phase-2),'w' if phase==3 else c)
  return [''.join(r) for r in g]
 
+if src.get('name') == 'large-scorpion-animated-study':
+ raise SystemExit('Legacy64px generator: use large_scorpion/generate_source.py for the approved128px model.')
+
 for di,d in enumerate(('s','se','e','ne','n','nw','w','sw')):
  body=src['animations']['idle_'+d]['frames'][0]['rows']
  frames=[{'ms':50,'rows':frame(di,body,i)} for i in range(6)]

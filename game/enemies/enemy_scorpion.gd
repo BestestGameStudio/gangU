@@ -12,7 +12,6 @@ var _tip_shape: CollisionShape2D
 var _body_shape: CollisionShape2D
 var _trail: Array[Vector2] = []
 var _trail_clock := 0.0
-var _pose_pixels: Dictionary = {}
 var _pre_stun_pose: Dictionary = {}
 
 func _ready() -> void:
@@ -26,7 +25,8 @@ func _ready() -> void:
 	set_buried(true)
 
 func stun_halo_position() -> Vector2:
-	return Vector2(0,-16)
+	# Per-pose opaque top preserves a10px gap over the actual larger model.
+	return super.stun_halo_position()
 
 func is_combat_targetable() -> bool:
 	return not buried and hp > 0
@@ -77,71 +77,26 @@ func face_player(direction: Vector2) -> void:
 		facing = direction.normalized()
 		if sprite != null: sprite.face_direction(facing)
 
-## Geometry follows the rendered suffix/frame, not player aim. Transition
-## coordinates reproduce the same anatomy/drop/shake as the SpriteU generator.
+## Generated source geometry follows the actual rendered suffix/frame, including
+## shake, drop, collapse and transition occlusion. No nearest-pixel guessing.
+const PoseGeometry := preload("res://game/enemies/scorpion_pose_geometry.gd")
+func _tip_pose(animation: StringName, frame: int) -> Vector3:
+	var frames: Array = PoseGeometry.POSES.get(animation,[])
+	return frames[frame] if frame >= 0 and frame < frames.size() else Vector3(-1,-1,0)
+
 func _tip_pixel() -> Vector2:
 	return _tip_pixel_for(sprite.animation,sprite.frame)
 
 func _tip_pixel_for(animation: StringName, frame: int) -> Vector2:
-	var name := String(animation)
-	var anim := name.get_slice("_",0)
-	var suffix := name.get_slice("_",1)
-	var di := ["s","se","e","ne","n","nw","w","sw"].find(suffix)
-	if di < 0: return Vector2(INF,INF)
-	var k := frame
-	var transition := anim == "emerge" or anim == "bury"
-	var transition_phase := 5-k if anim == "bury" else k
-	if transition:
-		if transition_phase == 0: return Vector2(INF,INF)
-		if transition_phase == 5:
-			anim = "idle"
-			k = 0
-	var count := sprite.sprite_frames.get_frame_count(animation)
-	var phase := float(k)/maxf(count,1)*TAU
-	var sway := sin(phase)*(0.6 if anim == "idle" else 0.8 if anim == "walk" else 0.0)
-	var shake := 0.0
-	var drop := 0.0
-	var cutoff := 63.0
-	if transition and transition_phase in [1,2,3,4]:
-		sway = sin(float(transition_phase)/6.0*TAU)*0.8 + [0.0,-1.8,1.8,-1.2,0.5,0.0][transition_phase]
-		shake = [0.0,-1.0,1.0,-1.0,1.0,0.0][transition_phase]
-		drop = [0.0,13.0,7.0,2.0,0.0][transition_phase]
-		cutoff = [0.0,44.0,47.0,52.0,61.0][transition_phase]
-	var strike: float = [0.0,0.18,1.0,0.32,0.0][mini(k,4)] if anim == "attack" else 0.0
-	var x := 7.0+sway
-	var f: float = -3.0+strike*12.0
-	var z: float = 23.0-strike*11.0
-	if strike > 0.0:
-		x = lerpf(x,0.0,strike)
-		f = lerpf(f,22.0,strike)
-		z = lerpf(z,5.0,strike)
-	f += 5.0+strike*2.0-(1.0 if anim == "hurt" and k == 0 else 0.0)
-	z -= 5.0
-	var angle := float(di)*PI/4.0
-	var co := cos(angle)
-	var si := sin(angle)
-	var bob := 1.0 if anim == "idle" and k in [1,2] else 0.0
-	var pixel := Vector2(round(32.0+x*co+f*si+shake),round(41.0+(-x*si+f*co)*0.66-z+bob)+drop)
-	return pixel if pixel.y <= cutoff else Vector2(INF,INF)
+	var pose := _tip_pose(animation,frame)
+	return Vector2(pose.x,pose.y) if pose.x >= 0.0 else Vector2(INF,INF)
 
 func stinger_exposed() -> bool:
-	if buried or sprite == null: return false
-	var key := "%s:%d" % [sprite.animation,sprite.frame]
-	if not _pose_pixels.has(key):
-		var pixel := _tip_pixel()
-		var exposed := pixel.is_finite()
-		if exposed:
-			# A transition can occlude the projected tip with sand/debris.
-			# Inspect the shipped frame once, not merely the mathematical rig.
-			var image := sprite.sprite_frames.get_frame_texture(sprite.animation,sprite.frame).get_image()
-			var color := image.get_pixelv(Vector2i(pixel))
-			exposed = color.a > 0.0 and color.r < 0.68 and color.b > color.r
-		_pose_pixels[key] = exposed
-	return bool(_pose_pixels[key])
+	return not buried and sprite != null and _tip_pose(sprite.animation,sprite.frame).z > 0.0
 
 func stinger_tip() -> Vector2:
 	var pixel := _tip_pixel() if sprite != null else Vector2(INF,INF)
-	return sprite.to_global(pixel-Vector2(32,32)) if pixel.is_finite() else global_position
+	return sprite.to_global(pixel-Vector2(64,64)) if pixel.is_finite() else global_position
 
 func _sync_tip_shape() -> void:
 	if _tip_shape == null: return
@@ -215,7 +170,7 @@ func charge_warning() -> Dictionary:
 	if buried or hp <= 0 or is_stunned() or not _behavior is EnemyBehaviorScorpion: return {}
 	var b := _behavior as EnemyBehaviorScorpion
 	if b.state != EnemyBehaviorScorpion.State.STING_WINDUP: return {}
-	var tip := sprite.to_global(_tip_pixel_for(sprite._variant(&"attack"),2)-Vector2(32,32))
+	var tip := sprite.to_global(_tip_pixel_for(sprite._variant(&"attack"),2)-Vector2(64,64))
 	return {"origin":tip-b._aim*24.0,"direction":b._aim,
 		"length":b.dash_distance+48.0,"width":48.0,
 		"progress":clampf(b._time/b.sting_windup_duration(),0.0,1.0)}
