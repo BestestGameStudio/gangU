@@ -14,10 +14,9 @@ class_name OverworldGround
 ## computed (`roads`, `road_distance`) because decor placement keeps trees
 ## and rocks off them - dropping that would move trees and change collision
 ## and routes. The arrival clearing and the pad under each gate stay.
-## Terrain art pass: the field is drawn from the TerrainArt grass tiles
-## (hashed variant per 64 px cell, meadow inside the old darker/lighter
-## patches) and each tree crown is a TerrainArt tree sprite sized to its
-## collision circle. Layout, collision and blockers are unchanged.
+## Painted look: the field is one shader quad (ground_paint.gdshader) over
+## the baked lattice types, and trees, rocks and ground clutter are
+## TerrainPieces. Layout, collision and blockers are unchanged.
 
 const CENTER := Vector2(576, -150)
 ## #436 (Daniel, 2026-11-09: "expand the overworld map" - the world itself,
@@ -51,8 +50,6 @@ const GRASS_DARK := Color(0.13, 0.18, 0.14)
 const GRASS_LIGHT := Color(0.19, 0.26, 0.19)
 const ROAD := Color(0.31, 0.27, 0.21)
 const ROAD_EDGE_COLOR := Color(0.23, 0.2, 0.16)
-const STONE := Color(0.33, 0.35, 0.38)
-const STONE_DARK := Color(0.22, 0.24, 0.27)
 const TREE := Color(0.1, 0.2, 0.12)
 const TREE_LIGHT := Color(0.15, 0.28, 0.16)
 const SHADOW := Color(0.04, 0.06, 0.05)
@@ -80,8 +77,16 @@ var _patch_slots: Dictionary = {}
 ## Decor: {"kind": "tree"|"rock", "at": Vector2, "r": float}
 var decor: Array[Dictionary] = []
 var _canopy: Node2D
-const TREE_SPRITES := 3
-static var _tree_textures: Array[Texture2D] = []
+## Painted ground clutter on the field (TerrainPieces): tuft, flower and
+## pebble clusters plus bushes, clumped by low-frequency noise so they gather
+## in patches. Presentation only, never collides.
+## {"kind": TerrainPieces.Kind, "v": int, "foot": Vector2, "flip": bool}
+var scatter: Array[Dictionary] = []
+const SCATTER_STEP := 56.0
+## Trees in a conifer patch (this noise above PINE_LEVEL) draw as pines.
+const PINE_LEVEL := 0.12
+var _pine_noise: FastNoiseLite
+var _clump_noise: FastNoiseLite
 ## #461: tall-grass patches. Centres/radii are hashed like the decor; the
 ## patch is the set of Terrain cells whose centre falls inside the circle,
 ## so what is drawn is exactly what conceals. Cells are in the area's
@@ -108,8 +113,10 @@ const GRASS_TOP_Z := 2
 
 func _init() -> void:
 	z_index = -80
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST ## pieces draw at 2x; keep pixels crisp
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
+	_paint = _make_paint()
 	var black := Node2D.new()
 	black.name = "BlackBackdrop"
 	black.z_as_relative = false
@@ -166,23 +173,37 @@ func _make_canopy() -> Node2D:
 	add_child(c)
 	return c
 
+## Crowns and bushes in view, back to front (by foot y) so a southern crown
+## overlaps the one behind it. Collision is only the trunk box at the foot.
 func _draw_canopy(c: Node2D) -> void:
-	if _tree_textures.is_empty():
-		for n in TREE_SPRITES:
-			_tree_textures.append(load("res://assets/sprites/terrain/tree_%d.png" % (n + 1)) as Texture2D)
+	var items: Array[Dictionary] = []
+	var reach := _view.grow(TerrainPieces.CELL.y * TerrainPieces.ART_SCALE)
 	for d in decor:
-		if d["kind"] != "tree":
-			continue
-		var at: Vector2 = d["at"]
-		var r: float = d["r"]
-		if not _view.grow(r*3.0).has_point(at): continue
-		var tex := _tree_textures[TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 7, TREE_SPRITES)]
-		# Bottom-centre anchored. Collision uses the same art transform,
-		# but only the narrow trunk base, never this canopy.
-		var k := (2.0 * r * 1.3) / (tex.get_width() * 0.9)
-		var size := tex.get_size() * k
-		var foot := at + Vector2(0.0, r * 0.85)
-		c.draw_texture_rect(tex, Rect2(foot - Vector2(size.x * 0.5, size.y), size), false)
+		if d["kind"] == "tree" and reach.has_point(d["at"]):
+			var piece := tree_piece(d)
+			items.append({"kind": piece.x, "v": piece.y, "foot": tree_foot(d), "flip": false})
+	for s in scatter:
+		if s["kind"] == TerrainPieces.Kind.BUSH and reach.has_point(s["foot"]):
+			items.append(s)
+	items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["foot"].y < b["foot"].y)
+	for it in items:
+		TerrainPieces.draw(c, true, it["kind"], it["v"], it["foot"])
+
+## Trunk base of a decor tree (the piece's foot).
+func tree_foot(d: Dictionary) -> Vector2:
+	return (d["at"] as Vector2) + Vector2(0.0, float(d["r"]) * 0.85)
+
+## (kind, variant) of a decor tree: pine inside conifer patches, broadleaf
+## elsewhere; the variant grows with the decor radius (18..32 px).
+func tree_piece(d: Dictionary) -> Vector2i:
+	var at: Vector2 = d["at"]
+	if _pine_noise == null:
+		_pine_noise = FastNoiseLite.new()
+		_pine_noise.seed = 451
+		_pine_noise.frequency = 1.0 / 700.0
+	var kind := TerrainPieces.Kind.PINE if _pine_noise.get_noise_2dv(at) > PINE_LEVEL else TerrainPieces.Kind.TREE
+	var t := (float(d["r"]) - 18.0) / 14.0
+	return Vector2i(kind, TerrainPieces.sized_variant(t, _hash01(int(at.x), int(at.y), 97)))
 
 ## Harness introspection: the node that draws the tree crowns.
 func canopy() -> Node2D:
@@ -217,6 +238,8 @@ func build_from(area: Node) -> void:
 	_plant_border_collision(area)
 	_build_tall_grass()
 	_plant_tall_grass(area)
+	_build_scatter(area)
+	_build_ground_paint()
 
 func covers(p: Vector2) -> bool:
 	return Geometry2D.is_point_in_polygon(p, outline)
@@ -302,19 +325,56 @@ func _plant_tree_collision(area: Node) -> void:
 	map.set_cells(cells)
 	map.set_projectile_blockers(blockers)
 
-## #771: a small box inside the narrow trunk, above the baked shadow.
-## Same variant/scale/foot transform as _draw_canopy; canopy never collides.
+## #771: a small box at the painted trunk base (the piece's foot); the
+## canopy never collides.
 func tree_trunk_rect(d: Dictionary) -> Rect2:
-	var at: Vector2 = d["at"]
-	var r: float = d["r"]
-	var variant := TerrainArt.variant(Vector2i(int(at.x), int(at.y)), 7, TREE_SPRITES)
-	var tex := load("res://assets/sprites/terrain/tree_%d.png" % (variant + 1)) as Texture2D
-	var k := (2.0 * r * 1.3) / (tex.get_width() * 0.9)
-	var size := tex.get_size() * k
-	var foot := at + Vector2(0, r * 0.85)
-	var width := 6.0 if tex.get_width() == 56 else 8.0
-	var source := Rect2(Vector2(tex.get_width() * 0.5 - width * 0.5, tex.get_height() - 16), Vector2(width, 6))
-	return Rect2(foot - Vector2(size.x * 0.5, size.y) + source.position * k, source.size * k)
+	return TerrainPieces.trunk_rect(tree_foot(d))
+
+## Ground clutter over the whole field, on hashed grid slots like the decor
+## (deterministic, no RNG). Density follows low-frequency noise, so tufts
+## and flowers gather in meadows and thin out between them. Kept off
+## non-grass ground (pebbles also allowed on dirt), the arrival clearing,
+## the village and the desert arena.
+func _build_scatter(area: Node) -> void:
+	scatter.clear()
+	_clump_noise = FastNoiseLite.new()
+	_clump_noise.seed = 2027
+	_clump_noise.frequency = 1.0 / 520.0
+	var inner := _blob(-40.0)
+	var village := area.get_node_or_null("AbandonedVillage") as Node2D if area != null else null
+	var desert := area.get_node_or_null("DesertStatueArena") as DesertStatueArena if area != null else null
+	var gx_n := int(ceil(RADII.x / SCATTER_STEP)) + 1
+	var gy_n := int(ceil(RADII.y / SCATTER_STEP)) + 1
+	var gy_s := int(ceil((RADII.y + SOUTH_EXTEND) / SCATTER_STEP)) + 1
+	for gx in range(-gx_n, gx_n + 1):
+		for gy in range(-gy_n, gy_s + 1):
+			var at := CENTER + Vector2(gx, gy) * SCATTER_STEP + Vector2(_hash01(gx, gy, 91) - 0.5, _hash01(gx, gy, 92) - 0.5) * SCATTER_STEP
+			var dens := smoothstep(-0.25, 0.45, _clump_noise.get_noise_2dv(at))
+			var roll := _hash01(gx, gy, 93)
+			var kind := -1
+			var edge := 0.03 + 0.42 * dens
+			if roll < edge:
+				kind = TerrainPieces.Kind.TUFTS
+			elif roll < edge + 0.14 * dens * dens:
+				kind = TerrainPieces.Kind.FLOWERS
+			elif roll < edge + 0.14 * dens * dens + 0.025:
+				kind = TerrainPieces.Kind.PEBBLES
+			elif roll < edge + 0.14 * dens * dens + 0.025 + 0.03 * dens:
+				kind = TerrainPieces.Kind.BUSH
+			if kind < 0 or not Geometry2D.is_point_in_polygon(at, inner):
+				continue
+			if at.distance_to(spawn) < ARRIVAL_STONE_R + 48.0:
+				continue
+			if village != null and at.distance_to(village.position) < 470.0:
+				continue
+			if desert != null and desert.contains_footprint(at, 48.0):
+				continue
+			var ground := _lattice_type(roundi(at.x / 64.0), roundi(at.y / 64.0))
+			if ground != DualGrid.T.GRASS and not (kind == TerrainPieces.Kind.PEBBLES and ground == DualGrid.T.DIRT):
+				continue
+			var flip := kind != TerrainPieces.Kind.BUSH and _hash01(gx, gy, 95) < 0.5
+			scatter.append({"kind": kind, "v": int(_hash01(gx, gy, 94) * TerrainPieces.VARIANTS) % TerrainPieces.VARIANTS,
+				"foot": at, "flip": flip})
 
 ## #461: hashed tall-grass patch centres (deterministic, no RNG). Decor is
 ## left exactly as it was; grass simply never covers a tree's cells.
@@ -614,24 +674,44 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 				if _hash01(n.x, n.y, 313) < keep:
 					_dirt_nodes[n] = true
 
-func _draw_dual_grid() -> void:
-	var grown := _blob(BORDER_DRAWN)
+## The ground is painted by one shader quad (ground_paint.gdshader), not
+## tiles: every lattice type of the field is baked into a tiny R8 texture
+## (one texel per 64 px point) that the shader samples at noise-warped
+## positions, so boundaries curve instead of stepping along the grid.
+## Outside the outline every point is CLIFF (rock face, then void).
+const GROUND_SHADER := preload("res://game/world/terrain/ground_paint.gdshader")
+var _paint: Node2D
+var _paint_rect := Rect2()
+
+func _make_paint() -> Node2D:
+	var p := Node2D.new()
+	p.name = "GroundPaint"
+	p.show_behind_parent = true ## under the pieces Ground draws itself
+	var mat := ShaderMaterial.new()
+	mat.shader = GROUND_SHADER
+	p.material = mat
+	p.draw.connect(func() -> void: p.draw_rect(_paint_rect, Color.WHITE))
+	add_child(p)
+	return p
+
+func _build_ground_paint() -> void:
 	var lo := Vector2i(((CENTER - RADII * 1.1) / 64.0).floor()) - Vector2i(8, 8)
 	var hi := Vector2i(((CENTER + (RADII + Vector2(0, SOUTH_EXTEND)) * 1.1) / 64.0).ceil()) + Vector2i(8, 8)
-	lo = lo.max(Vector2i((_view.position / 64.0).floor()))
-	hi = hi.min(Vector2i((_view.end / 64.0).ceil()))
-	for j in range(lo.y, hi.y + 1):
-		for i in range(lo.x, hi.x + 1):
-			if not Geometry2D.is_point_in_polygon(Vector2(i + 0.5, j + 0.5) * 64.0, grown):
-				continue
-			var tl := (_lattice_type(i, j))
-			var tr := (_lattice_type(i + 1, j))
-			var br := (_lattice_type(i + 1, j + 1))
-			var bl := (_lattice_type(i, j + 1))
-			var t := DualGrid.tile(i, j, [tl, tr, br, bl])
-			if t.is_empty():
-				continue
-			draw_texture_rect_region(t["tex"], Rect2(Vector2(i, j) * 64.0, Vector2(64, 64)), t["src"])
+	var size := hi - lo + Vector2i.ONE
+	var img := Image.create(size.x, size.y, false, Image.FORMAT_R8)
+	var grown := _blob(BORDER_DRAWN)
+	for j in size.y:
+		for i in size.x:
+			var p := lo + Vector2i(i, j)
+			var t := DualGrid.T.CLIFF
+			if Geometry2D.is_point_in_polygon(Vector2(p) * 64.0, grown):
+				t = _lattice_type(p.x, p.y)
+			img.set_pixel(i, j, Color8(t, 0, 0))
+	var mat := _paint.material as ShaderMaterial
+	mat.set_shader_parameter("types", ImageTexture.create_from_image(img))
+	mat.set_shader_parameter("lattice_origin", Vector2(lo) * 64.0)
+	_paint_rect = Rect2(Vector2(lo) * 64.0, Vector2(size - Vector2i.ONE) * 64.0)
+	_paint.queue_redraw()
 
 ## Block the border band so the playable area ends at the cliff: every
 ## Terrain cell whose centre lies between the outline and the blocked band
@@ -653,28 +733,28 @@ func _plant_border_collision(area: Node) -> void:
 	map.set_cells(cells)
 
 func _draw() -> void:
-	_draw_dual_grid()
 	_draw_grass_floor() # #461
 	# #419: roads are no longer drawn (cosmetic only). Their polylines are
 	# still laid out in build_from so decor/tree placement - and with it the
 	# tree collision on the Terrain grid - stays exactly as before.
 	# The arrival clearing (stone brick) and the dirt pad under every gate are
 	# part of the dual-grid field (see _lattice_type).
+	# Painted pieces, ground layer (TerrainPieces.BASE): clutter first, then
+	# trunks + shadows of trees and the rocks (boulders). #418: crowns and
+	# bushes are drawn by the Canopy child, above characters.
+	var reach := _view.grow(TerrainPieces.CELL.y * TerrainPieces.ART_SCALE)
+	for s in scatter:
+		if reach.has_point(s["foot"]):
+			TerrainPieces.draw(self, false, s["kind"], s["v"], s["foot"], s["flip"])
 	for d in decor:
 		var at: Vector2 = d["at"]
-		var r: float = d["r"]
-		if not _view.grow(r*2.0).has_point(at): continue
+		if not reach.has_point(at): continue
 		if d["kind"] == "tree":
-			# #418: only the ground shadow stays on the floor layer; the
-			# canopy itself is drawn by the Canopy child, above characters.
-			pass  # new tree sprites carry their own baked shadow
+			var piece := tree_piece(d)
+			TerrainPieces.draw(self, false, piece.x, piece.y, tree_foot(d))
 		else:
-			var rock := PackedVector2Array()
-			for i in 6:
-				var a := TAU * i / 6.0 + 0.3
-				rock.append(at + Vector2(cos(a), sin(a) * 0.75) * r)
-			draw_colored_polygon(rock, STONE_DARK)
-			draw_circle(at + Vector2(-r * 0.2, -r * 0.25), r * 0.45, STONE)
+			var v := TerrainPieces.sized_variant((float(d["r"]) - 8.0) / 8.0, _hash01(int(at.x), int(at.y), 98))
+			TerrainPieces.draw(self, false, TerrainPieces.Kind.BOULDER, v, at)
 
 ## #614: reserve_regions drops decor trees within a margin wider than a
 ## region's footprint, but _plant_tree_collision already marked those trees'

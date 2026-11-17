@@ -11,6 +11,7 @@ Notes for Claude agents working on gangU. Keep this short; the details live in t
 - `ci-runner` - load first when running in the GitHub Actions `@claude` job: installed tools, allowed commands, headless tests, screenshots into `/tmp/ci/media`, `github-fetch`.
 - `dungeon-creation`, `enemy-creation` - adding areas/gates and enemies/bosses.
 - `sprite-sheet-pipeline` - concept art to packed PNG + SpriteFrames.
+- `terrain-generation` - painted overworld: ground shader, TerrainPieces atlas, scatter, re-baking and in-game checks.
 - `showcase-video` - scripted gameplay recordings (`tools/showcase/`).
 
 ## Ground rules
