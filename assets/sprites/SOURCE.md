@@ -693,3 +693,7 @@ no new character pixels are authored and the scorpion sheet is unchanged.
 through the0.4s load-up. Every other state uses strength0. The unmodified source
 sheet still supplies alpha, brightness and incoming sprite tint. Barb-only
 high/low preview in all8 directions accepted November17 before commit.
+
+## Revive cross and reward diamond sprites (#861)
+
+- `revive_cross.png` (12x12) and `reward_diamond.png` (9x12, neutral tones, tinted in game with modulate): authored in SpriteU (`tools/gen_pickups.py`, `sprites/revive-cross.json`, `sprites/reward-diamond.json`, `characters/pickups.md`) and exported with `--export`. Drawn at 2x. CC0 reference viewed only (OpenGameArt CC0 Gem Icons); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/18

@@ -11,7 +11,7 @@ signal collected(drop: RewardDrop, entry: RewardEntry)
 
 var entry: RewardEntry
 @onready var _name_label: Label = $NameLabel
-@onready var _visual: Polygon2D = $Visual
+@onready var _visual: Sprite2D = $Visual
 
 const TOKEN_COLOR := Color(0.75, 0.45, 1.0)
 const RELIC_COLOR := Color(0.3, 0.95, 0.85)
@@ -27,11 +27,11 @@ func _ready() -> void:
 	if entry.kind == RewardEntry.Kind.CURRENCY:
 		# #128 placeholder presentation: gold diamond labeled with the amount.
 		_name_label.text = "%dc" % entry.currency_amount
-		_visual.color = Color(1.0, 0.85, 0.2)
+		_visual.modulate = Color(1.0, 0.85, 0.2)
 	elif entry.kind == RewardEntry.Kind.UPGRADE_TOKEN:
 		# #315 placeholder presentation (art is human-open): violet diamond.
 		_name_label.text = "Upgrade Token"
-		_visual.color = TOKEN_COLOR
+		_visual.modulate = TOKEN_COLOR
 	elif entry.kind == RewardEntry.Kind.RELIC:
 		# #426 placeholder presentation (art is human-open): teal diamond
 		# labeled with the relic name.
@@ -39,13 +39,13 @@ func _ready() -> void:
 			push_warning("RewardDrop: no relic entry assigned.")
 			return
 		_name_label.text = entry.relic.display_name
-		_visual.color = RELIC_COLOR
+		_visual.modulate = RELIC_COLOR
 	elif entry.spell == null:
 		push_warning("RewardDrop: no spell entry assigned.")
 		return
 	else:
 		_name_label.text = entry.spell.spell_name
-		_visual.color = entry.spell.projectile_color
+		_visual.modulate = entry.spell.projectile_color
 	body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node2D) -> void:

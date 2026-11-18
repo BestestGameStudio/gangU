@@ -1,6 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://bgangu7revitem"]
+[gd_scene load_steps=5 format=3 uid="uid://bgangu7revitem"]
 
 [ext_resource type="Script" path="res://game/player/revive_item.gd" id="1_item"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/revive_cross.png" id="2_cross"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_item"]
 radius = 14.0
@@ -10,9 +12,10 @@ collision_layer = 64
 collision_mask = 2
 script = ExtResource("1_item")
 
-[node name="Visual" type="Polygon2D" parent="."]
-color = Color(0.3, 0.9, 0.4, 1)
-polygon = PackedVector2Array(-4, -12, 4, -12, 4, -4, 12, -4, 12, 4, 4, 4, 4, 12, -4, 12, -4, 4, -12, 4, -12, -4, -4, -4)
+[node name="Visual" type="Sprite2D" parent="."]
+texture_filter = 1
+scale = Vector2(2, 2)
+texture = ExtResource("2_cross")
 
 [node name="Decor" type="Node2D" parent="."]
 ; #92: four small diagonal dots around the dominant green cross - a
