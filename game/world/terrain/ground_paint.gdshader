@@ -14,6 +14,9 @@ uniform sampler2D types : filter_nearest;
 uniform vec2 lattice_origin;   // world position of texel (0, 0)'s lattice point
 uniform float cell = 64.0;
 uniform float art_px = 2.0;
+uniform sampler2D relief : filter_linear, repeat_disable;
+uniform vec2 relief_origin;
+uniform float relief_cell = 32.0;
 uniform float warp_amount = 70.0;
 
 const int GRASS = 0;
@@ -186,6 +189,51 @@ vec3 paint(int t, vec2 w, float tone) {
 	return VOID_C;
 }
 
+// R is the walkable top, G the wider foot of the cliff, B the cut stone stair.
+vec3 paint_relief(vec2 w, vec3 ground) {
+	vec2 grid = (w - relief_origin) / relief_cell;
+	vec2 size = vec2(textureSize(relief, 0));
+	if (any(lessThan(grid, vec2(0.0))) || any(greaterThanEqual(grid, size))) { return ground; }
+	vec3 tile = texture(relief, (floor(grid) + 0.5) / size).rgb;
+	if (tile.b > 0.5) {
+		float across = fract(grid.x);
+		bool curb = (across < 0.12 && texture(relief, (floor(grid) + vec2(-0.5, 0.5)) / size).b < 0.5)
+			|| (across > 0.88 && texture(relief, (floor(grid) + vec2(1.5, 0.5)) / size).b < 0.5);
+		if (curb) { return mod(w.y, 24.0) < 3.0 ? COBBLE_P[0] : COBBLE_P[3]; }
+		if (tile.g - tile.r < 0.25) { return slabs(w, 24.0, 1.4, 0.05, COBBLE, 0.57); }
+		float tread = mod(w.y, 12.0);
+		float joint = mod(w.x + floor(w.y / 12.0) * 19.0, 46.0);
+		vec3 stone = mix(COBBLE_P[2], COBBLE_P[4], vnoise(w / 7.0));
+		if (tread < 2.0) { return COBBLE_P[4] * 1.15; }
+		if (tread >= 8.0) { return COBBLE_P[1] * 0.82; }
+		return joint < 2.0 ? COBBLE_P[1] : stone;
+	}
+	// Interpolating the contours rounds grid corners. Small offsets chip the lip.
+	vec2 uv = (grid + (vnoise(w / 16.0) - 0.5) * 0.19) / size;
+	vec2 edges = texture(relief, uv).rg * 2.0;
+	float level = floor(edges.g + 0.5);
+	float foot = edges.g - level + 0.5;
+	float lip = edges.r - level + 0.5;
+	if (level > 0.0 && lip < 0.0) {
+		// On the far side only a low, grassy shoulder is visible.
+		float behind = texture(relief, uv + vec2(0.0, 1.1) / size).r * 2.0;
+		if (behind > level - 0.5) {
+			float chips = fbm(w / 18.0);
+			return mix(GRASS_P[1], CLIFF_P[4], smoothstep(0.38, 0.7, chips));
+		}
+		float seam = w.x / 21.0 + 0.42 * vnoise(w / 23.0);
+		float facet = hash(vec2(floor(seam), floor((w.y + 8.0 * sin(seam)) / 28.0)));
+		vec3 rock = mix(CLIFF_P[2], CLIFF_P[5], facet);
+		rock *= 0.86 + 0.23 * vnoise(w / 5.0);
+		if (mod(w.y + 10.0 * sin(seam * 0.55) + 8.0 * facet, 30.0) < 2.5) { rock *= 0.74; }
+		if (fract(seam) < 0.12) { rock = CLIFF_P[1]; }
+		if (lip > -0.11) { return mix(GRASS_P[2], GRASS_P[4], facet); }
+		return rock * (0.66 + 0.34 * smoothstep(0.0, 0.42, foot));
+	}
+	if (foot > 0.82) { ground *= 0.78; }
+	return ground * (1.0 + 0.045 * level);
+}
+
 void fragment() {
 	vec2 w = (floor(world / art_px) + 0.5) * art_px;   // one colour per art pixel
 	// Calm, broad patches with a little grain, so tufts and pieces carry the detail.
@@ -237,5 +285,5 @@ void fragment() {
 			}
 		}
 	}
-	COLOR = vec4(c / 255.0, 1.0);
+	COLOR = vec4(paint_relief(w, c) / 255.0, 1.0);
 }

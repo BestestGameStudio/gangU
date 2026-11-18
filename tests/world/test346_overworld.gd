@@ -29,6 +29,17 @@ func _run() -> void:
 	_check(ow.get_node_or_null("GateHub") == null and hub.get_node_or_null("GateOverworld") == null, 'hub has no teleport passage')
 	_check(ow.name == &'Overworld' and loader.regions.is_empty(), 'overworld mounts no dungeon regions (#643)')
 	var map := ow.get_node('Terrain') as TerrainMap
+	# Walk each flight both ways using the same displacement checks as the player.
+	for ends: Vector4 in [Vector4(1264, 1136, 1264, 976), Vector4(1392, 912, 1392, 752),
+			Vector4(-656, 688, -656, 528)]:
+		var lower := Vector2(ends.x, ends.y)
+		var upper := Vector2(ends.z, ends.w)
+		_check(TerrainMotion.clamp_displacement(map, lower, upper, false) == upper
+			and TerrainMotion.clamp_displacement(map, upper, lower, false) == lower,
+			'stairs at %s connect both landings' % lower)
+		var foot := lower - Vector2(64, 0)
+		_check(TerrainMotion.clamp_displacement(map, foot, upper - Vector2(64, 0), false).y > upper.y,
+			'cliff beside %s blocks the climb' % lower)
 	var enemy: Enemy
 	for n in get_nodes_in_group('enemies'):
 		if n is Enemy and ow.is_ancestor_of(n):
