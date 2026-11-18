@@ -15,7 +15,6 @@ uniform vec2 lattice_origin;   // world position of texel (0, 0)'s lattice point
 uniform float cell = 64.0;
 uniform float art_px = 2.0;
 uniform sampler2D cliff_edges : source_color, filter_nearest, repeat_disable;
-uniform sampler2D cliff_materials : source_color, filter_nearest, repeat_disable;
 uniform sampler2D relief : filter_linear, repeat_disable;
 uniform vec2 relief_origin;
 uniform float relief_cell = 32.0;
