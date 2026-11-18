@@ -34,3 +34,9 @@ freeze/death handoff, repeated exit/expiry cycles, target loss, debounce/cooldow
 illegal edges, missing grenades and stale callbacks. A scripted demo stages
 player position/HP only, with no state, timer or cloud-lifetime override. It is
 not manual balance testing or browser-play qualification.
+
+## Inside-smoke charge follow-up
+
+A new draft tracks continuous charging while the player shares the squad smoke.
+Current per-puff containment and newest-cloud-only tracking are under review;
+no change to gameplay semantics is made by this draft-start note.
