@@ -96,3 +96,22 @@ func _draw() -> void:
   var puff: Dictionary = _puffs[i]
   if puff.r < 5.0: continue
   draw_texture_rect_region(PUFF_ATLAS,Rect2(puff.p-Vector2.ONE*puff.r,Vector2.ONE*puff.r*2.0),Rect2(frame*64,0,64,64))
+
+func has_smoke() -> bool:
+ if is_queued_for_deletion() or _age >= lifetime: return false
+ for puff in _puffs:
+  if puff.r >= 5.0:return true
+ return false
+
+func contains_smoke(at: Vector2) -> bool:
+ var local := to_local(at)
+ for puff in _puffs:
+  if puff.r >= 5.0 and local.distance_to(puff.p) <= puff.r*0.8:return true
+ return false
+
+func interior_point(index: int) -> Vector2:
+ var live: Array[Vector2] = []
+ for puff in _puffs:
+  if puff.r >= 5.0:live.append(puff.p)
+ if live.is_empty():return global_position
+ return to_global(live[(index*11+int(live.size()/2))%live.size()])
