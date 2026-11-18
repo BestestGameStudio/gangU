@@ -1,5 +1,5 @@
 extends RefCounted
-## Terrace art follows the collision cells and the cap atlas silhouette.
+## Draw the terraces and record the visible cliff faces for movement.
 const CAP := preload("res://assets/sprites/terrain/terrace_grass_cliff_16.png")
 const FACE := preload("res://assets/sprites/terrain/terrace_front_tiles_flat.png")
 const LIGHT := preload("res://game/world/terrain/terrace_tile_light.gdshader")
@@ -10,10 +10,14 @@ const TILE := 16
 const QUADRANT := TILE / 2
 const CORNERS := [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN]
 
-static func add_layers(parent: CanvasItem, terraces: Terraces) -> void:
+static func add_layers(parent: CanvasItem, terraces: Terraces) -> Image:
+	var raster := Image.create(terraces.bounds.size.x * TILE, terraces.bounds.size.y * TILE,
+		false, Image.FORMAT_R8)
 	if terraces.tops.is_empty():
-		return
+		return raster
+	var origin := terraces.bounds.position * CELL
 	var atlas := CAP.get_image()
+	var face_atlas := FACE.get_image()
 	for level in range(1, int(terraces.tops.values().max()) + 1):
 		var layer := Node2D.new()
 		layer.name = "TerraceLevel%d" % level
@@ -38,6 +42,10 @@ static func add_layers(parent: CanvasItem, terraces: Terraces) -> void:
 			_draw_regions(layer, CAP, caps)
 		)
 		parent.add_child(layer)
+		# Trace the same draw order so a higher cap clears walls behind it.
+		_stamp_mask(raster, origin, face_atlas, faces, Color.RED)
+		_stamp_mask(raster, origin, atlas, caps, Color.BLACK)
+	return raster
 
 static func _build_masks(terraces: Terraces, level: int) -> Dictionary[Vector2i, int]:
 	var masks: Dictionary[Vector2i, int] = {}
@@ -57,7 +65,7 @@ static func _add_cap(regions: Array[Rect2i], terraces: Terraces, cell: Vector2i,
 		source: Vector2i, world: Vector2i) -> void:
 	var size := Vector2i.ONE * QUADRANT
 	for corner: Vector2i in CORNERS:
-		if not terraces.stairs.has(cell + corner):
+		if not terraces.paths.has(cell + corner):
 			var offset := corner * QUADRANT
 			_add_region(regions, world + offset * ART_SCALE, source + offset, size)
 
@@ -85,7 +93,7 @@ static func _add_face_column(regions: Array[Rect2i], terraces: Terraces,
 		var cell := terraces.cell_at(Vector2(at))
 		@warning_ignore("integer_division")
 		var length := mini(FACE.get_height() - depth, (CELL - posmod(at.y, CELL)) / ART_SCALE)
-		if terraces.bases.get(cell, 0) >= level and not terraces.stairs.has(cell):
+		if terraces.bases.get(cell, 0) >= level and not terraces.paths.has(cell):
 			_add_region(regions, at, Vector2i(src_x, depth), Vector2i(1, length))
 		depth += length
 
@@ -97,3 +105,15 @@ static func _add_region(regions: Array[Rect2i], world: Vector2i, source: Vector2
 static func _draw_regions(canvas: CanvasItem, atlas: Texture2D, regions: Array[Rect2i]) -> void:
 	for index in range(0, regions.size(), 2):
 		canvas.draw_texture_rect_region(atlas, Rect2(regions[index]), Rect2(regions[index + 1]))
+
+static func _stamp_mask(raster: Image, origin: Vector2i, atlas: Image,
+		regions: Array[Rect2i], color: Color) -> void:
+	for i in range(0, regions.size(), 2):
+		@warning_ignore("integer_division")
+		var destination := (regions[i].position - origin) / ART_SCALE
+		var source := regions[i + 1]
+		for y in range(source.size.y):
+			for x in range(source.size.x):
+				var offset := Vector2i(x, y)
+				if atlas.get_pixelv(source.position + offset).a > 0.0:
+					raster.set_pixelv(destination + offset, color)

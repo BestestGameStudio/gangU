@@ -98,6 +98,9 @@ var _type_props: Dictionary = {} ## StringName -> read-only Dictionary
 ## Vector3(x, y, radius). Kept apart from the cell store: OBSTACLE cells
 ## (dungeon borders, maze walls) keep letting shots through as before.
 var _shot_blockers: Array[Vector3] = []
+var _terrace_faces: Image
+var _terrace_face_bounds := Rect2()
+var _terrace_face_scale := 1.0
 var _trunk_rects: Array[Rect2] = []
 var _trunk_cells: Dictionary = {}
 var _trunk_bodies: Node2D
@@ -289,6 +292,35 @@ func trunk_block_t(from: Vector2, motion: Vector2) -> float:
 				if enter <= leave and (best < 0 or enter < best): best = enter
 	return best
 
+## Sloped wall edges are finer than the movement grid. This mask
+## supplements coarse obstacles where a visible wall crosses a walkable cell.
+func set_terrace_face_mask(image: Image, origin: Vector2, pixels_per_texel: float) -> void:
+	_terrace_faces = image
+	_terrace_face_scale = pixels_per_texel
+	_terrace_face_bounds = Rect2(origin, Vector2(image.get_size()) * pixels_per_texel)
+
+func terrace_face_at(point: Vector2) -> bool:
+	if not _terrace_face_bounds.has_point(point):
+		return false
+	var pixel := Vector2i(((point - _terrace_face_bounds.position) / _terrace_face_scale).floor())
+	return _terrace_faces.get_pixelv(pixel).r > 0.5
+
+## Return the last reachable fraction before a face, or -1 for a clear
+## sweep. Movers that start inside an obstruction can walk out.
+func terrace_face_stop(from: Vector2, motion: Vector2) -> float:
+	if motion.is_zero_approx() or not _terrace_face_bounds.intersects(
+			Rect2(from, Vector2.ZERO).expand(from + motion), true):
+		return -1.0
+	var steps := ceili(motion.length() / (_terrace_face_scale * 0.5))
+	var started_inside := terrace_face_at(from)
+	for i in range(1, steps + 1):
+		var fraction := float(i) / steps
+		var blocked := terrace_face_at(from + motion * fraction)
+		if blocked and not started_inside:
+			return float(i - 1) / steps
+		started_inside = started_inside and blocked
+	return -1.0
+
 ## #407: replaces the projectile-blocking circles (Vector3(x, y, radius),
 ## world space). Indestructible: hits never remove them.
 func set_projectile_blockers(circles: Array[Vector3]) -> void:
@@ -368,7 +400,8 @@ func is_walkable_type(type: StringName) -> bool:
 	return (f if f != null else _cache_type(type)) & _WALKABLE != 0
 
 func is_walkable_at(world_pos: Vector2) -> bool:
-	return not trunk_contains(world_pos) and _cell_flags(world_to_cell(world_pos)) & _WALKABLE != 0
+	return (not terrace_face_at(world_pos) and not trunk_contains(world_pos)
+		and _cell_flags(world_to_cell(world_pos)) & _WALKABLE != 0)
 
 ## #461: true when the cell at world_pos hides whoever stands there (tall
 ## grass). Palette-aware like every other property lookup.

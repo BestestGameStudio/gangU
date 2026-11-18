@@ -37,7 +37,9 @@ const CANOPY_Z := 3
 ## popping while avoiding a redraw for every subpixel of camera movement.
 var _view := Rect2(Vector2(-100000,-100000), Vector2(200000,200000))
 var _view_bucket := Vector2i(2147483647,2147483647)
+const TERRACE_ART := preload("res://game/world/terrain/terrace_tile_art.gd")
 var terraces := preload("res://game/world/overworld_terraces.gd").new()
+var _terrace_faces: Image
 var outline: PackedVector2Array
 var spawn := Vector2(576, 480)
 var landmarks: Array[Vector2] = []
@@ -93,7 +95,7 @@ func _init() -> void:
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
 	_paint = _make_paint()
-	preload("res://game/world/terrain/terrace_tile_art.gd").add_layers(self, terraces)
+	_terrace_faces = TERRACE_ART.add_layers(self, terraces)
 	var black := Node2D.new()
 	black.name = "BlackBackdrop"
 	black.z_as_relative = false
@@ -307,6 +309,8 @@ func build_from(area: Node) -> void:
 	var terrain := area.get_node_or_null("Terrain") as TerrainMap
 	if terrain != null:
 		terrain.set_cells(terraces.walls)
+		terrain.set_terrace_face_mask(_terrace_faces,
+			to_global(Vector2(terraces.bounds.position) * terraces.CELL), TERRACE_ART.ART_SCALE)
 	_build_tall_grass()
 	_plant_tall_grass(area)
 	_build_scatter(area)
@@ -331,8 +335,8 @@ const MAP_COLORS := {
 
 func map_color(cell: Vector2i) -> Color:
 	var sample := terraces.cell_at((Vector2(cell) + Vector2(0.5, 0.5)) * DualGrid.CELL)
-	if terraces.stairs.has(sample):
-		return Color8(173, 154, 119)
+	if terraces.paths.has(sample):
+		return MAP_COLORS[DualGrid.T.GRASS]
 	if terraces.walls.has(sample):
 		return MAP_COLORS[DualGrid.T.CLIFF]
 	var types: Array[int] = [
@@ -708,6 +712,7 @@ const BEACH_WALK_OUT := 112.0
 ## past it, then ocean. Water tiles are drawn (animated) by OverworldWater;
 ## the blocked band below already ends movement before either waterline.
 const CLIFF_BAND := 256.0
+const COAST_CLIFF_HEIGHT := 144.0
 const BEACH_IN := 192.0
 const BEACH_OUT := 128.0
 var _beach_outer := PackedVector2Array()
@@ -729,7 +734,7 @@ var _desert_noise: FastNoiseLite
 func _front_rim() -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for p in outline:
-		pts.append(p + Vector2(0, 144))
+		pts.append(p + Vector2(0, COAST_CLIFF_HEIGHT))
 	return pts
 
 ## Terrain type at a lattice point (world position = point * 64).
@@ -866,7 +871,7 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 ## tiles: every lattice type of the field is baked into a tiny R8 texture
 ## (one texel per 64 px point) that the shader samples at noise-warped
 ## positions, so boundaries curve instead of stepping along the grid.
-## Outside the outline every point is CLIFF (rock face, then void).
+## The coast also bakes a distance and texture coordinate for its rock face.
 const GROUND_SHADER := preload("res://game/world/terrain/ground_paint.gdshader")
 var _paint: Node2D
 var _paint_rect := Rect2()
@@ -895,7 +900,9 @@ func _build_ground_paint() -> void:
 			var t := DualGrid.T.CLIFF
 			if Geometry2D.is_point_in_polygon(Vector2(p) * 64.0, grown):
 				t = _lattice_type(p.x, p.y)
-				if t == DualGrid.T.WATER:
+				if t == DualGrid.T.WATER and not _is_south(Vector2(p) * DualGrid.CELL):
+					t = DualGrid.T.CLIFF
+				elif t == DualGrid.T.WATER:
 					t = DualGrid.T.SAND ## sand under the animated water layer
 					for n in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 						if _lattice_type(p.x + n.x, p.y + n.y) == DualGrid.T.CLIFF:
@@ -906,11 +913,54 @@ func _build_ground_paint() -> void:
 							break
 			img.set_pixel(i, j, Color8(t, 0, 0))
 	var mat := _paint.material as ShaderMaterial
-	terraces.bake(mat)
+	terraces.bake_path_mask(mat)
+	mat.set_shader_parameter("cliff_face", preload("res://assets/sprites/terrain/terrace_front_tiles_flat.png"))
+	mat.set_shader_parameter("coast", ImageTexture.create_from_image(_bake_coast(lo, size)))
+	mat.set_shader_parameter("cliff_height", COAST_CLIFF_HEIGHT)
 	mat.set_shader_parameter("types", ImageTexture.create_from_image(img))
 	mat.set_shader_parameter("lattice_origin", Vector2(lo) * 64.0)
 	_paint_rect = Rect2(Vector2(lo) * 64.0, Vector2(size - Vector2i.ONE) * 64.0)
 	_paint.queue_redraw()
+
+## Distance outside the outline, distance along the outline, and how far
+## down the coast faces. Start the texture seam at the southern beach.
+func _bake_coast(lo: Vector2i, size: Vector2i) -> Image:
+	var image := Image.create(size.x, size.y, false, Image.FORMAT_RGBAH)
+	var first := 0
+	for i in range(outline.size()):
+		if outline[i].y > outline[first].y:
+			first = i
+	var starts := PackedVector2Array()
+	var tangents := PackedVector2Array()
+	var lengths := PackedFloat32Array()
+	var arc := PackedFloat32Array()
+	var perimeter := 0.0
+	for i in range(outline.size()):
+		var index := (first + i) % outline.size()
+		var edge := outline[(index + 1) % outline.size()] - outline[index]
+		starts.append(outline[index])
+		var length := edge.length()
+		tangents.append(edge / length)
+		lengths.append(length)
+		arc.append(perimeter)
+		perimeter += length
+	for y in range(size.y):
+		for x in range(size.x):
+			var point := Vector2(lo + Vector2i(x, y)) * DualGrid.CELL
+			var best_distance := INF
+			var sample := Color()
+			for i in range(starts.size()):
+				var relative := point - starts[i]
+				var tangent := tangents[i]
+				var along := clampf(relative.dot(tangent), 0.0, lengths[i])
+				var offset := relative - tangent * along
+				var distance := offset.length_squared()
+				if distance < best_distance:
+					best_distance = distance
+					var normal := Vector2(tangent.y, -tangent.x)
+					sample = Color(offset.dot(normal), arc[i] + along, normal.y)
+			image.set_pixel(x, y, sample)
+	return image
 
 ## Block the border band so the playable area ends at the cliff: every
 ## Terrain cell whose centre lies between the outline and the blocked band

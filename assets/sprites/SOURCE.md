@@ -774,3 +774,7 @@ BR4 BL8 mask order. The renderer uses cap alpha for the front-wall joins.
 rock, fissures, and overhang shadow come from the atlas. Both sheets draw
 at 2× scale. Each terrace level applies its own shader treatment to the
 grass fill. The reference informed the edge and wall placement.
+
+GangU also samples the same front-wall atlas along the coastal cliffs.
+The coast shader narrows and darkens side faces and shades the lip to match
+the adjoining ground material.
