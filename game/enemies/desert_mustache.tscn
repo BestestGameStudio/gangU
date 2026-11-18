@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3]
+[ext_resource type="PackedScene" path="res://game/enemies/enemy_base.tscn" id="1"]
+[ext_resource type="Resource" path="res://data/enemies/desert_mustache.tres" id="2"]
+[ext_resource type="SpriteFrames" path="res://data/sprites/desert_mustache_frames.tres" id="3"]
+[node name="DesertMustache" instance=ExtResource("1")]
+definition = ExtResource("2")
+[node name="Shadow" parent="." index="0"]
+position = Vector2(0,13)
+color = Color(0,0,0,0.32)
+polygon = PackedVector2Array(-12,0,-8,-3,0,-4,8,-3,12,0,8,3,0,4,-8,3)
+[node name="Sprite" parent="." index="1"]
+position = Vector2(0,-7)
+texture_filter = 1
+sprite_frames = ExtResource("3")
+animation = &"idle"

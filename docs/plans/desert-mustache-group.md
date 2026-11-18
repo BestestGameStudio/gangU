@@ -1,5 +1,26 @@
-# Unplaced desert mustache group (in progress)
-Exactly5 authored members travel together, spread on player approach and hold
-range. A living leader throws lightweight SpriteU smoke. Grenade landing, not a
-separate guessed timer, releases the group into a charge. No level, SpawnData,
-catalog encounter or production placement is authorized or added.
+# Unplaced desert mustache squad
+
+Owner direction: groups of5 travel together, spread and keep distance when a
+player approaches, one leader throws lightweight SpriteU smoke, then all living
+members charge on actual grenade landing. No level, SpawnData, catalog or
+encounter mounts this scene. Place the group under a mounted area when placement
+is separately authorized; its player_path and terrain_path are explicit seams.
+
+The group owns formation/phase/leader election; independent EnemyBehavior
+instances own terrain-safe desired movement and contact damage through Enemy's
+existing DamageCalc/OnHit API. No shared Enemy/area-loader changes. Dead members
+are pruned, leadership transfers to a survivor, frozen/stunned leader cannot
+advance the throw, and lost/hidden/dead/far player regroups. A grenade already in
+flight belongs to the area, not its thrower. Generation-stamped landed callback
+releases CHARGE once; a3s missing-landing timeout aborts/regroups, never invents a
+landing. Shared grenade API dependency isolated to _throw and _on_smoke_landed.
+
+PLACEHOLDER tuning: HP60, speed105/charge194.25px/s, damage10/contact0.8s/range35,
+approach360/disengage760/keep230px, spread1.8s/windup0.4s/lob0.6s. Charge persists
+until target loss/disengage. No respawning killed members. No reward-table or
+objective selection. Original approved SpriteU22 atlas imported byte-identically.
+
+Actual Main/Hub scripted15s demo shows all phases and contact damage. Player
+HP boosted1000 for recording, approach/dodge scripted via real movement input,
+no production placement. Native evidence, not human balance or browser play.
+Current exit warning names existing OGG playback resources, not squad scripts.
