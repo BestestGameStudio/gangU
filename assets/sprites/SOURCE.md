@@ -713,3 +713,7 @@ no gangU art generator. Dark cracks, lifted sandy plates and clods, no glow.
 Animated native/enlarged preview approved November17 before source commit.
 Runtime samples actual movement every20px, rotates/fades world-fixed stamps,
 and freezes their clocks with the owner. No hitbox or damage.
+
+## Terrace and coastal cliff material (#888)
+
+Original six-material rock texture, source generator and tileset notes in SpriteU PR #24. Atlas export is 512x384 RGBA: eight 64x64 variants across, material rows grass, dirt, sand, sandstone, stone, cobble. All texels opaque; the terrain shader supplies the silhouette, cap and ambient shadow. Upper-left lighting, nearest filtering, normal canvas day/night tint. Reference informed perspective only, no external pixels copied. Terrain layout, collision and stairs unchanged.
