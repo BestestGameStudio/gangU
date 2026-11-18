@@ -34,7 +34,7 @@ static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) ->
 				var at: Vector2 = origin+Vector2(0,depth)
 				var length: int = mini(64-depth,32-posmod(int(at.y),32))
 				if not terraces.stairs.has(terraces.cell_at(at+Vector2.ONE)):
-					canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(1,length)),Rect2(0,depth,1,length))
+					canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(1,length)),Rect2(posmod(int(at.x),256),depth,1,length))
 				depth += length
 	# Dual-grid corners are the existing cell centres, not noisy contours.
 		for x in range(terraces.bounds.position.x,terraces.bounds.end.x):

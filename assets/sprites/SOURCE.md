@@ -749,3 +749,18 @@ SpriteU `gen_terrace_dualgrid.py` / `terrace-grass-cliff-16.json` exports 128x12
 ### Normal overworld grass correction
 
 Old dualgrid grass was a regression. Terrace tile grass regions now use the same world-coordinate fbm/vnoise and exact GRASS_P palette as ground_paint, at the same 2px art grid. Actual 16-mask tile placement remains; the shader paints only the grass local colour, not geometry/masks. Old grass variant texture sampling is removed. Flat rock colour is now #77716a (neutral stone), still no painted shadows. No gameplay/collision data changed.
+
+### Brown shaded front walls
+
+SpriteU source commit4d49bcf, tools/gen_terrace_front_rock.py and char-mode
+sprites/terrace-front-tiles-flat.json. Filename retained for continuity, but
+front-only painted shading is now intentional. Eight connected32x64 panels
+exported256x64 with matching left/right boundary colours on every row. World-X
+sampling preserves the connected texture across one-pixel face strips. Original
+earth-brown rock planes, sparse short fissures and broken facet lights. Palette
+uses the existing dirt family. Top8px neutral rim, actual16-mask grass transitions,
+placement, stair clipping and gameplay/collision remain unchanged. Shader no longer
+adds grey depth bands over painted front rock. Coast remains unchanged.
+References visually studied: https://grajopx.itch.io/rocky-pine-forest and
+https://snaply.itch.io/environmental-tiles-pixel-art-top-down-tileset. No external
+pixels copied. Deliberately simple broad slabs;256px repeat visible on long walls.
