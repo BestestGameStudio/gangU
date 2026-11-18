@@ -717,3 +717,19 @@ and freezes their clocks with the owner. No hitbox or damage.
 ## Terrace and coastal cliff material (#888)
 
 Original six-material rock texture, source generator and tileset notes in SpriteU PR #24. Atlas export is 512x384 RGBA: eight 64x64 variants across, material rows grass, dirt, sand, sandstone, stone, cobble. All texels opaque; the terrain shader supplies the silhouette, cap and ambient shadow. Upper-left lighting, nearest filtering, normal canvas day/night tint. Reference informed perspective only, no external pixels copied. Terrain layout, collision and stairs unchanged.
+
+## Lightweight smoke puff
+Original SpriteU source: BestestGameStudio/SpriteU PR23, sprites/pixel-smoke-puff.json
+and tools/build_smoke.py, approved after a pre-commit image/video preview. Three
+flat tones,4x220ms frames,64x64 cells,256x64 transparent atlas. Exported at1x through
+the SpriteU viewer; generator-authored JSON, not hand-painted in the viewer. No
+reference raster copied. Source must land before the integration PR can land.
+
+## Hooded desert mustache man
+Approved source SpriteU PR22, merged013bbb390f8a6ad805bb0dbe3201bac5cf9d66c0.
+Original geometry authored in characters/desert-mustache-warrior/desert_rig.py
+and build_desert.py, not copied from reference pixels or hand-painted in viewer.
+64x48 cells,512x480 atlas,42 frames across16 animation names. Imported atlas
+byte-identical to source; SpriteFrames preserves original reference timing/layout,
+with texture path changed to desert_mustache.png and stale UIDs removed.
+No scene in any level/SpawnData/encounter references this group.

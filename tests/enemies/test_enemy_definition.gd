@@ -148,6 +148,7 @@ func _initialize() -> void:
 
 	await _test_fishy_audio()
 	await _test_scorpion()
+	await _test_desert_group()
 
 	if failures == 0:
 		print("[98] PASS")
@@ -829,3 +830,173 @@ func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array
 		var color := image.get_pixelv(Vector2i(expected))
 		var visible_tip := color.a > 0.0 and color.r < 0.68 and color.b > color.r
 		_check(e.stinger_exposed() == visible_tip,"scorpion: occlusion follows actual pixel %s:%d" % [animation,k])
+
+## Shared squad lifecycle and grenade-landing synchronization are otherwise
+## silent core contracts; content tuning/visual poses are deliberately unpinned.
+func _test_desert_group() -> void:
+	var world := Node2D.new()
+	root.add_child(world)
+	var p: Player = load("res://game/player/player.tscn").instantiate()
+	p.name = "Player"
+	world.add_child(p)
+	p.set_physics_process(false)
+	p.position = Vector2(-2000,0)
+	var area := Node2D.new()
+	world.add_child(area)
+	var squad: DesertMustacheGroup = load("res://game/enemies/desert_mustache_group.tscn").instantiate()
+	area.add_child(squad)
+	squad.set_physics_process(false)
+	for member in squad.members: member.set_physics_process(false)
+	_check(squad.members.size() == 5,"desert: group scene owns exactly five independent enemies")
+	_check(squad.members[0]._behavior != squad.members[1]._behavior,"desert: member behavior state is never shared")
+	var all_five: Dictionary = {}
+	for i in 5:
+		var pick := squad._pick_thrower()
+		all_five[pick.get_instance_id()] = true
+		squad._next_slot = (int(squad._slots[pick.get_instance_id()])+1)%squad._slot_count
+	_check(all_five.size() == 5,"desert: all five scene members are eligible in round-robin order")
+	_check(not squad._enter(DesertMustacheGroup.State.WAIT_SMOKE),"desert: travel cannot skip to airborne wait")
+
+	squad._physics_process(0.1)
+	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: distant player keeps traveling formation")
+	p.position = squad.leader.position+Vector2(200,0)
+	squad._physics_process(0.1)
+	_check(squad.state == DesertMustacheGroup.State.SPREAD,"desert: player approach spreads group")
+	_check(squad.destination(squad.members[0]).distance_to(squad.destination(squad.members[4])) > 100,"desert: spread members have distinct separated destinations")
+	squad._physics_process(squad.spread_seconds)
+	_check(squad.state == DesertMustacheGroup.State.THROW,"desert: spread precedes elected member throw")
+	var first_thrower := squad.thrower
+	first_thrower.set_frozen(true)
+	squad._physics_process(2.0)
+	_check(squad.thrower != first_thrower and squad._clock == 0.0,"desert: frozen thrower is replaced with fresh windup")
+	first_thrower.set_frozen(false)
+	squad._physics_process(squad.throw_windup)
+	_check(squad.state == DesertMustacheGroup.State.WAIT_SMOKE,"desert: throw does not immediately release charge")
+	await process_frame
+	_check(squad._grenade != null,"desert: deferred production grenade exists")
+	for i in 45: await physics_frame
+	_check(squad.state == DesertMustacheGroup.State.CHARGE,"desert: real cloud landing releases group charge")
+	var first_cloud := squad._cloud
+	first_cloud.set_physics_process(false)
+	for i in 200: first_cloud._physics_process(0.05)
+	p.position = first_cloud.global_position
+	_check(not first_cloud.contains_smoke(p.position) and first_cloud.contains_footprint(p.position),"desert: live10s inter-puff gap belongs to continuous footprint")
+	squad._physics_process(4.0)
+	_check(squad.state == DesertMustacheGroup.State.CHARGE and squad._outside_clock == 0.0,"desert: stationary inter-puff player keeps charging without rethrow")
+	for retry_state in [DesertMustacheGroup.State.SPREAD,DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE]:
+		squad._enter(DesertMustacheGroup.State.SPREAD)
+		if retry_state != DesertMustacheGroup.State.SPREAD: squad._enter(DesertMustacheGroup.State.THROW)
+		if retry_state == DesertMustacheGroup.State.WAIT_SMOKE: squad._enter(retry_state)
+		squad._physics_process(0.1)
+		_check(squad.state == DesertMustacheGroup.State.CHARGE and squad._clock == 0.0,"desert: shared smoke cancels retry state %d"%retry_state)
+
+	_check(squad.destination(squad.members[0]) == p.global_position,"desert: charge destination follows player across visual gap")
+	# Restore initial puff shape for the independent lifecycle contracts below.
+	first_cloud.free()
+	var restored := SmokeCloud.spawn(area,p.position)
+	squad._clouds = [restored]
+	squad._cloud = restored
+
+	# Tiny movement inside the cloud never rearms. Actual exit must persist.
+	squad._rearm = squad.launch_cooldown
+	var launch_generation := squad._generation
+	p.position += Vector2(1,0)
+	squad._physics_process(0.1)
+	_check(squad.state == DesertMustacheGroup.State.CHARGE,"desert: motion within smoke does not rethrow")
+	p.position = squad._cloud.global_position+Vector2(250,0)
+	squad._physics_process(0.5)
+	_check(squad.state == DesertMustacheGroup.State.SMOKE_HOLD,"desert: leaving smoke starts debounce refuge")
+	p.position = squad._cloud.global_position
+	squad._physics_process(0.01)
+	_check(squad._outside_clock == 0.0,"desert: returning inside resets exit debounce")
+	p.position += Vector2(250,0)
+	squad._physics_process(1.0)
+	_check(squad.state == DesertMustacheGroup.State.SMOKE_HOLD,"desert: minimum launch cooldown prevents immediate rethrow")
+	squad._physics_process(3.0)
+	_check(squad.state == DesertMustacheGroup.State.SPREAD,"desert: sustained exit rearms after cooldown")
+	var cloud := squad._cloud
+	squad._on_smoke_landed(cloud,launch_generation)
+	_check(squad.state == DesertMustacheGroup.State.SPREAD,"desert: stale landing cannot skip new spread")
+	_check(not squad._enter(DesertMustacheGroup.State.CHARGE),"desert: illegal spread-to-charge transition rejected")
+	squad._physics_process(squad.spread_seconds)
+	var dying_thrower := squad.thrower
+	dying_thrower.apply_damage(10000)
+	squad._physics_process(0.1)
+	_check(squad.state == DesertMustacheGroup.State.THROW and squad.thrower != dying_thrower and squad._clock == 0.0,"desert: dead thrower replaced and windup restarts")
+	var released_thrower := squad.thrower
+	squad._physics_process(squad.throw_windup)
+	await process_frame
+	released_thrower.apply_damage(10000)
+	squad._physics_process(0.01)
+	for i in 45: await physics_frame
+	_check(squad.state == DesertMustacheGroup.State.CHARGE,"desert: airborne rethrow survives thrower death and lands")
+	var newest := squad._cloud
+	# Both retained clouds are squad-owned. Standing in the older smoke must
+	# cancel an exit rethrow even when outside the newer cloud.
+	p.position = restored.global_position+Vector2(-150,0)
+	_check(not newest.contains_footprint(p.position),"desert: older cloud fixture is outside newer footprint")
+	squad._physics_process(4.0)
+	_check(squad.state == DesertMustacheGroup.State.CHARGE and squad._cloud == restored,"desert: older owned smoke retains charge and cancels exit clock")
+	var unrelated := SmokeCloud.spawn(area,Vector2(-1500,0))
+	p.position = unrelated.interior_point(0)
+	_check(not squad.player_in_smoke(p),"desert: unrelated squad smoke cannot retain charge")
+	unrelated.queue_free()
+	p.position = newest.interior_point(0)
+	squad._physics_process(0.01)
+	newest.lifetime = 0.0
+	squad._physics_process(0.01)
+	_check(squad.state != DesertMustacheGroup.State.SCATTER and not squad._clouds.is_empty(),"desert: one expired cloud does not scatter while owned smoke survives")
+
+	# Leader disable must not stall a different elected thrower or landing.
+	for owned in squad._clouds: owned.lifetime = 0.0
+	squad._physics_process(0.01)
+	_check(squad.state == DesertMustacheGroup.State.SCATTER,"desert: dissipated cloud releases scatter")
+	squad._physics_process(squad.scatter_seconds)
+	_check(squad.state == DesertMustacheGroup.State.SPREAD,"desert: expiry scatter rearms another cycle")
+	var eligible: Array[Enemy] = squad.members.duplicate()
+	for member in eligible: member.set_frozen(true)
+	squad._physics_process(squad.spread_seconds)
+	_check(squad.state == DesertMustacheGroup.State.SPREAD and squad.thrower == null,"desert: all disabled waits safely without a thrower")
+	for member in eligible: member.set_frozen(false)
+	# Exercise the round robin against stable slots, including pruned/dead gaps.
+	var selected: Dictionary = {}
+	for i in eligible.size():
+		var pick := squad._pick_thrower()
+		selected[pick.get_instance_id()] = true
+		squad._next_slot = (int(squad._slots[pick.get_instance_id()])+1)%squad._slot_count
+	_check(selected.size() == eligible.size(),"desert: every living member can take a turn")
+	squad._physics_process(0.01)
+	_check(squad.state == DesertMustacheGroup.State.THROW,"desert: recovered member resumes valid windup")
+	squad._physics_process(squad.throw_windup)
+	await process_frame
+	for i in 45: await physics_frame
+	p.apply_damage(10000)
+	squad._physics_process(4.0)
+	_check(squad.state == DesertMustacheGroup.State.SMOKE_HOLD,"desert: dead target stays in smoke without throwing")
+	_check(squad._cloud.contains_smoke(squad.destination(squad.leader)),"desert: no-target hold destination remains inside smoke")
+	# WAIT timeout and cancellation invalidate callbacks, rather than charging.
+	for owned in squad._clouds: owned.lifetime = 0.0
+	squad._physics_process(0.01)
+	squad._physics_process(squad.scatter_seconds)
+	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: scatter without target returns to travel")
+	p.hp = 100
+	p.position = squad.leader.position+Vector2(200,0)
+	squad._physics_process(0.01)
+	squad._physics_process(squad.spread_seconds)
+	squad._physics_process(squad.throw_windup)
+	await process_frame
+	var timed_out_generation := squad._generation
+	squad._grenade.queue_free()
+	await process_frame
+	squad._physics_process(3.1)
+	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: removed grenade times out safely")
+	squad._on_smoke_landed(squad._cloud,timed_out_generation)
+	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: timed-out callback cannot charge")
+	var freed_member: Enemy = squad.members.back()
+	freed_member.free()
+	squad._physics_process(0.01)
+	_check(squad.members.size() == 2,"desert: freed member pruned without invalid-instance argument access")
+
+	for i in 90: await physics_frame
+	world.queue_free()
+	await process_frame
