@@ -1,7 +1,7 @@
 class_name EnemyBehaviorScorpion
 extends EnemyBehavior
 ## #855: explicit clocks, aim lock, no contact attacks outside strike windows.
-enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_HOP, STING_STRIKE, MISS_STUN, RECOVER, CHASE, PINCER_WINDUP, PINCER_STRIKE, PINCER_RECOVER, BURY }
+enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_HOP, STING_STRIKE, MISS_STUN, RECOVER, CHASE, PINCER_WINDUP, PINCER_STRIKE, PINCER_RECOVER, BURY, BURROW_PURSUIT }
 @export var wake_range := 300.0
 @export var pincer_range := 50.0
 @export var sting_range := 160.0
@@ -10,6 +10,7 @@ enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, S
 @export var hide_delay := 2.0
 @export var dash_speed := 900.0
 @export var dash_distance := 200.0
+@export var burrow_speed := 600.0
 @export var sting_damage := 25
 @export var sting_gap := 1.5
 @export var pincer_damage := 15
@@ -41,6 +42,8 @@ var _path := TerrainPath.new()
 var _initial_charge := false
 var _charge_cd := 0.0
 var _charge_length := 0.0
+var _pursue_after_bury := false
+var _pursuit_emerge := false
 const CHARGE_HIT_RADIUS := 24.0
 
 func _enter(e: EnemyScorpion, next: State) -> void:
@@ -50,7 +53,14 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 	e.clear_action()
 	e.set_hop_height(0.0)
 	match state:
-		State.BURIED: e.set_buried(true)
+		State.BURIED:
+			_pursue_after_bury = false
+			_far = 0.0
+			e.set_buried(true)
+		State.BURROW_PURSUIT:
+			_pursue_after_bury = false
+			_far = 0.0
+			e.set_buried(true)
 		State.BURROW_RUSH:
 			e.set_buried(true)
 			_remaining = dash_distance
@@ -68,7 +78,7 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.sprite.set_frame_and_progress(1,0.0)
 			e.sprite.pause()
 		State.EMERGE:
-			_initial_charge = true
+			_initial_charge = not _pursuit_emerge
 			e.set_buried(false)
 			e.play_action(&"emerge", true)
 		State.STING_WINDUP:
@@ -123,6 +133,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		_far = _far+delta if distance > hide_range else 0.0
 		if _far >= hide_delay:
 			_far = 0.0
+			_pursue_after_bury = false
 			_enter(e,State.BURY)
 			return
 	match state:
@@ -131,11 +142,35 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 				_aim = off.normalized()
 				e.face_player(_aim)
 				_enter(e,State.BURROW_RUSH)
+		State.BURROW_PURSUIT:
+			if not alive:
+				_enter(e,State.BURIED)
+				return
+			_far = _far+delta if distance > hide_range else 0.0
+			if _far >= hide_delay:
+				_enter(e,State.BURIED)
+				return
+			if distance > hide_range:
+				e.velocity = Vector2.ZERO
+				return
+			if distance <= sting_range:
+				_aim = off.normalized()
+				e.face_player(_aim)
+				_pursuit_emerge = true
+				_enter(e,State.EMERGE)
+			else:
+				# Live pursuit, terrain-aware steering. Movement cannot cross the
+				# sting boundary in one tick; reels remain the sole external mover.
+				var direction := _path.steer(e.terrain,e.global_position,e.velocity,off.normalized()*burrow_speed,player.global_position,burrow_speed,delta,false,true).normalized()
+				var step := minf(burrow_speed*delta,maxf(0.0,distance-sting_range))
+				e.velocity = direction*step/maxf(delta,0.000001)
+				e.terrain_move_and_slide()
 		State.BURROW_RUSH:
 			# Rush toward locked player position, leaving room for the body charge tell.
 			if not alive or distance <= 180.0 or _remaining <= 0.0:
 				if alive: _aim = off.normalized()
 				e.face_player(_aim)
+				_pursuit_emerge = false
 				_enter(e,State.EMERGE)
 			else:
 				_move(e,delta,minf(_remaining,maxf(0.0,distance-180.0)))
@@ -146,6 +181,8 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 					_aim = off.normalized()
 					e.face_player(_aim)
 					_enter(e,State.STING_WINDUP)
+				elif _pursuit_emerge and (not alive or distance > charge_range):
+					_enter(e,State.CHASE)
 				else:
 					_enter(e,State.CHARGE_WINDUP)
 		State.CHARGE_WINDUP:
@@ -219,7 +256,10 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 				e.velocity = Vector2.ZERO
 				return
 			e.face_player(off)
-			if distance <= sting_range and _sting_cd <= 0.0:
+			if distance > charge_range and distance <= hide_range:
+				_pursue_after_bury = true
+				_enter(e,State.BURY)
+			elif distance <= sting_range and _sting_cd <= 0.0:
 				_aim = off.normalized()
 				_enter(e,State.STING_WINDUP)
 			elif distance > sting_range and distance <= charge_range and _charge_cd <= 0.0:
@@ -241,7 +281,8 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		State.PINCER_RECOVER:
 			if _time >= 0.32: _enter(e,State.CHASE)
 		State.BURY:
-			if _time >= transition_time: _enter(e,State.BURIED)
+			if _time >= transition_time:
+				_enter(e,State.BURROW_PURSUIT if _pursue_after_bury and alive and distance <= hide_range else State.BURIED)
 
 func _move(e: EnemyScorpion, delta: float, budget: float) -> void:
 	var step := minf(dash_speed*delta,budget)

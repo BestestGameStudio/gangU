@@ -704,6 +704,84 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,0.4)
 	b.physics_step(e,p,0.07)
 	_check(e.position.is_equal_approx(Vector2(100,0)) and b.state == b.State.STING_STRIKE,"hop:160 target closes100 to60 spacing, no overshoot")
+	# Pursuit is selected only outside the surface charge band, after a
+	# visible bury, and must surface before any existing sting damage.
+	e.position = Vector2.ZERO
+	e.set_buried(false)
+	b._charge_cd = 0.0
+	p.position = Vector2(300,0)
+	b._enter(e,b.State.CHASE)
+	b.physics_step(e,p,0.01)
+	_check(b.state == b.State.CHARGE_WINDUP,"burrow:300 remains overground charge")
+	for reach in [300.1,650.0]:
+		e.position = Vector2.ZERO
+		e.set_buried(false)
+		p.position = Vector2(reach,0)
+		b._enter(e,b.State.CHASE)
+		b.physics_step(e,p,0.01)
+		_check(b.state == b.State.BURY and not e.buried,"burrow:far in-band starts vulnerable bury")
+		b.physics_step(e,p,0.299)
+		_check(b.state == b.State.BURY,"burrow:bury cannot conceal before deadline")
+		b.physics_step(e,p,0.0011)
+		_check(b.state == b.State.BURROW_PURSUIT and e.buried and not HitContext.targetable(e),"burrow:full bury enters concealed pursuit")
+	var safe_hp := e.hp
+	e.apply_damage(10)
+	e.apply_calculated_damage(10)
+	_check(e.hp == safe_hp,"burrow:both HP entry points reject underground hits")
+	e.position = Vector2.ZERO
+	p.position = Vector2(400,0)
+	var player_safe_hp := p.hp
+	b._enter(e,b.State.BURROW_PURSUIT)
+	b.physics_step(e,p,1.0/60.0)
+	_check(e.position.is_equal_approx(Vector2(10,0)) and p.hp == player_safe_hp,"burrow:600px/s pursuit, no contact damage")
+	p.position = e.position+Vector2(0,400)
+	b.physics_step(e,p,1.0/60.0)
+	_check(e.position.is_equal_approx(Vector2(10,10)),"burrow:tracks changed player position underground")
+	e.set_frozen(true)
+	var frozen_pos := e.position
+	var frozen_clock := b._time
+	e._physics_process(0.5)
+	_check(e.position == frozen_pos and b._time == frozen_clock,"burrow:freeze holds pursuit movement and clock")
+	e.set_frozen(false)
+	e.position = Vector2.ZERO
+	p.position = Vector2(165,0)
+	b.physics_step(e,p,1.0/60.0)
+	_check(e.position.is_equal_approx(Vector2(5,0)) and e.buried,"burrow:step stops exactly at160, no pass through")
+	b.physics_step(e,p,1.0/60.0)
+	_check(b.state == b.State.EMERGE and not e.buried,"burrow:at160 surfaces before attack")
+	b.physics_step(e,p,0.299)
+	_check(b.state == b.State.EMERGE and p.hp == player_safe_hp,"burrow:emerge has no instant hit")
+	b.physics_step(e,p,0.0011)
+	_check(b.state == b.State.STING_WINDUP,"burrow:emerge completes into existing sting tell")
+	b.physics_step(e,p,0.399)
+	_check(b.state == b.State.STING_WINDUP,"burrow:full red tell retained after emerge")
+	b.physics_step(e,p,0.0011)
+	_check(b.state == b.State.STING_HOP,"burrow:then existing hop, not damage shortcut")
+	# Far disengage cannot retain an invisible chaser or re-wake at long range.
+	e.position = Vector2.ZERO
+	p.position = Vector2(650.1,0)
+	b._enter(e,b.State.BURROW_PURSUIT)
+	b.physics_step(e,p,1.99)
+	_check(b.state == b.State.BURROW_PURSUIT and e.position == Vector2.ZERO,"burrow:beyond650 stops and honors disengage grace")
+	b.physics_step(e,p,0.011)
+	_check(b.state == b.State.BURIED,"burrow:far2s disengages to buried idle")
+	b.physics_step(e,p,0.5)
+	_check(b.state == b.State.BURIED,"burrow:idle wake remains300, not unlimited aggro")
+	b._enter(e,b.State.BURROW_PURSUIT)
+	b.physics_step(e,null,0.01)
+	_check(b.state == b.State.BURIED,"burrow:lost/dead/hidden target safely stops pursuit")
+	# External owner still samples once; it alone applies the integrated step.
+	e.position = Vector2.ZERO
+	p.position = Vector2(400,0)
+	b._enter(e,b.State.BURROW_PURSUIT)
+	var burrow_owner := Node.new()
+	area.add_child(burrow_owner)
+	e.displacement_owner = burrow_owner
+	e._physics_process(1.0/60.0)
+	_check(e.position == Vector2.ZERO and e.reel_propulsion.is_equal_approx(Vector2(600,0)),"burrow:external owner samples600 propulsion with zero self move")
+	e.displacement_owner = null
+	burrow_owner.queue_free()
+
 	area.free()
 
 func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array) -> void:
