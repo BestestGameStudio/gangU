@@ -1,6 +1,7 @@
 extends Node2D
 class_name DesertMustacheGroup
-## Unplaced scene content. No level, spawn catalog or encounter mounts this.
+## Five-member desert squad, mounted by desert_squad_placement.gd.
+## Smoke rethrow/state-machine follow-up is tracked in the linked draft PR.
 enum State { TRAVEL, SPREAD, THROW, WAIT_SMOKE, CHARGE, SMOKE_HOLD, SCATTER }
 # PLACEHOLDER tuning, not settled balance.
 @export var player_path := NodePath("../../Player")
