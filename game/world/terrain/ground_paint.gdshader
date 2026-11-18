@@ -195,10 +195,10 @@ vec3 cliff_stone(vec2 w, float depth, int kind) {
 	int row = kind == COBBLE ? 5 : clamp(kind, 0, 4);
 	float column = floor(hash(vec2(floor(w.x / 128.0), 888.0)) * 8.0);
 	vec2 texel = vec2(column * 64.0 + mod(floor(w.x / 2.0), 64.0),
-		float(row) * 64.0 + clamp(floor(depth / 2.0), 0.0, 63.0));
+		float(row) * 64.0 + mod(floor(w.y / 2.0), 64.0));
 	vec3 rock = texture(cliff_materials, (texel + 0.5) / vec2(512.0, 384.0)).rgb * 255.0;
 	// Broad lower occlusion, not a black outline or repeated stone blobs.
-	return rock * mix(1.03, 0.54, smoothstep(12.0, 144.0, depth));
+	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.78 : (depth > 36.0 ? 0.90 : 1.0)));
 }
 
 // R is the walkable top, G the wider foot of the cliff, B the cut stone stair.
@@ -230,17 +230,25 @@ vec3 paint_relief(vec2 w, vec3 ground, int kind) {
 		// On the far side only a low, grassy shoulder is visible.
 		float behind = texture(relief, uv + vec2(0.0, 1.1) / size).r * 2.0;
 		if (behind > level - 0.5) {
-			float chips = fbm(w / 18.0);
-			return mix(paint(kind, w, 0.34), cliff_stone(w, 12.0, kind), smoothstep(0.42, 0.72, chips));
+			// North-facing shoulder: quiet continuous rock, never camouflage noise.
+			if (lip > -0.055) { return paint(kind, w, 0.48) * 0.90; }
+			return cliff_stone(w, 18.0, kind) * 0.76;
 		}
 		float above = texture(relief, uv - vec2(0.0, 1.4) / size).r * 2.0;
 		float front = smoothstep(level - 0.65, level - 0.2, above);
 		float depth = clamp(-lip * 64.0, 0.0, 128.0);
+		if (front > 0.5) {
+			for (int k = 1; k <= 16; k++) {
+				float step_up = float(k) * 6.0;
+				float upper = texture(relief, uv - vec2(0.0, step_up / relief_cell) / size).r * 2.0;
+				if (upper > level - 0.5) { depth = step_up; break; }
+			}
+		}
 		vec3 rock = cliff_stone(w, depth, kind);
 		// Keep side planes quiet and dark so the southern face carries height.
-		rock *= mix(0.64, 1.0, front);
+		rock *= front > 0.5 ? 1.0 : 0.80;
 		if (lip > -0.07) { return paint(kind, w, 0.52) * 0.88; }
-		return rock * (0.72 + 0.28 * smoothstep(0.0, 0.36, foot));
+		return rock * (foot < 0.08 ? 0.76 : 1.0);
 	}
 	if (foot > 0.82) { ground *= 0.78; }
 	return ground * (1.0 + 0.045 * level);
