@@ -5,6 +5,15 @@ func check(ok: bool, label: String) -> void:
  print("PASS " if ok else "FAIL ",label)
  if not ok:failures += 1
 func run() -> void:
+ var shadow := load("res://assets/sprites/forest/unified-shadow.png") as Texture2D
+ var pixels := shadow.get_image()
+ var bad := 0
+ for y in pixels.get_height():
+  for x in pixels.get_width():
+   var c := pixels.get_pixel(x,y)
+   if c.a > 0.0 and (c.r8 != 8 or c.g8 != 16 or c.b8 != 12):bad += 1
+ check(pixels.get_size() == Vector2i(448,192),"all three shadow-panel rows present")
+ check(bad == 0,"all shadow rows encode dark opacity, no opaque preview colours")
  var main: Node = load("res://game/core/main.tscn").instantiate()
  root.add_child(main)
  current_scene = main

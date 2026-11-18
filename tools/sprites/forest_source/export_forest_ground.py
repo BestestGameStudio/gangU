@@ -8,8 +8,8 @@ from PIL import Image
 src=Image.open(sys.argv[1]).convert('RGBA');out=Image.new('RGBA',(448,192))
 for row in range(3):out.alpha_composite(src.crop((row*448,0,(row+1)*448,64)),(0,row*64))
 p=out.load()
-for y in range(128):
- for x in range(448):
+for y in range(out.height):
+ for x in range(out.width):
   r,g,b,a=p[x,y]
   if a:p[x,y]=(8,16,12,round(255*max(0,min(1,(183-r)/175))))
 out.save(sys.argv[2])
