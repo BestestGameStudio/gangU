@@ -681,3 +681,15 @@ are included. Full provenance/verification: docs/evidence/large_scorpion.md.
 ## Breakable crate sprite (#861)
 
 - `destroyable_crate.png` (10x10): authored in SpriteU (`tools/gen_pickups.py`, `sprites/destroyable-crate.json`, `characters/pickups.md`) and exported with `--export`. Drawn at 2x = 20x20. CC0 reference viewed only (OpenGameArt 16x16 boxes, crates, chests); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/17
+
+## Scorpion stinger load-up mask (#873)
+
+`scorpion_tail_mask.png` is a semantic mask for the pointed stinger barb only,
+not the articulated tail chain. `tools/sprites/generate_scorpion_tail_mask.py`
+instruments the existing native128px rig immediately before its final barb draw;
+no new character pixels are authored and the scorpion sheet is unchanged.
+1024x256 atlas: S,SE,E,NE,N,NW,W,SW columns, attack frames0/1 rows.
+`scorpion_tail_tint.gdshader` blends those pixels red with a modest5Hz pulse
+through the0.4s load-up. Every other state uses strength0. The unmodified source
+sheet still supplies alpha, brightness and incoming sprite tint. Barb-only
+high/low preview in all8 directions accepted November17 before commit.

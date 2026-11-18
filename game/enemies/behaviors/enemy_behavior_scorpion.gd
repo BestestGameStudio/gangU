@@ -4,7 +4,7 @@ extends EnemyBehavior
 enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, STING_HOP, STING_STRIKE, MISS_STUN, RECOVER, CHASE, PINCER_WINDUP, PINCER_STRIKE, PINCER_RECOVER, BURY }
 @export var wake_range := 300.0
 @export var pincer_range := 50.0
-@export var sting_range := 110.0
+@export var sting_range := 160.0
 @export var charge_range := 300.0
 @export var hide_range := 650.0
 @export var hide_delay := 2.0
@@ -15,7 +15,8 @@ enum State { CHARGE_WINDUP, CHARGE, BURIED, BURROW_RUSH, EMERGE, STING_WINDUP, S
 @export var pincer_damage := 15
 @export var pincer_gap := 1.0
 @export var transition_time := 0.30
-const STING_WINDUP := 0.36
+const STING_WINDUP := 0.40
+const CHARGE_WINDUP_TIME := 0.36
 ## Initial-only fast reaction window, after the full0.30s emerge.
 const INITIAL_CHARGE_WINDUP := 0.18
 ## Pincer first pose100ms + held pose420ms = 520ms to impact.
@@ -23,8 +24,8 @@ const PINCER_WINDUP := 0.52
 const STRIKE_TIME := 0.06
 const MISS_STUN_TIME := 1.0
 const MISS_HIT_BONUS := 2.0
-const HOP_TIME := 0.10
-const HOP_DISTANCE := 60.0
+const HOP_TIME := 0.07
+const HOP_DISTANCE := 100.0
 const HOP_STOP_DISTANCE := 52.0
 var state: State = State.BURIED
 var _time := 0.0
@@ -149,7 +150,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 					_enter(e,State.CHARGE_WINDUP)
 		State.CHARGE_WINDUP:
 			_charge_length = e.charge_travel(_aim,dash_distance)
-			if _time >= sting_windup_duration():
+			if _time >= charge_windup_duration():
 				if alive and distance <= sting_range:
 					_aim = off.normalized()
 					e.face_player(_aim)
@@ -257,5 +258,5 @@ func extend_miss_stun() -> void:
 		_miss_extended = true
 		_miss_duration += MISS_HIT_BONUS
 
-func sting_windup_duration() -> float:
-	return INITIAL_CHARGE_WINDUP if _initial_charge else STING_WINDUP
+func charge_windup_duration() -> float:
+	return INITIAL_CHARGE_WINDUP if _initial_charge else CHARGE_WINDUP_TIME

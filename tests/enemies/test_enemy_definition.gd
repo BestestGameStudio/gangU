@@ -278,7 +278,7 @@ func _test_scorpion() -> void:
 	_check(b.state == b.State.CHARGE_WINDUP,"initial tell remains before fast deadline")
 	b.physics_step(e,p,0.01)
 	_check(b.state == b.State.CHARGE,"initial fast locked tell -> body charge")
-	_check(b.sting_windup_duration() == b.STING_WINDUP,"later stings retain normal windup")
+	_check(b.charge_windup_duration() == b.CHARGE_WINDUP_TIME,"later charges retain normal windup")
 	p.position = Vector2(0,500)
 	for i in 21: b.physics_step(e,p,1.0/60.0)
 	_check(b.state in [b.State.PINCER_STRIKE,b.State.PINCER_RECOVER],"charge -> immediate pincer follow-up")
@@ -303,7 +303,7 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,0.01)
 	_check(b.state == b.State.STING_WINDUP,"close -> stationary sting")
 	var stationary_position := e.position
-	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.4)
 	b.physics_step(e,p,0.01)
 	_check(e.position == stationary_position,"point-blank hop never travels through player")
 	b._enter(e,b.State.PINCER_WINDUP)
@@ -634,74 +634,76 @@ func _test_scorpion() -> void:
 	# Recheck range at charge launch, even after initial long-range selection.
 	b._aim = Vector2.RIGHT
 	b._enter(e,b.State.CHARGE_WINDUP)
-	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.4)
 	_check(b.state == b.State.STING_WINDUP and e.charge_warning().is_empty(),"charge: close player at launch cancels charge for sting")
 	# A70px target produces an18px toward hop to the52px spacing point.
 	e.position = Vector2.ZERO
 	p.position = Vector2(70,0)
 	b._enter(e,b.State.STING_WINDUP)
-	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.399)
+	_check(b.state == b.State.STING_WINDUP and e.position == Vector2.ZERO,"hop: full warning before any movement")
+	b.physics_step(e,p,0.0011)
 	_check(b.state == b.State.STING_HOP and not e.stinger_grounded(),"hop: windup enters raised-tail hop, not early strike")
-	b.physics_step(e,p,0.05)
+	b.physics_step(e,p,0.035)
 	_check(e.position.is_equal_approx(Vector2(18,0)) and e.sprite.position.y < -31.9,"hop: half-time stops short18px ground travel and12px visual arc")
 	e.set_frozen(true)
 	var hop_clock := b._time
 	e._physics_process(0.2)
 	_check(b._time == hop_clock and e.sprite.position.y < -31.9,"hop: freeze holds both clock and visual altitude")
 	e.set_frozen(false)
-	b.physics_step(e,p,0.05)
-	_check(b.state == b.State.STING_STRIKE and e.position.is_equal_approx(Vector2(18,0)) and e.sprite.position.y == -20,"hop: lands short after0.1s then grounded strike")
+	b.physics_step(e,p,0.035)
+	_check(b.state == b.State.STING_STRIKE and e.position.is_equal_approx(Vector2(18,0)) and e.sprite.position.y == -20,"hop: lands short after0.07s then grounded strike")
 	# A retreat during tell cannot turn hop into a long-range lunge.
 	e.position = Vector2.ZERO
-	p.position = Vector2(150,0)
+	p.position = Vector2(200,0)
 	b._enter(e,b.State.STING_WINDUP)
-	b.physics_step(e,p,0.36)
-	b.physics_step(e,p,0.1)
-	_check(e.position.is_equal_approx(Vector2(60,0)),"hop: retreating target caps total ground travel60")
+	b.physics_step(e,p,0.4)
+	b.physics_step(e,p,0.07)
+	_check(e.position.is_equal_approx(Vector2(100,0)),"hop: retreating target caps total ground travel100")
 	# Constraints clip the hop too; no wall slide or forbidden movement.
 	e.position = Vector2.ZERO
 	e.movement_constraint = func(point: Vector2) -> Vector2: return Vector2(minf(point.x,8.0),point.y)
 	p.position = Vector2(70,0)
 	b._enter(e,b.State.STING_WINDUP)
-	b.physics_step(e,p,0.36)
-	b.physics_step(e,p,0.1)
+	b.physics_step(e,p,0.4)
+	b.physics_step(e,p,0.07)
 	_check(e.position.is_equal_approx(Vector2(8,0)) and b.state == b.State.STING_STRIKE,"hop: constraint clips travel without delaying impact")
 	e.movement_constraint = Callable()
 	# A real reel remains sole mover during the new hop as well.
 	e.position = Vector2.ZERO
-	p.position = Vector2(70,0)
+	p.position = Vector2(160,0)
 	b._enter(e,b.State.STING_WINDUP)
-	b.physics_step(e,p,0.36)
+	b.physics_step(e,p,0.4)
 	reel = HookReel.begin(area,e,p,hook)
 	reel.set_physics_process(false)
 	held_before = e.position
 	e._physics_process(1.0/60.0)
-	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(600,0)),"hop reel: samples ground drive without moving")
-	expected_velocity = Enemy.force_step(Vector2(600,0),e.reel_force_velocity,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
+	_check(e.position == held_before and e.reel_propulsion.is_equal_approx(Vector2(b.HOP_DISTANCE/b.HOP_TIME,0)),"hop reel: samples ground drive without moving")
+	expected_velocity = Enemy.force_step(Vector2(b.HOP_DISTANCE/b.HOP_TIME,0),e.reel_force_velocity,reel.pull_force(e),e.weight,1.0/60.0,reel.pull_speed_limit(e))
 	reel._physics_process(1.0/60.0)
 	_check(e.position.is_equal_approx(held_before+expected_velocity/60.0),"hop reel: real HookReel performs sole integrated move")
 	reel.free()
 	# New trigger boundary is shared by chase, opening and launch recheck.
-	for separation in [110.0,110.1]:
+	for separation in [160.0,160.1]:
 		e.position = Vector2.ZERO
 		p.position = Vector2(separation,0)
 		b._sting_cd = 0.0
 		b._charge_cd = 0.0
 		b._enter(e,b.State.CHASE)
 		b.physics_step(e,p,0.01)
-		_check(b.state == (b.State.STING_WINDUP if separation == 110.0 else b.State.CHARGE_WINDUP),"sting: chase uses exact110 boundary")
+		_check(b.state == (b.State.STING_WINDUP if separation == 160.0 else b.State.CHARGE_WINDUP),"sting: chase uses exact160 boundary")
 		b._enter(e,b.State.BURIED)
 		b.physics_step(e,p,0.01)
 		b.physics_step(e,p,0.01)
 		b.physics_step(e,p,0.30)
-		_check(b.state == (b.State.STING_WINDUP if separation == 110.0 else b.State.CHARGE_WINDUP),"sting: opening uses exact110 boundary")
+		_check(b.state == (b.State.STING_WINDUP if separation == 160.0 else b.State.CHARGE_WINDUP),"sting: opening uses exact160 boundary")
 	b._enter(e,b.State.CHARGE_WINDUP)
-	p.position = Vector2(110,0)
-	b.physics_step(e,p,0.36)
-	_check(b.state == b.State.STING_WINDUP,"sting: charge rechecks expanded110 radius at launch")
-	b.physics_step(e,p,0.36)
-	b.physics_step(e,p,0.1)
-	_check(e.position.is_equal_approx(Vector2(58,0)) and b.state == b.State.STING_STRIKE,"hop:110 target closes58 to52 spacing, no overshoot")
+	p.position = Vector2(160,0)
+	b.physics_step(e,p,0.4)
+	_check(b.state == b.State.STING_WINDUP,"sting: charge rechecks expanded160 radius at launch")
+	b.physics_step(e,p,0.4)
+	b.physics_step(e,p,0.07)
+	_check(e.position.is_equal_approx(Vector2(100,0)) and b.state == b.State.STING_STRIKE,"hop:160 target closes100 to60 spacing, no overshoot")
 	area.free()
 
 func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array) -> void:

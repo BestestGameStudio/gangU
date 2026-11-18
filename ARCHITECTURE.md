@@ -180,8 +180,8 @@ Type-local states own buried/rush/emerge/body-charge/sting-hop/miss/chase/
 pincer/bury. Underground has no targeting, collision, contact attack or
 accepted HP damage. Named states feed F2. Harmless initial rush has a sand
 trail and stops within180px;0.30s emerge then initial180ms charge tell (later
-360ms), or close sting if player is within110px. Charge launches only outside
-110px, rechecked at the end of load-up. It travels up to200px at900px/s with
+360ms), or close sting if player is within160px. Charge launches only outside
+160px, rechecked at the end of load-up. It travels up to200px at900px/s with
 24px swept hit radius and25damage. Pincers prepare during charge load-up;
 charge goes straight into15damage pincer strike, no endpoint windup pause.
 Standalone pincer retains its520ms tell and50px reach. Attack gaps count
@@ -193,12 +193,12 @@ sliding. External reels/stacks remain sole movers: charge and hop submit
 self-propulsion to the existing force resolver and spend finite own budgets,
 not net pulled distance.
 
-Close sting has a360ms raised-tail load-up then a0.10s quick ground-plane hop
-toward the player, up to60px, stopping at52px spacing rather than crossing a
+Close sting has a400ms raised-tail load-up with a red pulsing stinger barb
+(not the tail chain), then a0.07s quick ground-plane hop toward the player, up to100px, stopping at52px spacing rather than crossing a
 close player. Point-blank has a visual-only hop; no backward hop was approved.
 A12px visual arc lifts the sprite, not the collision body or shadow. Hop uses
 the same straight clipping helper. Landing triggers stationary25damage sting
-at the actual rendered tip, within110px of the body. Point-blank can still
+at the actual rendered tip, within160px of the body. Point-blank can still
 miss the extended tip. A missed sting (including i-frames) holds the grounded
 pose with halo for1s; the first accepted Player hit anywhere during that miss
 adds2s once without resetting elapsed time. Body/projectile/AoE all qualify
