@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3]
+[ext_resource type="Script" path="res://game/world/forest_placeholder.gd" id="floor"]
+[ext_resource type="Script" path="res://game/world/forest_passage.gd" id="passage"]
+[ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="terrain"]
+[sub_resource type="RectangleShape2D" id="exit"]
+size = Vector2(80, 24)
+[node name="ForestPlaceholder" type="Node2D"]
+[node name="Terrain" type="Node2D" parent="."]
+visible = false
+script = ExtResource("terrain")
+cell_size = 32
+art_enabled = false
+[node name="Floor" type="Node2D" parent="."]
+script = ExtResource("floor")
+z_index = -80
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(0, 96)
+[node name="Return" type="Area2D" parent="."]
+position = Vector2(0, 300)
+script = ExtResource("passage")
+target_path = "res://game/world/overworld.tscn"
+arrival = Vector2(576, -1580)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Return"]
+shape = SubResource("exit")
+[node name="TitleLayer" type="CanvasLayer" parent="."]
+[node name="Title" type="Label" parent="TitleLayer"]
+offset_left = 24.0
+offset_top = 210.0
+theme_override_font_sizes/font_size = 22
+text = "FOREST | Placeholder\nWalk south to return to the desert"
