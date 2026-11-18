@@ -1,10 +1,11 @@
 extends RefCounted
-## Shelf outlines and stair landings in the overworld's 32 px collision grid.
+## Shelf outlines and grass paths in the overworld's 32 px collision grid.
 ## Each outline encloses the walkable top. The apron around it is rock.
 const CELL := 32
 var tops: Dictionary[Vector2i, int] = {}
 var bases: Dictionary[Vector2i, int] = {}
-var stairs: Dictionary[Vector2i, bool] = {}
+# Per path cell: upper level, progress at the north edge, and progress per cell.
+var paths: Dictionary[Vector2i, Vector3] = {}
 var walls: Dictionary = {}
 var clear_ground: Dictionary[Vector2i, bool] = {}
 var bounds := Rect2i()
@@ -22,16 +23,16 @@ func _init() -> void:
 		Vector2(-17,12), Vector2(-17,15), Vector2(-19,18), Vector2(-24,18),
 		Vector2(-25,16), Vector2(-29,17)]), 1, Rect2i(-22,17,3,4))
 	for cell in bases:
-		if bases[cell] > tops.get(cell, 0) and not stairs.has(cell):
+		if bases[cell] > tops.get(cell, 0) and not paths.has(cell):
 			walls[cell] = TerrainTypes.OBSTACLE
-		if walls.has(cell) or stairs.has(cell):
+		if walls.has(cell) or paths.has(cell):
 			for dx in range(-1, 2):
 				for dy in range(-1, 2):
 					clear_ground[cell + Vector2i(dx, dy)] = true
 		bounds = bounds.expand(cell)
 	bounds = bounds.grow(2)
 
-func _add_shelf(outline: PackedVector2Array, level: int, flight: Rect2i) -> void:
+func _add_shelf(outline: PackedVector2Array, level: int, path: Rect2i) -> void:
 	var extent := Rect2(outline[0], Vector2.ZERO)
 	for p in outline:
 		extent = extent.expand(p)
@@ -45,21 +46,19 @@ func _add_shelf(outline: PackedVector2Array, level: int, flight: Rect2i) -> void
 			for dx in range(-1, 2):
 				for dy in range(-1, 3):
 					bases[cell + Vector2i(dx, dy)] = level
-	for x in range(flight.position.x, flight.end.x):
-		for y in range(flight.position.y, flight.end.y):
-			stairs[Vector2i(x, y)] = true
+	for x in range(path.position.x, path.end.x):
+		for y in range(path.position.y, path.end.y):
+			paths[Vector2i(x, y)] = Vector3(level, float(y - path.position.y) / path.size.y,
+				1.0 / path.size.y)
 
 func cell_at(p: Vector2) -> Vector2i:
 	return Vector2i((p / CELL).floor())
 
-func bake(material: ShaderMaterial) -> void:
-	var image := Image.create(bounds.size.x, bounds.size.y, false, Image.FORMAT_RGB8)
-	for cell in bases:
-		image.set_pixelv(cell - bounds.position, Color(tops.get(cell, 0) * 0.5,
-			bases[cell] * 0.5, float(stairs.has(cell))))
-	for cell in stairs:
-		if not bases.has(cell):
-			image.set_pixelv(cell - bounds.position, Color.BLUE)
-	material.set_shader_parameter("relief", ImageTexture.create_from_image(image))
-	material.set_shader_parameter("relief_origin", Vector2(bounds.position) * CELL)
-	material.set_shader_parameter("relief_cell", float(CELL))
+func bake_path_mask(material: ShaderMaterial) -> void:
+	var image := Image.create(bounds.size.x, bounds.size.y, false, Image.FORMAT_RGBAH)
+	for cell in paths:
+		var path := paths[cell]
+		image.set_pixelv(cell - bounds.position, Color(path.x, path.y, path.z))
+	material.set_shader_parameter("terrace_paths", ImageTexture.create_from_image(image))
+	material.set_shader_parameter("path_origin", Vector2(bounds.position) * CELL)
+	material.set_shader_parameter("path_cell", float(CELL))

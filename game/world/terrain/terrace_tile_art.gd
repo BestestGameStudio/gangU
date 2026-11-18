@@ -1,67 +1,119 @@
 extends RefCounted
-## Presentation only. Read the existing terrace cells; never change gameplay data.
-const EDGE = preload("res://assets/sprites/terrain/terrace_grass_cliff_16.png")
-const FRONT = preload("res://assets/sprites/terrain/terrace_front_tiles_flat.png")
-const CELL = 32
-static var _ribbons: Dictionary = {}
+## Draw the terraces and record the visible cliff faces for movement.
+const CAP := preload("res://assets/sprites/terrain/terrace_grass_cliff_16.png")
+const FACE := preload("res://assets/sprites/terrain/terrace_front_tiles_flat.png")
+const LIGHT := preload("res://game/world/terrain/terrace_tile_light.gdshader")
+const Terraces := preload("res://game/world/overworld_terraces.gd")
+const CELL := Terraces.CELL
+const ART_SCALE := 2
+const TILE := 16
+const QUADRANT := TILE / 2
+const CORNERS := [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN]
 
-static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) -> void:
-	for level in [1,2]:
-		# One front ribbon follows the exact dual-grid grass boundary. Art pixels
-		# have one owner, so adjacent wall cells cannot overlap or reset depth.
-		var key := str(terraces.get_instance_id())+":"+str(level)
-		if not _ribbons.has(key):
-			_ribbons[key] = []
-			for px in range(terraces.bounds.position.x*32,terraces.bounds.end.x*32):
-				var bottom := -100000
-				for py in range(terraces.bounds.end.y*32,terraces.bounds.position.y*32,-1):
-					var q := (Vector2(px+0.5,py+0.5)-Vector2(16,16))/32.0
-					var c := Vector2i(q.floor())
-					var f := q-Vector2(c)
-					var a := 1.0 if terraces.tops.get(c,0)==level else 0.0
-					var b := 1.0 if terraces.tops.get(c+Vector2i.RIGHT,0)==level else 0.0
-					var d := 1.0 if terraces.tops.get(c+Vector2i.DOWN,0)==level else 0.0
-					var e := 1.0 if terraces.tops.get(c+Vector2i.ONE,0)==level else 0.0
-					if lerpf(lerpf(a,b,f.x),lerpf(d,e,f.x),f.y)>=0.5:
-						bottom=py+1
-						break
-				if bottom == -100000: continue
-				_ribbons[key].append(Vector2(px,bottom))
-		for origin in _ribbons[key]:
-			if not view.grow(64).has_point(origin):continue
-			var depth := 0
-			while depth < 64:
-				var at: Vector2 = origin+Vector2(0,depth)
-				var length: int = mini(64-depth,32-posmod(int(at.y),32))
-				if not terraces.stairs.has(terraces.cell_at(at+Vector2.ONE)):
-					canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(1,length)),Rect2(posmod(int(at.x),256),depth,1,length))
-				depth += length
-	# Dual-grid corners are the existing cell centres, not noisy contours.
-		for x in range(terraces.bounds.position.x,terraces.bounds.end.x):
-			for y in range(terraces.bounds.position.y,terraces.bounds.end.y):
-				var c := Vector2i(x,y)
-				var at := Vector2(c) * CELL + Vector2(16,16)
-				if not view.grow(64).has_point(at): continue
-				var mask := 0
-				var corners := [c,c+Vector2i.RIGHT,c+Vector2i.ONE,c+Vector2i.DOWN]
-				for i in range(4):
-					if terraces.tops.get(corners[i],0) == level: mask |= 1 << i
-				if mask == 0: continue
-				_draw_edge(canvas,terraces,Rect2(at,Vector2(32,32)),Vector2((mask%4)*32,(mask/4)*32))
+static func add_layers(parent: CanvasItem, terraces: Terraces) -> Image:
+	var raster := Image.create(terraces.bounds.size.x * TILE, terraces.bounds.size.y * TILE,
+		false, Image.FORMAT_R8)
+	if terraces.tops.is_empty():
+		return raster
+	var origin := terraces.bounds.position * CELL
+	var atlas := CAP.get_image()
+	var face_atlas := FACE.get_image()
+	for level in range(1, int(terraces.tops.values().max()) + 1):
+		var layer := Node2D.new()
+		layer.name = "TerraceLevel%d" % level
+		layer.show_behind_parent = true
+		var light := ShaderMaterial.new()
+		light.shader = LIGHT
+		light.set_shader_parameter("elevation", float(level))
+		layer.material = light
 
-static func _draw_edge(canvas: CanvasItem, terraces: RefCounted, rect: Rect2, source: Vector2) -> void:
-	var parts: Array[Rect2] = [rect]
-	for c in terraces.stairs:
-		var cut := Rect2(Vector2(c)*32,Vector2(32,32))
-		if not rect.intersects(cut):continue
-		var next: Array[Rect2] = []
-		for part in parts:
-			var hit := part.intersection(cut)
-			if not hit.has_area():
-				next.append(part)
+		var masks := _build_masks(terraces, level)
+		var caps: Array[Rect2i] = []
+		var faces: Array[Rect2i] = []
+		for cell in masks:
+			var tile := _atlas_origin(masks[cell])
+			var world := cell * CELL + Vector2i.ONE * (CELL / 2)
+			_add_cap(caps, terraces, cell, tile, world)
+			var below := _atlas_origin(masks.get(cell + Vector2i.DOWN, 0))
+			_add_faces(faces, atlas, terraces, level, tile, below, world)
+
+		layer.draw.connect(func() -> void:
+			_draw_regions(layer, FACE, faces)
+			_draw_regions(layer, CAP, caps)
+		)
+		parent.add_child(layer)
+		# Trace the same draw order so a higher cap clears walls behind it.
+		_stamp_mask(raster, origin, face_atlas, faces, Color.RED)
+		_stamp_mask(raster, origin, atlas, caps, Color.BLACK)
+	return raster
+
+static func _build_masks(terraces: Terraces, level: int) -> Dictionary[Vector2i, int]:
+	var masks: Dictionary[Vector2i, int] = {}
+	for cell in terraces.tops:
+		# Each higher shelf sits over a complete lower shelf.
+		if terraces.tops[cell] >= level:
+			for corner in range(CORNERS.size()):
+				var tile: Vector2i = cell - CORNERS[corner]
+				masks[tile] = masks.get(tile, 0) | (1 << corner)
+	return masks
+
+static func _atlas_origin(mask: int) -> Vector2i:
+	@warning_ignore("integer_division")
+	return Vector2i(mask % 4, mask / 4) * TILE
+
+static func _add_cap(regions: Array[Rect2i], terraces: Terraces, cell: Vector2i,
+		source: Vector2i, world: Vector2i) -> void:
+	var size := Vector2i.ONE * QUADRANT
+	for corner: Vector2i in CORNERS:
+		if not terraces.paths.has(cell + corner):
+			var offset := corner * QUADRANT
+			_add_region(regions, world + offset * ART_SCALE, source + offset, size)
+
+static func _add_faces(regions: Array[Rect2i], atlas: Image, terraces: Terraces,
+		level: int, tile: Vector2i, below: Vector2i, world: Vector2i) -> void:
+	for x in range(TILE):
+		for y in range(TILE):
+			if atlas.get_pixelv(tile + Vector2i(x, y)).a == 0.0:
 				continue
-			for box in [Rect2(part.position,Vector2(part.size.x,hit.position.y-part.position.y)),Rect2(Vector2(part.position.x,hit.end.y),Vector2(part.size.x,part.end.y-hit.end.y)),Rect2(Vector2(part.position.x,hit.position.y),Vector2(hit.position.x-part.position.x,hit.size.y)),Rect2(Vector2(hit.end.x,hit.position.y),Vector2(part.end.x-hit.end.x,hit.size.y))]:
-				if box.has_area():next.append(box)
-		parts=next
-	for part in parts:
-		canvas.draw_texture_rect_region(EDGE,part,Rect2(source+part.position-rect.position,part.size))
+			var next := tile + Vector2i(x, y + 1) if y + 1 < TILE else below + Vector2i(x, 0)
+			if atlas.get_pixelv(next).a > 0.0:
+				continue
+			# Every south-facing exit gets a wall, even when the same column
+			# crosses another shelf farther down. Match the visible cap pixel.
+			var foot := world + Vector2i(x, y + 1) * ART_SCALE
+			_add_face_column(regions, terraces, level, foot)
+
+static func _add_face_column(regions: Array[Rect2i], terraces: Terraces,
+		level: int, foot: Vector2i) -> void:
+	@warning_ignore("integer_division")
+	var src_x := posmod(foot.x / ART_SCALE, FACE.get_width())
+	var depth := 0
+	while depth < FACE.get_height():
+		var at := foot + Vector2i(0, depth * ART_SCALE)
+		var cell := terraces.cell_at(Vector2(at))
+		@warning_ignore("integer_division")
+		var length := mini(FACE.get_height() - depth, (CELL - posmod(at.y, CELL)) / ART_SCALE)
+		if terraces.bases.get(cell, 0) >= level and not terraces.paths.has(cell):
+			_add_region(regions, at, Vector2i(src_x, depth), Vector2i(1, length))
+		depth += length
+
+static func _add_region(regions: Array[Rect2i], world: Vector2i, source: Vector2i,
+		size: Vector2i) -> void:
+	regions.append(Rect2i(world, size * ART_SCALE))
+	regions.append(Rect2i(source, size))
+
+static func _draw_regions(canvas: CanvasItem, atlas: Texture2D, regions: Array[Rect2i]) -> void:
+	for index in range(0, regions.size(), 2):
+		canvas.draw_texture_rect_region(atlas, Rect2(regions[index]), Rect2(regions[index + 1]))
+
+static func _stamp_mask(raster: Image, origin: Vector2i, atlas: Image,
+		regions: Array[Rect2i], color: Color) -> void:
+	for i in range(0, regions.size(), 2):
+		@warning_ignore("integer_division")
+		var destination := (regions[i].position - origin) / ART_SCALE
+		var source := regions[i + 1]
+		for y in range(source.size.y):
+			for x in range(source.size.x):
+				var offset := Vector2i(x, y)
+				if atlas.get_pixelv(source.position + offset).a > 0.0:
+					raster.set_pixelv(destination + offset, color)
