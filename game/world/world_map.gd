@@ -3,7 +3,7 @@ extends Node
 ## (#347) Player map record: what terrain the player has explored, plus the
 ## marks they drew themselves. Pure data + one reveal hook; MapPanel (M) is
 ## the only view. Mounted by main.gd as ONE persistent child (Shop idiom), so
-## per-run reset comes free from RunManager's full scene reload.
+## the panel keeps its state while the player travels between areas.
 ##
 ## SETTLED (Colin, 2026-11-08, #347):
 ##   - Explored terrain shows automatically, fog-of-war style.
@@ -14,8 +14,7 @@ extends Node
 ##     at their entrance, and selecting one on the map offers fast travel
 ##     (see "dungeon sites" below). Uncleared dungeons stay unmarked.
 ##
-##   - Run-scoped (#351 death = full reset): kept across area trips within a
-##     run, wiped on death by RunManager's reload.
+##   - Discovered terrain survives death. Player annotations last for the run.
 ##
 ## SETTLED (Colin, 2026-11-08): reveal TIMING - terrain appears as you
 ## explore. Production wires `explore_rule`: each physics tick the cells
@@ -72,6 +71,8 @@ var _sites: Dictionary = {}
 ## area_id -> last world position of the player there (#366: centers the map
 ## when viewing an area the player is not in).
 var _last_pos: Dictionary = {}
+var _outlines: Dictionary[StringName, PackedVector2Array] = {}
+var _bounds: Dictionary[StringName, Rect2] = {}
 
 ## Map colour of a flat (no TerrainMap) area: plain GROUND.
 const FALLBACK_GROUND := Color(0.16, 0.24, 0.18, 1.0)
@@ -84,6 +85,16 @@ func set_area(id: StringName, area_terrain: TerrainMap) -> void:
 		_snapshot_colors(area_id, terrain)
 	area_id = id
 	terrain = area_terrain
+	var ground := terrain.get_node_or_null("../Ground") as OverworldGround if terrain != null else null
+	if ground != null and not ground.outline.is_empty():
+		_outlines[id] = ground.outline
+		var bounds := Rect2(ground.outline[0], Vector2.ZERO)
+		for point in ground.outline:
+			bounds = bounds.expand(point)
+		_bounds[id] = bounds
+	else:
+		_outlines.erase(id)
+		_bounds.erase(id)
 	changed.emit(id)
 
 ## (#366 review) Map colour of an explored cell in area `id`. The current
@@ -160,29 +171,12 @@ func areas_with_cleared_sites() -> Array[StringName]:
 			out.append(id)
 	return out
 
-## (#435) The panning limits of the player's CURRENT area: the bounding rect
-## of the overworld's land outline, so a dragged map never shows beyond it.
-## Empty Rect2 when the current area has no overworld ground (dungeons).
-func pan_bounds() -> Rect2:
-	if terrain == null or not is_instance_valid(terrain) or terrain.get_parent() == null:
-		return Rect2()
-	for c in terrain.get_parent().get_children():
-		if c is OverworldGround and not (c as OverworldGround).outline.is_empty():
-			var o := (c as OverworldGround).outline
-			var r := Rect2(o[0], Vector2.ZERO)
-			for p in o:
-				r = r.expand(p)
-			return r
-	return Rect2()
+## Keep the coastline available when viewing the world map from another area.
+func pan_bounds(id: StringName = &"") -> Rect2:
+	return _bounds.get(area_id if id == &"" else id, Rect2())
 
-## (#440 review) The overworld land outline polygon (empty where none).
-func pan_outline() -> PackedVector2Array:
-	if terrain == null or not is_instance_valid(terrain) or terrain.get_parent() == null:
-		return PackedVector2Array()
-	for c in terrain.get_parent().get_children():
-		if c is OverworldGround and not (c as OverworldGround).outline.is_empty():
-			return (c as OverworldGround).outline
-	return PackedVector2Array()
+func pan_outline(id: StringName = &"") -> PackedVector2Array:
+	return _outlines.get(area_id if id == &"" else id, PackedVector2Array())
 
 ## Where to center a view of area `id`: the player's last spot there, else
 ## the middle of its marked dungeons, else the origin.
@@ -198,6 +192,25 @@ func view_center(id: StringName) -> Vector2:
 	return sum / s.size()
 
 ## --- reveal ---
+
+## Each key identifies a discovered cell. Its color lets the World view draw
+## areas whose terrain node has already been unloaded.
+func capture_discovery() -> Dictionary:
+	var discovery := {}
+	for id: StringName in _areas:
+		var colors := {}
+		for cell: Vector2i in _areas[id]["explored"]:
+			colors[cell] = cell_color(id, cell)
+		discovery[id] = colors
+	return discovery
+
+func restore_discovery(discovery: Dictionary) -> void:
+	for id: StringName in discovery:
+		var area := _area(id)
+		for cell: Vector2i in discovery[id]:
+			area["explored"][cell] = true
+			area["colors"][cell] = discovery[id][cell]
+		changed.emit(id)
 
 func reveal_cells(id: StringName, cells: Array) -> int:
 	var explored: Dictionary = _area(id)["explored"]

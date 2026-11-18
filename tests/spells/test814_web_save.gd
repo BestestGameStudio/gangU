@@ -27,6 +27,7 @@ func run():
  var expected_color:=WorldMap.terrain_color(map.terrain,Vector2i(60,60))
  var snapshot:=WebRunSave.capture(main)
  check(not snapshot.has('area') and not snapshot.run.has('position') and not snapshot.run.has('hp'),'no position/fight/HP persistence')
+ var death_save:=WebRunSave.decode(WebRunSave.encode(WebRunSave.capture(main,true)))
  var text:=WebRunSave.encode(snapshot)
  var decoded:=WebRunSave.decode(text)
  check(not decoded.is_empty(),'complete snapshot roundtrips')
@@ -46,6 +47,7 @@ func run():
  check(fresh.area_loader.is_cleared(&'dungeon_a') and fresh.get_node('Shop')._paid_refresh_count==4,'restore cleared rooms and paid shop price')
  check(fresh.area_loader.current_area.name==&'Overworld' and fresh.area_loader.current_area.get_node('HubServices').contains_player(fresh.get_node('Player').global_position) and fresh.get_node('Player').hp==100,'restore starts hub fresh health')
  check(fresh.area_loader._revive_claimed,'fixed revive claim persists, cannot duplicate item')
+ check(fresh.get_node('WorldMap').is_explored(&'Overworld',Vector2i(60,60)),'ordinary save restores discovery')
  check(fresh.get_node('WorldMap').cell_color(&'Overworld',Vector2i(60,60)).is_equal_approx(expected_color),'hub-restored explored map retains water color')
  check(not save.enabled,'native build does not enable browser saves')
  save._sand_defeated=true;fresh.area_loader.enter_overworld()
@@ -53,4 +55,11 @@ func run():
  save.apply_world_progress(fresh.area_loader.current_area)
  check(arena._won and not arena.is_active() and not arena._reward_pending,'completed Sand boss restores without restarting combat or issuing reward')
  fresh.queue_free();await process_frame;await process_frame
+ var respawn=load('res://game/core/main.tscn').instantiate();root.add_child(respawn);current_scene=respawn
+ var death_loader:=WebRunSave.new();respawn.add_child(death_loader);death_loader.main=respawn
+ death_loader.restore(death_save)
+ var restored_map:WorldMap=respawn.get_node('WorldMap')
+ check(restored_map.is_explored(&'Overworld',Vector2i(60,60)) and not restored_map.is_explored(&'Overworld',Vector2i(61,60)),'death save restores only discovered cells')
+ check(respawn.get_node('CurrencyWallet').balance()==0,'death save keeps currency reset')
+ respawn.queue_free();await process_frame;await process_frame
  print('[814] failures=',failures);quit(1 if failures else 0)

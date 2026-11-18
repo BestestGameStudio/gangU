@@ -6,10 +6,10 @@ extends Object
 ## it to the fresh scene right after the reload. Statics survive the scene
 ## reload exactly like Run's service lists - here that is the point.
 ##
-## This supersedes the #351 "no partial carryover" scope for progression
-## ONLY. Coins, the world, dungeon cleared-state, the map, the revive
-## satchel and consumables still reset with the reload, unchanged.
+## Discovered terrain also carries across the reload. Map annotations and
+## cleared dungeons belong to the current run.
 
+static var _discovery := {}
 static var _pending := false
 static var _unlocked: Array[Spell] = []
 static var _spells: Array[Spell] = []
@@ -35,6 +35,8 @@ static func snapshot(tree: SceneTree) -> void:
 	var relics := Run.relics()
 	if relics != null:
 		_relics = relics.all()
+	var map := p.get_node_or_null("../WorldMap") as WorldMap
+	_discovery = map.capture_discovery() if map != null else {}
 	_pending = true
 
 ## Called by Main at the end of _ready, after every run service is mounted.
@@ -43,6 +45,10 @@ static func apply_pending(main: Node) -> void:
 	if not _pending:
 		return
 	_pending = false
+	var map := main.get_node_or_null("WorldMap") as WorldMap
+	if map != null:
+		map.restore_discovery(_discovery)
+	_discovery.clear()
 	var caster := main.get_node_or_null("Player/SpellCaster") as SpellCaster
 	if caster != null:
 		caster.restore_run_state(_unlocked, _spells, _slots)

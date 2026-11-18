@@ -175,11 +175,6 @@ func _ready() -> void:
 	panel.player_path = NodePath("../Player")
 	panel.upgrader_path = NodePath("../SpellProgress")
 	add_child(panel)
-	## (#347) Player map: ONE persistent WorldMap record + its M panel (Shop
-	## idiom; per-run reset comes free from the reload). Explored terrain is
-	## shown automatically, details only as player-placed marks (Colin,
-	## 2026-11-08). reveal_rule is deliberately LEFT UNSET: reveal timing is
-	## Colin's open call (ARCHITECTURE.md O7), so nothing auto-reveals yet.
 	var world_map := WorldMap.new()
 	world_map.name = "WorldMap"
 	world_map.player = $Player
@@ -201,9 +196,6 @@ func _ready() -> void:
 	settings.name = "SettingsPanel"
 	add_child(settings)
 	area_loader.enter_overworld()
-	# #655: reapply the progression snapshot RunManager took at the player's
-	# death - spells, cast XP, upgrade tiers/tokens and relics persist across
-	# death; coins, the world and the map still reset with this reload.
 	ProgressionCarry.apply_pending(self)
 	if OS.has_feature("web"):
 		var web_save := WebRunSave.new()

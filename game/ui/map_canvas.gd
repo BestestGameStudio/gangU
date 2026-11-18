@@ -27,7 +27,7 @@ const SITE_RADIUS := 11.0
 ## Click reach for selecting a site, in SCREEN px.
 const SITE_PICK_PX := 18.0
 
-const FOG_COLOR := Color(0.03, 0.03, 0.05, 1.0)
+const FOG_COLOR := Color.BLACK
 const FALLBACK_GROUND := WorldMap.FALLBACK_GROUND
 const GRID_COLOR := Color(1.0, 1.0, 1.0, 0.05)
 const PLAYER_COLOR := Color(0.4, 0.85, 1.0, 1.0)
@@ -41,6 +41,7 @@ const ERASE_RADIUS_PX := 12.0
 var world_map: WorldMap = null
 var center: Vector2 = Vector2.ZERO
 var map_scale: float = 0.375
+var overview_scale := 0.0
 var tool: Tool = Tool.DRAW
 var symbol: WorldMap.Symbol = WorldMap.Symbol.CROSS
 ## (#366) Area shown; &"" follows the player's current area.
@@ -104,6 +105,7 @@ var _drag_button: MouseButton = MOUSE_BUTTON_NONE
 var _drag_area: StringName = &""
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visibility_changed.connect(cancel_interaction)
@@ -184,7 +186,7 @@ func clamp_center(c: Vector2) -> Vector2:
 	var out := c
 	out.x = pan_bounds.get_center().x if lo.x > hi.x else clampf(c.x, lo.x, hi.x)
 	out.y = pan_bounds.get_center().y if lo.y > hi.y else clampf(c.y, lo.y, hi.y)
-	if pan_outline.size() < 3 or view_inside_outline(out):
+	if (lo.x >= hi.x and lo.y >= hi.y) or pan_outline.size() < 3 or view_inside_outline(out):
 		return out
 	var a := _fit_anchor()
 	if a == Vector2.INF:
@@ -218,6 +220,15 @@ func _gui_input(event: InputEvent) -> void:
 		cancel_interaction()
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		if pan_bounds.has_area() and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			if mb.pressed:
+				var focus := screen_to_world(mb.position)
+				var factor := 1.25 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 0.8
+				map_scale = clampf(map_scale * factor, overview_scale, maxf(overview_scale, MapPanel.DEFAULT_SCALE))
+				center = clamp_center(center + focus - screen_to_world(mb.position))
+				queue_redraw()
+			accept_event()
+			return
 		if mb.button_index != MOUSE_BUTTON_LEFT and mb.button_index != MOUSE_BUTTON_RIGHT and mb.button_index != MOUSE_BUTTON_MIDDLE:
 			return
 		var w := screen_to_world(mb.position)
