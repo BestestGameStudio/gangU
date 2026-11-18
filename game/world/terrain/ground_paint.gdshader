@@ -197,7 +197,7 @@ vec3 cliff_stone(vec2 w, float depth, int kind) {
 	float column = floor(hash(vec2(floor(w.x / 128.0), 888.0)) * 8.0);
 	vec2 texel = vec2(column * 64.0 + mod(floor(w.x / 2.0), 64.0),
 		float(row) * 64.0 + mod(floor(w.y / 2.0), 64.0));
-	vec3 rock = texture(cliff_materials, (texel + 0.5) / vec2(512.0, 384.0)).rgb * 255.0;
+	vec3 rock = vec3(136.0,111.0,88.0);
 	// Broad lower occlusion, not a black outline or repeated stone blobs.
 	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.72 : (depth > 36.0 ? 0.82 : 1.0)));
 }
@@ -230,39 +230,8 @@ vec3 paint_relief(vec2 w, vec3 ground, int kind) {
 		if (tread >= 8.0) { return COBBLE_P[1] * 0.82; }
 		return joint < 2.0 ? COBBLE_P[1] : stone;
 	}
-	// Interpolating the contours rounds grid corners. Small offsets chip the lip.
-	vec2 uv = (grid + (vnoise(w / 16.0) - 0.5) * 0.19) / size;
-	vec2 edges = texture(relief, uv).rg * 2.0;
-	float level = floor(edges.g + 0.5);
-	float foot = edges.g - level + 0.5;
-	float lip = edges.r - level + 0.5;
-	if (level > 0.0 && lip < 0.0) {
-		// Find the nearest plateau in each direction. Only its southern
-		// exposure gets rock; side/back strips stay normal ground edge tiles.
-		vec4 dist = vec4(108.0);
-		for (int k = 1; k <= 8; k++) {
-			float step_up = float(k) * 12.0;
-			vec2 off = vec2(step_up / relief_cell) / size;
-			if (dist.x > 100.0 && texture(relief, uv - vec2(0.0, off.y)).r * 2.0 > level - 0.5) { dist.x = step_up; }
-			if (dist.y > 100.0 && texture(relief, uv + vec2(off.x, 0.0)).r * 2.0 > level - 0.5) { dist.y = step_up; }
-			if (dist.z > 100.0 && texture(relief, uv + vec2(0.0, off.y)).r * 2.0 > level - 0.5) { dist.z = step_up; }
-			if (dist.w > 100.0 && texture(relief, uv - vec2(off.x, 0.0)).r * 2.0 > level - 0.5) { dist.w = step_up; }
-		}
-		bool front = dist.x < 100.0 && dist.x <= min(dist.y, dist.w) + 12.0 && dist.x < dist.z;
-		// Rims use the plateau surface, not a dirt patch on the lower ground.
-        vec2 nearest = dist.x <= min(min(dist.y, dist.z),dist.w) ? vec2(0.0,-dist.x) : (dist.y <= min(dist.z,dist.w) ? vec2(dist.y,0.0) : (dist.z <= dist.w ? vec2(0.0,dist.z) : vec2(-dist.w,0.0)));
-        int rim_kind; int rim_second; float rim_margin;
-        classify(warped(w + nearest), rim_kind, rim_second, rim_margin);
-        if (rim_kind == DIRT || rim_kind == CLIFF) { rim_kind = GRASS; }
-        float rim_tone = fbm((w + nearest) / 240.0) * 0.72 + vnoise(w / 26.0) * 0.2 + 0.04;
-        vec3 cap_ground = paint(rim_kind,w,rim_tone);
-		if (!front) { return ground_edge(w, abs(lip) * 48.0, rim_kind, cap_ground); }
-		float depth = dist.x;
-		vec3 rock = cliff_stone(w, depth, kind);
-		return rock * (foot < 0.08 ? 0.76 : 1.0);
-	}
-	if (foot > 0.82) { ground *= 0.78; }
-	return ground * (1.0 + 0.045 * level);
+	// Terrace surfaces, edges and faces are discrete sprite tiles now.
+	return ground;
 }
 
 void fragment() {

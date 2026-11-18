@@ -93,6 +93,14 @@ func _init() -> void:
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
 	_paint = _make_paint()
+	_terrace_art = Node2D.new()
+	_terrace_art.name = "TerraceTiles"
+	_terrace_art.show_behind_parent = true
+	var tile_light := ShaderMaterial.new()
+	tile_light.shader = preload("res://game/world/terrain/terrace_tile_light.gdshader")
+	_terrace_art.material = tile_light
+	_terrace_art.draw.connect(func() -> void: preload("res://game/world/terrain/terrace_tile_art.gd").draw_tiles(_terrace_art,terraces,_view))
+	add_child(_terrace_art)
 	var black := Node2D.new()
 	black.name = "BlackBackdrop"
 	black.z_as_relative = false
@@ -126,6 +134,7 @@ func _ready() -> void:
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
 	_water.queue_redraw()
+	_terrace_art.queue_redraw()
 
 func _process(_delta: float) -> void:
 	_update_view()
@@ -145,6 +154,7 @@ func _update_view() -> void:
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
 	_water.queue_redraw()
+	_terrace_art.queue_redraw()
 
 ## #418: tree canopies draw on their own child at an absolute z above every
 ## character (player, enemies, summons all sit at z 0), so anyone standing
@@ -867,6 +877,7 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 ## positions, so boundaries curve instead of stepping along the grid.
 ## Outside the outline every point is CLIFF (rock face, then void).
 const GROUND_SHADER := preload("res://game/world/terrain/ground_paint.gdshader")
+var _terrace_art: Node2D
 var _paint: Node2D
 var _paint_rect := Rect2()
 
