@@ -874,7 +874,11 @@ func _test_desert_group() -> void:
 	_check(squad.leader != old_leader and is_instance_valid(squad.leader),"desert: surviving member inherits leadership")
 	p.apply_damage(10000)
 	squad._physics_process(0.01)
-	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: target loss cancels charge and regroups")
+	_check(squad.state == DesertMustacheGroup.State.SMOKE_HOLD,"desert: target loss stays in live smoke")
+	_check(squad._cloud.contains_smoke(squad.destination(squad.leader)),"desert: hold destination remains inside live puffs")
+	squad._cloud.lifetime = 0.0
+	squad._physics_process(0.01)
+	_check(squad.state == DesertMustacheGroup.State.SCATTER,"desert: dissipated cloud releases scatter")
 	for i in 90: await physics_frame
 	world.queue_free()
 	await process_frame

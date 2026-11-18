@@ -24,3 +24,12 @@ Actual Main/Hub scripted15s demo shows all phases and contact damage. Player
 HP boosted1000 for recording, approach/dodge scripted via real movement input,
 no production placement. Native evidence, not human balance or browser play.
 Current exit warning names existing OGG playback resources, not squad scripts.
+
+## Smoke hold and scatter correction
+The initial rigid V offsets were a placeholder, not owner direction. Replaced
+with a loose irregular cluster, per-member travel pace and slow independent
+arrival offsets. No sprite/animation source change. Once smoke lands, a player
+inside live puffs can be charged/contacted; a player outside is not chased out.
+Members use distinct interior puff points, even if the target is lost/dead/far.
+Actual cloud exhaustion/expiry/removal releases3s outward scatter, then regroup
+with4s re-arm delay. Knockback/terrain/freeze contracts still outrank propulsion.

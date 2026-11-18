@@ -11,8 +11,10 @@ func physics_step(enemy: Enemy, _target, dt: float) -> void:
  var player := squad.target()
  var goal := squad.destination(enemy)
  var speed := enemy.speed*(1.85 if squad.state == DesertMustacheGroup.State.CHARGE else 1.0)
+ if squad.state == DesertMustacheGroup.State.TRAVEL:
+  speed *= [0.94,1.05,0.9,1.1,0.98][clampi(squad.members.find(enemy),0,4)]
  var desired := enemy.global_position.direction_to(goal)*speed if enemy.global_position.distance_to(goal) > 10.0 else Vector2.ZERO
- if squad.state != DesertMustacheGroup.State.TRAVEL and squad.state != DesertMustacheGroup.State.CHARGE and player != null:
+ if squad.state in [DesertMustacheGroup.State.SPREAD,DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE] and player != null:
   var away: Vector2 = enemy.global_position-player.global_position
   if away.length() < squad.keep_distance-35.0: desired = away.normalized()*speed
   if enemy == squad.leader and squad.state in [DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE] and away.length() >= squad.keep_distance-35.0: desired = Vector2.ZERO
