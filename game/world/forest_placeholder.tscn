@@ -13,6 +13,8 @@ art_enabled = false
 [node name="Floor" type="Node2D" parent="."]
 script = ExtResource("floor")
 z_index = -80
+[node name="PermanentNight" type="CanvasModulate" parent="."]
+color = Color(0.30, 0.33, 0.55, 1)
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 position = Vector2(0, 96)
 [node name="Return" type="Area2D" parent="."]
