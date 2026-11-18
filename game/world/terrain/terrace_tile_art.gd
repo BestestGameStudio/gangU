@@ -6,20 +6,20 @@ const GRASS = preload("res://assets/sprites/terrain/dualgrid_variants_grass.png"
 const CELL = 32
 
 static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) -> void:
-	# Separate face below the south edge, only inside existing wall cells.
-	for c in terraces.walls:
-		var at := Vector2(c) * CELL
-		if not view.grow(64).has_point(at): continue
-		var level: int = terraces.bases.get(c, 0)
-		var depth := 0
-		for n in range(1, 4):
-			if terraces.tops.get(c - Vector2i(0,n),0) == level:
-				depth = n
-				break
-		if depth == 0 or terraces.stairs.has(c): continue
-		canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(32,32)),Rect2(0,32 if depth > 1 else 0,32,32))
-	# Dual-grid corners are the existing cell centres, not noisy contours.
 	for level in [1,2]:
+		# Separate face below the south edge, only inside existing wall cells.
+		for c in terraces.walls:
+			var at := Vector2(c) * CELL
+			if not view.grow(64).has_point(at): continue
+			if terraces.bases.get(c,0) != level: continue
+			var depth := 0
+			for n in range(1, 4):
+				if terraces.tops.get(c - Vector2i(0,n),0) == level:
+					depth = n
+					break
+			if depth == 0 or terraces.stairs.has(c): continue
+			canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(32,32)),Rect2(0,32 if depth > 1 else 0,32,32))
+	# Dual-grid corners are the existing cell centres, not noisy contours.
 		for x in range(terraces.bounds.position.x,terraces.bounds.end.x):
 			for y in range(terraces.bounds.position.y,terraces.bounds.end.y):
 				var c := Vector2i(x,y)
