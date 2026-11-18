@@ -697,3 +697,7 @@ high/low preview in all8 directions accepted November17 before commit.
 ## Revive cross and reward diamond sprites (#861)
 
 - `revive_cross.png` (12x12) and `reward_diamond.png` (9x12, neutral tones, tinted in game with modulate): authored in SpriteU (`tools/gen_pickups.py`, `sprites/revive-cross.json`, `sprites/reward-diamond.json`, `characters/pickups.md`) and exported with `--export`. Drawn at 2x. CC0 reference viewed only (OpenGameArt CC0 Gem Icons); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/18
+
+## Spell pickup tile and brackets (#861)
+
+- `spell_pickup_tile.png` (18x18) and `spell_pickup_brackets.png` (28x28): authored in SpriteU (`tools/gen_pickups.py`, `sprites/spell-pickup-tile.json`, `sprites/spell-pickup-brackets.json`, `characters/pickups.md`) and exported with `--export`. Drawn at 2x. CC0 reference viewed only (OpenGameArt CC0 Gem Icons); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/19
