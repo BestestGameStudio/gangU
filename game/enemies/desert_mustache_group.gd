@@ -36,7 +36,8 @@ func _ready() -> void:
  _elect_leader()
 
 func _elect_leader() -> void:
- members = members.filter(func(member: Enemy) -> bool: return is_instance_valid(member) and member.hp > 0 and not member.is_queued_for_deletion())
+ for i in range(members.size()-1,-1,-1):
+  if not is_instance_valid(members[i]) or members[i].hp <= 0 or members[i].is_queued_for_deletion():members.remove_at(i)
  if is_instance_valid(leader) and leader.hp > 0 and not leader.is_queued_for_deletion(): return
  leader = null
  for member in members:

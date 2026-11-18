@@ -43,3 +43,9 @@ valid deterministic sample on current map is(-380,-960), west of boss center
 anchor. No other group, new encounter, objective or respawn. Explicit player and
 shared-terrain refs verified from actual Main/Overworld boot. Placement is
 run-owned and retained with the cached overworld, reset by normal death reload.
+
+## Shifty idle direction
+Travel members choose independent twitch targets every0.16-0.52s, offset16-58px,
+with24% short pauses and0.6-1.55 pace multiplier. Independent deterministic seeds
+per member prevent synchronized changes. Existing group envelope, separation and
+terrain/force constraints remain; smoke/charge phases do not use this idle jitter.
