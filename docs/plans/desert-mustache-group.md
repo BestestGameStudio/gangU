@@ -49,3 +49,8 @@ Travel members choose independent twitch targets every0.16-0.52s, offset16-58px,
 with24% short pauses and0.6-1.55 pace multiplier. Independent deterministic seeds
 per member prevent synchronized changes. Existing group envelope, separation and
 terrain/force constraints remain; smoke/charge phases do not use this idle jitter.
+
+Engagement correction: same independent twitch/pace decisions also run through
+spread/keep-range and nonleader throw/wait. Too-close retreat overrides a pause;
+leader windup/wait remains steady for a reliable lob. Postlanding charge and
+smoke-hold/scatter do not receive this pre-smoke jitter.

@@ -16,7 +16,7 @@ func physics_step(enemy: Enemy, _target, dt: float) -> void:
  var player := squad.target()
  var goal := squad.destination(enemy)
  var speed := enemy.speed*(1.85 if squad.state == DesertMustacheGroup.State.CHARGE else 1.0)
- if squad.state == DesertMustacheGroup.State.TRAVEL:
+ if squad.state in [DesertMustacheGroup.State.TRAVEL,DesertMustacheGroup.State.SPREAD,DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE] and not (enemy == squad.leader and squad.state in [DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE]):
   if not _seeded:
    _rng.seed = 2909+maxi(0,squad.members.find(enemy))*7919
    _seeded = true
@@ -30,7 +30,7 @@ func physics_step(enemy: Enemy, _target, dt: float) -> void:
  var desired := enemy.global_position.direction_to(goal)*speed if enemy.global_position.distance_to(goal) > 10.0 else Vector2.ZERO
  if squad.state in [DesertMustacheGroup.State.SPREAD,DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE] and player != null:
   var away: Vector2 = enemy.global_position-player.global_position
-  if away.length() < squad.keep_distance-35.0: desired = away.normalized()*speed
+  if away.length() < squad.keep_distance-35.0: desired = away.normalized()*maxf(speed,enemy.speed)
   if enemy == squad.leader and squad.state in [DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE] and away.length() >= squad.keep_distance-35.0: desired = Vector2.ZERO
  # Separation is a desired velocity, still subject to terrain/force integration.
  for peer in squad.members:
