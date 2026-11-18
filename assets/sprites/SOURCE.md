@@ -701,3 +701,15 @@ high/low preview in all8 directions accepted November17 before commit.
 ## Spell pickup tile and brackets (#861)
 
 - `spell_pickup_tile.png` (18x18) and `spell_pickup_brackets.png` (28x28): authored in SpriteU (`tools/gen_pickups.py`, `sprites/spell-pickup-tile.json`, `sprites/spell-pickup-brackets.json`, `characters/pickups.md`) and exported with `--export`. Drawn at 2x. CC0 reference viewed only (OpenGameArt CC0 Gem Icons); no pixels copied. SpriteU PR: https://github.com/BestestGameStudio/SpriteU/pull/19
+
+## Broken-ground scorpion burrow trail (#877)
+
+Original SpriteU art in `tools/gen_scorpion_burrow.py`,
+`sprites/scorpion-burrow-trail.json`, `characters/scorpion-burrow.md`.
+Source PR https://github.com/BestestGameStudio/SpriteU/pull/21 must land first.
+No external pixels copied.48x32 transparent cells, visible soil about40x20;
+four keys120/150/180/150ms =600ms. Exported sheet192x32 via `--export DIR`,
+no gangU art generator. Dark cracks, lifted sandy plates and clods, no glow.
+Animated native/enlarged preview approved November17 before source commit.
+Runtime samples actual movement every20px, rotates/fades world-fixed stamps,
+and freezes their clocks with the owner. No hitbox or damage.

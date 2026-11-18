@@ -8,8 +8,6 @@ var buried := true
 var facing := Vector2.DOWN
 var _shell: DamageModifier
 var _body_shape: CollisionShape2D
-var _trail: Array[Vector2] = []
-var _trail_clock := 0.0
 var _pre_stun_pose: Dictionary = {}
 var _hop_height := 0.0
 
@@ -147,24 +145,6 @@ func set_hop_height(height: float) -> void:
 func _process(delta: float) -> void:
 	_hold_grounded_stinger()
 	super._process(delta)
-	if freeze.is_frozen(): return
-	if _behavior is EnemyBehaviorScorpion and (_behavior as EnemyBehaviorScorpion).state == EnemyBehaviorScorpion.State.BURROW_RUSH:
-		_trail_clock += delta
-		if _trail_clock >= 0.025:
-			_trail_clock = 0.0
-			_trail.append(global_position)
-			if _trail.size() > 12: _trail.pop_front()
-	elif not _trail.is_empty():
-		_trail.pop_front()
-	queue_redraw()
-
-func _draw() -> void:
-	for i in _trail.size():
-		var p := to_local(_trail[i])
-		var a := float(i+1)/float(_trail.size())
-		draw_circle(p, 3.0+4.0*a, Color(0.73,0.59,0.37,0.5*a))
-		draw_line(p+Vector2(-7,2),p+Vector2(7,2),Color(0.92,0.8,0.56,0.65*a),2.0)
-
 ## Straight charge planner uses the same center path as execution, clipped
 ## by terrain, world constraints and actual physics body sweeps. No wall slide.
 func charge_travel(direction: Vector2, maximum: float) -> float:

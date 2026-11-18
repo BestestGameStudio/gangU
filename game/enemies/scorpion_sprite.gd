@@ -31,7 +31,7 @@ func _process(delta: float) -> void:
 	var e := get_parent() as EnemyScorpion
 	if e != null and e._behavior is EnemyBehaviorScorpion:
 		var b := e._behavior as EnemyBehaviorScorpion
-		if b.state == b.State.STING_WINDUP and not e.is_stunned() and String(animation).begins_with("attack_") and frame < 2:
+		if (b.state == b.State.STING_WINDUP or (b.state == b.State.STING_HOP and b._burrow_hop)) and not e.is_stunned() and String(animation).begins_with("attack_") and frame < 2:
 			direction = TAIL_DIRECTIONS.find(String(animation).trim_prefix("attack_"))
 			strength = 0.55+0.45*(0.5+0.5*sin(TAU*5.0*b._time))
 	(material as ShaderMaterial).set_shader_parameter("mask_cell",Vector2(maxi(direction,0),mini(frame,1)))
