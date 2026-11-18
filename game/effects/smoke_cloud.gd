@@ -10,6 +10,8 @@ var wind := Vector2.ZERO
 var _age := 0.0
 var _clock := 0.0
 var _puffs: Array[Dictionary] = []
+var _footprint := PackedVector2Array()
+var _footprint_dirty := true
 var update_usec := 0
 var update_count := 0
 var update_max_usec := 0
@@ -60,6 +62,7 @@ func _physics_process(dt: float) -> void:
  for puff in _puffs:
   puff.p += (puff.v+wind)*STEP
   puff.r = maxf(0.0,puff.r-0.06)
+ _footprint_dirty = true
  modulate.a = minf(1.0,(lifetime-_age)/2.0)
  queue_redraw()
  var elapsed := Time.get_ticks_usec()-started
@@ -69,6 +72,7 @@ func _physics_process(dt: float) -> void:
 
 ## World-space inputs. Swept puffs are shrunk and pushed; this is NOT a fluid grid.
 func apply_segment(a: Vector2, b: Vector2, radius: float, heat := false) -> void:
+ _footprint_dirty = true
  a = to_local(a)
  b = to_local(b)
  for puff in _puffs:
@@ -108,6 +112,21 @@ func contains_smoke(at: Vector2) -> bool:
  for puff in _puffs:
   if puff.r >= 5.0 and local.distance_to(puff.p) <= puff.r*0.8:return true
  return false
+
+## Squad engagement footprint: convex envelope of surviving puff extents.
+## This bridges interior visual gaps without filling gaps between separate clouds.
+## Projectile interaction and exact-puff containment remain unchanged.
+func contains_footprint(at: Vector2) -> bool:
+ if not has_smoke(): return false
+ if _footprint_dirty:
+  var points := PackedVector2Array()
+  for puff in _puffs:
+   if puff.r < 5.0: continue
+   for i in 8:
+    points.append(puff.p+Vector2.from_angle(float(i)*TAU/8.0)*puff.r)
+  _footprint = Geometry2D.convex_hull(points) if not points.is_empty() else PackedVector2Array()
+  _footprint_dirty = false
+ return _footprint.size() >= 3 and Geometry2D.is_point_in_polygon(to_local(at),_footprint)
 
 func interior_point(index: int) -> Vector2:
  var live: Array[Vector2] = []

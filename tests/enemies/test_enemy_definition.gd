@@ -876,7 +876,29 @@ func _test_desert_group() -> void:
 	_check(squad._grenade != null,"desert: deferred production grenade exists")
 	for i in 45: await physics_frame
 	_check(squad.state == DesertMustacheGroup.State.CHARGE,"desert: real cloud landing releases group charge")
+	var first_cloud := squad._cloud
+	first_cloud.set_physics_process(false)
+	for i in 200: first_cloud._physics_process(0.05)
+	p.position = first_cloud.global_position
+	_check(not first_cloud.contains_smoke(p.position) and first_cloud.contains_footprint(p.position),"desert: live10s inter-puff gap belongs to continuous footprint")
+	squad._physics_process(4.0)
+	_check(squad.state == DesertMustacheGroup.State.CHARGE and squad._outside_clock == 0.0,"desert: stationary inter-puff player keeps charging without rethrow")
+	for retry_state in [DesertMustacheGroup.State.SPREAD,DesertMustacheGroup.State.THROW,DesertMustacheGroup.State.WAIT_SMOKE]:
+		squad._enter(DesertMustacheGroup.State.SPREAD)
+		if retry_state != DesertMustacheGroup.State.SPREAD: squad._enter(DesertMustacheGroup.State.THROW)
+		if retry_state == DesertMustacheGroup.State.WAIT_SMOKE: squad._enter(retry_state)
+		squad._physics_process(0.1)
+		_check(squad.state == DesertMustacheGroup.State.CHARGE and squad._clock == 0.0,"desert: shared smoke cancels retry state %d"%retry_state)
+
+	_check(squad.destination(squad.members[0]) == p.global_position,"desert: charge destination follows player across visual gap")
+	# Restore initial puff shape for the independent lifecycle contracts below.
+	first_cloud.free()
+	var restored := SmokeCloud.spawn(area,p.position)
+	squad._clouds = [restored]
+	squad._cloud = restored
+
 	# Tiny movement inside the cloud never rearms. Actual exit must persist.
+	squad._rearm = squad.launch_cooldown
 	var launch_generation := squad._generation
 	p.position += Vector2(1,0)
 	squad._physics_process(0.1)
@@ -908,8 +930,25 @@ func _test_desert_group() -> void:
 	squad._physics_process(0.01)
 	for i in 45: await physics_frame
 	_check(squad.state == DesertMustacheGroup.State.CHARGE,"desert: airborne rethrow survives thrower death and lands")
+	var newest := squad._cloud
+	# Both retained clouds are squad-owned. Standing in the older smoke must
+	# cancel an exit rethrow even when outside the newer cloud.
+	p.position = restored.global_position+Vector2(-150,0)
+	_check(not newest.contains_footprint(p.position),"desert: older cloud fixture is outside newer footprint")
+	squad._physics_process(4.0)
+	_check(squad.state == DesertMustacheGroup.State.CHARGE and squad._cloud == restored,"desert: older owned smoke retains charge and cancels exit clock")
+	var unrelated := SmokeCloud.spawn(area,Vector2(-1500,0))
+	p.position = unrelated.interior_point(0)
+	_check(not squad.player_in_smoke(p),"desert: unrelated squad smoke cannot retain charge")
+	unrelated.queue_free()
+	p.position = newest.interior_point(0)
+	squad._physics_process(0.01)
+	newest.lifetime = 0.0
+	squad._physics_process(0.01)
+	_check(squad.state != DesertMustacheGroup.State.SCATTER and not squad._clouds.is_empty(),"desert: one expired cloud does not scatter while owned smoke survives")
+
 	# Leader disable must not stall a different elected thrower or landing.
-	squad._cloud.lifetime = 0.0
+	for owned in squad._clouds: owned.lifetime = 0.0
 	squad._physics_process(0.01)
 	_check(squad.state == DesertMustacheGroup.State.SCATTER,"desert: dissipated cloud releases scatter")
 	squad._physics_process(squad.scatter_seconds)
@@ -936,7 +975,7 @@ func _test_desert_group() -> void:
 	_check(squad.state == DesertMustacheGroup.State.SMOKE_HOLD,"desert: dead target stays in smoke without throwing")
 	_check(squad._cloud.contains_smoke(squad.destination(squad.leader)),"desert: no-target hold destination remains inside smoke")
 	# WAIT timeout and cancellation invalidate callbacks, rather than charging.
-	squad._cloud.lifetime = 0.0
+	for owned in squad._clouds: owned.lifetime = 0.0
 	squad._physics_process(0.01)
 	squad._physics_process(squad.scatter_seconds)
 	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: scatter without target returns to travel")
