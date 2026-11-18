@@ -12,6 +12,13 @@ var player: Player = null
 ## #349 travel wiring. Uses the ONE canonical dictionary above. Mount kept
 ## separate from the map block so exploration-map work remains independent.
 var _fast_travel: FastTravelPanel
+var _was_in_hub := false
+
+func _process(_delta: float) -> void:
+	var inside := _is_hub_area()
+	if inside != _was_in_hub:
+		_was_in_hub = inside
+		refresh()
 
 func mount() -> void:
 	_fast_travel = FastTravelPanel.new()
@@ -29,7 +36,10 @@ func refresh() -> void:
 	_fast_travel.set_choices(choices)
 
 func _is_hub_area() -> bool:
-	return area_loader.current_area != null and area_loader.current_area.scene_file_path == FastTravelRoutes.HUB_SCENE
+	if area_loader == null or area_loader.current_area == null or player == null:
+		return false
+	var hub := area_loader.current_area.get_node_or_null("HubServices")
+	return hub != null and hub.contains_player(player.global_position) and not area_loader.has_active_encounter()
 
 func _request_fast_travel(dungeon_id: StringName) -> void:
 	_commit_fast_travel.call_deferred(dungeon_id)

@@ -4,6 +4,8 @@ extends Node2D
 ## Initial balance values are tunable placeholders.
 ## Phase 2 tell/attack alignment is tracked in #666.
 
+const MAX_LAYOUT_RADIUS := 640.0
+
 enum State { DORMANT, POSSESSED, STUNNED, PREPARING, TRANSFERRING, PHASE_TWO }
 var arena_radius := 0.0
 var statue_radius := 0.0
@@ -1059,7 +1061,7 @@ func configure_size() -> void:
 	var camera := get_viewport().get_camera_2d()
 	var camera_zoom := camera.zoom if camera != null else Vector2.ONE
 	_screen_world_size = get_viewport_rect().size / camera_zoom
-	arena_radius = _screen_world_size.y * arena_diameter_screen_heights * 0.5
+	arena_radius = minf(_screen_world_size.y * arena_diameter_screen_heights * 0.5, MAX_LAYOUT_RADIUS)
 	statue_radius = arena_radius*0.75
 	barrier_radius = statue_radius-DesertStatue.BODY_RADIUS
 	activation_radius = minf(220.0,arena_radius*0.25)

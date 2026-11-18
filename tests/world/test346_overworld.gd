@@ -1,6 +1,6 @@
 extends SceneTree
 ## Core folded-world contract: physical entries, one instance per run,
-## parked hub isolation, explicit Player wiring and bounded activation.
+## outdoor hub services, explicit Player wiring and bounded activation.
 ## The performance sample is repeatable diagnostic output, not a claim
 ## about browser FPS on a developer laptop. Structural tick-budget guards
 ## are stable across CI machines; browser frame times are PR evidence.
@@ -23,12 +23,10 @@ func _run() -> void:
 	var loader: AreaLoader = main.area_loader
 	var p: Player = main.get_node('Player')
 	var player_id := p.get_instance_id()
-	var hub: Node = loader.current_area
-	var gate := hub.get_node('GateOverworld') as Gate
-	_check(gate.gate_type == Gate.GateType.TRAVEL, 'hub retains TRAVEL passage')
-	gate._on_body_entered(p)
-	await _frames(3)
 	var ow := loader.current_area
+	var hub := ow.get_node("HubServices") as HubServices
+	_check(hub.contains_player(p.global_position), 'run starts beside the outdoor hub services')
+	_check(ow.get_node_or_null("GateHub") == null and hub.get_node_or_null("GateOverworld") == null, 'hub has no teleport passage')
 	_check(ow.name == &'Overworld' and loader.regions.is_empty(), 'overworld mounts no dungeon regions (#643)')
 	var map := ow.get_node('Terrain') as TerrainMap
 	var enemy: Enemy
@@ -41,17 +39,19 @@ func _run() -> void:
 	marker.name = 'RetainedRunMarker'
 	ow.add_child(marker)
 	p.hp = 77
-	loader._load_hub()
-	await _frames(2)
-	_check(is_instance_valid(ow) and not (ow as Node2D).visible, 'hub parks existing overworld')
-	var collisions_off := true
-	for n in ow.find_children('*','CollisionObject2D',true,false):
-		if n.collision_layer != 0 or n.collision_mask != 0: collisions_off = false
-	_check(collisions_off, 'parked overworld has no collisions in hub')
-	loader.enter_overworld()
-	await _frames(2)
-	_check(loader.current_area == ow and ow.get_node_or_null('RetainedRunMarker') == marker, 'hub trip retains exact region instances')
-	_check(p.get_instance_id() == player_id and p.hp == 77, 'hub trip preserves player and HP')
+	var start := p.global_position
+	Input.action_press("move_down")
+	await _frames(50)
+	Input.action_release("move_down")
+	_check(p.global_position.y > start.y + 170.0 and not hub.contains_player(p.global_position), 'player walks out of the service clearing')
+	_check(not main.travel._is_hub_area(), 'hub travel is unavailable outdoors')
+	Input.action_press("move_up")
+	await _frames(50)
+	Input.action_release("move_up")
+	_check(hub.contains_player(p.global_position) and main.travel._is_hub_area(), 'walking back inside restores hub travel')
+	_check(loader.current_area == ow and ow.get_node_or_null('RetainedRunMarker') == marker, 'walking through hub retains exact world instance')
+	_check(p.get_instance_id() == player_id and p.hp == 77, 'hub visit preserves player and HP')
+	_check(hub.get_node_or_null("ShopVendor") != null and hub.get_node_or_null("SpellDirectory") != null and hub.get_node_or_null("BestiaryStation") != null, 'all three services share the outdoor clearing')
 	p.global_position = ow.get_node('PlayerSpawn').global_position
 	loader.activation.update_now()
 	var active_count := 0
@@ -80,7 +80,7 @@ func _run() -> void:
 	reload_current_scene()
 	await _frames(5)
 	var fresh := current_scene
-	_check(fresh != main and fresh.area_loader.current_area.name == &'Hub', 'full reset returns fresh run to hub')
+	_check(fresh != main and fresh.area_loader.current_area.name == &'Overworld' and fresh.area_loader.current_area.get_node('HubServices').contains_player(fresh.get_node('Player').global_position), 'full reset returns fresh run to hub')
 	_check(not is_instance_id_valid(old_id) and fresh.area_loader.regions.is_empty(), 'full reset destroys cached world and region state')
 	fresh.queue_free()
 	await process_frame

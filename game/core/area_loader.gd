@@ -5,7 +5,7 @@ extends Node
 ## policy lives in MusicDirector and hub-spoke travel in TravelService.
 
 ## Main, which parents the mounted areas (they stay Main/<Area> children so
-## every relative NodePath is unchanged); assigned by Main before _load_hub().
+## every relative NodePath is unchanged); assigned by Main before enter_overworld().
 var main_host: Node = null
 ## The shared run Player (Main/Player); assigned by Main.
 var player: Player = null
@@ -74,10 +74,7 @@ func complete_encounter(id: StringName) -> bool:
 					if is_instance_valid(enemy): enemy.queue_free()
 	return true
 
-func _load_hub() -> void:
-	_swap(preload("res://game/world/hub.tscn").instantiate())
-
-## #346: go straight to the overworld (same swap a hub TRAVEL gate makes).
+## Boot and return travel share the run-owned overworld.
 func enter_overworld() -> void:
 	if is_instance_valid(_run_overworld):
 		_swap(_run_overworld)

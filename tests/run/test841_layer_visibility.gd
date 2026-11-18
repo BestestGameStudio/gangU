@@ -38,11 +38,11 @@ func run() -> void:
  var arena=main.area_loader.current_area.get_node('DesertStatueArena')
  check(not arena.is_active() and not arena._ui.visible, 'production dormant arena starts hidden')
  for trip in 2:
-  main.area_loader._load_hub()
+  main.area_loader._swap(load('res://game/world/dungeon_a.tscn').instantiate())
   await process_frame
   main.area_loader.enter_overworld()
   await process_frame
-  check(not arena.is_active() and not arena._ui.visible, 'production dormant arena stays hidden after hub trip%d'%trip)
+  check(not arena.is_active() and not arena._ui.visible, 'production dormant arena stays hidden after area trip%d'%trip)
  main.queue_free()
  await process_frame
  print('[841] DONE failures=',failures)

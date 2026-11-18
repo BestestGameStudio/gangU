@@ -1,10 +1,13 @@
-[gd_scene load_steps=29 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=32 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
 [ext_resource type="Script" path="res://game/spells/effects/terrain_block_visuals.gd" id="437_blockvis"]
 [ext_resource type="Script" path="res://game/core/day_night_tint.gd" id="448_tint"]
-[ext_resource type="PackedScene" uid="uid://bgangu7gate" path="res://game/world/gate.tscn" id="346_gate"]
+[ext_resource type="Script" path="res://game/world/hub_services.gd" id="hub_services"]
+[ext_resource type="PackedScene" path="res://game/ui/shop_vendor.tscn" id="hub_vendor"]
+[ext_resource type="PackedScene" path="res://game/ui/spell_directory.tscn" id="hub_directory"]
+[ext_resource type="PackedScene" path="res://game/ui/bestiary_station.tscn" id="hub_bestiary"]
 [ext_resource type="PackedScene" uid="uid://bgangu5enemy" path="res://game/enemies/enemy.tscn" id="346_enemy"]
 [ext_resource type="Resource" uid="uid://bgangurdemotable" path="res://data/rewards/demo_table.tres" id="346_table"]
 [ext_resource type="PackedScene" path="res://game/enemies/enemy_red_mustache.tscn" id="631_red"]
@@ -26,34 +29,34 @@
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_0"]
 script = ExtResource("518_spawn_entry")
-position = Vector2(420, 2420)
+position = Vector2(-200, 1300)
 enemy = ExtResource("631_red")
 reward_table = ExtResource("346_table")
 definition = ExtResource("631_red_def")
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_1"]
 script = ExtResource("518_spawn_entry")
-position = Vector2(760, 2560)
+position = Vector2(-80, 1450)
 enemy = ExtResource("631_red")
 reward_table = ExtResource("346_table")
 definition = ExtResource("631_red_def")
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_2"]
 script = ExtResource("518_spawn_entry")
-position = Vector2(300, 2720)
+position = Vector2(-180, 1600)
 enemy = ExtResource("631_red")
 reward_table = ExtResource("346_table")
 definition = ExtResource("631_red_def")
 
 [sub_resource type="Resource" id="Resource_spawn_fishy_0"]
 script = ExtResource("518_spawn_entry")
-position = Vector2(520, 2520)
+position = Vector2(-320, 1350)
 enemy = ExtResource("662_fishy")
 definition = ExtResource("662_fishy_def")
 
 [sub_resource type="Resource" id="Resource_spawn_fishy_1"]
 script = ExtResource("518_spawn_entry")
-position = Vector2(250, 2620)
+position = Vector2(-280, 1550)
 enemy = ExtResource("662_fishy")
 definition = ExtResource("662_fishy_def")
 
@@ -95,7 +98,7 @@ route = PackedVector2Array(1450, 250, 1500, -300, 1350, -800)
 script = ExtResource("346_ground")
 
 [node name="AbandonedVillage" type="Area2D" parent="."]
-position = Vector2(576, 1400)
+position = Vector2(160, 600)
 script = ExtResource("484_village")
 
 [node name="Terrain" type="Node2D" parent="."]
@@ -129,13 +132,20 @@ text = "OVERWORLD"
 horizontal_alignment = 2
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
-position = Vector2(576, 480)
+position = Vector2(896, 1632)
 
-[node name="GateHub" parent="." instance=ExtResource("346_gate")]
-position = Vector2(576, 640)
-gate_type = 3
-target_path = "res://game/world/hub.tscn"
-label_text = "HUB"
+[node name="HubServices" type="Node2D" parent="."]
+position = Vector2(896, 1536)
+script = ExtResource("hub_services")
+
+[node name="ShopVendor" parent="HubServices" instance=ExtResource("hub_vendor")]
+position = Vector2(160, 0)
+
+[node name="SpellDirectory" parent="HubServices" instance=ExtResource("hub_directory")]
+position = Vector2(0, 0)
+
+[node name="BestiaryStation" parent="HubServices" instance=ExtResource("hub_bestiary")]
+position = Vector2(-160, 0)
 
 [node name="Roamers" type="Node" parent="."]
 script = ExtResource("373_spawn_data")
@@ -153,7 +163,7 @@ entries = Array[ExtResource("518_spawn_entry")]([SubResource("Resource_spawn_fis
 player_path = NodePath("../../Player")
 
 [node name="DesertStatueArena" type="Node2D" parent="."]
-position = Vector2(2100, 400)
+position = Vector2(576, -960)
 script = ExtResource("desert_arena")
 
 [node name="Scorpions" type="Node" parent="."]

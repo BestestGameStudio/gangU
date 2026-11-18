@@ -1,39 +1,14 @@
 extends Node2D
 class_name OverworldGround
-## #346: code-drawn overworld field (HubFloor idiom: lives in the area scene,
-## freed with it, drawn once). A wide grass field with dirt roads from the
-## arrival point to every gate, plus scattered trees and rocks kept off the
-## roads and away from the gates. Layout is read from the parent scene on
-## _ready (PlayerSpawn + every Gate sibling), so moving an entrance in
-## overworld.tscn moves its road with it. Deterministic (hashed, no RNG).
-## #771: trees collide only in a small rectangle at the narrow trunk base.
-## Precise movement/projectile queries and debug physics boxes share it;
-## coarse navigation cells route around it without widening actual collision.
-## #419 (Daniel, 2026-11-09: "remove the visible dirt paths leading to
-## gates, keep it cosmetic"): the roads are no longer drawn. They are still
-## computed (`roads`, `road_distance`) because decor placement keeps trees
-## and rocks off them - dropping that would move trees and change collision
-## and routes. The arrival clearing and the pad under each gate stay.
-## Painted look: the field is one shader quad (ground_paint.gdshader) over
-## the baked lattice types, and trees, rocks and ground clutter are
-## TerrainPieces. Layout, collision and blockers are unchanged.
+## Authored island coast with desert to the north, grass/dirt plains in the
+## middle, and a beach to the south. Ground types drive both the painted
+## floor and exploration map. Existing TerrainPieces supply the decor.
+## Trees collide only at their narrow trunks; the ocean blocks movement.
 
 const CENTER := Vector2(576, -150)
-## #436 (Daniel, 2026-11-09: "expand the overworld map" - the world itself,
-## 2x in each direction, same terrain mix for now): doubled from
-## (1200, 1050), quadrupling the explorable area. Gates, spawns and guard
-## posts keep their scene positions; the field grows around them. The
-## decor/patch grids below derive their extents from RADII so the terrain
-## mix covers the whole field at the same density.
-const RADII := Vector2(2400, 2100)
-## #635 (Daniel, WhatsApp 2026-11-12: "extend the map south with grass,
-## trees ..."): the field outline reaches this far past the old south edge.
-## Only the south half of the outline grows; the north edge and every
-## existing decor/meadow/tall-grass slot stay put because the placement
-## grids anchor at CENTER and only their southern gy range extends.
+## Sampling bounds for the authored coast and surrounding ocean.
+const RADII := Vector2(2600, 2100)
 const SOUTH_EXTEND := 1200.0
-const OUTLINE_POINTS := 64
-const OUTER_FADE := 160.0
 
 const ARRIVAL_R := 74.0
 const DECOR_STEP := 120.0
@@ -217,7 +192,6 @@ func _build_beach_decor() -> void:
 	beach_decor.clear()
 	var step := 90.0
 	var grass_rim := _blob(-40.0)       ## stay off the grass/sand blend
-	var sand_deep := _blob(-176.0)      ## inner limit for palms
 	var waterline := _blob(-64.0)       ## in-field driftwood hugs the shore
 	var outer_sand := _blob(BEACH_OUT - 24.0)
 	var x0 := int(floor((CENTER.x - RADII.x) / step))
@@ -232,7 +206,7 @@ func _build_beach_decor() -> void:
 			var v := int(_hash01(gx, gy, 75) * 2.0) % 2
 			var h := _hash01(gx, gy, 73)
 			if covers(at):
-				if Geometry2D.is_point_in_polygon(at, sand_deep) or not Geometry2D.is_point_in_polygon(at, grass_rim):
+				if at.y < _beach_edge_y(at.x) + 80.0 or not Geometry2D.is_point_in_polygon(at, grass_rim):
 					continue
 				var near_decor := false
 				for d in decor:
@@ -302,6 +276,7 @@ func canopy() -> Node2D:
 ## Reads the arrival marker and every Gate sibling, then lays out roads and
 ## decor. Public so harnesses can rebuild from a scene without a tree.
 func build_from(area: Node) -> void:
+	_lattice_memo.clear()
 	landmarks.clear()
 	roads.clear()
 	if area != null:
@@ -377,17 +352,45 @@ static func _hash01(x: int, y: int, salt: int) -> float:
 	h = h ^ (h >> 16)
 	return float(h & 0xFFFF) / 65535.0
 
-## Irregular field outline: an ellipse with hashed radial wobble, grown by d.
+## Coast traced from the layout sketch, in a 6 px world scale.
+const COAST_SKETCH: Array[Vector2] = [
+	Vector2(108, 300), Vector2(120, 265), Vector2(165, 218),
+	Vector2(212, 176), Vector2(280, 137), Vector2(350, 104),
+	Vector2(430, 86), Vector2(520, 75), Vector2(590, 77),
+	Vector2(680, 89), Vector2(760, 106), Vector2(830, 127),
+	Vector2(875, 153), Vector2(904, 194), Vector2(917, 237),
+	Vector2(911, 292), Vector2(899, 352), Vector2(872, 405),
+	Vector2(837, 461), Vector2(804, 520), Vector2(768, 581),
+	Vector2(731, 632), Vector2(698, 681), Vector2(665, 732),
+	Vector2(637, 780), Vector2(611, 815), Vector2(581, 835),
+	Vector2(551, 838), Vector2(498, 833), Vector2(452, 821),
+	Vector2(428, 806), Vector2(411, 783), Vector2(390, 739),
+	Vector2(369, 688), Vector2(347, 631), Vector2(327, 577),
+	Vector2(303, 528), Vector2(273, 495), Vector2(230, 474),
+	Vector2(190, 454), Vector2(158, 435), Vector2(143, 399),
+	Vector2(125, 350), Vector2(114, 324),
+]
+
 func _blob(d: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for i in OUTLINE_POINTS:
-		var a := TAU * i / OUTLINE_POINTS
-		var wob := 1.0 + 0.027 * (sin(3.0 * a + 1.0) + 0.7 * sin(5.0 * a + 2.0) + 0.5 * sin(9.0 * a))
-		# #635: asymmetric south radius - the outline stays a superset of
-		# the old ellipse, so no existing slot check changes result.
-		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
-		pts.append(CENTER + Vector2(cos(a) * (RADII.x * wob + d), sin(a) * (ry * wob + d)))
-	return pts
+	var coast := PackedVector2Array()
+	for point in COAST_SKETCH:
+		coast.append(Vector2(576, 900) + (point - Vector2(533, 540)) * 6.0)
+	if is_zero_approx(d):
+		return coast
+	var grown := Geometry2D.offset_polygon(coast, d, Geometry2D.JOIN_ROUND)
+	return grown[0] if not grown.is_empty() else coast
+
+## The desert's southern edge bows north at the centre of the island.
+func _desert_edge_y(x: float) -> float:
+	var dx := (x - 400.0) / 2100.0
+	return -120.0 + 520.0 * dx * dx + 28.0 * sin(x / 330.0)
+
+func _beach_edge_y(x: float) -> float:
+	return 2010.0 + 42.0 * sin(x / 140.0) + 24.0 * sin(x / 71.0)
+
+func _hub_bounds() -> Rect2:
+	var hub := get_parent().get_node_or_null("HubServices") if get_parent() != null else null
+	return hub.world_bounds() if hub != null else Rect2()
 
 ## A gently bent road: two hashed sideways offsets along the way.
 func _road(from: Vector2, to: Vector2, salt: int) -> PackedVector2Array:
@@ -483,6 +486,8 @@ func _build_scatter(area: Node) -> void:
 				kind = TerrainPieces.Kind.BUSH
 			if kind < 0 or not Geometry2D.is_point_in_polygon(at, inner):
 				continue
+			if _hub_bounds().grow(100.0).has_point(at):
+				continue
 			if at.distance_to(spawn) < ARRIVAL_STONE_R + 48.0:
 				continue
 			if village != null and at.distance_to(village.position) < 470.0:
@@ -512,6 +517,8 @@ func _build_tall_grass() -> void:
 			if not Geometry2D.is_point_in_polygon(at, inner):
 				continue
 			var r := 64.0 + _hash01(gx, gy, 44) * 64.0
+			if at.y < _desert_edge_y(at.x) + r or at.y + r > _beach_edge_y(at.x) or _hub_bounds().grow(r).has_point(at):
+				continue
 			var village := get_parent().get_node_or_null("AbandonedVillage") as AbandonedVillage if get_parent() != null else null
 			if village != null and at.distance_to(village.position) < 550.0 + r:
 				continue
@@ -627,6 +634,8 @@ func patrol_distance(p: Vector2) -> float:
 	return best
 
 func _clear_spot(p: Vector2) -> bool:
+	if _hub_bounds().grow(100.0).has_point(p):
+		return false
 	if p.distance_to(spawn) < GATE_CLEAR:
 		return false
 	for l in landmarks:
@@ -646,6 +655,8 @@ func _build_decor() -> void:
 	for gx in range(-gx_n, gx_n + 1):
 		for gy in range(-gy_n, gy_s + 1):
 			var at := CENTER + Vector2(gx, gy) * DECOR_STEP + Vector2(_hash01(gx, gy, 31) - 0.5, _hash01(gx, gy, 32) - 0.5) * DECOR_STEP * 0.8
+			if at.y < _desert_edge_y(at.x) + 100.0 or at.y > _beach_edge_y(at.x) - 100.0:
+				continue
 			if _hash01(gx, gy, 33) > 0.42:
 				continue
 			# Keep decor inside the field, clear of the soft edge.
@@ -667,17 +678,10 @@ func _in_patch(p: Vector2) -> bool:
 				return true
 	return false
 
-## Dual-grid terrain (DualGrid): the field's terrain type lives on 64 px
-## lattice points, every drawn tile blends the four points around it. Grass
-## everywhere inside the outline, a stone-brick clearing at the arrival,
-## dirt pads under the gates and in some of the old patch slots, the desert
-## arena as sandstone slabs ringed by sand, and a cliff border outside the
-## outline (the cliff set, DualGrid.T.CLIFF). Layout, decor and collision are
-## unchanged: this is presentation only.
+## The 64 px ground lattice feeds the floor shader and animated water.
 const ARRIVAL_STONE_R := 88.0
 const GATE_PAD_R := 76.0
 ## Cells past the outline that the border covers (drawn) and blocks (collision).
-const BORDER_DRAWN := 112.0
 ## #820 (Mitra: "we shouldn't be able to float"): the blocked band used to end
 ## 192 past the outline, but the rock and water run ~290 past it, so the
 ## strip beyond was walkable void. It now reaches past the whole cliff band
@@ -696,8 +700,6 @@ const BEACH_WALK_OUT := 112.0
 const CLIFF_BAND := 256.0
 const BEACH_IN := 192.0
 const BEACH_OUT := 128.0
-var _beach_inner := PackedVector2Array()
-var _beach_buffer := PackedVector2Array()
 var _beach_outer := PackedVector2Array()
 var _cliff_rim := PackedVector2Array()
 ## Beach set dressing on the south sand: {"kind": "palm"|"driftwood",
@@ -713,21 +715,11 @@ static var _driftwood_textures: Array[Texture2D] = []
 var _lattice_memo: Dictionary = {}
 var _desert_noise: FastNoiseLite
 
-## #820 (Mitra: "only put them where it would be visible from the front,
-## everywhere else can just be the water"): the cliff band is full width
-## only on the south-facing stretches of the edge and tapers to nothing
-## toward the sides and the north, where grass meets the ocean directly.
-const CLIFF_FRONT_FROM := 0.97 ## sin(angle) below which there is no cliff
-const CLIFF_FRONT_FULL := 0.99 ## sin(angle) at which the band is full width
-const CLIFF_FRONT_WIDTH := 32.0 ## just the brown face, then water up to its foot
+## Downward extrusion exposes cliffs only on the front-facing coast.
 func _front_rim() -> PackedVector2Array:
 	var pts := PackedVector2Array()
-	for i in OUTLINE_POINTS:
-		var a := TAU * i / OUTLINE_POINTS
-		var wob := 1.0 + 0.027 * (sin(3.0 * a + 1.0) + 0.7 * sin(5.0 * a + 2.0) + 0.5 * sin(9.0 * a))
-		var ry := RADII.y + (SOUTH_EXTEND if sin(a) > 0.0 else 0.0)
-		var d := CLIFF_FRONT_WIDTH * smoothstep(CLIFF_FRONT_FROM, CLIFF_FRONT_FULL, sin(a))
-		pts.append(CENTER + Vector2(cos(a) * (RADII.x * wob + d), sin(a) * (ry * wob + d)))
+	for p in outline:
+		pts.append(p + Vector2(0, 144))
 	return pts
 
 ## Terrain type at a lattice point (world position = point * 64).
@@ -739,12 +731,9 @@ func _lattice_type(x: int, y: int) -> int:
 	_lattice_memo[key] = t
 	return t
 
-## #811: the south sector (a cone from CENTER opening downward) gets the
-## beach; every other edge keeps the cliff. The cone is wide enough that
-## the sand/cliff seam sits well outside the drawn border.
+## Only the southern tip gets a walkable sand apron into the sea.
 func _is_south(p: Vector2) -> bool:
-	var d := p - CENTER
-	return d.y > 0.0 and absf(d.x) < d.y * 1.2
+	return p.y > 1700.0
 
 func _compute_lattice_type(p: Vector2) -> int:
 	if not covers(p):
@@ -755,21 +744,11 @@ func _compute_lattice_type(p: Vector2) -> int:
 		if _cliff_rim.is_empty():
 			_cliff_rim = _front_rim()
 		return DualGrid.T.CLIFF if Geometry2D.is_point_in_polygon(p, _cliff_rim) else DualGrid.T.WATER
-	if _is_south(p):
-		if _beach_inner.is_empty():
-			_beach_inner = _blob(-BEACH_IN)
-		if not Geometry2D.is_point_in_polygon(p, _beach_inner):
-			return DualGrid.T.SAND
-		# Buffer band: no dirt pads or patches against the sand - there is
-		# no dirt-on-sand sheet, and the blend would draw as bare blocks.
-		if _beach_buffer.is_empty():
-			_beach_buffer = _blob(-(BEACH_IN + 64.0))
-		if not Geometry2D.is_point_in_polygon(p, _beach_buffer):
-			return DualGrid.T.GRASS
-	# Only grass meets the cliff edge (the edge art is grass over void).
-	if _inner_edge.is_empty():
-		_inner_edge = _blob(-140.0)
-	if not Geometry2D.is_point_in_polygon(p, _inner_edge):
+	if p.y >= _beach_edge_y(p.x):
+		return DualGrid.T.SAND
+	if p.y > _beach_edge_y(p.x) - 100.0:
+		return DualGrid.T.GRASS
+	if _hub_bounds().grow(32.0).has_point(p):
 		return DualGrid.T.GRASS
 	var parent := get_parent()
 	var desert := parent.get_node_or_null("DesertStatueArena") as DesertStatueArena if parent != null else null
@@ -801,6 +780,8 @@ func _compute_lattice_type(p: Vector2) -> int:
 		if d < r * 1.08 * wob:
 			return DualGrid.T.SAND
 		desert_near = d < r * 1.08 * wob + 220.0
+	if p.y < _desert_edge_y(p.x):
+		return DualGrid.T.SAND
 	# Arrival clearing and the pad under every gate.
 	if p.distance_to(spawn) <= ARRIVAL_STONE_R:
 		return DualGrid.T.STONE
@@ -834,7 +815,6 @@ const VILLAGE_DIRT_RING := false
 var _cobble_nodes: Dictionary = {}
 var _dirt_nodes: Dictionary = {}
 var _lane_nodes: Dictionary = {}
-var _inner_edge := PackedVector2Array()
 
 ## One-tile-wide trails: snap every path polyline onto the 64px lattice and
 ## fill the corner of each diagonal step so the trail stays connected.
