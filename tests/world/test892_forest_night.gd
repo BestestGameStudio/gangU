@@ -23,9 +23,10 @@ func run() -> void:
  check(night.get_script()==null,"night tint has no cycle driver")
  check(night.visible,"forest night tint visible")
  var floor: Node2D=forest.get_node("Floor")
- check(floor.GRASS.resource_path=="res://assets/sprites/terrain/dualgrid_variants_grass.png","existing game grass reused")
- check(floor.grass_tiles.size()==192,"grass covers entire placeholder floor")
- check(floor.texture_filter==CanvasItem.TEXTURE_FILTER_NEAREST,"existing pixel texture stays sharp")
+ var mat := floor.material as ShaderMaterial
+ check(mat.shader.resource_path=="res://game/world/terrain/ground_paint.gdshader","exact overworld ground shader reused")
+ check(mat.get_shader_parameter("types").get_image().get_pixel(0,0).r==0.0,"grass-only lattice")
+ check(floor.PAINT_RECT.encloses(Rect2(-2000,-2000,4000,4000)),"grass covers beyond walk bounds without panel edge")
  for time in [0.0,0.18,0.29,0.5,0.72,0.9]:
   clock.time_of_day=time
   await process_frame

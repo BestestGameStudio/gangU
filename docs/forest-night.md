@@ -1,15 +1,15 @@
 # Forest grass and permanent night
 
-Daniel's November18 request: existing grass texture and permanent night in
-the forest placeholder behind #891's tree wall.
+Owner requested existing overworld grass and permanent night in the forest
+placeholder behind #891, then approved the corrected shader preview.
 
-- Reuses assets/sprites/terrain/dualgrid_variants_grass.png, 64px tiles with
-  deterministic variants and nearest filtering. No new art or SpriteU edit.
-- Static scene-local CanvasModulate uses the existing DayNightClock midnight
-  colour(0.30,0.33,0.55). No clock driver, reset, freeze or gameplay change.
-- Player/world tint at night, HUD/instructions stay on their existing canvas.
-- Existing room bounds, return guide, doorway and cached overworld behavior
-  unchanged. Night tint is freed with forest scene on return.
-- Tests sample the full clock cycle, grass coverage and cached return. Demo
-  uses staged start/clock samples with actual input/physics for the round trip.
-  Native/scripted evidence, not hands-on browser or balance qualification.
+- Reuses ground_paint.gdshader unchanged, with a grass-only lattice. Same
+  palette, clumpy noise and 2px art scale as the overworld, not legacy tiles.
+- Grass extends beyond unchanged collision bounds with no visible floor-panel
+  edge. Removed rectangular south-guide fills. Invisible return trigger stays.
+- Static scene-local CanvasModulate uses the existing midnight colour
+  (0.30,0.33,0.55). No clock driver, reset, freeze or global appearance change.
+- Player/world tinted; HUD/instructions remain on their existing canvas.
+- Regression covers shader reuse, clock-cycle samples and cached-world return.
+  Demo stages start/HP/clock samples, uses real movement input/physics for the
+  round trip. Native evidence, not browser gameplay or balance qualification.
