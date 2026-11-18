@@ -876,6 +876,7 @@ func _make_paint() -> Node2D:
 	p.show_behind_parent = true ## under the pieces Ground draws itself
 	var mat := ShaderMaterial.new()
 	mat.shader = GROUND_SHADER
+	mat.set_shader_parameter("cliff_materials", preload("res://assets/sprites/terrain/terrace_cliffs.png"))
 	p.material = mat
 	p.draw.connect(func() -> void: p.draw_rect(_paint_rect, Color.WHITE))
 	add_child(p)
@@ -897,8 +898,11 @@ func _build_ground_paint() -> void:
 				if t == DualGrid.T.WATER:
 					t = DualGrid.T.SAND ## sand under the animated water layer
 					for n in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+						if _lattice_type(p.x + n.x, p.y + n.y) == DualGrid.T.CLIFF:
+							t = DualGrid.T.CLIFF ## carry rock under transparent shore pixels
+							break
 						if _lattice_type(p.x + n.x, p.y + n.y) == DualGrid.T.GRASS:
-							t = DualGrid.T.GRASS ## grass meets the water directly (north edge)
+							t = DualGrid.T.GRASS ## grass meets the water directly
 							break
 			img.set_pixel(i, j, Color8(t, 0, 0))
 	var mat := _paint.material as ShaderMaterial
