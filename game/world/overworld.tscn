@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=40 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
@@ -32,6 +32,9 @@
 
 [ext_resource type="Script" path="res://game/world/forest_entrance.gd" id="forest_wall"]
 [ext_resource type="Script" path="res://game/world/forest_passage.gd" id="forest_passage"]
+[ext_resource type="Texture2D" path="res://assets/sprites/forest/forest-wall.png" id="forest_wall_art"]
+[ext_resource type="Texture2D" path="res://assets/sprites/forest/unified-shadow.png" id="forest_shadow"]
+[ext_resource type="Texture2D" path="res://assets/sprites/forest/back-row.png" id="forest_back"]
 [sub_resource type="RectangleShape2D" id="forest_entry"]
 size = Vector2(64, 20)
 
@@ -185,8 +188,19 @@ script = ExtResource("desert_squad_mount")
 group_scene = ExtResource("desert_squad_scene")
 
 [node name="ForestEntrance" type="Node2D" parent="."]
-position = Vector2(576, -1650)
+position = Vector2(576, -1610)
+scale = Vector2(0.75, 0.75)
 script = ExtResource("forest_wall")
+wall_texture = ExtResource("forest_wall_art")
+back_texture = ExtResource("forest_back")
+[node name="GroundShade" type="Sprite2D" parent="ForestEntrance"]
+position = Vector2(0, -136)
+scale = Vector2(2, 2)
+texture_filter = 1
+z_as_relative = false
+z_index = -1
+modulate = Color(1, 1, 1, 1)
+texture = ExtResource("forest_shadow")
 [node name="Opening" type="Area2D" parent="ForestEntrance"]
 position = Vector2(0, -48)
 script = ExtResource("forest_passage")

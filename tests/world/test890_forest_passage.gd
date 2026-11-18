@@ -15,11 +15,14 @@ func run() -> void:
  var entrance: Node2D = world.get_node("ForestEntrance")
  var passage: ForestPassage = entrance.get_node("Opening")
  print("FOREST at ",entrance.position)
- for y in range(-1580,-1700,-16):
+ for y in range(-1510,-1650,-16):
   check(terrain.is_walkable_at(Vector2(576,y)),"approach "+str(y))
- check(not terrain.is_walkable_at(Vector2(400,-1680)),"left wall solid")
- check(not terrain.is_walkable_at(Vector2(750,-1680)),"right wall solid")
- check(not terrain.is_walkable_at(Vector2(576,-1750)),"back row solid")
+ check(not terrain.is_walkable_at(Vector2(400,-1640)),"left wall solid")
+ check(not terrain.is_walkable_at(Vector2(750,-1640)),"right wall solid")
+ check(not terrain.is_walkable_at(Vector2(576,-1700)),"back row solid")
+ var ground: OverworldGround = world.get_node("Ground")
+ for x in range(240,913,24):
+  check(ground.covers(Vector2(x,-1840)),"back trees on island "+str(x))
  var trunks := terrain.trunk_blockers().size()
  var hp: int = loader.player.hp
  var arena: DesertStatueArena = world.get_node("DesertStatueArena")
@@ -40,7 +43,7 @@ func run() -> void:
  loader._on_forest_passage(exit)
  for i in 5:await physics_frame
  check(loader.current_area==world,"returned same cached overworld")
- check(loader.player.global_position.is_equal_approx(Vector2(576,-1580)),"return below opening")
+ check(loader.player.global_position.is_equal_approx(Vector2(576,-1510)),"return below opening")
  check(world.visible and world.process_mode==Node.PROCESS_MODE_INHERIT,"overworld resumed")
  check(terrain.trunk_blockers().size()==trunks,"no duplicate wall collision")
  check(loader.player.hp==hp,"player health retained")
