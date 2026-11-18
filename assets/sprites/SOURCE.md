@@ -745,3 +745,7 @@ SpriteU art/terrace-cliffs at 0f93f86: original irregular faceted rock and broke
 ### Discrete sixteen-mask terraces, flat local colour
 
 SpriteU `gen_terrace_dualgrid.py` / `terrace-grass-cliff-16.json` exports 128x128 (4x4, 32px cells), TL1 TR2 BR4 BL8 masks. Separate 256x64 flat front-fill atlas uses #886f58. No painted outlines or shadows. Ground source is gangU's own retained grass tile pixel grid; full interiors also use existing grass variant atlas. `terrace_tile_art.gd` draws from unchanged tops/bases/walls/stairs; shader-only face lighting is separate. Old relief contour paint is disabled except stair art, removing its external green foot band. Elevated surfaces no longer show the underlying dirt paint. Existing dirt outside terraces stays. Coast remains shader geometry with flat local rock colour, not this tile layer.
+
+### Normal overworld grass correction
+
+Old dualgrid grass was a regression. Terrace tile grass regions now use the same world-coordinate fbm/vnoise and exact GRASS_P palette as ground_paint, at the same 2px art grid. Actual 16-mask tile placement remains; the shader paints only the grass local colour, not geometry/masks. Old grass variant texture sampling is removed. Flat rock colour is now #77716a (neutral stone), still no painted shadows. No gameplay/collision data changed.

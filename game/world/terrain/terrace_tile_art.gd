@@ -2,7 +2,6 @@ extends RefCounted
 ## Presentation only. Read the existing terrace cells; never change gameplay data.
 const EDGE = preload("res://assets/sprites/terrain/terrace_grass_cliff_16.png")
 const FRONT = preload("res://assets/sprites/terrain/terrace_front_tiles_flat.png")
-const GRASS = preload("res://assets/sprites/terrain/dualgrid_variants_grass.png")
 const CELL = 32
 
 static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) -> void:
@@ -31,8 +30,4 @@ static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) ->
 					if terraces.tops.get(corners[i],0) == level: mask |= 1 << i
 				if mask == 0: continue
 				if terraces.stairs.has(c) or terraces.stairs.has(c+Vector2i.RIGHT): continue
-				if mask == 15:
-					var variant := int(DualGrid._hash01(x,y,182)*7.99)
-					canvas.draw_texture_rect_region(GRASS,Rect2(at,Vector2(32,32)),Rect2(variant*64+(posmod(x,2)*32),posmod(y,2)*32,32,32))
-					continue
 				canvas.draw_texture_rect_region(EDGE,Rect2(at,Vector2(32,32)),Rect2((mask%4)*32,(mask/4)*32,32,32))
