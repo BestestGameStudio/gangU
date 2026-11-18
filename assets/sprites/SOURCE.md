@@ -713,3 +713,10 @@ no gangU art generator. Dark cracks, lifted sandy plates and clods, no glow.
 Animated native/enlarged preview approved November17 before source commit.
 Runtime samples actual movement every20px, rotates/fades world-fixed stamps,
 and freezes their clocks with the owner. No hitbox or damage.
+
+## Lightweight smoke puff
+Original SpriteU source: BestestGameStudio/SpriteU PR23, sprites/pixel-smoke-puff.json
+and tools/build_smoke.py, approved after a pre-commit image/video preview. Three
+flat tones,4x220ms frames,64x64 cells,256x64 transparent atlas. Exported at1x through
+the SpriteU viewer; generator-authored JSON, not hand-painted in the viewer. No
+reference raster copied. Source must land before the integration PR can land.

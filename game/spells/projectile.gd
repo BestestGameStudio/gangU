@@ -77,6 +77,7 @@ var source: Node2D ## The caster's owner; never hit by its own projectile.
 var _attacker_modifiers: DamageModifiers
 var _attacker_rng: RandomNumberGenerator
 var _traveled: float = 0.0
+var _smoke_sweep_end := Vector2.ZERO
 var _hit_bodies: Array[Node2D] = [] ## #37 piercing: one hit per body per projectile
 ## #331 steer Signature (Daniel 2026-11-09): pierce_hits shots count TOTAL
 ## hits (re-hits of one body included) and re-arm a body after rehit_delay.
@@ -424,6 +425,8 @@ func _physics_process(delta: float) -> void:
 	# resolve in the order the projectile reaches them, so a nearer block
 	# absorbs a non-piercing shot before a farther body (and vice versa).
 	_sweep_segment(from, direction * step)
+	# Visual-only smoke sees the actual collision-limited path.
+	SmokeCloud.trace(get_tree(), from, _smoke_sweep_end, maxf(16.0, spell.radius*2.0), spell.tags.has(&"fire"))
 	if is_queued_for_deletion():
 		return
 	_traveled += step
@@ -700,6 +703,7 @@ func _body_events(from: Vector2, motion: Vector2) -> Array[Dictionary]:
 ## #433: solid non-destroyable cells (walls) produce a blocker event and stop
 ## every shot, piercing included, at the cell face.
 func _sweep_segment(from: Vector2, motion: Vector2) -> void:
+	_smoke_sweep_end = from + motion
 	var events: Array[Dictionary] = _body_events(from, motion)
 	events.append_array(_terrain_events(from, motion))
 	# #407/#433: solid cover (overworld trees, solid terrain cells). Stops
@@ -740,4 +744,5 @@ func _sweep_segment(from: Vector2, motion: Vector2) -> void:
 				FireballAudio.impact(self, spell)
 				queue_free()
 		if is_queued_for_deletion():
+			_smoke_sweep_end = from + motion * float(e.t)
 			return
