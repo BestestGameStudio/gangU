@@ -13,9 +13,8 @@ extends Node2D
 ## mounter reads it on every area swap. No SpawnData child => no enemies for
 ## that area (the hub stays empty; DungeonB's carrier holds zero entries).
 ## No area-name checks and no hardcoded positions/tables remain in code.
-## #346: boot -> hub -> (TRAVEL gate) -> overworld -> (entrance) -> dungeon;
-## exit portals return to that dungeon's overworld entrance (#378). Overworld entrance guards mount from
-## "EntranceGuards" carriers only while their dungeon is uncleared this run.
+## Runs start beside the outdoor hub services on the overworld plains.
+## Entrance guards mount only while their dungeon is uncleared this run.
 ## #512: Main keeps service boot and the persistent run children. Area
 ## loading/mounting lives in AreaLoader, fast/map travel in TravelService,
 ## and all music in MusicDirector (one each, wired below).
@@ -201,7 +200,7 @@ func _ready() -> void:
 	var settings := SettingsPanel.new() # #489: Esc settings (master volume)
 	settings.name = "SettingsPanel"
 	add_child(settings)
-	area_loader._load_hub()
+	area_loader.enter_overworld()
 	# #655: reapply the progression snapshot RunManager took at the player's
 	# death - spells, cast XP, upgrade tiers/tokens and relics persist across
 	# death; coins, the world and the map still reset with this reload.

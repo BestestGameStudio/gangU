@@ -131,7 +131,7 @@ func _process(delta: float) -> bool:
 			_check(s != old_scene, "death reloaded the run scene")
 			_check(get_nodes_in_group(&"player_death_presentation").is_empty(), "death screen is gone on the next run")
 			# world
-			_check(s.area_loader.current_area.name == &"Hub", "world: fresh run starts in the hub (got %s)" % s.area_loader.current_area.name)
+			_check(s.area_loader.current_area.name == &"Overworld" and s.area_loader.current_area.get_node("HubServices").contains_player(s.get_node("Player").global_position), "world: fresh run starts in the hub (got %s)" % s.area_loader.current_area.name)
 			# dungeon cleared-state: no completed objective carried, DungeonA repopulates
 			_check(not s.area_loader.is_cleared(&"dungeon_a"), "encounter clear state reset")
 			s.area_loader.enter_overworld()

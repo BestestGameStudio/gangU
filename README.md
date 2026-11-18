@@ -18,7 +18,7 @@ Contributor working agreements: [INSTINCT.md](INSTINCT.md). Agent notes: [CLAUDE
 - `export_presets.cfg` - Web export preset (see "Web export" below).
 - `game/core/main.tscn` - main scene (Player + FollowCamera). `game/core/main.gd` mounts every
   run service in code (#512: `AreaLoader` mounts and swaps areas, `TravelService` owns
-  fast/map travel, `MusicDirector` owns all music): hub (`game/world/hub.tscn`) <-> overworld
+  fast/map travel, `MusicDirector` owns all music): overworld with outdoor hub services
   (`game/world/overworld.tscn`) <-> dungeons (`game/world/dungeon_*.tscn`).
 - `game/` - production scripts grouped by feature, with their scenes alongside them.
 - `tests/<feature>/` - existing core harnesses; `tests/support/` holds shared fixtures.
@@ -59,8 +59,8 @@ trackpad friendly.
 
 ## Run (editor)
 
-Open the project and press F5. The game boots into the hub; walk into the gold TRAVEL gate to
-reach the overworld and its dungeon entrances.
+Open the project and press F5. The game starts beside the shop, spell directory and bestiary in the overworld plains.
+Walk south to the beach, or head inland toward the abandoned village and northern desert.
 
 ## Web export (headless/CI)
 
