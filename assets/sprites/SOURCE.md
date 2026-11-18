@@ -733,3 +733,7 @@ and build_desert.py, not copied from reference pixels or hand-painted in viewer.
 byte-identical to source; SpriteFrames preserves original reference timing/layout,
 with texture path changed to desert_mustache.png and stale UIDs removed.
 No scene in any level/SpawnData/encounter references this group.
+
+### Cliff-start ground edge overlays
+
+SpriteU PR #24 also supplies `terrace_ground_edges.png`, 1024x384 RGBA: six material rows and 16 N/E/S/W masks across (1/2/4/8). Binary transparency preserves the normal painted ground under the edge. Runtime currently samples the shared south-edge strip along its interpolated contour; other masks are source variants for further tiled use. Only the camera-facing terrace exposure receives rock. Back/side areas retain ground with a narrow cliff-start mark. No terrace data or collision changes.

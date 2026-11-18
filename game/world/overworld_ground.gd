@@ -876,6 +876,7 @@ func _make_paint() -> Node2D:
 	p.show_behind_parent = true ## under the pieces Ground draws itself
 	var mat := ShaderMaterial.new()
 	mat.shader = GROUND_SHADER
+	mat.set_shader_parameter("cliff_edges", preload("res://assets/sprites/terrain/terrace_ground_edges.png"))
 	mat.set_shader_parameter("cliff_materials", preload("res://assets/sprites/terrain/terrace_cliffs.png"))
 	p.material = mat
 	p.draw.connect(func() -> void: p.draw_rect(_paint_rect, Color.WHITE))

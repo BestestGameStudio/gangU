@@ -14,6 +14,7 @@ uniform sampler2D types : filter_nearest;
 uniform vec2 lattice_origin;   // world position of texel (0, 0)'s lattice point
 uniform float cell = 64.0;
 uniform float art_px = 2.0;
+uniform sampler2D cliff_edges : source_color, filter_nearest, repeat_disable;
 uniform sampler2D cliff_materials : source_color, filter_nearest, repeat_disable;
 uniform sampler2D relief : filter_linear, repeat_disable;
 uniform vec2 relief_origin;
@@ -201,6 +202,15 @@ vec3 cliff_stone(vec2 w, float depth, int kind) {
 	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.78 : (depth > 36.0 ? 0.90 : 1.0)));
 }
 
+// Real SpriteU cliff-start ground tiles. Transparent centres keep normal paint.
+vec3 ground_edge(vec2 w, float distance_to_edge, int kind, vec3 ground) {
+	int row = kind == COBBLE ? 5 : clamp(kind, 0, 4);
+	float v = clamp(63.0 - floor(distance_to_edge / art_px), 0.0, 63.0);
+	vec2 texel = vec2(4.0 * 64.0 + mod(floor(w.x / art_px), 64.0), float(row) * 64.0 + v);
+	vec4 edge = texture(cliff_edges, (texel + 0.5) / vec2(1024.0, 384.0));
+	return mix(ground, edge.rgb * 255.0, edge.a);
+}
+
 // R is the walkable top, G the wider foot of the cliff, B the cut stone stair.
 vec3 paint_relief(vec2 w, vec3 ground, int kind) {
 	vec2 grid = (w - relief_origin) / relief_cell;
@@ -227,27 +237,22 @@ vec3 paint_relief(vec2 w, vec3 ground, int kind) {
 	float foot = edges.g - level + 0.5;
 	float lip = edges.r - level + 0.5;
 	if (level > 0.0 && lip < 0.0) {
-		// On the far side only a low, grassy shoulder is visible.
-		float behind = texture(relief, uv + vec2(0.0, 1.1) / size).r * 2.0;
-		if (behind > level - 0.5) {
-			// North-facing shoulder: quiet continuous rock, never camouflage noise.
-			if (lip > -0.055) { return paint(kind, w, 0.48) * 0.90; }
-			return cliff_stone(w, 18.0, kind) * 0.76;
+		// Find the nearest plateau in each direction. Only its southern
+		// exposure gets rock; side/back strips stay normal ground edge tiles.
+		vec4 dist = vec4(108.0);
+		for (int k = 1; k <= 8; k++) {
+			float step_up = float(k) * 12.0;
+			vec2 off = vec2(step_up / relief_cell) / size;
+			if (dist.x > 100.0 && texture(relief, uv - vec2(0.0, off.y)).r * 2.0 > level - 0.5) { dist.x = step_up; }
+			if (dist.y > 100.0 && texture(relief, uv + vec2(off.x, 0.0)).r * 2.0 > level - 0.5) { dist.y = step_up; }
+			if (dist.z > 100.0 && texture(relief, uv + vec2(0.0, off.y)).r * 2.0 > level - 0.5) { dist.z = step_up; }
+			if (dist.w > 100.0 && texture(relief, uv - vec2(off.x, 0.0)).r * 2.0 > level - 0.5) { dist.w = step_up; }
 		}
-		float above = texture(relief, uv - vec2(0.0, 1.4) / size).r * 2.0;
-		float front = smoothstep(level - 0.65, level - 0.2, above);
-		float depth = clamp(-lip * 64.0, 0.0, 128.0);
-		if (front > 0.5) {
-			for (int k = 1; k <= 16; k++) {
-				float step_up = float(k) * 6.0;
-				float upper = texture(relief, uv - vec2(0.0, step_up / relief_cell) / size).r * 2.0;
-				if (upper > level - 0.5) { depth = step_up; break; }
-			}
-		}
+		bool front = dist.x < 100.0 && dist.x <= min(dist.y, dist.w) + 12.0 && dist.x < dist.z;
+		vec3 cap_ground = ground;
+		if (!front) { return ground_edge(w, abs(lip) * 64.0, kind, cap_ground); }
+		float depth = dist.x;
 		vec3 rock = cliff_stone(w, depth, kind);
-		// Keep side planes quiet and dark so the southern face carries height.
-		rock *= front > 0.5 ? 1.0 : 0.80;
-		if (lip > -0.07) { return paint(kind, w, 0.52) * 0.88; }
 		return rock * (foot < 0.08 ? 0.76 : 1.0);
 	}
 	if (foot > 0.82) { ground *= 0.78; }
