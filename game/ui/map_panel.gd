@@ -1,8 +1,7 @@
 class_name MapPanel
 extends ModalPanel
 ## (#347) The map, toggled with M (Esc also closes). Shows a WorldMap's
-## explored terrain for the current area, centered on the player when it
-## opens, and lets the player draw on it and place their own markers.
+## explored terrain and player marks. The overworld opens with the whole island in view.
 ##
 ## Minimal UX (#347 asks to keep it minimal):
 ##   - Tools: Draw (freehand ink), Marker (pick one of four symbols, click to
@@ -120,12 +119,17 @@ func _set_view(id: StringName) -> void:
 		canvas.center = world_map.player.global_position
 	else:
 		canvas.center = world_map.view_center(canvas.view())
-	_fit_sites(here)
-	# (#435) Panning only where the area has overworld bounds, and only in the
-	# player's own area view; the (re)centered view is kept inside them.
-	canvas.pan_bounds = world_map.pan_bounds() if here else Rect2()
-	canvas.pan_outline = world_map.pan_outline() if here else PackedVector2Array()
-	canvas.center = canvas.clamp_center(canvas.center)
+	canvas.pan_bounds = world_map.pan_bounds(canvas.view())
+	canvas.pan_outline = world_map.pan_outline(canvas.view())
+	if canvas.pan_bounds.has_area():
+		var view_size := canvas.size if canvas.size != Vector2.ZERO else MAP_SIZE
+		var available := view_size - Vector2.ONE * 2.0 * SITE_FIT_MARGIN_PX
+		var scale_to_fit := available / canvas.pan_bounds.size
+		canvas.overview_scale = minf(scale_to_fit.x, scale_to_fit.y)
+		canvas.map_scale = canvas.overview_scale
+		canvas.center = canvas.pan_bounds.get_center()
+	else:
+		_fit_sites(here)
 	_last_player_pos = world_map.player.global_position if here else Vector2.INF
 	_refresh()
 
@@ -190,7 +194,7 @@ func _on_site_selected(_id: StringName) -> void:
 func _process(_delta: float) -> void:
 	if visible:
 		# (#435) A player move snaps a panned view back onto the player.
-		if canvas.pan_bounds.size.x > 0.0 and is_instance_valid(world_map.player):
+		if canvas.view_id == &"" and canvas.map_scale > canvas.overview_scale and canvas.pan_bounds.has_area() and is_instance_valid(world_map.player):
 			var pp := world_map.player.global_position
 			if not _last_player_pos.is_equal_approx(pp):
 				_last_player_pos = pp
@@ -338,7 +342,7 @@ func _build_ui() -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bottom.add_child(_status)
 	var hint := Label.new()
-	hint.text = "LMB: use tool   RMB: erase   MMB / Space+LMB: pan   M / Esc: close"
+	hint.text = "LMB: use tool   RMB: erase   Wheel: zoom   MMB: pan   M / Esc: close"
 	hint.add_theme_color_override("font_color", UiStyle.TEXT_DIM * Color(1, 1, 1, 0.6))
 	hint.add_theme_font_size_override("font_size", 16)
 	bottom.add_child(hint)

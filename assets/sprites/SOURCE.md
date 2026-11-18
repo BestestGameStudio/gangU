@@ -714,6 +714,10 @@ Animated native/enlarged preview approved November17 before source commit.
 Runtime samples actual movement every20px, rotates/fades world-fixed stamps,
 and freezes their clocks with the owner. No hitbox or damage.
 
+## Terrace and coastal cliff material (#888)
+
+Original six-material rock texture, source generator and tileset notes in SpriteU PR #24. Atlas export is 512x384 RGBA: eight 64x64 variants across, material rows grass, dirt, sand, sandstone, stone, cobble. All texels opaque; the terrain shader supplies the silhouette, cap and ambient shadow. Upper-left lighting, nearest filtering, normal canvas day/night tint. Reference informed perspective only, no external pixels copied. Terrain layout, collision and stairs unchanged.
+
 ## Lightweight smoke puff
 Original SpriteU source: BestestGameStudio/SpriteU PR23, sprites/pixel-smoke-puff.json
 and tools/build_smoke.py, approved after a pre-commit image/video preview. Three
@@ -729,3 +733,34 @@ and build_desert.py, not copied from reference pixels or hand-painted in viewer.
 byte-identical to source; SpriteFrames preserves original reference timing/layout,
 with texture path changed to desert_mustache.png and stale UIDs removed.
 No scene in any level/SpawnData/encounter references this group.
+
+### Cliff-start ground edge overlays
+
+SpriteU PR #24 also supplies `terrace_ground_edges.png`, 1024x384 RGBA: six material rows and 16 N/E/S/W masks across (1/2/4/8). Binary transparency preserves the normal painted ground under the edge. Runtime currently samples the shared south-edge strip along its interpolated contour; other masks are source variants for further tiled use. Only the camera-facing terrace exposure receives rock. Back/side areas retain ground with a narrow cliff-start mark. No terrace data or collision changes.
+
+### Stronger rock and rocky rim pass
+
+SpriteU art/terrace-cliffs at 0f93f86: original irregular faceted rock and broken chevron/tapered fissures, warm-grey grass/dirt rock palette, nine-pixel rocky edge bevel. No dirt-colour edge variant: former dirt edge uses rock colours. Rim surface comes from nearest plateau; a dirt plateau rim uses grass rather than extending a dirt patch across the drop. Interior dirt remains unchanged. Revisited owner's image and visually studied Rocky Pines (https://grajopx.itch.io/rocky-pine-forest) and Simple Tiles (https://snaply.itch.io/environmental-tiles-pixel-art-top-down-tileset) for cap/face value separation and readable stone rims. No reference pixels copied. Still no geometry/collision change.
+
+### Discrete sixteen-mask terraces, flat local colour
+
+SpriteU `gen_terrace_dualgrid.py` / `terrace-grass-cliff-16.json` exports 128x128 (4x4, 32px cells), TL1 TR2 BR4 BL8 masks. Separate 256x64 flat front-fill atlas uses #886f58. No painted outlines or shadows. Ground source is gangU's own retained grass tile pixel grid; full interiors also use existing grass variant atlas. `terrace_tile_art.gd` draws from unchanged tops/bases/walls/stairs; shader-only face lighting is separate. Old relief contour paint is disabled except stair art, removing its external green foot band. Elevated surfaces no longer show the underlying dirt paint. Existing dirt outside terraces stays. Coast remains shader geometry with flat local rock colour, not this tile layer.
+
+### Normal overworld grass correction
+
+Old dualgrid grass was a regression. Terrace tile grass regions now use the same world-coordinate fbm/vnoise and exact GRASS_P palette as ground_paint, at the same 2px art grid. Actual 16-mask tile placement remains; the shader paints only the grass local colour, not geometry/masks. Old grass variant texture sampling is removed. Flat rock colour is now #77716a (neutral stone), still no painted shadows. No gameplay/collision data changed.
+
+### Brown shaded front walls
+
+SpriteU source commit4d49bcf, tools/gen_terrace_front_rock.py and char-mode
+sprites/terrace-front-tiles-flat.json. Filename retained for continuity, but
+front-only painted shading is now intentional. Eight connected32x64 panels
+exported256x64 with matching left/right boundary colours on every row. World-X
+sampling preserves the connected texture across one-pixel face strips. Original
+earth-brown rock planes, sparse short fissures and broken facet lights. Palette
+uses the existing dirt family. Top8px neutral rim, actual16-mask grass transitions,
+placement, stair clipping and gameplay/collision remain unchanged. Shader no longer
+adds grey depth bands over painted front rock. Coast remains unchanged.
+References visually studied: https://grajopx.itch.io/rocky-pine-forest and
+https://snaply.itch.io/environmental-tiles-pixel-art-top-down-tileset. No external
+pixels copied. Deliberately simple broad slabs;256px repeat visible on long walls.

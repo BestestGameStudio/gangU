@@ -83,9 +83,7 @@ func save_now() -> bool:
 
 func save_death() -> void:
  # Synchronous before the death pause: closing now cannot resurrect money.
- var state:=capture(main)
- state["run"]={}
- _write(state)
+ _write(capture(main, true))
 
 func _write(state:Dictionary) -> bool:
  if not _rejected.is_empty():return false
@@ -154,6 +152,12 @@ static func valid_state(state:Variant) -> bool:
   for count in p.progress[key].values():
    if not count is int or count<0:return false
  if not p.progress.get("tokens") is int:return false
+ if p.has("map_discovery"):
+  if not p.map_discovery is Dictionary:return false
+  for id in p.map_discovery:
+   if not (id is StringName or id is String) or not p.map_discovery[id] is Dictionary:return false
+   for cell in p.map_discovery[id]:
+    if not cell is Vector2i or not p.map_discovery[id][cell] is Color:return false
  var r:Dictionary=state.run
  if r.is_empty():return true
  for key in ["wallet","revives","shop_paid"]:
@@ -227,19 +231,22 @@ static func unpack_value(value:Variant,depth:int=0) -> Variant:
   return out
  return value
 
-static func capture(host:Node) -> Dictionary:
+static func capture(host:Node, after_death:bool=false) -> Dictionary:
  var p:Player=host.get_node("Player")
  var caster:SpellCaster=p.get_node("SpellCaster")
  var loader:AreaLoader=host.area_loader
  # Active map colors otherwise remain live-only until the player leaves.
  var map:WorldMap=host.get_node("WorldMap")
- map._snapshot_colors(map.area_id,map.terrain)
- return {"progression":{"unlocked":caster.get_unlocked(),
+ var progression:Dictionary={"unlocked":caster.get_unlocked(),
   "spells":caster.spells.duplicate(),
   "slots":caster.get_slots(),
   "progress":host.get_node("SpellProgress").capture_run_state(),
-  "relics":host.get_node("OwnedRelics").all()},
-  "run":{"wallet":host.get_node("CurrencyWallet").balance(),
+  "relics":host.get_node("OwnedRelics").all()}
+ if after_death:
+  progression["map_discovery"]=map.capture_discovery()
+  return {"progression":progression,"run":{}}
+ map._snapshot_colors(map.area_id,map.terrain)
+ return {"progression":progression,"run":{"wallet":host.get_node("CurrencyWallet").balance(),
   "revives":host.get_node("ReviveSatchel").carried,
   "consumables":host.get_node("Consumables")._counts.duplicate(),
   "cleared":loader.cleared_ids(),
@@ -263,7 +270,9 @@ func restore(state:Dictionary) -> void:
   if relic is Relic:main.get_node("OwnedRelics").add(relic)
  var run:Dictionary=state.run
  _sand_defeated=bool(run.get("sand_defeated",false))
- if run.is_empty():return
+ if run.is_empty():
+  main.get_node("WorldMap").restore_discovery(progression.get("map_discovery",{}))
+  return
  var loader:AreaLoader=main.area_loader
  for id in run.get("cleared",[]):loader.encounter_state.complete(StringName(id))
  loader._revive_claimed=bool(run.get("revive_claims",false))

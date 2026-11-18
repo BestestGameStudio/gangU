@@ -18,7 +18,7 @@ class_name RunManager
 ##
 ## #351 FULL-RESET SCOPE (Colin, 2026-11-08): death resets run-scoped state
 ## - the world (current area -> hub, enemies, pickups), dungeon
-## cleared-state, coins and the map. Today all of that lives in nodes under
+## cleared-state, coins and map annotations. Today all of that lives in nodes under
 ## the run scene, so the reload alone wipes it. State that outlives the
 ## reload (an autoload, a node parked on the tree root, e.g. future
 ## overworld cleared-state #348 or the map #347) MUST join RUN_STATE_GROUP
@@ -33,7 +33,8 @@ class_name RunManager
 ## ProgressionCarry before the restart presentation; Main applies the
 ## snapshot to the fresh scene after the reload. This supersedes the #351
 ## "no partial carryover" line for progression ONLY: coins, the world,
-## cleared-state, the map, the revive satchel and consumables still reset.
+## cleared-state, map annotations, the revive satchel and consumables still reset.
+## Discovered terrain joins the progression snapshot.
 
 signal run_restarting()
 

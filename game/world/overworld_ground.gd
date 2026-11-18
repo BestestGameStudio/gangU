@@ -37,6 +37,7 @@ const CANOPY_Z := 3
 ## popping while avoiding a redraw for every subpixel of camera movement.
 var _view := Rect2(Vector2(-100000,-100000), Vector2(200000,200000))
 var _view_bucket := Vector2i(2147483647,2147483647)
+var terraces := preload("res://game/world/overworld_terraces.gd").new()
 var outline: PackedVector2Array
 var spawn := Vector2(576, 480)
 var landmarks: Array[Vector2] = []
@@ -92,6 +93,14 @@ func _init() -> void:
 	outline = _blob(0.0)
 	_canopy = _make_canopy()
 	_paint = _make_paint()
+	_terrace_art = Node2D.new()
+	_terrace_art.name = "TerraceTiles"
+	_terrace_art.show_behind_parent = true
+	var tile_light := ShaderMaterial.new()
+	tile_light.shader = preload("res://game/world/terrain/terrace_tile_light.gdshader")
+	_terrace_art.material = tile_light
+	_terrace_art.draw.connect(func() -> void: preload("res://game/world/terrain/terrace_tile_art.gd").draw_tiles(_terrace_art,terraces,_view))
+	add_child(_terrace_art)
 	var black := Node2D.new()
 	black.name = "BlackBackdrop"
 	black.z_as_relative = false
@@ -125,6 +134,7 @@ func _ready() -> void:
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
 	_water.queue_redraw()
+	_terrace_art.queue_redraw()
 
 func _process(_delta: float) -> void:
 	_update_view()
@@ -144,6 +154,7 @@ func _update_view() -> void:
 	_canopy.queue_redraw()
 	_grass_top.queue_redraw()
 	_water.queue_redraw()
+	_terrace_art.queue_redraw()
 
 ## #418: tree canopies draw on their own child at an absolute z above every
 ## character (player, enemies, summons all sit at z 0), so anyone standing
@@ -302,6 +313,9 @@ func build_from(area: Node) -> void:
 		desert.shape_decor(self)
 	_plant_tree_collision(area)
 	_plant_border_collision(area)
+	var terrain := area.get_node_or_null("Terrain") as TerrainMap
+	if terrain != null:
+		terrain.set_cells(terraces.walls)
 	_build_tall_grass()
 	_plant_tall_grass(area)
 	_build_scatter(area)
@@ -325,6 +339,11 @@ const MAP_COLORS := {
 }
 
 func map_color(cell: Vector2i) -> Color:
+	var sample := terraces.cell_at((Vector2(cell) + Vector2(0.5, 0.5)) * DualGrid.CELL)
+	if terraces.stairs.has(sample):
+		return Color8(173, 154, 119)
+	if terraces.walls.has(sample):
+		return MAP_COLORS[DualGrid.T.CLIFF]
 	var types: Array[int] = [
 		_lattice_type(cell.x, cell.y), _lattice_type(cell.x + 1, cell.y),
 		_lattice_type(cell.x, cell.y + 1), _lattice_type(cell.x + 1, cell.y + 1)]
@@ -486,7 +505,7 @@ func _build_scatter(area: Node) -> void:
 				kind = TerrainPieces.Kind.BUSH
 			if kind < 0 or not Geometry2D.is_point_in_polygon(at, inner):
 				continue
-			if _hub_bounds().grow(100.0).has_point(at):
+			if _hub_bounds().grow(100.0).has_point(at) or terraces.clear_ground.has(terraces.cell_at(at)):
 				continue
 			if at.distance_to(spawn) < ARRIVAL_STONE_R + 48.0:
 				continue
@@ -553,7 +572,7 @@ func _plant_tall_grass(area: Node) -> void:
 		for cx in range(lo.x, hi.x + 1):
 			for cy in range(lo.y, hi.y + 1):
 				var cell := Vector2i(cx, cy)
-				if map.tile_type_at_cell(cell) != TerrainTypes.GROUND:
+				if terraces.clear_ground.has(cell) or map.tile_type_at_cell(cell) != TerrainTypes.GROUND:
 					continue
 				# Hashed ragged edge: the outer ring keeps ~60% of its cells.
 				var d := map.cell_to_world(cell).distance_to(at)
@@ -634,7 +653,7 @@ func patrol_distance(p: Vector2) -> float:
 	return best
 
 func _clear_spot(p: Vector2) -> bool:
-	if _hub_bounds().grow(100.0).has_point(p):
+	if _hub_bounds().grow(100.0).has_point(p) or terraces.clear_ground.has(terraces.cell_at(p)):
 		return false
 	if p.distance_to(spawn) < GATE_CLEAR:
 		return false
@@ -858,6 +877,7 @@ func _build_cobble_nodes(origin: Vector2) -> void:
 ## positions, so boundaries curve instead of stepping along the grid.
 ## Outside the outline every point is CLIFF (rock face, then void).
 const GROUND_SHADER := preload("res://game/world/terrain/ground_paint.gdshader")
+var _terrace_art: Node2D
 var _paint: Node2D
 var _paint_rect := Rect2()
 
@@ -867,6 +887,7 @@ func _make_paint() -> Node2D:
 	p.show_behind_parent = true ## under the pieces Ground draws itself
 	var mat := ShaderMaterial.new()
 	mat.shader = GROUND_SHADER
+	mat.set_shader_parameter("cliff_edges", preload("res://assets/sprites/terrain/terrace_ground_edges.png"))
 	p.material = mat
 	p.draw.connect(func() -> void: p.draw_rect(_paint_rect, Color.WHITE))
 	add_child(p)
@@ -888,11 +909,15 @@ func _build_ground_paint() -> void:
 				if t == DualGrid.T.WATER:
 					t = DualGrid.T.SAND ## sand under the animated water layer
 					for n in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+						if _lattice_type(p.x + n.x, p.y + n.y) == DualGrid.T.CLIFF:
+							t = DualGrid.T.CLIFF ## carry rock under transparent shore pixels
+							break
 						if _lattice_type(p.x + n.x, p.y + n.y) == DualGrid.T.GRASS:
-							t = DualGrid.T.GRASS ## grass meets the water directly (north edge)
+							t = DualGrid.T.GRASS ## grass meets the water directly
 							break
 			img.set_pixel(i, j, Color8(t, 0, 0))
 	var mat := _paint.material as ShaderMaterial
+	terraces.bake(mat)
 	mat.set_shader_parameter("types", ImageTexture.create_from_image(img))
 	mat.set_shader_parameter("lattice_origin", Vector2(lo) * 64.0)
 	_paint_rect = Rect2(Vector2(lo) * 64.0, Vector2(size - Vector2i.ONE) * 64.0)

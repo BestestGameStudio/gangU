@@ -14,6 +14,10 @@ uniform sampler2D types : filter_nearest;
 uniform vec2 lattice_origin;   // world position of texel (0, 0)'s lattice point
 uniform float cell = 64.0;
 uniform float art_px = 2.0;
+uniform sampler2D cliff_edges : source_color, filter_nearest, repeat_disable;
+uniform sampler2D relief : filter_linear, repeat_disable;
+uniform vec2 relief_origin;
+uniform float relief_cell = 32.0;
 uniform float warp_amount = 70.0;
 
 const int GRASS = 0;
@@ -186,6 +190,49 @@ vec3 paint(int t, vec2 w, float tone) {
 	return VOID_C;
 }
 
+// SpriteU atlas: eight variants per material, 64 art pixels each.
+vec3 cliff_stone(vec2 w, float depth, int kind) {
+	int row = kind == COBBLE ? 5 : clamp(kind, 0, 4);
+	float column = floor(hash(vec2(floor(w.x / 128.0), 888.0)) * 8.0);
+	vec2 texel = vec2(column * 64.0 + mod(floor(w.x / 2.0), 64.0),
+		float(row) * 64.0 + mod(floor(w.y / 2.0), 64.0));
+	vec3 rock = vec3(136.0,111.0,88.0);
+	// Broad lower occlusion, not a black outline or repeated stone blobs.
+	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.72 : (depth > 36.0 ? 0.82 : 1.0)));
+}
+
+// Real SpriteU cliff-start ground tiles. Transparent centres keep normal paint.
+vec3 ground_edge(vec2 w, float distance_to_edge, int kind, vec3 ground) {
+	int row = kind == COBBLE ? 5 : clamp(kind, 0, 4);
+	float v = clamp(63.0 - floor(distance_to_edge / art_px), 0.0, 63.0);
+	vec2 texel = vec2(4.0 * 64.0 + mod(floor(w.x / art_px), 64.0), float(row) * 64.0 + v);
+	vec4 edge = texture(cliff_edges, (texel + 0.5) / vec2(1024.0, 384.0));
+	return mix(ground, edge.rgb * 255.0, edge.a);
+}
+
+// R is the walkable top, G the wider foot of the cliff, B the cut stone stair.
+vec3 paint_relief(vec2 w, vec3 ground, int kind) {
+	vec2 grid = (w - relief_origin) / relief_cell;
+	vec2 size = vec2(textureSize(relief, 0));
+	if (any(lessThan(grid, vec2(0.0))) || any(greaterThanEqual(grid, size))) { return ground; }
+	vec3 tile = texture(relief, (floor(grid) + 0.5) / size).rgb;
+	if (tile.b > 0.5) {
+		float across = fract(grid.x);
+		bool curb = (across < 0.12 && texture(relief, (floor(grid) + vec2(-0.5, 0.5)) / size).b < 0.5)
+			|| (across > 0.88 && texture(relief, (floor(grid) + vec2(1.5, 0.5)) / size).b < 0.5);
+		if (curb) { return mod(w.y, 24.0) < 3.0 ? COBBLE_P[0] : COBBLE_P[3]; }
+		if (tile.g - tile.r < 0.25) { return slabs(w, 24.0, 1.4, 0.05, COBBLE, 0.57); }
+		float tread = mod(w.y, 12.0);
+		float joint = mod(w.x + floor(w.y / 12.0) * 19.0, 46.0);
+		vec3 stone = mix(COBBLE_P[2], COBBLE_P[4], vnoise(w / 7.0));
+		if (tread < 2.0) { return COBBLE_P[4] * 1.15; }
+		if (tread >= 8.0) { return COBBLE_P[1] * 0.82; }
+		return joint < 2.0 ? COBBLE_P[1] : stone;
+	}
+	// Terrace surfaces, edges and faces are discrete sprite tiles now.
+	return ground;
+}
+
 void fragment() {
 	vec2 w = (floor(world / art_px) + 0.5) * art_px;   // one colour per art pixel
 	// Calm, broad patches with a little grain, so tufts and pieces carry the detail.
@@ -196,34 +243,32 @@ void fragment() {
 	classify(warped(w), top, second, margin);
 	vec3 c;
 	if (top == CLIFF) {
-		// Rock face hanging below the field edge, then the void.
-		float depth = 99.0;
-		for (int k = 1; k <= 12; k++) {
+		// The existing coast footprint already extends south by 144px.
+		// Fill its entire exposed face instead of a 44px strip plus grey apron.
+		float depth = 192.0;
+		int cap_type = GRASS;
+		for (int k = 1; k <= 16; k++) {
 			int t2;
 			int s2;
 			float m2;
-			classify(warped(w - vec2(0.0, float(k) * 4.0)), t2, s2, m2);
+			classify(warped(w - vec2(0.0, float(k) * 12.0)), t2, s2, m2);
 			if (t2 != CLIFF) {
-				depth = float(k) * 4.0;
+				depth = float(k) * 12.0;
+				float low = depth - 12.0;
+				float high = depth;
+				for (int refine = 0; refine < 3; refine++) {
+					float middle = (low + high) * 0.5;
+					int tm; int sm; float mm;
+					classify(warped(w - vec2(0.0, middle)), tm, sm, mm);
+					if (tm == CLIFF) { low = middle; } else { high = middle; }
+				}
+				depth = floor(high / art_px) * art_px;
+				cap_type = t2;
 				break;
 			}
 		}
-		if (depth < 44.0) {
-			float column = floor((w.x + vnoise(vec2(w.x / 30.0, 0.0)) * 20.0) / 14.0);
-			int k = int(hash(vec2(column, 3.0)) * 2.5) + 2;
-			if (fract((w.x + vnoise(vec2(w.x / 30.0, 0.0)) * 20.0) / 14.0) < 0.12) {
-				k = 1;
-			}
-			if (mod(floor(depth / 4.0) + column, 5.0) < 0.5) {
-				k = max(k - 1, 1);
-			}
-			if (depth <= 4.0) {
-				k = 5;
-			}
-			c = CLIFF_P[k] * mix(1.0, 0.45, depth / 44.0);
-		} else {
-			c = ROCK_C;
-		}
+		c = cliff_stone(w, depth, cap_type);
+		if (depth <= 12.0) { c = paint(cap_type, w, tone) * 0.84; }
 	} else {
 		c = paint(top, w, tone);
 		if (margin < 0.1) {
@@ -237,5 +282,5 @@ void fragment() {
 			}
 		}
 	}
-	COLOR = vec4(c / 255.0, 1.0);
+	COLOR = vec4(paint_relief(w, c, top == CLIFF ? GRASS : top) / 255.0, 1.0);
 }

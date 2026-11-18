@@ -70,6 +70,14 @@ func _draw() -> void:
 			# be a beat apart - reads as waves rolling in, not a hard seam).
 			var f := (_frame + _swell_phase(i, j)) % 5
 			var t := DualGrid.tile(i, j, corners, f)
+			# A three-type coast cell must not pick a non-water rock sheet.
+			if corners.has(DualGrid.T.CLIFF):
+				var mask := 0
+				for k in 4:
+					if corners[k] == DualGrid.T.WATER:
+						mask |= 1 << k
+				t = {"tex": DualGrid._tex("dualgrid_water_on_cliff"),
+					"src": Rect2(Vector2(mask % 4, mask / 4 + f * 4) * 64.0, Vector2(64, 64))}
 			if t.is_empty():
 				continue
 			# No per-tile value shift: open water is one flat tone everywhere
@@ -181,7 +189,7 @@ func _draw_waves(i: int, j: int, corners: Array) -> void:
 ## would paint over it as a tile-shaped rectangle. Turn those exact flat land
 ## colours transparent (cached per sheet) so only the water, foam and wet-sand
 ## rim draw here and the shader's own sand/grass/dirt shows through.
-const LAND_KEYS := [Color8(216, 188, 132), Color8(66, 118, 58), Color8(114, 82, 58)]
+const LAND_KEYS := [Color8(216, 188, 132), Color8(66, 118, 58), Color8(114, 82, 58), Color8(88, 82, 88), Color8(68, 66, 75)]
 var _keyed := {}
 
 func _see_through(tex: Texture2D) -> Texture2D:

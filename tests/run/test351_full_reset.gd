@@ -91,6 +91,7 @@ func _process(delta: float) -> bool:
 			applied = prog.apply_upgrade(fire_ball, &"fireball_split") if prog.can_upgrade(fire_ball) else false
 			_check(prog.cast_count(fire_ball) >= 10, "setup: fire ball XP recorded")
 			print("[351] info: fireball_split applied before death = ", applied)
+			old_scene.get_node("WorldMap").reveal_cells(&"Overworld", [Vector2i(-8, 5)])
 			map.revealed[&"dungeon_a"] = true
 			map.cleared[&"dungeon_a"] = true
 			# --- die through the production path ---
@@ -157,6 +158,7 @@ func _process(delta: float) -> bool:
 			for sp in caster.spells:
 				tiers += prog.get_tier(sp)
 			_check(tiers == (1 if applied else 0), "upgrades: applied split tier persists across death (#655)")
+			_check(s.get_node("WorldMap").is_explored(&"Overworld", Vector2i(-8, 5)), "explored terrain survives death")
 			# map / persistent run state
 			_check(map.resets == 1, "map: reset_run_state() called once on death (got %d)" % map.resets)
 			_check(map.revealed.is_empty() and map.cleared.is_empty(), "map: revealed + cleared state wiped")
