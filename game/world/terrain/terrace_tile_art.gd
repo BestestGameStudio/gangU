@@ -12,10 +12,10 @@ static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) ->
 		var key := str(terraces.get_instance_id())+":"+str(level)
 		if not _ribbons.has(key):
 			_ribbons[key] = []
-			for px in range(terraces.bounds.position.x*32,terraces.bounds.end.x*32,2):
+			for px in range(terraces.bounds.position.x*32,terraces.bounds.end.x*32):
 				var bottom := -100000
-				for py in range(terraces.bounds.end.y*32,terraces.bounds.position.y*32,-2):
-					var q := (Vector2(px+1,py+1)-Vector2(16,16))/32.0
+				for py in range(terraces.bounds.end.y*32,terraces.bounds.position.y*32,-1):
+					var q := (Vector2(px+0.5,py+0.5)-Vector2(16,16))/32.0
 					var c := Vector2i(q.floor())
 					var f := q-Vector2(c)
 					var a := 1.0 if terraces.tops.get(c,0)==level else 0.0
@@ -23,7 +23,7 @@ static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) ->
 					var d := 1.0 if terraces.tops.get(c+Vector2i.DOWN,0)==level else 0.0
 					var e := 1.0 if terraces.tops.get(c+Vector2i.ONE,0)==level else 0.0
 					if lerpf(lerpf(a,b,f.x),lerpf(d,e,f.x),f.y)>=0.5:
-						bottom=py+2
+						bottom=py+1
 						break
 				if bottom == -100000: continue
 				_ribbons[key].append(Vector2(px,bottom))
@@ -34,7 +34,7 @@ static func draw_tiles(canvas: CanvasItem, terraces: RefCounted, view: Rect2) ->
 				var at: Vector2 = origin+Vector2(0,depth)
 				var length: int = mini(64-depth,32-posmod(int(at.y),32))
 				if not terraces.stairs.has(terraces.cell_at(at+Vector2.ONE)):
-					canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(2,length)),Rect2(0,depth,2,length))
+					canvas.draw_texture_rect_region(FRONT,Rect2(at,Vector2(1,length)),Rect2(0,depth,1,length))
 				depth += length
 	# Dual-grid corners are the existing cell centres, not noisy contours.
 		for x in range(terraces.bounds.position.x,terraces.bounds.end.x):

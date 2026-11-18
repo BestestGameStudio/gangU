@@ -33,9 +33,12 @@ void fragment() {
 		float tone = fbm(w / 240.0)*0.72 + vnoise(w/26.0)*0.2 + (hash(w)-0.5)*0.1+0.04;
 		c.rgb = GRASS_P[int(clamp(tone,0.0,0.999)*6.0)]/255.0;
 	} else if (TEXTURE_PIXEL_SIZE.x > 0.0038 && TEXTURE_PIXEL_SIZE.x < 0.0040) {
-		c.rgb *= mix(0.92, 0.56, floor(UV.y * 8.0) / 7.0);
+		// A constant-depth rim follows the same boundary as the face.
+		c.rgb *= UV.y < 0.125 ? 0.92 : mix(0.88, 0.56, floor((UV.y-0.125) * 8.0) / 6.0);
 	} else if (distance(local.rgb, vec3(119.0,113.0,106.0)/255.0) < 0.008) {
-		c.rgb *= 0.92;
+		// Rock halves encode the tile boundary, not a square rim slab.
+		// The continuous front ribbon supplies rock below that boundary.
+		discard;
 	}
 	COLOR = c;
 }
