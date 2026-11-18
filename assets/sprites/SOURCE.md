@@ -764,3 +764,13 @@ adds grey depth bands over painted front rock. Coast remains unchanged.
 References visually studied: https://grajopx.itch.io/rocky-pine-forest and
 https://snaply.itch.io/environmental-tiles-pixel-art-top-down-tileset. No external
 pixels copied. Deliberately simple broad slabs;256px repeat visible on long walls.
+
+### Continuous terrace rims and front faces
+
+SpriteU's `tools/gen_terrace_dualgrid.py` exports both active terrace sheets.
+`terrace_grass_cliff_16.png` is a 64×64 atlas of 16px cap tiles in TL1 TR2
+BR4 BL8 mask order. The renderer uses cap alpha for the front-wall joins.
+`terrace_front_tiles_flat.png` is a 192×32 repeating wall strip. Its warm
+rock, fissures, and overhang shadow come from the atlas. Both sheets draw
+at 2× scale. Each terrace level applies its own shader treatment to the
+grass fill. The reference informed the edge and wall placement.

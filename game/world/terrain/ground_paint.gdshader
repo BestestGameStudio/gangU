@@ -14,7 +14,6 @@ uniform sampler2D types : filter_nearest;
 uniform vec2 lattice_origin;   // world position of texel (0, 0)'s lattice point
 uniform float cell = 64.0;
 uniform float art_px = 2.0;
-uniform sampler2D cliff_edges : source_color, filter_nearest, repeat_disable;
 uniform sampler2D relief : filter_linear, repeat_disable;
 uniform vec2 relief_origin;
 uniform float relief_cell = 32.0;
@@ -201,17 +200,8 @@ vec3 cliff_stone(vec2 w, float depth, int kind) {
 	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.72 : (depth > 36.0 ? 0.82 : 1.0)));
 }
 
-// Real SpriteU cliff-start ground tiles. Transparent centres keep normal paint.
-vec3 ground_edge(vec2 w, float distance_to_edge, int kind, vec3 ground) {
-	int row = kind == COBBLE ? 5 : clamp(kind, 0, 4);
-	float v = clamp(63.0 - floor(distance_to_edge / art_px), 0.0, 63.0);
-	vec2 texel = vec2(4.0 * 64.0 + mod(floor(w.x / art_px), 64.0), float(row) * 64.0 + v);
-	vec4 edge = texture(cliff_edges, (texel + 0.5) / vec2(1024.0, 384.0));
-	return mix(ground, edge.rgb * 255.0, edge.a);
-}
-
 // R is the walkable top, G the wider foot of the cliff, B the cut stone stair.
-vec3 paint_relief(vec2 w, vec3 ground, int kind) {
+vec3 paint_stairs(vec2 w, vec3 ground) {
 	vec2 grid = (w - relief_origin) / relief_cell;
 	vec2 size = vec2(textureSize(relief, 0));
 	if (any(lessThan(grid, vec2(0.0))) || any(greaterThanEqual(grid, size))) { return ground; }
@@ -229,7 +219,6 @@ vec3 paint_relief(vec2 w, vec3 ground, int kind) {
 		if (tread >= 8.0) { return COBBLE_P[1] * 0.82; }
 		return joint < 2.0 ? COBBLE_P[1] : stone;
 	}
-	// Terrace surfaces, edges and faces are discrete sprite tiles now.
 	return ground;
 }
 
@@ -282,5 +271,5 @@ void fragment() {
 			}
 		}
 	}
-	COLOR = vec4(paint_relief(w, c, top == CLIFF ? GRASS : top) / 255.0, 1.0);
+	COLOR = vec4(paint_stairs(w, c) / 255.0, 1.0);
 }

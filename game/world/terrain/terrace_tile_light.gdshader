@@ -1,8 +1,14 @@
 shader_type canvas_item;
 render_mode blend_mix;
-// Lighting only. Source tiles contain flat local colour, never painted shadows.
+// Each terrace samples its own grass field. Rock keeps the atlas shading.
+uniform float elevation = 1.0;
 varying vec2 world;
-void vertex() { world = VERTEX; }
+varying vec4 tint;
+
+void vertex() {
+	world = VERTEX;
+	tint = COLOR;
+}
 float hash(vec2 p) {
 	p = fract(p * vec2(0.1031, 0.1030));
 	p += dot(p, p.yx + 33.33);
@@ -25,20 +31,17 @@ float fbm(vec2 p) {
 }
 
 const vec3 GRASS_P[6] = vec3[6](vec3(35.0,72.0,48.0),vec3(44.0,88.0,56.0),vec3(53.0,102.0,52.0),vec3(66.0,118.0,58.0),vec3(79.0,133.0,57.0),vec3(98.0,150.0,62.0));
+// SpriteU uses this palette entry for the grass fill inside the bevel.
+const vec3 GRASS_FILL = vec3(82.0, 139.0, 62.0) / 255.0;
+
 void fragment() {
 	vec4 local = texture(TEXTURE, UV);
-	vec4 c = COLOR;
-	if (local.g > local.r * 1.15 && local.g > local.b * 1.15) {
-		vec2 w = (floor(world / 2.0)+0.5)*2.0;
-		float tone = fbm(w / 240.0)*0.72 + vnoise(w/26.0)*0.2 + (hash(w)-0.5)*0.1+0.04;
-		c.rgb = GRASS_P[int(clamp(tone,0.0,0.999)*6.0)]/255.0;
-	} else if (TEXTURE_PIXEL_SIZE.x > 0.0038 && TEXTURE_PIXEL_SIZE.x < 0.0040) {
-		// Preserve the approved neutral rim; painted front planes carry shading.
-		if (UV.y < 0.125) c.rgb *= 0.92;
-	} else if (distance(local.rgb, vec3(119.0,113.0,106.0)/255.0) < 0.008) {
-		// Rock halves encode the tile boundary, not a square rim slab.
-		// The continuous front ribbon supplies rock below that boundary.
-		discard;
+	if (distance(local.rgb, GRASS_FILL) < 0.004) {
+		vec2 w = (floor(world / 2.0) + 0.5) * 2.0;
+		w += elevation * vec2(173.0, -97.0);
+		float tone = fbm(w / 240.0) * 0.72 + vnoise(w / 26.0) * 0.2 + (hash(w) - 0.5) * 0.1 + 0.04;
+		vec3 grass = GRASS_P[int(clamp(tone, 0.0, 0.999) * 6.0)] / 255.0;
+		local.rgb = grass * (vec3(1.01, 1.04, 0.97) + (elevation - 1.0) * vec3(0.07, 0.09, 0.03));
 	}
-	COLOR = c;
+	COLOR = local * tint;
 }
