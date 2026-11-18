@@ -4,13 +4,13 @@ class_name DesertMustacheGroup
 ## All transitions pass through _enter. Only WAIT_SMOKE accepts a landing.
 enum State { TRAVEL, SPREAD, THROW, WAIT_SMOKE, CHARGE, SMOKE_HOLD, SCATTER }
 const TRANSITIONS := {
- State.TRAVEL: [State.SPREAD],
- State.SPREAD: [State.TRAVEL,State.THROW],
- State.THROW: [State.TRAVEL,State.SPREAD,State.WAIT_SMOKE],
- State.WAIT_SMOKE: [State.TRAVEL,State.CHARGE],
+ State.TRAVEL: [State.SPREAD,State.CHARGE],
+ State.SPREAD: [State.TRAVEL,State.THROW,State.CHARGE],
+ State.THROW: [State.TRAVEL,State.SPREAD,State.WAIT_SMOKE,State.CHARGE],
+ State.WAIT_SMOKE: [State.TRAVEL,State.CHARGE,State.SMOKE_HOLD],
  State.CHARGE: [State.SMOKE_HOLD,State.SCATTER,State.SPREAD],
  State.SMOKE_HOLD: [State.CHARGE,State.SCATTER,State.SPREAD],
- State.SCATTER: [State.TRAVEL,State.SPREAD],
+ State.SCATTER: [State.TRAVEL,State.SPREAD,State.CHARGE],
 }
 # PLACEHOLDER tuning, not settled balance.
 @export var player_path := NodePath("../../Player")
@@ -39,6 +39,7 @@ var _spread_angle := 0.0
 var _generation := 0
 var _grenade: SmokeGrenade
 var _cloud: SmokeCloud
+var _clouds: Array = []
 var _scatter_origin := Vector2.ZERO
 var _travel_time := 0.0
 var _rearm := 0.0
@@ -92,6 +93,18 @@ func _prepare_spread(player: Player) -> void:
  _spread_angle = player.global_position.direction_to(leader.global_position).angle()
  _enter(State.SPREAD)
 
+func _prune_clouds() -> void:
+ for i in range(_clouds.size()-1,-1,-1):
+  if not is_instance_valid(_clouds[i]) or not _clouds[i].has_smoke(): _clouds.remove_at(i)
+
+func _containing_cloud(at: Vector2) -> SmokeCloud:
+ for cloud in _clouds:
+  if is_instance_valid(cloud) and cloud.has_smoke() and cloud.contains_footprint(at): return cloud
+ return null
+
+func player_in_smoke(player: Player) -> bool:
+ return player != null and _containing_cloud(player.global_position) != null
+
 func _physics_process(dt: float) -> void:
  _elect_leader()
  if leader == null:
@@ -101,11 +114,21 @@ func _physics_process(dt: float) -> void:
  _rearm = maxf(0.0,_rearm-dt)
  var player := target()
  var distance := _distance_to(player)
+ _prune_clouds()
+ var shared_cloud := _containing_cloud(player.global_position) if player != null else null
+ # Re-entering any owned smoke cancels spread/windup/hold immediately.
+ # An already airborne lob remains area-owned and registers on landing.
+ if shared_cloud != null:
+  _cloud = shared_cloud
+  _scatter_origin = shared_cloud.global_position
+  _outside_clock = 0.0
+  if state != State.CHARGE: _enter(State.CHARGE)
  if state in [State.CHARGE,State.SMOKE_HOLD]:
-  if not is_instance_valid(_cloud) or not _cloud.has_smoke():
+  if _clouds.is_empty():
    _enter(State.SCATTER)
    return
-  var inside := player != null and _cloud.contains_smoke(player.global_position)
+  if not is_instance_valid(_cloud) or not _cloud.has_smoke(): _cloud = _clouds.back()
+  var inside := shared_cloud != null
   if inside:
    _outside_clock = 0.0
    if state != State.CHARGE: _enter(State.CHARGE)
@@ -164,14 +187,19 @@ func _throw(from: Vector2, at: Vector2, generation: int) -> void:
  _grenade.landed.connect(_on_smoke_landed.bind(generation),CONNECT_ONE_SHOT)
 
 func _on_smoke_landed(cloud, generation: int) -> void:
- if generation != _generation or state != State.WAIT_SMOKE or not is_instance_valid(cloud): return
+ # Every real lob belongs to this squad, even after a windup/wait cancellation.
+ if not is_instance_valid(cloud) or not cloud.has_smoke(): return
+ _prune_clouds()
+ if not _clouds.has(cloud): _clouds.append(cloud)
+ if generation != _generation or state != State.WAIT_SMOKE: return
  _cloud = cloud
  _scatter_origin = cloud.global_position
  _outside_clock = 0.0
- _enter(State.CHARGE)
+ _enter(State.CHARGE if player_in_smoke(target()) else State.SMOKE_HOLD)
 
 func _enter(next: State) -> bool:
  if next == state or not TRANSITIONS.get(state,[]).has(next): return false
+ if next == State.CHARGE and not player_in_smoke(target()): return false
  var candidate: Enemy
  if next == State.THROW:
   candidate = _pick_thrower()
@@ -193,7 +221,7 @@ func destination(member: Enemy) -> Vector2:
  if state == State.SCATTER:
   return _scatter_origin+Vector2.from_angle(float(index)*TAU/maxi(1,members.size())+0.35)*260.0
  if state in [State.CHARGE,State.SMOKE_HOLD] and is_instance_valid(_cloud) and _cloud.has_smoke():
-  if player != null and _cloud.contains_smoke(player.global_position):return player.global_position
+  if player_in_smoke(player):return player.global_position
   return _cloud.interior_point(index)
  if state == State.TRAVEL or player == null:
   var offsets := [Vector2(-18,-12),Vector2(-74,21),Vector2(35,44),Vector2(-40,-60),Vector2(65,-28)]

@@ -35,8 +35,26 @@ illegal edges, missing grenades and stale callbacks. A scripted demo stages
 player position/HP only, with no state, timer or cloud-lifetime override. It is
 not manual balance testing or browser-play qualification.
 
-## Inside-smoke charge follow-up
+## Inside-smoke charge continuity (#886)
 
-A new draft tracks continuous charging while the player shares the squad smoke.
-Current per-puff containment and newest-cloud-only tracking are under review;
-no change to gameplay semantics is made by this draft-start note.
+Squad engagement uses a continuous convex envelope around surviving puff
+extents for each cloud. Eight radial points per live puff approximate its bounds.
+The polygon is cached until the next20Hz puff update or projectile interaction.
+Exact-puff collision, projectile changes, lifetime and rendering are unchanged.
+Individual cloud envelopes stay separate: empty space between two clouds is not
+filled. Only clouds actually launched by this squad count, not another squad.
+
+Every landing registers its area-owned cloud, including a lob whose wait was
+canceled by player reentry. Invalid/expired/exhausted clouds are pruned. A stale
+landing may register real smoke but cannot itself change the state of a later
+cycle. Actual membership is evaluated on the next physics tick.
+
+A visible living player inside any owned live envelope keeps CHARGE and resets
+the exit clock. Reentry from TRAVEL, SPREAD, THROW or WAIT_SMOKE cancels retry
+movement/windup through a guarded CHARGE edge; SCATTER has the same guarded
+reentry edge. CHARGE entry requires actual shared-smoke membership, including
+the real-landing path. Landing outside all smoke enters SMOKE_HOLD instead.
+An already airborne grenade survives cancellation and registers on landing.
+One cloud expiring does not scatter while another owned cloud survives. All
+smoke ending scatters; leaving every cloud preserves1s exit debounce and3s
+minimum launch interval, then spread/windup. Dead/hidden targets still hold.
