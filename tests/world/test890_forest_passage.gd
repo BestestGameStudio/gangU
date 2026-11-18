@@ -22,6 +22,12 @@ func run() -> void:
  check(not terrain.is_walkable_at(Vector2(576,-1750)),"back row solid")
  var trunks := terrain.trunk_blockers().size()
  var hp: int = loader.player.hp
+ var arena: DesertStatueArena = world.get_node("DesertStatueArena")
+ arena.state = DesertStatueArena.State.POSSESSED
+ loader._on_forest_passage(passage)
+ for i in 3:await physics_frame
+ check(loader.current_area == world,"active encounter blocks passage")
+ arena.state = DesertStatueArena.State.DORMANT
  loader._on_forest_passage(passage)
  for i in 5:await physics_frame
  check(loader.current_area.name == &"ForestPlaceholder","entered placeholder")
