@@ -737,3 +737,7 @@ No scene in any level/SpawnData/encounter references this group.
 ### Cliff-start ground edge overlays
 
 SpriteU PR #24 also supplies `terrace_ground_edges.png`, 1024x384 RGBA: six material rows and 16 N/E/S/W masks across (1/2/4/8). Binary transparency preserves the normal painted ground under the edge. Runtime currently samples the shared south-edge strip along its interpolated contour; other masks are source variants for further tiled use. Only the camera-facing terrace exposure receives rock. Back/side areas retain ground with a narrow cliff-start mark. No terrace data or collision changes.
+
+### Stronger rock and rocky rim pass
+
+SpriteU art/terrace-cliffs at 0f93f86: original irregular faceted rock and broken chevron/tapered fissures, warm-grey grass/dirt rock palette, nine-pixel rocky edge bevel. No dirt-colour edge variant: former dirt edge uses rock colours. Rim surface comes from nearest plateau; a dirt plateau rim uses grass rather than extending a dirt patch across the drop. Interior dirt remains unchanged. Revisited owner's image and visually studied Rocky Pines (https://grajopx.itch.io/rocky-pine-forest) and Simple Tiles (https://snaply.itch.io/environmental-tiles-pixel-art-top-down-tileset) for cap/face value separation and readable stone rims. No reference pixels copied. Still no geometry/collision change.

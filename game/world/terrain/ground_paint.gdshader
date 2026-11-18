@@ -199,7 +199,7 @@ vec3 cliff_stone(vec2 w, float depth, int kind) {
 		float(row) * 64.0 + mod(floor(w.y / 2.0), 64.0));
 	vec3 rock = texture(cliff_materials, (texel + 0.5) / vec2(512.0, 384.0)).rgb * 255.0;
 	// Broad lower occlusion, not a black outline or repeated stone blobs.
-	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.78 : (depth > 36.0 ? 0.90 : 1.0)));
+	return rock * (depth > 108.0 ? 0.66 : (depth > 72.0 ? 0.72 : (depth > 36.0 ? 0.82 : 1.0)));
 }
 
 // Real SpriteU cliff-start ground tiles. Transparent centres keep normal paint.
@@ -249,8 +249,14 @@ vec3 paint_relief(vec2 w, vec3 ground, int kind) {
 			if (dist.w > 100.0 && texture(relief, uv - vec2(off.x, 0.0)).r * 2.0 > level - 0.5) { dist.w = step_up; }
 		}
 		bool front = dist.x < 100.0 && dist.x <= min(dist.y, dist.w) + 12.0 && dist.x < dist.z;
-		vec3 cap_ground = ground;
-		if (!front) { return ground_edge(w, abs(lip) * 64.0, kind, cap_ground); }
+		// Rims use the plateau surface, not a dirt patch on the lower ground.
+        vec2 nearest = dist.x <= min(min(dist.y, dist.z),dist.w) ? vec2(0.0,-dist.x) : (dist.y <= min(dist.z,dist.w) ? vec2(dist.y,0.0) : (dist.z <= dist.w ? vec2(0.0,dist.z) : vec2(-dist.w,0.0)));
+        int rim_kind; int rim_second; float rim_margin;
+        classify(warped(w + nearest), rim_kind, rim_second, rim_margin);
+        if (rim_kind == DIRT || rim_kind == CLIFF) { rim_kind = GRASS; }
+        float rim_tone = fbm((w + nearest) / 240.0) * 0.72 + vnoise(w / 26.0) * 0.2 + 0.04;
+        vec3 cap_ground = paint(rim_kind,w,rim_tone);
+		if (!front) { return ground_edge(w, abs(lip) * 48.0, rim_kind, cap_ground); }
 		float depth = dist.x;
 		vec3 rock = cliff_stone(w, depth, kind);
 		return rock * (foot < 0.08 ? 0.76 : 1.0);
