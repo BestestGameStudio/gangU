@@ -2,7 +2,7 @@ extends SceneTree
 ## Data-only weights: serialized defaults, assignment and unchanged push behavior.
 var failures := 0
 const EXPECTED := {
- "beast_boss": 5.0, "bird": 0.5, "defense_wave_boss": 3.0,
+ "desert_mustache": 1.0, "beast_boss": 5.0, "bird": 0.5, "defense_wave_boss": 3.0,
  "fishy": 0.75, "head_boss": 4.0, "mustache_barricader": 1.0,
  "mustache_warlord": 3.0, "mustache_warrior": 1.0,
  "overworld_fishy": 0.75, "overworld_guard": 1.0,

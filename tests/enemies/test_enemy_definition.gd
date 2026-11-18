@@ -148,6 +148,7 @@ func _initialize() -> void:
 
 	await _test_fishy_audio()
 	await _test_scorpion()
+	await _test_desert_group()
 
 	if failures == 0:
 		print("[98] PASS")
@@ -829,3 +830,55 @@ func _check_scorpion_pose(e: EnemyScorpion, animation: StringName, pixels: Array
 		var color := image.get_pixelv(Vector2i(expected))
 		var visible_tip := color.a > 0.0 and color.r < 0.68 and color.b > color.r
 		_check(e.stinger_exposed() == visible_tip,"scorpion: occlusion follows actual pixel %s:%d" % [animation,k])
+
+## Shared squad lifecycle and grenade-landing synchronization are otherwise
+## silent core contracts; content tuning/visual poses are deliberately unpinned.
+func _test_desert_group() -> void:
+	var world := Node2D.new()
+	root.add_child(world)
+	var p: Player = load("res://game/player/player.tscn").instantiate()
+	p.name = "Player"
+	world.add_child(p)
+	p.set_physics_process(false)
+	p.position = Vector2(-2000,0)
+	var area := Node2D.new()
+	world.add_child(area)
+	var squad: DesertMustacheGroup = load("res://game/enemies/desert_mustache_group.tscn").instantiate()
+	area.add_child(squad)
+	squad.set_physics_process(false)
+	for member in squad.members: member.set_physics_process(false)
+	_check(squad.members.size() == 5,"desert: group scene owns exactly five independent enemies")
+	_check(squad.members[0]._behavior != squad.members[1]._behavior,"desert: member behavior state is never shared")
+	squad._physics_process(0.1)
+	_check(squad.state == DesertMustacheGroup.State.TRAVEL,"desert: distant player keeps traveling formation")
+	p.position = squad.leader.position+Vector2(200,0)
+	squad._physics_process(0.1)
+	_check(squad.state == DesertMustacheGroup.State.SPREAD,"desert: player approach spreads group")
+	_check(squad.destination(squad.members[0]).distance_to(squad.destination(squad.members[4])) > 100,"desert: spread members have distinct separated destinations")
+	squad._physics_process(squad.spread_seconds)
+	_check(squad.state == DesertMustacheGroup.State.THROW,"desert: spread precedes leader throw")
+	squad.leader.set_frozen(true)
+	var clock := squad._clock
+	squad._physics_process(2.0)
+	_check(squad._clock == clock,"desert: frozen leader cannot advance throw clock")
+	squad.leader.set_frozen(false)
+	squad._physics_process(squad.throw_windup)
+	_check(squad.state == DesertMustacheGroup.State.WAIT_SMOKE,"desert: throw does not immediately release charge")
+	await process_frame
+	_check(squad._grenade != null,"desert: deferred production grenade exists")
+	for i in 45: await physics_frame
+	_check(squad.state == DesertMustacheGroup.State.CHARGE,"desert: real cloud landing releases group charge")
+	var old_leader := squad.leader
+	old_leader.apply_damage(10000)
+	squad._physics_process(0.01)
+	_check(squad.leader != old_leader and is_instance_valid(squad.leader),"desert: surviving member inherits leadership")
+	p.apply_damage(10000)
+	squad._physics_process(0.01)
+	_check(squad.state == DesertMustacheGroup.State.SMOKE_HOLD,"desert: target loss stays in live smoke")
+	_check(squad._cloud.contains_smoke(squad.destination(squad.leader)),"desert: hold destination remains inside live puffs")
+	squad._cloud.lifetime = 0.0
+	squad._physics_process(0.01)
+	_check(squad.state == DesertMustacheGroup.State.SCATTER,"desert: dissipated cloud releases scatter")
+	for i in 90: await physics_frame
+	world.queue_free()
+	await process_frame
