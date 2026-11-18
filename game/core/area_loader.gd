@@ -94,6 +94,26 @@ func _on_gate_entered(gate: Gate) -> void:
 	else:
 		_swap.call_deferred(target.instantiate())
 
+## Queue outside physics flush; recheck ownership so hidden cached areas and
+## two same-frame overlaps cannot transport the player from a stale scene.
+func _on_forest_passage(passage: ForestPassage) -> void:
+	_commit_forest_passage.call_deferred(passage, current_area)
+
+func _commit_forest_passage(passage: ForestPassage, origin: Node) -> void:
+	if not is_instance_valid(passage) or origin != current_area or not origin.is_ancestor_of(passage):
+		return
+	if player == null or player.hp <= 0 or has_active_encounter():
+		return
+	var target := load(passage.target_path) as PackedScene
+	if target == null:
+		return
+	var arrival := passage.arrival
+	if passage.target_path == OVERWORLD_SCENE:
+		enter_overworld()
+	else:
+		_swap(target.instantiate())
+	player.global_position = (current_area as Node2D).to_global(arrival)
+
 func _swap(area: Node) -> void:
 	if current_area == area:
 		return
@@ -137,6 +157,9 @@ func _swap(area: Node) -> void:
 		if not sites.is_empty():
 			world_map.set_sites(current_area.name, sites) # #366
 		world_map.set_area(current_area.name, current_area.get_node_or_null("Terrain") as TerrainMap)
+	for passage: ForestPassage in get_tree().get_nodes_in_group("forest_passages"):
+		if current_area.is_ancestor_of(passage) and not passage.entered.is_connected(_on_forest_passage):
+			passage.entered.connect(_on_forest_passage)
 	if first_mount:
 		_mount_area_spawns(current_area)
 		if current_area.scene_file_path == OVERWORLD_SCENE:
