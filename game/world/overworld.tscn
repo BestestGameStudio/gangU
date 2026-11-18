@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3 uid="uid://bgangu346ovw"]
+[gd_scene load_steps=34 format=3 uid="uid://bgangu346ovw"]
 
 [ext_resource type="Script" path="res://game/world/overworld_ground.gd" id="346_ground"]
 [ext_resource type="Script" path="res://game/world/terrain/terrain_map.gd" id="391_terrain"]
@@ -26,6 +26,9 @@
 [ext_resource type="Script" path="res://game/world/scorpion_spawn_data.gd" id="855_spawn"]
 [ext_resource type="PackedScene" path="res://game/enemies/enemy_scorpion.tscn" id="855_scorpion"]
 [ext_resource type="Resource" path="res://data/enemies/scorpion.tres" id="855_def"]
+
+[ext_resource type="Script" path="res://game/world/desert_squad_placement.gd" id="desert_squad_mount"]
+[ext_resource type="PackedScene" path="res://game/enemies/desert_mustache_group.tscn" id="desert_squad_scene"]
 
 [sub_resource type="Resource" id="Resource_spawn_redsouth_0"]
 script = ExtResource("518_spawn_entry")
@@ -171,3 +174,7 @@ script = ExtResource("855_spawn")
 scorpion_scene = ExtResource("855_scorpion")
 scorpion_definition = ExtResource("855_def")
 player_path = NodePath("../../Player")
+
+[node name="DesertSquadPlacement" type="Node2D" parent="."]
+script = ExtResource("desert_squad_mount")
+group_scene = ExtResource("desert_squad_scene")

@@ -33,3 +33,13 @@ inside live puffs can be charged/contacted; a player outside is not chased out.
 Members use distinct interior puff points, even if the target is lost/dead/far.
 Actual cloud exhaustion/expiry/removal releases3s outward scatter, then regroup
 with4s re-arm delay. Knockback/terrain/freeze contracts still outrank propulsion.
+
+## Placement after overworld reshape
+Once #883 merged, place exactly1group/5members on the west desert approach.
+A local overworld carrier checks an entire320x256 sand/walkable footprint outside
+boss barrier+160 and at least320px from existing scorpion spawn samples. First
+valid deterministic sample on current map is(-380,-960), west of boss center
+(576,-960), about340px beyond its barrier. Short patrol is110x40 around that
+anchor. No other group, new encounter, objective or respawn. Explicit player and
+shared-terrain refs verified from actual Main/Overworld boot. Placement is
+run-owned and retained with the cached overworld, reset by normal death reload.
