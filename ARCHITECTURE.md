@@ -193,6 +193,22 @@ sliding. External reels/stacks remain sole movers: charge and hop submit
 self-propulsion to the existing force resolver and spend finite own budgets,
 not net pulled distance.
 
+Engaged targets outside the surface charge band (300<distance<=650px) trigger
+0.30s vulnerable bury, then600px/s concealed live pursuit. At160px it reveals
+directly into the0.07s stinger hop: no separate emerge or400ms tell pause after
+pursuit (November17 follow-up). The red barb pulse runs during that raised hop.
+Existing damage still begins only after landing, with actual-tip proximity.
+Beyond650px pursuit stops and returns to buried idle after2s; losing a target
+stops it immediately. Dormant wake range remains300px, not a new long-range aggro.
+Terrain routing, constraints, freeze and external sole-mover behavior remain.
+The original short opening BURROW_RUSH/emerge sequence is unchanged.
+
+Broken-ground trail is SpriteU21 source art,48x32 cells (soil about40x20), four
+settling keys120/150/180/150ms. Visual-only stamps every20px of actual movement,
+world-anchored,600ms lifetime, max32 per enemy; source RGB fades, never glows.
+Both underground movement states use it, replacing old procedural lines/circles.
+Clocks/stamps pause under the owner's freeze; no collision/damage/target effects.
+
 Close sting has a400ms raised-tail load-up with a red pulsing stinger barb
 (not the tail chain), then a0.07s quick ground-plane hop toward the player, up to100px, stopping at52px spacing rather than crossing a
 close player. Point-blank has a visual-only hop; no backward hop was approved.

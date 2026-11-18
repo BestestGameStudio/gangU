@@ -43,17 +43,19 @@ var _initial_charge := false
 var _charge_cd := 0.0
 var _charge_length := 0.0
 var _pursue_after_bury := false
-var _pursuit_emerge := false
+var _burrow_hop := false
 const CHARGE_HIT_RADIUS := 24.0
 
 func _enter(e: EnemyScorpion, next: State) -> void:
 	state = next
+	if state != State.STING_HOP: _burrow_hop = false
 	_time = 0.0
 	e.velocity = Vector2.ZERO
 	e.clear_action()
 	e.set_hop_height(0.0)
 	match state:
 		State.BURIED:
+			_burrow_hop = false
 			_pursue_after_bury = false
 			_far = 0.0
 			e.set_buried(true)
@@ -78,7 +80,7 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.sprite.set_frame_and_progress(1,0.0)
 			e.sprite.pause()
 		State.EMERGE:
-			_initial_charge = not _pursuit_emerge
+			_initial_charge = true
 			e.set_buried(false)
 			e.play_action(&"emerge", true)
 		State.STING_WINDUP:
@@ -86,6 +88,7 @@ func _enter(e: EnemyScorpion, next: State) -> void:
 			e.play_action(&"attack", true)
 			e.sprite.pause()
 		State.STING_HOP:
+			e.set_buried(false)
 			e.play_action(&"attack",true)
 			e.sprite.set_frame_and_progress(1,0.0)
 			e.sprite.pause()
@@ -154,10 +157,8 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 				e.velocity = Vector2.ZERO
 				return
 			if distance <= sting_range:
-				_aim = off.normalized()
-				e.face_player(_aim)
-				_pursuit_emerge = true
-				_enter(e,State.EMERGE)
+				_burrow_hop = true
+				_begin_sting_hop(e,off,distance,true)
 			else:
 				# Live pursuit, terrain-aware steering. Movement cannot cross the
 				# sting boundary in one tick; reels remain the sole external mover.
@@ -170,7 +171,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			if not alive or distance <= 180.0 or _remaining <= 0.0:
 				if alive: _aim = off.normalized()
 				e.face_player(_aim)
-				_pursuit_emerge = false
+				_burrow_hop = false
 				_enter(e,State.EMERGE)
 			else:
 				_move(e,delta,minf(_remaining,maxf(0.0,distance-180.0)))
@@ -181,8 +182,6 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 					_aim = off.normalized()
 					e.face_player(_aim)
 					_enter(e,State.STING_WINDUP)
-				elif _pursuit_emerge and (not alive or distance > charge_range):
-					_enter(e,State.CHASE)
 				else:
 					_enter(e,State.CHARGE_WINDUP)
 		State.CHARGE_WINDUP:
@@ -224,12 +223,7 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 			if _time >= 0.1:
 				e.sprite.set_frame_and_progress(1,0.0)
 			if _time >= STING_WINDUP:
-				# Toward-only spacing hop, never pass through a close player.
-				if alive:
-					_aim = off.normalized()
-					e.face_player(_aim)
-				_remaining = minf(HOP_DISTANCE,maxf(0.0,distance-HOP_STOP_DISTANCE)) if alive else 0.0
-				_enter(e,State.STING_HOP)
+				_begin_sting_hop(e,off,distance,alive)
 		State.STING_HOP:
 			var budget := minf(HOP_DISTANCE/HOP_TIME*delta,_remaining)
 			var allowed := e.charge_travel(_aim,budget)
@@ -283,6 +277,14 @@ func physics_step(enemy: Enemy, player, delta: float) -> void:
 		State.BURY:
 			if _time >= transition_time:
 				_enter(e,State.BURROW_PURSUIT if _pursue_after_bury and alive and distance <= hide_range else State.BURIED)
+
+func _begin_sting_hop(e: EnemyScorpion, off: Vector2, distance: float, alive: bool) -> void:
+	# Both surface and emerging hops are toward-only, never through a close player.
+	if alive:
+		_aim = off.normalized()
+		e.face_player(_aim)
+	_remaining = minf(HOP_DISTANCE,maxf(0.0,distance-HOP_STOP_DISTANCE)) if alive else 0.0
+	_enter(e,State.STING_HOP)
 
 func _move(e: EnemyScorpion, delta: float, budget: float) -> void:
 	var step := minf(dash_speed*delta,budget)

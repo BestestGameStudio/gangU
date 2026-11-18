@@ -705,7 +705,7 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,0.07)
 	_check(e.position.is_equal_approx(Vector2(100,0)) and b.state == b.State.STING_STRIKE,"hop:160 target closes100 to60 spacing, no overshoot")
 	# Pursuit is selected only outside the surface charge band, after a
-	# visible bury, and must surface before any existing sting damage.
+	# visible bury, then surfaces directly into the existing hop/strike.
 	e.position = Vector2.ZERO
 	e.set_buried(false)
 	b._charge_cd = 0.0
@@ -748,15 +748,14 @@ func _test_scorpion() -> void:
 	b.physics_step(e,p,1.0/60.0)
 	_check(e.position.is_equal_approx(Vector2(5,0)) and e.buried,"burrow:step stops exactly at160, no pass through")
 	b.physics_step(e,p,1.0/60.0)
-	_check(b.state == b.State.EMERGE and not e.buried,"burrow:at160 surfaces before attack")
-	b.physics_step(e,p,0.299)
-	_check(b.state == b.State.EMERGE and p.hp == player_safe_hp,"burrow:emerge has no instant hit")
-	b.physics_step(e,p,0.0011)
-	_check(b.state == b.State.STING_WINDUP,"burrow:emerge completes into existing sting tell")
-	b.physics_step(e,p,0.399)
-	_check(b.state == b.State.STING_WINDUP,"burrow:full red tell retained after emerge")
-	b.physics_step(e,p,0.0011)
-	_check(b.state == b.State.STING_HOP,"burrow:then existing hop, not damage shortcut")
+	_check(b.state == b.State.STING_HOP and not e.buried and b._burrow_hop,"burrow:at160 surfaces directly in hop, zero emerge/tell pause")
+	var burrow_hop_origin := e.position
+	b.physics_step(e,p,0.035)
+	_check(e.position.x > burrow_hop_origin.x and e.sprite.position.y < -31.9 and p.hp == player_safe_hp,"burrow:emerging hop moves immediately, no damage until grounded")
+	b.physics_step(e,p,0.035)
+	_check(b.state == b.State.STING_STRIKE and e.position.is_equal_approx(burrow_hop_origin+Vector2(100,0)),"burrow:emerging hop lands after0.07s directly into existing sting")
+	_check(not b._burrow_hop,"burrow:hop cue resets at strike")
+
 	# Far disengage cannot retain an invisible chaser or re-wake at long range.
 	e.position = Vector2.ZERO
 	p.position = Vector2(650.1,0)
@@ -774,13 +773,42 @@ func _test_scorpion() -> void:
 	e.position = Vector2.ZERO
 	p.position = Vector2(400,0)
 	b._enter(e,b.State.BURROW_PURSUIT)
-	var burrow_owner := Node.new()
-	area.add_child(burrow_owner)
-	e.displacement_owner = burrow_owner
+	# A reel attached above ground remains sole mover through concealment.
+	e.set_buried(false)
+	e.reel_force_velocity = Vector2.ZERO
+	var burrow_reel := HookReel.begin(area,e,p,hook)
+	burrow_reel.set_physics_process(false)
+	b._enter(e,b.State.BURROW_PURSUIT)
 	e._physics_process(1.0/60.0)
 	_check(e.position == Vector2.ZERO and e.reel_propulsion.is_equal_approx(Vector2(600,0)),"burrow:external owner samples600 propulsion with zero self move")
-	e.displacement_owner = null
-	burrow_owner.queue_free()
+	var burrow_velocity := Enemy.force_step(Vector2(600,0),Vector2.ZERO,burrow_reel.pull_force(e),e.weight,1.0/60.0,burrow_reel.pull_speed_limit(e))
+	burrow_reel._physics_process(1.0/60.0)
+	_check(e.position.is_equal_approx(burrow_velocity/60.0),"burrow:real HookReel performs sole force-integrated move")
+	burrow_reel.free()
+	e.position = Vector2.ZERO
+	p.position = Vector2(400,0)
+	e.movement_constraint = func(point:Vector2)->Vector2:return Vector2(minf(point.x,25.0),point.y)
+	b._enter(e,b.State.BURROW_PURSUIT)
+	for i in 10:e._physics_process(1.0/60.0)
+	_check(e.position == Vector2(25,0),"burrow:production constraint clamps underground travel")
+	e.movement_constraint = Callable()
+	var burrow_map := TerrainMap.new()
+	area.add_child(burrow_map)
+	for y in range(-2,3):burrow_map.set_cell(Vector2i(2,y),TerrainTypes.MOUNTAIN)
+	e.terrain = burrow_map
+	e.position = Vector2(32,32)
+	p.position = Vector2(432,32)
+	b._enter(e,b.State.BURROW_PURSUIT)
+	var terrain_safe := true
+	var detour := false
+	for i in 90:
+		if b.state != b.State.BURROW_PURSUIT:break
+		e._physics_process(1.0/60.0)
+		terrain_safe = terrain_safe and TerrainMotion.can_enter(burrow_map,e.position,false)
+		detour = detour or absf(e.position.y-32.0)>32.0
+	_check(terrain_safe and detour,"burrow:routes around blocking terrain, never enters mountain")
+	e.terrain = null
+	burrow_map.free()
 
 	area.free()
 
