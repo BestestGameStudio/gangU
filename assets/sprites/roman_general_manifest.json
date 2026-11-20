@@ -1,12 +1,13 @@
 {
   "frame_size": [
-    64,
-    64
+    128,
+    128
   ],
-  "rows": [
+  "columns": 25,
+  "animations": [
     {
-      "row": 0,
       "name": "idle-front",
+      "first_cell": 0,
       "frame_count": 5,
       "durations_ms": [
         320,
@@ -24,46 +25,8 @@
       ]
     },
     {
-      "row": 1,
-      "name": "idle-back",
-      "frame_count": 5,
-      "durations_ms": [
-        320,
-        280,
-        280,
-        320,
-        320
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 4
-        }
-      ]
-    },
-    {
-      "row": 2,
-      "name": "idle-right",
-      "frame_count": 5,
-      "durations_ms": [
-        320,
-        280,
-        280,
-        320,
-        320
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 4
-        }
-      ]
-    },
-    {
-      "row": 3,
       "name": "walk-front",
+      "first_cell": 5,
       "frame_count": 8,
       "durations_ms": [
         110,
@@ -84,52 +47,8 @@
       ]
     },
     {
-      "row": 4,
-      "name": "walk-back",
-      "frame_count": 8,
-      "durations_ms": [
-        110,
-        110,
-        110,
-        110,
-        110,
-        110,
-        110,
-        110
-      ],
-      "tags": [
-        {
-          "name": "walk",
-          "from": 0,
-          "to": 7
-        }
-      ]
-    },
-    {
-      "row": 5,
-      "name": "walk-right",
-      "frame_count": 8,
-      "durations_ms": [
-        110,
-        110,
-        110,
-        110,
-        110,
-        110,
-        110,
-        110
-      ],
-      "tags": [
-        {
-          "name": "walk",
-          "from": 0,
-          "to": 7
-        }
-      ]
-    },
-    {
-      "row": 6,
       "name": "run-front",
+      "first_cell": 13,
       "frame_count": 8,
       "durations_ms": [
         70,
@@ -150,52 +69,8 @@
       ]
     },
     {
-      "row": 7,
-      "name": "run-back",
-      "frame_count": 8,
-      "durations_ms": [
-        70,
-        70,
-        70,
-        70,
-        70,
-        70,
-        70,
-        70
-      ],
-      "tags": [
-        {
-          "name": "run",
-          "from": 0,
-          "to": 7
-        }
-      ]
-    },
-    {
-      "row": 8,
-      "name": "run-right",
-      "frame_count": 8,
-      "durations_ms": [
-        70,
-        70,
-        70,
-        70,
-        70,
-        70,
-        70,
-        70
-      ],
-      "tags": [
-        {
-          "name": "run",
-          "from": 0,
-          "to": 7
-        }
-      ]
-    },
-    {
-      "row": 9,
       "name": "projectile-front",
+      "first_cell": 21,
       "frame_count": 16,
       "durations_ms": [
         80,
@@ -234,88 +109,8 @@
       ]
     },
     {
-      "row": 10,
-      "name": "projectile-back",
-      "frame_count": 16,
-      "durations_ms": [
-        80,
-        110,
-        110,
-        110,
-        110,
-        110,
-        110,
-        80,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120
-      ],
-      "tags": [
-        {
-          "name": "wind-up",
-          "from": 0,
-          "to": 6
-        },
-        {
-          "name": "impact",
-          "from": 7,
-          "to": 7
-        },
-        {
-          "name": "wind-down",
-          "from": 8,
-          "to": 15
-        }
-      ]
-    },
-    {
-      "row": 11,
-      "name": "projectile-right",
-      "frame_count": 16,
-      "durations_ms": [
-        80,
-        110,
-        110,
-        110,
-        110,
-        110,
-        110,
-        80,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120
-      ],
-      "tags": [
-        {
-          "name": "wind-up",
-          "from": 0,
-          "to": 6
-        },
-        {
-          "name": "impact",
-          "from": 7,
-          "to": 7
-        },
-        {
-          "name": "wind-down",
-          "from": 8,
-          "to": 15
-        }
-      ]
-    },
-    {
-      "row": 12,
       "name": "triple-slash-front",
+      "first_cell": 37,
       "frame_count": 19,
       "durations_ms": [
         220,
@@ -382,144 +177,8 @@
       ]
     },
     {
-      "row": 13,
-      "name": "triple-slash-back",
-      "frame_count": 19,
-      "durations_ms": [
-        220,
-        150,
-        150,
-        150,
-        60,
-        100,
-        100,
-        60,
-        100,
-        100,
-        70,
-        200,
-        200,
-        200,
-        200,
-        180,
-        180,
-        180,
-        180
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 3
-        },
-        {
-          "name": "impact",
-          "from": 4,
-          "to": 4
-        },
-        {
-          "name": "wind-up",
-          "from": 5,
-          "to": 6
-        },
-        {
-          "name": "impact",
-          "from": 7,
-          "to": 7
-        },
-        {
-          "name": "wind-up",
-          "from": 8,
-          "to": 9
-        },
-        {
-          "name": "impact",
-          "from": 10,
-          "to": 10
-        },
-        {
-          "name": "wind-down",
-          "from": 11,
-          "to": 18
-        }
-      ]
-    },
-    {
-      "row": 14,
-      "name": "triple-slash-right",
-      "frame_count": 19,
-      "durations_ms": [
-        220,
-        150,
-        150,
-        150,
-        60,
-        100,
-        100,
-        60,
-        100,
-        100,
-        70,
-        200,
-        200,
-        200,
-        200,
-        180,
-        180,
-        180,
-        180
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 3
-        },
-        {
-          "name": "impact",
-          "from": 4,
-          "to": 4
-        },
-        {
-          "name": "wind-up",
-          "from": 5,
-          "to": 6
-        },
-        {
-          "name": "impact",
-          "from": 7,
-          "to": 7
-        },
-        {
-          "name": "wind-up",
-          "from": 8,
-          "to": 9
-        },
-        {
-          "name": "impact",
-          "from": 10,
-          "to": 10
-        },
-        {
-          "name": "wind-down",
-          "from": 11,
-          "to": 18
-        }
-      ]
-    },
-    {
-      "row": 15,
       "name": "charged-slash-front",
+      "first_cell": 56,
       "frame_count": 20,
       "durations_ms": [
         250,
@@ -567,106 +226,8 @@
       ]
     },
     {
-      "row": 16,
-      "name": "charged-slash-back",
-      "frame_count": 20,
-      "durations_ms": [
-        250,
-        160,
-        160,
-        160,
-        160,
-        140,
-        140,
-        140,
-        60,
-        60,
-        60,
-        190,
-        190,
-        190,
-        190,
-        190,
-        200,
-        200,
-        200,
-        200
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 7
-        },
-        {
-          "name": "impact",
-          "from": 8,
-          "to": 10
-        },
-        {
-          "name": "wind-down",
-          "from": 11,
-          "to": 19
-        }
-      ]
-    },
-    {
-      "row": 17,
-      "name": "charged-slash-right",
-      "frame_count": 20,
-      "durations_ms": [
-        250,
-        160,
-        160,
-        160,
-        160,
-        140,
-        140,
-        140,
-        60,
-        60,
-        60,
-        190,
-        190,
-        190,
-        190,
-        190,
-        200,
-        200,
-        200,
-        200
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 7
-        },
-        {
-          "name": "impact",
-          "from": 8,
-          "to": 10
-        },
-        {
-          "name": "wind-down",
-          "from": 11,
-          "to": 19
-        }
-      ]
-    },
-    {
-      "row": 18,
       "name": "ground-slam-front",
+      "first_cell": 76,
       "frame_count": 17,
       "durations_ms": [
         80,
@@ -716,110 +277,8 @@
       ]
     },
     {
-      "row": 19,
-      "name": "ground-slam-back",
-      "frame_count": 17,
-      "durations_ms": [
-        80,
-        100,
-        100,
-        100,
-        70,
-        70,
-        100,
-        100,
-        80,
-        100,
-        100,
-        100,
-        100,
-        100,
-        100,
-        100,
-        100
-      ],
-      "tags": [
-        {
-          "name": "wind-up",
-          "from": 0,
-          "to": 3
-        },
-        {
-          "name": "takeoff",
-          "from": 4,
-          "to": 5
-        },
-        {
-          "name": "airborne",
-          "from": 6,
-          "to": 7
-        },
-        {
-          "name": "impact",
-          "from": 8,
-          "to": 8
-        },
-        {
-          "name": "wind-down",
-          "from": 9,
-          "to": 16
-        }
-      ]
-    },
-    {
-      "row": 20,
-      "name": "ground-slam-right",
-      "frame_count": 17,
-      "durations_ms": [
-        80,
-        100,
-        100,
-        100,
-        70,
-        70,
-        100,
-        100,
-        80,
-        100,
-        100,
-        100,
-        100,
-        100,
-        100,
-        100,
-        100
-      ],
-      "tags": [
-        {
-          "name": "wind-up",
-          "from": 0,
-          "to": 3
-        },
-        {
-          "name": "takeoff",
-          "from": 4,
-          "to": 5
-        },
-        {
-          "name": "airborne",
-          "from": 6,
-          "to": 7
-        },
-        {
-          "name": "impact",
-          "from": 8,
-          "to": 8
-        },
-        {
-          "name": "wind-down",
-          "from": 9,
-          "to": 16
-        }
-      ]
-    },
-    {
-      "row": 21,
       "name": "shield-bash-front",
+      "first_cell": 93,
       "frame_count": 15,
       "durations_ms": [
         240,
@@ -862,96 +321,8 @@
       ]
     },
     {
-      "row": 22,
-      "name": "shield-bash-back",
-      "frame_count": 15,
-      "durations_ms": [
-        240,
-        160,
-        160,
-        160,
-        160,
-        70,
-        70,
-        180,
-        180,
-        180,
-        180,
-        190,
-        190,
-        190,
-        190
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 4
-        },
-        {
-          "name": "impact",
-          "from": 5,
-          "to": 6
-        },
-        {
-          "name": "wind-down",
-          "from": 7,
-          "to": 14
-        }
-      ]
-    },
-    {
-      "row": 23,
-      "name": "shield-bash-right",
-      "frame_count": 15,
-      "durations_ms": [
-        240,
-        160,
-        160,
-        160,
-        160,
-        70,
-        70,
-        180,
-        180,
-        180,
-        180,
-        190,
-        190,
-        190,
-        190
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 4
-        },
-        {
-          "name": "impact",
-          "from": 5,
-          "to": 6
-        },
-        {
-          "name": "wind-down",
-          "from": 7,
-          "to": 14
-        }
-      ]
-    },
-    {
-      "row": 24,
       "name": "spear-throw-front",
+      "first_cell": 108,
       "frame_count": 17,
       "durations_ms": [
         240,
@@ -996,100 +367,8 @@
       ]
     },
     {
-      "row": 25,
-      "name": "spear-throw-back",
-      "frame_count": 17,
-      "durations_ms": [
-        240,
-        150,
-        150,
-        150,
-        150,
-        140,
-        140,
-        60,
-        60,
-        140,
-        140,
-        160,
-        160,
-        160,
-        160,
-        200,
-        200
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 6
-        },
-        {
-          "name": "impact",
-          "from": 7,
-          "to": 8
-        },
-        {
-          "name": "wind-down",
-          "from": 9,
-          "to": 16
-        }
-      ]
-    },
-    {
-      "row": 26,
-      "name": "spear-throw-right",
-      "frame_count": 17,
-      "durations_ms": [
-        240,
-        150,
-        150,
-        150,
-        150,
-        140,
-        140,
-        60,
-        60,
-        140,
-        140,
-        160,
-        160,
-        160,
-        160,
-        200,
-        200
-      ],
-      "tags": [
-        {
-          "name": "idle",
-          "from": 0,
-          "to": 0
-        },
-        {
-          "name": "wind-up",
-          "from": 1,
-          "to": 6
-        },
-        {
-          "name": "impact",
-          "from": 7,
-          "to": 8
-        },
-        {
-          "name": "wind-down",
-          "from": 9,
-          "to": 16
-        }
-      ]
-    },
-    {
-      "row": 27,
       "name": "shield-plant-front",
+      "first_cell": 125,
       "frame_count": 11,
       "durations_ms": [
         100,
@@ -1123,78 +402,8 @@
       ]
     },
     {
-      "row": 28,
-      "name": "shield-plant-back",
-      "frame_count": 11,
-      "durations_ms": [
-        100,
-        100,
-        100,
-        100,
-        80,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120
-      ],
-      "tags": [
-        {
-          "name": "wind-up",
-          "from": 0,
-          "to": 3
-        },
-        {
-          "name": "impact",
-          "from": 4,
-          "to": 4
-        },
-        {
-          "name": "wind-down",
-          "from": 5,
-          "to": 10
-        }
-      ]
-    },
-    {
-      "row": 29,
-      "name": "shield-plant-right",
-      "frame_count": 11,
-      "durations_ms": [
-        100,
-        100,
-        100,
-        100,
-        80,
-        120,
-        120,
-        120,
-        120,
-        120,
-        120
-      ],
-      "tags": [
-        {
-          "name": "wind-up",
-          "from": 0,
-          "to": 3
-        },
-        {
-          "name": "impact",
-          "from": 4,
-          "to": 4
-        },
-        {
-          "name": "wind-down",
-          "from": 5,
-          "to": 10
-        }
-      ]
-    },
-    {
-      "row": 30,
       "name": "death-front",
+      "first_cell": 136,
       "frame_count": 13,
       "durations_ms": [
         70,
@@ -1235,8 +444,404 @@
       ]
     },
     {
-      "row": 31,
+      "name": "idle-back",
+      "first_cell": 149,
+      "frame_count": 5,
+      "durations_ms": [
+        320,
+        280,
+        280,
+        320,
+        320
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 4
+        }
+      ]
+    },
+    {
+      "name": "walk-back",
+      "first_cell": 154,
+      "frame_count": 8,
+      "durations_ms": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "tags": [
+        {
+          "name": "walk",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "name": "run-back",
+      "first_cell": 162,
+      "frame_count": 8,
+      "durations_ms": [
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70
+      ],
+      "tags": [
+        {
+          "name": "run",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "name": "projectile-back",
+      "first_cell": 170,
+      "frame_count": 16,
+      "durations_ms": [
+        80,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-down",
+          "from": 8,
+          "to": 15
+        }
+      ]
+    },
+    {
+      "name": "triple-slash-back",
+      "first_cell": 186,
+      "frame_count": 19,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        60,
+        100,
+        100,
+        60,
+        100,
+        100,
+        70,
+        200,
+        200,
+        200,
+        200,
+        180,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-up",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-up",
+          "from": 8,
+          "to": 9
+        },
+        {
+          "name": "impact",
+          "from": 10,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 18
+        }
+      ]
+    },
+    {
+      "name": "charged-slash-back",
+      "first_cell": 205,
+      "frame_count": 20,
+      "durations_ms": [
+        250,
+        160,
+        160,
+        160,
+        160,
+        140,
+        140,
+        140,
+        60,
+        60,
+        60,
+        190,
+        190,
+        190,
+        190,
+        190,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 19
+        }
+      ]
+    },
+    {
+      "name": "ground-slam-back",
+      "first_cell": 225,
+      "frame_count": 17,
+      "durations_ms": [
+        80,
+        100,
+        100,
+        100,
+        70,
+        70,
+        100,
+        100,
+        80,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "takeoff",
+          "from": 4,
+          "to": 5
+        },
+        {
+          "name": "airborne",
+          "from": 6,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "name": "shield-bash-back",
+      "first_cell": 242,
+      "frame_count": 15,
+      "durations_ms": [
+        240,
+        160,
+        160,
+        160,
+        160,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        190,
+        190,
+        190,
+        190
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 4
+        },
+        {
+          "name": "impact",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "wind-down",
+          "from": 7,
+          "to": 14
+        }
+      ]
+    },
+    {
+      "name": "spear-throw-back",
+      "first_cell": 257,
+      "frame_count": 17,
+      "durations_ms": [
+        240,
+        150,
+        150,
+        150,
+        150,
+        140,
+        140,
+        60,
+        60,
+        140,
+        140,
+        160,
+        160,
+        160,
+        160,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "name": "shield-plant-back",
+      "first_cell": 274,
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
       "name": "death-back",
+      "first_cell": 285,
       "frame_count": 13,
       "durations_ms": [
         70,
@@ -1277,8 +882,842 @@
       ]
     },
     {
-      "row": 32,
+      "name": "idle-left",
+      "first_cell": 298,
+      "frame_count": 5,
+      "durations_ms": [
+        320,
+        280,
+        280,
+        320,
+        320
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 4
+        }
+      ]
+    },
+    {
+      "name": "walk-left",
+      "first_cell": 303,
+      "frame_count": 8,
+      "durations_ms": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "tags": [
+        {
+          "name": "walk",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "name": "run-left",
+      "first_cell": 311,
+      "frame_count": 8,
+      "durations_ms": [
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70
+      ],
+      "tags": [
+        {
+          "name": "run",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "name": "projectile-left",
+      "first_cell": 319,
+      "frame_count": 16,
+      "durations_ms": [
+        80,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-down",
+          "from": 8,
+          "to": 15
+        }
+      ]
+    },
+    {
+      "name": "triple-slash-left",
+      "first_cell": 335,
+      "frame_count": 19,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        60,
+        100,
+        100,
+        60,
+        100,
+        100,
+        70,
+        200,
+        200,
+        200,
+        200,
+        180,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-up",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-up",
+          "from": 8,
+          "to": 9
+        },
+        {
+          "name": "impact",
+          "from": 10,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 18
+        }
+      ]
+    },
+    {
+      "name": "charged-slash-left",
+      "first_cell": 354,
+      "frame_count": 20,
+      "durations_ms": [
+        250,
+        160,
+        160,
+        160,
+        160,
+        140,
+        140,
+        140,
+        60,
+        60,
+        60,
+        190,
+        190,
+        190,
+        190,
+        190,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 19
+        }
+      ]
+    },
+    {
+      "name": "ground-slam-left",
+      "first_cell": 374,
+      "frame_count": 17,
+      "durations_ms": [
+        80,
+        100,
+        100,
+        100,
+        70,
+        70,
+        100,
+        100,
+        80,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "takeoff",
+          "from": 4,
+          "to": 5
+        },
+        {
+          "name": "airborne",
+          "from": 6,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "name": "shield-bash-left",
+      "first_cell": 391,
+      "frame_count": 15,
+      "durations_ms": [
+        240,
+        160,
+        160,
+        160,
+        160,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        190,
+        190,
+        190,
+        190
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 4
+        },
+        {
+          "name": "impact",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "wind-down",
+          "from": 7,
+          "to": 14
+        }
+      ]
+    },
+    {
+      "name": "spear-throw-left",
+      "first_cell": 406,
+      "frame_count": 17,
+      "durations_ms": [
+        240,
+        150,
+        150,
+        150,
+        150,
+        140,
+        140,
+        60,
+        60,
+        140,
+        140,
+        160,
+        160,
+        160,
+        160,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "name": "shield-plant-left",
+      "first_cell": 423,
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
+      "name": "death-left",
+      "first_cell": 434,
+      "frame_count": 13,
+      "durations_ms": [
+        70,
+        120,
+        110,
+        110,
+        150,
+        130,
+        100,
+        110,
+        90,
+        130,
+        140,
+        150,
+        1400
+      ],
+      "tags": [
+        {
+          "name": "recoil",
+          "from": 0,
+          "to": 1
+        },
+        {
+          "name": "point",
+          "from": 2,
+          "to": 5
+        },
+        {
+          "name": "fall",
+          "from": 6,
+          "to": 9
+        },
+        {
+          "name": "fallen",
+          "from": 10,
+          "to": 12
+        }
+      ]
+    },
+    {
+      "name": "idle-right",
+      "first_cell": 447,
+      "frame_count": 5,
+      "durations_ms": [
+        320,
+        280,
+        280,
+        320,
+        320
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 4
+        }
+      ]
+    },
+    {
+      "name": "walk-right",
+      "first_cell": 452,
+      "frame_count": 8,
+      "durations_ms": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110
+      ],
+      "tags": [
+        {
+          "name": "walk",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "name": "run-right",
+      "first_cell": 460,
+      "frame_count": 8,
+      "durations_ms": [
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70
+      ],
+      "tags": [
+        {
+          "name": "run",
+          "from": 0,
+          "to": 7
+        }
+      ]
+    },
+    {
+      "name": "projectile-right",
+      "first_cell": 468,
+      "frame_count": 16,
+      "durations_ms": [
+        80,
+        110,
+        110,
+        110,
+        110,
+        110,
+        110,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-down",
+          "from": 8,
+          "to": 15
+        }
+      ]
+    },
+    {
+      "name": "triple-slash-right",
+      "first_cell": 484,
+      "frame_count": 19,
+      "durations_ms": [
+        220,
+        150,
+        150,
+        150,
+        60,
+        100,
+        100,
+        60,
+        100,
+        100,
+        70,
+        200,
+        200,
+        200,
+        200,
+        180,
+        180,
+        180,
+        180
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-up",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 7
+        },
+        {
+          "name": "wind-up",
+          "from": 8,
+          "to": 9
+        },
+        {
+          "name": "impact",
+          "from": 10,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 18
+        }
+      ]
+    },
+    {
+      "name": "charged-slash-right",
+      "first_cell": 503,
+      "frame_count": 20,
+      "durations_ms": [
+        250,
+        160,
+        160,
+        160,
+        160,
+        140,
+        140,
+        140,
+        60,
+        60,
+        60,
+        190,
+        190,
+        190,
+        190,
+        190,
+        200,
+        200,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 10
+        },
+        {
+          "name": "wind-down",
+          "from": 11,
+          "to": 19
+        }
+      ]
+    },
+    {
+      "name": "ground-slam-right",
+      "first_cell": 523,
+      "frame_count": 17,
+      "durations_ms": [
+        80,
+        100,
+        100,
+        100,
+        70,
+        70,
+        100,
+        100,
+        80,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "takeoff",
+          "from": 4,
+          "to": 5
+        },
+        {
+          "name": "airborne",
+          "from": 6,
+          "to": 7
+        },
+        {
+          "name": "impact",
+          "from": 8,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "name": "shield-bash-right",
+      "first_cell": 540,
+      "frame_count": 15,
+      "durations_ms": [
+        240,
+        160,
+        160,
+        160,
+        160,
+        70,
+        70,
+        180,
+        180,
+        180,
+        180,
+        190,
+        190,
+        190,
+        190
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 4
+        },
+        {
+          "name": "impact",
+          "from": 5,
+          "to": 6
+        },
+        {
+          "name": "wind-down",
+          "from": 7,
+          "to": 14
+        }
+      ]
+    },
+    {
+      "name": "spear-throw-right",
+      "first_cell": 555,
+      "frame_count": 17,
+      "durations_ms": [
+        240,
+        150,
+        150,
+        150,
+        150,
+        140,
+        140,
+        60,
+        60,
+        140,
+        140,
+        160,
+        160,
+        160,
+        160,
+        200,
+        200
+      ],
+      "tags": [
+        {
+          "name": "idle",
+          "from": 0,
+          "to": 0
+        },
+        {
+          "name": "wind-up",
+          "from": 1,
+          "to": 6
+        },
+        {
+          "name": "impact",
+          "from": 7,
+          "to": 8
+        },
+        {
+          "name": "wind-down",
+          "from": 9,
+          "to": 16
+        }
+      ]
+    },
+    {
+      "name": "shield-plant-right",
+      "first_cell": 572,
+      "frame_count": 11,
+      "durations_ms": [
+        100,
+        100,
+        100,
+        100,
+        80,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "tags": [
+        {
+          "name": "wind-up",
+          "from": 0,
+          "to": 3
+        },
+        {
+          "name": "impact",
+          "from": 4,
+          "to": 4
+        },
+        {
+          "name": "wind-down",
+          "from": 5,
+          "to": 10
+        }
+      ]
+    },
+    {
       "name": "death-right",
+      "first_cell": 583,
       "frame_count": 13,
       "durations_ms": [
         70,
@@ -1318,6 +1757,5 @@
         }
       ]
     }
-  ],
-  "left": "mirror right"
+  ]
 }

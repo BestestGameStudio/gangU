@@ -541,11 +541,26 @@ hook cell carried over from the previous hand-drawn sheet.
 
 
 ## Sand general attack readability (#666)
-The existing original Roman-general part rig was extended under Mitra's requested fan/jump-slam rework. Native SpriteU character data and keyframe generators remain in the art source bundle; the packed export updates only the projectile and ground-slam rows in `roman_general_v4.png`, `roman_general_frames.tres` and `roman_general_manifest.json`. The old v3 atlas is retained for source continuity; the active frames resource points at v4. Other rows are unchanged.
+The existing original Roman-general part rig was extended under Mitra's requested fan/jump-slam rework. Native SpriteU character data and keyframe generators remain in the art source bundle; the packed export updates only the projectile and ground-slam rows in `roman_general_v4.png`, `roman_general_frames.tres` and `roman_general_manifest.json`. The old v3 atlas is retained for source continuity; the frames resource pointed at v4 at that stage. Other rows were unchanged.
 
 Projectile: 16 frames per facing, source windup 740ms, release 80ms, recovery 960ms; no baked flying spear effects. Ground slam: 17 frames per facing, source crouch 380ms, takeoff 140ms, airborne 200ms, landing 80ms, recovery 800ms. The game maps key poses to its shared attack clock. Feet remain at the existing ground baseline except intentional jump height, applied to the whole sprite node. Left mirrors right.
 
 `roman_general_spear.png` is the same rig's sandstone/purple spear template, rotated right into a 39x9 transparent PNG, drawn at 1.6x by the shared Projectile. No third-party art. Generated frames pass the existing SpriteU checker: continuous neck, one connected component, no edge clipping. No new test or verification drivers are committed.
+
+## Sand General pharaoh redraw
+
+`roman_general_v5.png` packs the transparent 128×128 frames from
+`sprites/14-sandstone-roman-general.json` in SpriteU (commit `6033422`).
+This iteration redraws the seven attacks around distinct silhouettes and
+adds delayed follow-through to the cape and headcloth.
+Run `python3 tools/sprites/pack_roman_general_spriteu.py PATH_TO_SPRITEU_JSON`
+from gangU to regenerate the atlas, manifest, and Godot SpriteFrames.
+
+The atlas holds 596 frames in 25 columns. The manifest gives each clip's
+starting cell, frame count, phase tags, and durations. All 11 moves have native
+front, back, left, and right art. The mobile boss renders at 1×, with the
+standing feet at world y=24. The arena still owns damage, projectiles, and the
+timing of each attack. The charged slash flash aligns with its gameplay cue.
 
 ## Hub stone bricks, thin connected walls and quiet shop (#708)
 `terrain/dualgrid_brickwall_on_stonebrick.png` and `terrain/dualgrid_variants_stonebrick_hub.png` were generated for gangU by Instinct, then edited to darken and mute the original brick design and align the variant borders. No third-party assets. The 256x256 wall sheet uses 16 row-major 64px dual-grid masks (TL=1, TR=2, BR=4, BL=8), with backgrounds from floor/cap variant 0. The 512x64 floor strip holds eight variants with identical outer rings. Runtime uses deterministic hash placement and trims excess outer cap to a 22px band around the square marching-corner floor boundary; no full cap tiles remain. Nearest texture filtering, lossless import, no mipmaps.
