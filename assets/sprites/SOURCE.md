@@ -17,17 +17,16 @@ the SpriteU JSON (source of truth; see characters/player-wizard.md there).
 a 1500 ms held fallen frame; palette-true rim light in the rig (see SpriteU
 characters/player-wizard.md).
 
-## Design
-- Mitra's wizard: oversized blue pointed hat with gold band, long white beard,
-  purple bell robe, sandals, NO staff/wand - magic comes from the bare hands.
-  Original art, no copied or referenced asset files.
-- Flat palette (22 tones), shading via lit/shade/deep tones per part plus a
-  palette-true rim light on silhouette edges; no gradients, no drawn glow or
-  spell orbs (the game draws FX).
-- Frame: 32x48 px. Sheet: 6 cols x 32 rows (192x1536), one row per animation
-  (idle, walk, dash, cast-bolt, cast-twohand, cast-raise, hurt, death x
-  down/up/left/right). Anim timing: held key poses with fast transitions
-  (Sakurai key-pose pass, 2026-11-15).
+## Current design
+
+The [SpriteU wizard redesign](https://github.com/BestestGameStudio/SpriteU/pull/34)
+uses a 15-color palette of plum, magenta, and gold, with a swept hat, white
+beard, and split coat. Spell effects come from the game. Both side walks have
+six frames over 440 ms, and the upward dash sweeps both hands behind the body.
+
+The 192×1536 atlas has 32 rows of six 32×48 cells. Each row holds one animation
+and facing. Regenerate the atlas and WizardSprite frames with
+`python3 -I tools/sprites/build_main_character.py --json /path/to/player-wizard.json`.
 
 ## References (layout/timing only, not shipped art)
 - "Space Guy - 8 Directional animated character 16x16"
