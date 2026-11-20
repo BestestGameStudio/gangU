@@ -550,7 +550,9 @@ Projectile: 16 frames per facing, source windup 740ms, release 80ms, recovery 96
 ## Sand General pharaoh redraw
 
 `roman_general_v5.png` packs the transparent 128×128 frames from
-`sprites/14-sandstone-roman-general.json` in SpriteU (commit `f27e7b3`).
+`sprites/14-sandstone-roman-general.json` in SpriteU (commit `6033422`).
+This iteration redraws the seven attacks around distinct silhouettes and
+adds delayed follow-through to the cape and headcloth.
 Run `python3 tools/sprites/pack_roman_general_spriteu.py PATH_TO_SPRITEU_JSON`
 from gangU to regenerate the atlas, manifest, and Godot SpriteFrames.
 
