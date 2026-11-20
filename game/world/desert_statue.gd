@@ -7,10 +7,12 @@ const STATIONARY_FRAMES: SpriteFrames = preload("res://assets/sprites/stationary
 const THROW_RELEASE_TIME := 1.17
 const THROW_DURATION := 2.14
 const GENERAL_FRAMES: SpriteFrames = preload("res://assets/sprites/roman_general_frames.tres")
+# Native feet sit at y=116 in a centered 128px cell. Align them to world y=24.
+const GENERAL_GROUND_OFFSET := 24.0 + 64.0 - 116.0
 # Visual-only sampling of the arena clock. Damage, projectiles and movement
 # remain owned by DesertStatueArena, never by animation callbacks.
 const GENERAL_MOVES := ["projectile", "triple_slash", "charged_slash", "ground_slam", "shield_bash", "spear_throw", "shield_plant"]
-const GENERAL_IMPACT_FRAMES := [[7], [4, 7, 10], [8], [8], [5], [7], [4]]
+const GENERAL_IMPACT_FRAMES := [[7], [4, 7, 10], [9], [8], [5], [7], [4]]
 const GENERAL_IMPACT_TIMES := [[0.0], [0.22, 0.78, 1.34], [0.12], [0.4], [0.0], [0.0], [0.0]]
 
 var arena: Node2D
@@ -22,7 +24,6 @@ var flash := 0.0
 var _sprite: AnimatedSprite2D
 var _general_facing := "front"
 var _death_time := -1.0
-var _general_mirror := false
 var _general_last_position := Vector2.ZERO
 var _general_locomotion_time := 0.0
 var _stationary: AnimatedSprite2D
@@ -97,9 +98,7 @@ func _ready() -> void:
 	_sprite = AnimatedSprite2D.new()
 	_sprite.name = "RomanGeneralSprite"
 	_sprite.sprite_frames = GENERAL_FRAMES
-	_sprite.scale = Vector2(2.0, 2.0)
-	# Native feet are at y=55. Keep them at the existing ground/shadow y=24.
-	_sprite.position.y = -22.0
+	_sprite.position.y = GENERAL_GROUND_OFFSET
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_sprite.z_index = -1
 	add_child(_sprite)
@@ -173,7 +172,7 @@ func is_defeated_general() -> bool:
 ## animation does.
 static func death_animation_seconds() -> float:
 	var total := 0.0
-	for facing in ["front", "back", "right"]:
+	for facing in ["front", "back", "left", "right"]:
 		var anim := StringName("death_" + facing)
 		var seconds := 0.0
 		var frames := GENERAL_FRAMES.get_frame_count(anim)
@@ -185,10 +184,8 @@ static func death_animation_seconds() -> float:
 func _general_direction(direction: Vector2) -> void:
 	if direction.is_zero_approx():
 		return
-	_general_mirror = false
 	if absf(direction.x) > absf(direction.y):
-		_general_facing = "right"
-		_general_mirror = direction.x < 0.0
+		_general_facing = "left" if direction.x < 0.0 else "right"
 	else:
 		_general_facing = "front" if direction.y >= 0.0 else "back"
 
@@ -200,7 +197,6 @@ func _general_frame_start(anim: StringName, index: int) -> float:
 
 func _sample_general(anim: StringName, seconds: float) -> void:
 	_sprite.animation = anim
-	_sprite.flip_h = _general_mirror
 	for i in GENERAL_FRAMES.get_frame_count(anim):
 		var duration := GENERAL_FRAMES.get_frame_duration(anim, i)
 		if seconds < duration:
@@ -217,10 +213,10 @@ func _update_sprite(delta: float) -> void:
 		return
 	var attack := general_arena._phase_two_attack_index
 	var clock := general_arena._phase_two_attack_time
-	_sprite.position.y = -22.0-general_arena.general_height
+	_sprite.position.y = GENERAL_GROUND_OFFSET - general_arena.general_height
 	_sprite.z_index = 100 if general_arena.general_height > 0.0 else -1
 	# #692: once defeated the general keeps the facing he fell with - the
-	# corpse must not turn or mirror as the player walks past.
+	# corpse must not turn as the player walks past.
 	if is_instance_valid(general_arena.player) and general_arena.hp > 0:
 		# Follow aim during windup, then keep it locked through the strike.
 		# Triple slash retargets each dash in the arena and turns with travel.
@@ -229,7 +225,7 @@ func _update_sprite(delta: float) -> void:
 		elif attack == 1 and movement.length_squared() > 0.001:
 			_general_direction(movement)
 	if general_arena.hp <= 0:
-		# The death art carries the dim: play it once and hold the last frame.
+		# Play the death animation once and hold the last frame.
 		if _death_time < 0.0:
 			_death_time = 0.0
 		_sample_general(StringName("death_"+_general_facing), _death_time)
