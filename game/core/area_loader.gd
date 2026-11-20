@@ -138,6 +138,8 @@ func _swap(area: Node) -> void:
 		_set_overworld_layers(true)
 		_run_overworld.show()
 		_run_overworld.process_mode = Node.PROCESS_MODE_INHERIT
+		# #896: the statue-circle arena's fight signals drive its boss theme.
+		_connect_statue_arena_music()
 	if music:
 		# #359: the boss theme never outlives its dungeon; #471: a fresh loop
 		# on every dungeon entry, silence in the hub/overworld; #487: the
@@ -410,6 +412,28 @@ func _mount_regions(area: Node) -> void:
 	area.add_child(activation)
 	if world_map:
 		world_map.set_sites(area.name, _dungeon_sites(area))
+
+## #896: the Sunbound Sanctum statue-circle boss plays Colin's supplied
+## theme from the encounter start until the win fade. Guarded so repeat
+## overworld mounts do not double-connect.
+func _connect_statue_arena_music() -> void:
+	if music == null or not is_instance_valid(_run_overworld):
+		return
+	var desert := _run_overworld.get_node_or_null("DesertStatueArena") as DesertStatueArena
+	if desert == null:
+		return
+	if not desert.encounter_started.is_connected(_on_statue_encounter_started):
+		desert.encounter_started.connect(_on_statue_encounter_started)
+	if not desert.encounter_won.is_connected(_on_statue_encounter_won):
+		desert.encounter_won.connect(_on_statue_encounter_won)
+
+func _on_statue_encounter_started() -> void:
+	if music:
+		music.start_statue_boss()
+
+func _on_statue_encounter_won() -> void:
+	if music:
+		music.on_statue_fight_won()
 
 func has_active_encounter() -> bool:
 	if is_instance_valid(_run_overworld):

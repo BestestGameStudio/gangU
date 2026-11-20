@@ -84,3 +84,40 @@ Candidate percussion source: **"Loop - Night Run.mp3" by McChaffe**, Freesound s
 - License: Creative Commons Attribution3.0 Unported, https://creativecommons.org/licenses/by/3.0/ . Remixing and redistribution are permitted with attribution, a license link and a description of changes. No endorsement is implied.
 - Preview source: the page's public HQ MP3 preview, https://cdn.freesound.org/previews/330/330411_4263416-hq.mp3 . This is not the login-required original download.
 - Processing: use the first32s percussion phrase repeated twice, time-stretch120BPM to108BPM (atempo0.9) to match measured piano onset spacing, high-pass70Hz/low-pass7.5kHz, net -8dB percussion gain; enter at8.889s with4.444s fade-in, fade out72.222-77.778s. Existing piano gain and pitch unchanged. Output81.778s; MP3preview192kbps. Measured MP3preview mean -36.4dBFS, peak -14.9dBFS; integrated Ogg mean -36.1dBFS, peak -14.9dBFS (codec rounding, no normalization). Mitra approved the listening preview on2026-11-11 and asked to use it as the overworld theme while preserving the older piano for another use. `overworld_piano_night_run_remix.ogg` is Ogg Vorbis q5 encoded from that same mix master, with no further gain or mix changes. MusicDirector selects this new asset at0dB. The old `overworld_soft_piano_loop.ogg` and its import metadata remain unchanged. Looping remains set in code.
+
+# Statue-circle boss theme (#896)
+
+`statue_boss_pharaohs_wrath.ogg` is the track Colin supplied over iMessage on
+2026-11-19 ("Pharaoh's Wrath", his boss-music request for the stone spear men
+circle boss, the Sunbound Sanctum) with a seamless wrap and the level matched
+to the other music ("its a bit loud so make sure its similar volume as teh
+other music and loop it"). No other edits (no EQ, compression or resampling).
+
+| File | Source | Source format (ffprobe) | Processing |
+|------|--------|-------------------------|------------|
+| `statue_boss_pharaohs_wrath.ogg` | Colin's iMessage attachment `Pharaoh's Wrath.m4a` (2026-11-19) | Opus, 48 kHz stereo, ~130 kb/s, 60.00 s | 3 s wrap crossfade (tail into head) for a seamless loop, then `volume=-2.1dB`, encode `-c:a libvorbis -q:a 5` |
+
+ffmpeg command:
+
+```
+ffmpeg -i pharaohs_wrath_src.m4a -filter_complex \
+  "[0:a]atrim=0:3,asetpts=PTS-STARTPTS[head];\
+   [0:a]atrim=57:60,asetpts=PTS-STARTPTS[tail];\
+   [0:a]atrim=3:57,asetpts=PTS-STARTPTS[mid];\
+   [tail][head]acrossfade=d=3:c1=tri:c2=tri[blend];\
+   [blend][mid]concat=n=2:v=0:a=1,volume=-2.1dB[out]" \
+  -map "[out]" -c:a libvorbis -q:a 5 statue_boss_pharaohs_wrath.ogg
+```
+
+Levels (`ffmpeg -af volumedetect`):
+
+| File | mean | peak |
+|------|------|------|
+| source (60 s) | -19.4 dB | -4.1 dB |
+| `statue_boss_pharaohs_wrath.ogg` (committed, 57 s) | -21.7 dB | -6.9 dB |
+
+The committed mean matches `boss1.ogg`/`boss2.ogg` (-21.7 / -21.5 dB), and at
+runtime `MusicDirector.BOSS_VOLUME_DB` applies the same further -6 dB, so the
+theme sits at the same effective level as the other boss themes and the
+dungeon loop. Looping is set in code (`MusicDirector.start_statue_boss`), not
+in the import.

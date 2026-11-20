@@ -23,6 +23,11 @@ extends Node
 ## Overworld remix (#597): the approved piano and percussion mix. The
 ## original #487 piano asset stays available for another use. Playback
 ## keeps the approved quiet gain (0 dB) and the soft ending/pause.
+##
+## Statue-circle boss theme (#896): Colin's supplied track for the Sunbound
+## Sanctum (stone spear men) fight. It starts when the arena's encounter
+## starts, loops, and uses the same boss trim; the overworld piano yields
+## (stream_paused) while it plays and fades back in when the fight is won.
 
 const BOSS_TRACKS: Array[AudioStream] = [
 	preload("res://assets/audio/music/boss1.ogg"),
@@ -32,6 +37,11 @@ const BOSS_TRACKS: Array[AudioStream] = [
 const BOSS_VOLUME_DB := -6.0
 ## Seconds to fade the theme out after the boss dies.
 const BOSS_FADE_OUT_SEC := 1.5
+
+## #896: Colin's supplied theme for the Sunbound Sanctum statue-circle boss.
+## Level-matched to the boss convention (committed mean -21.7 dB) with a
+## crossfaded wrap so it loops seamlessly. See assets/audio/music/SOURCE.md.
+const STATUE_TRACK: AudioStream = preload("res://assets/audio/music/statue_boss_pharaohs_wrath.ogg")
 
 const DUNGEON_TRACK: AudioStream = preload("res://assets/audio/music/dungeon_battle_loop.ogg")
 ## Runtime attenuation. The source loop measures mean -14.9 dB; this puts it
@@ -54,6 +64,9 @@ var overworld: AudioStreamPlayer = null
 
 var _boss_fade: Tween = null
 var _dungeon_fade: Tween = null
+var _overworld_fade: Tween = null
+## The piano's yield to the statue theme, same idea as _dungeon_yielded.
+var _overworld_yielded := false
 ## AudioStreamPlayer.playing reads false while stream_paused, so the dungeon
 ## loop's yield to the boss theme is tracked here.
 var _dungeon_yielded := false
@@ -104,6 +117,52 @@ func on_boss_spawned(play_theme: bool) -> void:
 func on_objective_completed() -> void:
 	fade_out_boss()
 	resume_dungeon_after_boss()
+
+## #896: the statue-circle encounter started. Plays Colin's supplied theme
+## (looping, boss trim) and holds the overworld piano where it is. No-op if
+## a boss theme is already playing.
+func start_statue_boss() -> void:
+	if boss.playing and _boss_fade == null:
+		return
+	_kill_boss_fade()
+	var s := STATUE_TRACK
+	if s is AudioStreamOggVorbis:
+		(s as AudioStreamOggVorbis).loop = true
+	boss.stream = s
+	boss.volume_db = BOSS_VOLUME_DB
+	boss.play()
+	yield_overworld_to_boss()
+
+## #896: the statue-circle fight is won: the theme fades out and the
+## overworld piano fades back in.
+func on_statue_fight_won() -> void:
+	fade_out_boss()
+	resume_overworld_after_boss()
+
+## A statue theme started: hold the piano where it is.
+func yield_overworld_to_boss() -> void:
+	if not overworld.playing:
+		return
+	_kill_overworld_fade()
+	_overworld_yielded = true
+	overworld.stream_paused = true
+
+## The statue theme is done: continue the piano, fading back in.
+func resume_overworld_after_boss() -> void:
+	if not _overworld_yielded:
+		return
+	_overworld_yielded = false
+	overworld.volume_db = SILENT_DB
+	overworld.stream_paused = false
+	_kill_overworld_fade()
+	_overworld_fade = create_tween()
+	_overworld_fade.tween_property(overworld, "volume_db", 0.0, DUNGEON_FADE_IN_SEC)
+	_overworld_fade.tween_callback(_kill_overworld_fade)
+
+func _kill_overworld_fade() -> void:
+	if _overworld_fade != null:
+		_overworld_fade.kill()
+		_overworld_fade = null
 
 ## Start a random boss theme (looping). No-op if a theme is already playing,
 ## so a second boss_spawned in the same fight does not restart the music.
@@ -186,14 +245,20 @@ func _kill_dungeon_fade() -> void:
 ## Start the overworld piano from the top (overworld entered). No gain trim:
 ## the track is quiet by design.
 func start_overworld() -> void:
+	_kill_overworld_fade()
+	_overworld_yielded = false
 	var s := OVERWORLD_TRACK
 	if s is AudioStreamOggVorbis:
 		(s as AudioStreamOggVorbis).loop = true
 	overworld.stream = s
+	overworld.stream_paused = false
 	overworld.volume_db = 0.0
 	overworld.play()
 
 ## Stop immediately (leaving the overworld).
 func stop_overworld() -> void:
+	_kill_overworld_fade()
+	_overworld_yielded = false
 	overworld.stop()
+	overworld.stream_paused = false
 	overworld.volume_db = 0.0

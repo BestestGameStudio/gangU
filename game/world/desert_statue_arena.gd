@@ -7,6 +7,10 @@ extends Node2D
 const MAX_LAYOUT_RADIUS := 640.0
 
 enum State { DORMANT, POSSESSED, STUNNED, PREPARING, TRANSFERRING, PHASE_TWO }
+
+## #896: boss-theme hookup; AreaLoader routes these to the MusicDirector.
+signal encounter_started
+signal encounter_won
 var arena_radius := 0.0
 var statue_radius := 0.0
 var barrier_radius := 0.0
@@ -262,6 +266,8 @@ func start_encounter() -> void:
 	_possess(statues[_rng.randi_range(0,11)])
 	for enemy in get_tree().get_nodes_in_group(&"enemies"):
 		_register_enemy(enemy)
+	# #896: the boss theme starts with the fight.
+	encounter_started.emit()
 
 func is_active() -> bool:
 	# A won fight is over: state stays PHASE_TWO on the kneeling general, so
@@ -417,6 +423,8 @@ func _win() -> void:
 	if _won:
 		return
 	_won = true
+	# #896: the boss theme fades out and the overworld piano returns.
+	encounter_won.emit()
 	_remove_phase_two_shield()
 	# _phase_two_step halts on hp<=0, so a slam shockwave telegraph live at the
 	# kill would freeze mid-expansion and keep drawing its ring forever.
